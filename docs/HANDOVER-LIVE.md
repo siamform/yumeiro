@@ -11,16 +11,18 @@ Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DI
 
 ### Done on r21-major-list (all CI pending unless stated)
 TG-PLAY-1 (8D), UP-NEXT-1 (8E), TG-TAB-1 (7), NAV-2 (2), YF-2 (10), PC-1 (11), DOC-README-1 (17, docs), PROBE-1
-(field-probe new_tag=branch), TG-8ABC-1 (8A–C), TOR-1 (12), META-1 (13), DEDUP-1 (14). Each has a ledger row "(R21)"
+(field-probe new_tag=branch), TG-8ABC-1 (8A–C), TOR-1 (12), META-1 (13), DEDUP-1 (14), TB-PREVIEW-1 (19a TeraBox).
+DiskWala (19b) is blocked on an owner decision: see "DiskWala findings" in docs/OWNER-LIST-R21.md. Each has a ledger row "(R21)"
 in docs/BUGS-AND-FIXES-2.0.0.md, after REL-2.2-CI.
 
 ### Pending runs (check each one first)
-- CI 45228964730 on r21-major-list. It covers everything up to META-1. DEDUP-1 (ac440752) and later commits need a
-  new dispatch: `gh workflow run ci.yml --ref r21-major-list -R siamform/yumeiro`.
+- CI 45229632390 on r21-major-list (a0fc0e2f, up to DEDUP-1; the earlier 45228964730 was cancelled by it).
+  TB-PREVIEW-1 (3dd034aa) and later commits need a new dispatch: `gh workflow run ci.yml --ref r21-major-list -R siamform/yumeiro`.
   If it fails, read the log (`gh run view <id> --log-failed | tail -200`) and fix the compile and test errors first.
   The new code that has never been compiled is: TitleFacts.kt, the OnlineDetailScreen about / cast / trailers block,
-  TelegramAvatars.kt, TelegramAvatar.kt, the TelegramAccountScreen grid, IncomingMedia magnet handling, and TitleDedupe.kt.
-- Field probe 45227123635 (branch build, api36): `send https://t.me/telegram/441`, with shots tgplay and tgplay2. It is
+  TelegramAvatars.kt, TelegramAvatar.kt, the TelegramAccountScreen grid, IncomingMedia magnet handling, TitleDedupe.kt,
+  and the TB-PREVIEW-1 code in PageStreamFinderDialog.kt, StreamResolver.checkCapture and CloudRecapture.
+- Field probe 45227123635 (branch build, api36; the first attempt failed on a runner system-image download, re-run): `send https://t.me/telegram/441`, with shots tgplay and tgplay2. It is
   the emulator check for TG-PLAY-1. Download it with
   `gh run download 45227123635 -R siamform/yumeiro -n field-probe -D /tmp/ob`, then grep timeline.txt for
   "Telegram post can't play". The baseline v2.1.0 (45225547048) showed that message; the fix should play.
@@ -31,7 +33,7 @@ in docs/BUGS-AND-FIXES-2.0.0.md, after REL-2.2-CI.
    author you to approved the marge"); still bump the version (app/build.gradle.kts versionName / versionCode) and
    write the CHANGELOG / docs/WHATS-NEW.md entry before merging. Close PR #44 as superseded (its only commit 0265a031
    is in r21), with a comment and the footer.
-2. Continue the not-started items in docs/OWNER-LIST-R21.md: 19 (TeraBox / Diskwala), 1 (Live TV), 15, 16, 9, 3, 5,
+2. Continue the not-started items in docs/OWNER-LIST-R21.md: 1 (Live TV), 15, 16, 9, 3, 5,
    6, 18, 4. Load ui-ux-pro-max before any redesign; use rea when stuck.
 3. Re-check www.yumeiro.click/changelog shows v2.2.0 (yumeiro-web PR #8 merged).
 

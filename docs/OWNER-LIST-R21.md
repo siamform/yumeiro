@@ -37,7 +37,8 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 16B | Upcoming page redesign: 3 filter icon buttons, dynamic country and category | — | not started | |
 | 17 | README cleanup | DOC-README-1 | done (docs) | README went from 545 to 245 lines, plus docs/WHATS-NEW.md, SCREENSHOTS.md, COMPARISON.md and FAQ.md |
 | 18 | Fix Skip Intro and add Skip Outro (AniSkip / IntroDB) | — | not started | |
-| 19 | TeraBox plays only a 30 s preview; Diskwala links don't open | — | not started | Plan below. Owner text is copied in full at the end |
+| 19a | TeraBox plays only a 30 s preview | TB-PREVIEW-1 | CI pending | The page finder played the page player's preview capture. Now: never plays a preview, resolves the share via the API, opens sign-in in the same browser and resumes by itself after sign-in. Full playback needs a TeraBox account (owner-side check) |
+| 19b | Diskwala links don't open | — | **blocked: owner decision** | See "DiskWala findings" below |
 | web | yumeiro-web: changelog and download text say v2.2.0 | — | done, merged | yumeiro-web PR #8. Re-check www.yumeiro.click/changelog |
 | PR44 | What is inside PR 44 | — | answered | Docs only: the HANDOVER-LIVE rewrite and the REL-2.2-CI ledger row. Its commit 0265a031 is now on r21-major-list, so close PR 44 as superseded when the r21 PR opens |
 
@@ -144,3 +145,21 @@ redirections and video extraction, and fix resolution and playback. Inspect how 
 open-source projects, but don't just copy Hikari. Links must open in Yumeiro's built-in browser and play in Yumeiro's
 built-in player. No redirect to the TeraBox / Diskwala apps or to external browsers for normal playback. Handle
 redirects, video URLs and streaming formats. Preserve the original link and give clear feedback on extraction errors.
+
+## DiskWala findings (R21, 2026-11-23, measured)
+- The website (diskwala.com/app/<id>) is a "Get the app" page. Its whole JS bundle (main.d3b09a1c.js, 630 KB) calls
+  only `file/temp_info`, which answers name / size / type and **no video address** (checked live with curl). So no
+  website flow exists to capture, and Hikari's WebView fetch/XHR hook (NetworkStream.kt mdisk()) has nothing to catch
+  on that page.
+- DiskWala's own Android app gets the file behind an app-integrity check. Faking that is out (owner: no bypassing).
+- The only working open-source route found (github.com/XKILLER2006Y/TeraBox-Video-Downloader, diskwalaDL) goes through a
+  **third-party Telegram Mini App**, @sky577bot "DiskWala Video Downloader" (miniapp.diskwala.net, api2.diskwala.net).
+  It is ad-funded (adsgram, richpartners, tgads scripts on the page) and authenticated with the user's Telegram
+  initData. Its API answers are AES-GCM encrypted with a key taken from the Mini App bundle.
+- Possible in-app design (needs owner approval, because it sends the user's Telegram identity to a third-party bot):
+  with the user's TDLib sign-in, get the Mini App URL (TDLib getWebAppLinkUrl / searchWebApp for @sky577bot "open"),
+  open it in Yumeiro's browser with the link as start_param, and capture the video it plays (the page decrypts its
+  own answers, so no copied key is needed). The original link is kept, the user sees a clear consent line, and the
+  route is off by default.
+- Until the owner decides: Yumeiro keeps the honest message (file name + size from temp_info). Remove the hand-off to
+  the DiskWala app only when the replacement exists, so the link doesn't become a dead end.
