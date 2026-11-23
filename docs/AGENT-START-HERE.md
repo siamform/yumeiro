@@ -178,6 +178,7 @@ Trust the repo and CI run IDs over any summary, including this one. Last updated
   instant cached feed, 10 min feed after install/update, reinstall-after-update check). Read it before feed/search work.
 - Owner rule 2026-11-21 19:15 +06: after every bug or feature, mark its status in the docs as verified (run ID) or not.
 - What every older doc says, in one place (owner order 2026-11-22: read every doc): docs/DOCS-READ-DIGEST.md.
+- R21 owner list (19 items: status, plans, TeraBox / Diskwala research notes): docs/OWNER-LIST-R21.md.
 - Live state, pending runs and the next step: docs/HANDOVER-LIVE.md (owner rule 2026-11-21: rewrite it with every
   push; every listed bug and feature must be done and verified; mandatory focus: feed, extension loading, load
   speed, search speed).
