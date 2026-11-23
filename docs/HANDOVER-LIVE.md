@@ -6,24 +6,24 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-23 17:12 +06 (R19, owner directive 2, branch **r19-restore**). Ledger rows "(R19)" in docs/BUGS-AND-FIXES-2.0.0.md
-after OWN-12 hold commits, run ids and verification level (CI / emulator / real device = none available / blocked).
-- ONLINE-INIT-1 (07cd54de, d35e2aa9): emulator verified (skip / tour / update). Firebase notifications + Cloudflare kept.
-- LIVE-DNS-1 (ad56caff, 979014b9): CI 45151409433 green; emulator: IPv4 at 17.5 s (was 174.5 s).
-- LIVE-SLOW-1 (24a78259): lte 45158999820 7555 channels by 60 s, relaunch shows saved copy within 5 s. umts / hsdpa
-  emulator shaping carries 2-7 KB/s (inconclusive). Range-resume tried and dropped (gzip bodies). Real 3G: blocked.
-- NAV-1 / NAV-1b, THEME-1, ENGINE-1, LEGACY-EXT-1/2, TG-PAGE-1, UX-MARKET-1, PERF-IDLE-1: see ledger.
-- New this round: UX-LIB-1 (020e1db5) and UX-LIVE-1 (6a19672b), CI 45155141844 green + emulator; TG-PAGE-2 (26eb41a4).
-Probe tooling: PREWAIT N (wait before install) and step "relaunch" (9b4031f6); answer_system answers system ANR dialogs.
+2026-11-23 18:05 +06 (R20, owner message 5: website download button, 22 CodeQL warnings, release prep, social images; branch
+**r19-restore**). Ledger rows "(R20)" after TG-PAGE-2 in docs/BUGS-AND-FIXES-2.0.0.md.
+- WEB-DL-1: yumeiro-web PR #7 (fix-download-button): processor-check button no longer overflows phones. Local build +
+  Playwright verified; Vercel preview on the PR. Not merged.
+- CQ-1 (00a59132, 2f8f17c6): #89 and #97-#104 fixed in code, the rest documented suppressions (AUDIT.md). CodeQL on the
+  branch: 22 -> 2 at 00a59132; 2f8f17c6 fixes the last 2 (#109/#110, apply blocks).
+- REL-2.2-PREP (d4846d8b): CHANGELOG v2.2.0, README "What's new in 2.2.0" (posters in a row), docs/assets/release-2.2
+  images + SOCIAL-CAPTIONS.md. Release PR r19-restore -> main open, NOT merged.
+- R19 rows (ONLINE-INIT-1 ... TG-PAGE-2) unchanged; see ledger.
 
 ## Pending runs
-- None. CI 45161173640 on 26eb41a4 (TG-PAGE-2) green.
+- CodeQL 45170991902 and CI 45170997499 on 2f8f17c6; CI 45168860296 on 00a59132.
 
 ## Next step
-2. UI/UX audit continues screen by screen (tour probe 45155200957 covered Library, History, Downloads, Reading,
-   Home "See more", Settings, Telegram; Search / Yumix source menu taps missed).
+1. Owner: review and approve release PR (r19-restore -> main) and yumeiro-web PR #7. On merge, the Release workflow
+   bumps to 2.2.0 (feat commits) and uses the CHANGELOG v2.2.0 notes. No merge / release / tag without approval.
+2. UI/UX audit continues (Search, Yumix source menu not covered yet).
 3. Blocked: Telegram signed-in search (no account), every real-device check (no device), real slow mobile network.
-4. No merge / release / tag without owner approval.
 
 ## Next step (older)
 1. Live TV (E2-ALL): Yumeiro Live is published on the streams branch (playlists/yumeiro_live.m3u, 1.7 MB, sync 45071581763).
