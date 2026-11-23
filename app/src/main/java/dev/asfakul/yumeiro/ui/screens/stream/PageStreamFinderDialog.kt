@@ -780,5 +780,5 @@ fun PageStreamFinderDialog(
 }
 
 /** TB-PREVIEW-1: the cookies the web view holds for TeraBox's sign-in hosts (the `ndus` sign-in lives on one of them). */
-private fun teraCookies(): String = listOf("https://www.terabox.app", "https://www.terabox.com", "https://www.1024terabox.com")
+private fun teraCookies(): String = listOf("https://www.terabox.app", "https://www.terabox.com", "https://www.1024terabox.com", "https://www.1024tera.com")
     .mapNotNull { runCatching { CookieManager.getInstance().getCookie(it) }.getOrNull() }.joinToString("; ")
