@@ -59,6 +59,8 @@ data class OnlineItem(
     val key: String get() = "$api|$url"
     /** Poster tags (language, release source, resolution, kind) — see [ReleaseTags]. */
     val tags: List<ReleaseTags.Tag> by lazy(LazyThreadSafetyMode.PUBLICATION) { ReleaseTags.parse(name, quality, type, dub) }
+    /** DEDUP-1: the title's identity across extensions, worked out once per card (the feed re-checks on each update). */
+    internal val titleKey: TitleDedupe.Key by lazy(LazyThreadSafetyMode.PUBLICATION) { TitleDedupe.compute(name, type) }
 }
 
 data class OnlineRow(

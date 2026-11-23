@@ -40,6 +40,7 @@ object RegexWarmup {
 
     /** JVM names of the classes whose static initialiser compiles patterns. */
     val CLASSES: List<String> = listOf(
+        "dev.asfakul.yumeiro.online.TitleDedupe",
         // UI classes first: a screen's first composition is what touches them.
         "com.lagradost.cloudstream3.ui.home.HomeViewModelKt",
         "dev.asfakul.yumeiro.ui.components.ErrorHelp",
