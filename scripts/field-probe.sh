@@ -33,7 +33,7 @@ tap_text() { # tap the first node whose text or content-desc equals (or, with ~ 
   adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || return 1
   adb pull /sdcard/ui.xml "$OUT/tap.xml" > /dev/null 2>&1 || return 1
   XY=$(python3 - "$OUT/tap.xml" "$@" <<'PY'
-import sys, re
+import sys, re, html
 t = open(sys.argv[1], encoding="utf-8", errors="replace").read()
 want = sys.argv[2:]
 # Exact text first, in the order asked; "~x" (contains) only when nothing matched exactly, so "~Skip" never
@@ -43,7 +43,7 @@ for m in re.finditer(r'<node [^>]*>', t):
     n = m.group(0)
     tx = re.search(r' text="([^"]*)"', n); cd = re.search(r'content-desc="([^"]*)"', n)
     b = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', n)
-    if b: nodes.append(((tx.group(1) if tx else ""), (cd.group(1) if cd else ""), tuple(map(int, b.groups()))))
+    if b: nodes.append((html.unescape(tx.group(1)) if tx else "", html.unescape(cd.group(1)) if cd else "", tuple(map(int, b.groups()))))
 def find():
     for w in [w for w in want if not w.startswith("~")]:
         for tx, cd, b in nodes:
@@ -86,6 +86,8 @@ run_steps() {
       find*) # scroll the page up (up to 6 swipes) until TEXT is on screen, then tap it
         t=${s#find }; ok=0
         for i in 1 2 3 4 5 6 7; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 1500 540 700 300; sleep 1; done
+        # not below: the page may have opened scrolled down (Settings keeps its place), so look above too
+        [ $ok = 1 ] || for i in 1 2 3 4 5 6 7 8 9 10 11 12; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 700 540 1500 300; sleep 1; done
         [ $ok = 1 ] || note "find miss [$t]"; sleep 1; dump "after-find" ;;
       recpull*) r=${s#recpull }; sleep 5; adb pull "/sdcard/rec-$r.mp4" "$OUT/rec-$r.mp4" > /dev/null 2>&1 && note "pulled rec-$r.mp4" || note "rec miss [$r]" ;;
       rec*) # rec NAME: record the screen for 5 s from now (runs while the next steps happen)
