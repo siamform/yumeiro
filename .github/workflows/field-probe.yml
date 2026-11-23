@@ -53,7 +53,7 @@ jobs:
         id: cfg
         run: |
           if [ "${{ github.event_name }}" = push ] && [ -f .github/field-probe.env ]; then set -a; . .github/field-probe.env; set +a; fi
-          { echo "new_tag=${NEW_TAG}"; echo "old_tag=${OLD_TAG}"; echo "steps=${STEPS:-skip;wait 120}"; echo "net=${NET:-none}"; echo "api=${API:-33}"; } >> "$GITHUB_OUTPUT"
+          { echo "new_tag=${NEW_TAG}"; echo "old_tag=${OLD_TAG}"; echo "steps=${STEPS:-skip;wait 120}"; echo "net=${NET:-none}"; echo "api=${API:-33}"; echo "prewait=${PREWAIT:-}"; } >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: ${{ steps.cfg.outputs.new_tag == '' }}
@@ -131,6 +131,7 @@ jobs:
           OLD_APK: ${{ steps.cfg.outputs.old_tag != '' && 'old.apk' || '' }}
           STEPS: ${{ steps.cfg.outputs.steps }}
           NET: ${{ steps.cfg.outputs.net }}
+          PREWAIT: ${{ steps.cfg.outputs.prewait }}
           OUT: probe
         with:
           api-level: ${{ steps.cfg.outputs.api }}

@@ -102,6 +102,8 @@ run_steps() {
       top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
+      relaunch) # the app is closed (as after a swipe away) and opened again, to see what it shows from its saved state
+        adb shell am force-stop "$P"; sleep 2; launch again; sleep 2 ;;
       shot*) dump "${s#shot }" ;;
       gfxreset) adb shell dumpsys gfxinfo "$P" reset > /dev/null 2>&1; note "gfxinfo reset" ;;
       gfx*) g=${s#gfx }; adb shell dumpsys gfxinfo "$P" > "$OUT/gfx-$g.txt" 2>&1; note "gfx [$g] $(grep -m1 'Total frames rendered' "$OUT/gfx-$g.txt")" ;;
@@ -131,6 +133,9 @@ esac
 # The emulator's -tcpdump sees the first NIC only; with Wi-Fi on, app traffic went around it (run 45112282639:
 # 97 packets in 150 s, none from the app). Mobile data only, so every connection is in the capture.
 [ "${WIFI:-off}" = "off" ] && { adb shell svc wifi disable > /dev/null 2>&1; adb shell svc data enable > /dev/null 2>&1; sleep 3; note "wifi off, mobile data on"; }
+# PREWAIT N: a new emulator's Google Play services download several MB at first boot (45148263297: ~5 MB in
+# 240 s on umts) and starve a shaped link; wait N s first so the app's own traffic is measured, not that.
+if [ -n "${PREWAIT:-}" ]; then note "prewait ${PREWAIT} s (system first-boot downloads)"; sleep "$PREWAIT"; fi
 adb logcat -c
 adb logcat -v threadtime > "$OUT/logcat.txt" 2>&1 &
 LOGCAT=$!
