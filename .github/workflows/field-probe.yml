@@ -1,0 +1,159 @@
+name: Field probe
+
+# R19: run the APK a user actually installs (a published release, or this branch's release build) on an
+# emulator with real internet and record the first minutes: every network connection (emulator -tcpdump),
+# logcat, UI text dumps and screenshots on one timeline (scripts/field-probe.sh, scripts/field_probe_report.py).
+# Measures first-launch / after-update online readiness without a test harness. Manual only.
+# workflow_dispatch needs the file on the default branch; until then a push to a `probe/**` branch runs it with the
+# values in .github/field-probe.env (same names as the inputs, upper case).
+on:
+  push:
+    branches: ["probe/**"]
+  workflow_dispatch:
+    inputs:
+      new_tag:
+        description: "Published tag to install (empty = build this branch's release APK)"
+        required: false
+        default: "v2.1.0"
+      old_tag:
+        description: "Published tag installed and opened first (update scenario); empty = fresh install"
+        required: false
+        default: ""
+      steps:
+        description: "Scenario: skip | tour | wait N | tap TEXT | back | home | shot NAME, separated by ;"
+        required: false
+        default: "skip;wait 60;tap Videos;wait 60;tap Music;wait 60"
+      net:
+        description: "Emulator network shape (none, lte, umts, edge)"
+        required: false
+        default: "none"
+      api:
+        description: "Android image (33 = Pixel 3a 2 GB, 36 = Pixel 6 4 GB)"
+        type: choice
+        options: ["33", "36"]
+        default: "33"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      NEW_TAG: ${{ inputs.new_tag }}
+      OLD_TAG: ${{ inputs.old_tag }}
+      STEPS: ${{ inputs.steps }}
+      NET: ${{ inputs.net }}
+      API: ${{ inputs.api }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Probe settings
+        id: cfg
+        run: |
+          if [ "${{ github.event_name }}" = push ] && [ -f .github/field-probe.env ]; then set -a; . .github/field-probe.env; set +a; fi
+          { echo "new_tag=${NEW_TAG}"; echo "old_tag=${OLD_TAG}"; echo "steps=${STEPS:-skip;wait 120}"; echo "net=${NET:-none}"; echo "api=${API:-33}"; echo "prewait=${PREWAIT:-}"; } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: ${{ steps.cfg.outputs.new_tag == '' }}
+        with: { distribution: temurin, java-version: "21.0.13" }
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        if: ${{ steps.cfg.outputs.new_tag == '' }}
+
+      - name: Download published APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_TAG: ${{ steps.cfg.outputs.new_tag }}
+          OLD_TAG: ${{ steps.cfg.outputs.old_tag }}
+        run: |
+          pick() { # $1 tag $2 out: x86_64 split when the release has one, else the universal APK
+            mkdir -p "rel-$1"
+            gh release download "$1" -R "$GITHUB_REPOSITORY" -D "rel-$1" -p '*.apk' -p 'SHA256SUMS.txt'
+            (cd "rel-$1" && sha256sum -c --ignore-missing SHA256SUMS.txt)
+            F=$(ls "rel-$1"/*x86_64.apk 2>/dev/null | grep -v -- '\.tv\.apk' | head -1)
+            [ -n "$F" ] || F=$(ls "rel-$1"/release-Yumeiro-*.apk | head -1)
+            cp "$F" "$2"; echo "PROBE $2 <- $F $(sha256sum "$2" | cut -d' ' -f1)"
+          }
+          if [ -n "$NEW_TAG" ]; then pick "$NEW_TAG" new.apk; fi
+          if [ -n "$OLD_TAG" ]; then pick "$OLD_TAG" old.apk; fi
+
+      - name: Restore constant release keystore
+        if: ${{ steps.cfg.outputs.new_tag == '' }}
+        env:
+          MT_KEYSTORE_BASE64: ${{ secrets.MT_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$MT_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "MT_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build this branch's release APK (test build, not published)
+        if: ${{ steps.cfg.outputs.new_tag == '' }}
+        env:
+          MT_KEYSTORE_PASSWORD: ${{ secrets.MT_KEYSTORE_PASSWORD }}
+          MT_KEY_ALIAS: ${{ secrets.MT_KEY_ALIAS }}
+          MT_KEY_PASSWORD: ${{ secrets.MT_KEY_PASSWORD }}
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          YUMEIRO_TG_API_ID: ${{ secrets.YUMEIRO_TG_API_ID }}
+          YUMEIRO_TG_API_HASH: ${{ secrets.YUMEIRO_TG_API_HASH }}
+          YUMEIRO_FCM_PROJECT_ID: ${{ secrets.YUMEIRO_FCM_PROJECT_ID }}
+          YUMEIRO_FCM_SENDER_ID: ${{ secrets.YUMEIRO_FCM_SENDER_ID }}
+          YUMEIRO_FCM_API_KEY: ${{ secrets.YUMEIRO_FCM_API_KEY }}
+          YUMEIRO_FCM_APP_ID: ${{ secrets.YUMEIRO_FCM_APP_ID }}
+        run: |
+          ./gradlew --no-daemon --no-configuration-cache --no-build-cache assembleMobileRelease
+          SRC=$(ls app/build/outputs/apk/mobile/release/*x86_64*.apk 2>/dev/null | grep -v unsigned | head -1)
+          [ -n "$SRC" ] || SRC=$(ls app/build/outputs/apk/mobile/release/*.apk | grep -v unsigned | head -1)
+          cp "$SRC" new.apk; echo "PROBE new.apk <- $SRC"
+
+      - name: Remove keystore from the runner
+        if: always()
+        run: |
+          if [ -n "${MT_KEYSTORE_PATH:-}" ] && [ -f "$MT_KEYSTORE_PATH" ]; then shred -u "$MT_KEYSTORE_PATH" || rm -f "$MT_KEYSTORE_PATH"; fi
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+          mkdir -p probe
+
+      - name: Probe on emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          NEW_APK: new.apk
+          OLD_APK: ${{ steps.cfg.outputs.old_tag != '' && 'old.apk' || '' }}
+          STEPS: ${{ steps.cfg.outputs.steps }}
+          NET: ${{ steps.cfg.outputs.net }}
+          PREWAIT: ${{ steps.cfg.outputs.prewait }}
+          OUT: probe
+        with:
+          api-level: ${{ steps.cfg.outputs.api }}
+          target: google_apis
+          arch: x86_64
+          profile: ${{ steps.cfg.outputs.api == '36' && 'pixel_6' || 'pixel_3a' }}
+          ram-size: ${{ steps.cfg.outputs.api == '36' && '4096M' || '2048M' }}
+          heap-size: ${{ steps.cfg.outputs.api == '36' && '512M' || '192M' }}
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -tcpdump ${{ github.workspace }}/probe/net.pcap
+          script: bash scripts/field-probe.sh
+
+      - name: Network report
+        if: always()
+        run: |
+          pip install --quiet dpkt
+          python3 scripts/field_probe_report.py probe/net.pcap probe/timeline.txt > probe/network-report.txt || true
+          cat probe/network-report.txt | head -200
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: field-probe
+          path: probe/

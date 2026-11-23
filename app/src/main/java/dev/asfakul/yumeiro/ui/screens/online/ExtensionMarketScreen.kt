@@ -110,6 +110,8 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
     var sort by rememberSaveable { mutableStateOf(MarketSort.TOP) }
     var repoFilter by rememberSaveable { mutableStateOf<String?>(null) }
     var showRepoDialog by remember { mutableStateOf(false) }
+    // UX-MARKET-1: the extension whose details sheet is open (by key, so a list refresh keeps it).
+    var infoKey by rememberSaveable { mutableStateOf<String?>(null) }
     var showLanguages by remember { mutableStateOf(false) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var showFilters by remember { mutableStateOf(false) }
@@ -287,6 +289,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                             showRank = tab == MarketTab.DISCOVER && sort == MarketSort.TOP && category == "All" && language == null && repoFilter == null && query.isBlank(),
                             onInstall = { install(ext) },
                             onManage = onOpenExtensions,
+                            onInfo = { infoKey = ext.key },
                         )
                     }
                     if (tab == MarketTab.DISCOVER) item("legal") {
@@ -322,6 +325,12 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
         }
     }
 
+    infoKey?.let { k -> visible.firstOrNull { it.key == k } }?.let { ext ->
+        MarketInfoSheet(
+            ext = ext, installedVersion = installedKeys[ext.key]?.version, hasUpdate = ext.key in updates,
+            onInstall = { install(ext) }, onManage = onOpenExtensions, onDismiss = { infoKey = null },
+        )
+    }
     if (showRepoDialog) InputDialog(
         title = "Add repository", label = "Repository link", hint = "https://…/repo.json or a GitHub repo",
         confirm = "Add", onDismiss = { showRepoDialog = false },
@@ -378,11 +387,14 @@ private fun OriginPill(origin: String, verified: Boolean) {
 @Composable
 private fun MarketCard(
     ext: RemoteExtension, installedVersion: Int?, hasUpdate: Boolean, busy: Boolean, showRank: Boolean,
-    onInstall: () -> Unit, onManage: () -> Unit,
+    onInstall: () -> Unit, onManage: () -> Unit, onInfo: () -> Unit = {},
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val rich = remember { dev.asfakul.yumeiro.FeatureFlags.on(ctx, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS) }
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("market_item_${ext.internalName}")) {
+    Surface(
+        onClick = onInfo, shape = RoundedCornerShape(20.dp), color = GlassFill,
+        modifier = Modifier.fillMaxWidth().testTag("market_item_${ext.internalName}"),
+    ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (showRank && ext.rank in 1..999) {

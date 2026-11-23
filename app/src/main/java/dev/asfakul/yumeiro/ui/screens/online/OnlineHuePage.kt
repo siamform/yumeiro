@@ -115,6 +115,9 @@ internal fun HuePage(
     openItem: (OnlineItem) -> Unit,
     openInfo: (OnlineItem) -> Unit,
     errorFix: dev.asfakul.yumeiro.online.EmptyHome.Diagnosis? = null,
+    /** B-32 (R19): another repository's copy of this extension, offered when its home parses nothing. */
+    otherCopy: dev.asfakul.yumeiro.online.RemoteExtension? = null,
+    onTryCopy: (dev.asfakul.yumeiro.online.RemoteExtension) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     // R15: keyed by the channel only. A refreshed copy of [rows] (background refresh of a saved
@@ -221,7 +224,8 @@ internal fun HuePage(
                     dev.asfakul.yumeiro.online.EmptyHome.Kind.MOVED -> if (api != null && fix.movedTo != null) ("Use new address" to {
                         dev.asfakul.yumeiro.online.ProviderOverrides.setMainUrl(api, fix.movedTo); onRetry()
                     }) else null
-                    dev.asfakul.yumeiro.online.EmptyHome.Kind.NOTHING_PARSED -> "Search" to onSearch
+                    dev.asfakul.yumeiro.online.EmptyHome.Kind.NOTHING_PARSED ->
+                        otherCopy?.let { c -> dev.asfakul.yumeiro.online.OtherCopy.label(c) to { onTryCopy(c) } } ?: ("Search" to onSearch)
                     else -> null
                 }
                 HueNotice("$name didn't load: $error", "Retry", onRetry, second?.first, second?.second)

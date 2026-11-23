@@ -38,6 +38,13 @@
 #  6. websettings-allow-content-access on WebViews whose settings are set false where they are created
 #     (page.settings.allowFileAccess/allowContentAccess = false, plus SafeWebView.harden). The query treats
 #     later reads of a WebView held in a variable / Compose state as new, unconfigured WebViews.
+#  8. (2026-11-23, CQ-87..108) ScriptCrypto.kt is the host half of the crypto-js shim for Nuvio scrapers (rule 1:
+#     MD5 / HmacMD5 / TripleDES-CBC because the sites use them; decodes third-party data, protects nothing of ours).
+#     Pinning (rule 2): EpisodeStills.kt (TVmaze, ani.zip), online/upcoming/Upcoming.kt (Simkl calendar CDN),
+#     stream/TeraBoxApi.kt (TeraBox share hosts); torrent/TorrentEngine.kt and telegram/td/TdEngine.kt download a
+#     native library from GitHub and only load it if its SHA-256 matches the pin compiled into the app (content
+#     pinning, stronger than a certificate pin). stream/CloudRecapture.kt: the off-screen stream re-capture, same
+#     JavaScript page + string-only "MTFinder" bridge as HeadlessCapture (rule 4).
 #  7. java/unsafe-cert-trust in network/DnsMessage.kt (DNS-over-TLS): the socket comes from the system
 #     SSLSocketFactory (system CAs, no custom TrustManager), sets endpointIdentificationAlgorithm = "HTTPS" via
 #     setSSLParameters before the handshake and then checks the name with the system HostnameVerifier. The
@@ -46,18 +53,20 @@ def suppressed:
   (.ruleId // .rule.id) as $r
   | (.locations[0].physicalLocation.artifactLocation.uri // "") as $u
   | ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
-      and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$|dev/asfakul/yumeiro/scrobble/LastFmSignature\\.kt$|com/lagradost/cloudstream3/extractors/(Vidplay|VidSrcTo)\\.kt$)")))
+      and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/sources/ecosystem/ScriptCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$|dev/asfakul/yumeiro/scrobble/LastFmSignature\\.kt$|com/lagradost/cloudstream3/extractors/(Vidplay|VidSrcTo)\\.kt$)")))
     or (($r == "java/android/missing-certificate-pinning")
-      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource)|online/anime/(AniList|AniSkip|AnimeIds)|youtube/music/YtMusicApi|notify/FcmPush|online/ExtensionMarket|sources/UniversalAdd|subtitles/OnlineSubtitles)\\.kt$")))
+      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource)|online/anime/(AniList|AniSkip|AnimeIds)|youtube/music/YtMusicApi|notify/FcmPush|online/ExtensionMarket|sources/UniversalAdd|subtitles/OnlineSubtitles|online/EpisodeStills|online/upcoming/Upcoming|stream/TeraBoxApi|stream/torrent/TorrentEngine|online/telegram/td/TdEngine)\\.kt$")))
     or (($r == "java/android/websettings-javascript-enabled")
       and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/settings/YouTubeAccountScreen.kt")
         or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/online/BrowserCheckHost.kt")
         or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt")
         or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/HeadlessCapture.kt")
-        or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/BrowserCheck.kt")))
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/BrowserCheck.kt")
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/stream/CloudRecapture.kt")))
     or (($r == "java/android/webview-addjavascriptinterface")
       and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/stream/PageStreamFinderDialog.kt")
-        or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/HeadlessCapture.kt")))
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/online/web/HeadlessCapture.kt")
+        or ($u == "app/src/main/java/dev/asfakul/yumeiro/stream/CloudRecapture.kt")))
     or (($r == "java/android/websettings-allow-content-access")
       and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(ui/screens/stream/PageStreamFinderDialog|ui/screens/settings/YouTubeAccountScreen|online/web/HeadlessCapture)\\.kt$")))
     or ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))

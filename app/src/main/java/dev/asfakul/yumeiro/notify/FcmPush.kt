@@ -110,14 +110,24 @@ object FcmPush {
 
     fun onSettingsChanged(c: Context) { if (configured()) FcmSyncWorker.enqueue(c) }
 
+    /**
+     * FirebaseMessaging.register() calls onRegistered on every call, even when the id did not change
+     * (firebase-messaging 26.0.2 blockingRegister(shouldInvokeCallback = true)). [sync] calls register(), so
+     * a REPLACE enqueue here cancelled the running sync and started a new one that registered again: a
+     * WorkManager loop of ~80 jobs a second for the first minutes after install (R19 ONLINE-INIT). Only a
+     * new id needs a sync, and KEEP leaves a sync that is already queued or running alone (it reads the id
+     * itself after register()).
+     */
     internal fun onRegistered(c: Context, fid: String) {
-        prefs(c).edit().putString("fid", fid).apply()
-        FcmSyncWorker.enqueue(c)
+        val p = prefs(c)
+        if (!FcmPlan.idChanged(p.getString("fid", null), fid)) return
+        p.edit().putString("fid", fid).apply()
+        FcmSyncWorker.enqueue(c, replace = false)
     }
 
     internal fun onUnregistered(c: Context) {
         prefs(c).edit().remove("fid").remove("fp").remove("topics").apply()
-        FcmSyncWorker.enqueue(c)
+        FcmSyncWorker.enqueue(c, replace = false)
     }
 
     /** What the user's switches ask for right now. */
@@ -277,6 +287,9 @@ object FcmPlan {
      */
     const val REFRESH_MS = 7L * 24 * 3600 * 1000
 
+    /** onRegistered: only a new (or first) id needs a sync; register() reports the same id on every call. */
+    fun idChanged(stored: String?, fid: String): Boolean = fid.isNotBlank() && fid != stored
+
     fun due(fp: String, oldFp: String?, now: Long, lastSync: Long, refreshMs: Long = REFRESH_MS): Boolean =
         fp != oldFp || now - lastSync >= refreshMs || now < lastSync
 
@@ -387,11 +400,12 @@ class YumeiroMessagingService : FirebaseMessagingService() {
 class FcmSyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     companion object {
         private const val WORK = "fcm_sync"
-        fun enqueue(c: Context) {
+        /** [replace] = false: a sync already queued or running is enough (callbacks from inside a sync). */
+        fun enqueue(c: Context, replace: Boolean = true) {
             val wm = runCatching { WorkManager.getInstance(c.applicationContext) }.getOrNull() ?: return
             val k = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
             runCatching {
-                wm.enqueueUniqueWork(WORK, ExistingWorkPolicy.REPLACE,
+                wm.enqueueUniqueWork(WORK, if (replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
                     OneTimeWorkRequestBuilder<FcmSyncWorker>().setConstraints(k)
                         .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES).build())
             }

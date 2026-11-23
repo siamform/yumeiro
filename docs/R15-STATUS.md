@@ -1,6 +1,6 @@
-## Resume here (2026-11-21, no release until the owner says)
+## Resume here (2026-11-23, 2.1.0 released)
 
-Resume here: release 2.1.0. CI 45062571312 green, phone upgrade 45067511656 PASS. Open PR to main, merge, watch release.yml.
+Resume here: 2.1.0 is out (45080181866). Branch r18-live-ext: e13 (onshort.net slot queue, see HANDOVER), then Live TV checks.
 
 # R15 status: every item in the master prompt, with its evidence
 

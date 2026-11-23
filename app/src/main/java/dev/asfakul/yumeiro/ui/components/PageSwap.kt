@@ -10,6 +10,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -94,6 +95,22 @@ object PageMotion {
 
     fun popExit(reduced: Boolean): ExitTransition =
         if (reduced) fadeOut(tween(REDUCED_MS)) else slideOutHorizontally(tween(POP_MS, easing = YuMotion.Emphasized)) { it }
+
+    // ---- System Back gesture (predictive back) ---------------------------------------------------
+    // R19 NAV-1: with `enableOnBackInvokedCallback` on, a Back *gesture* does not use popEnter / popExit.
+    // NavHost (navigation-compose 2.10) seeks a separate predictivePopEnter / predictivePopExit pair, and its
+    // defaults are a 0.7x scale-down of the page with a cross-fade of the page below: the "strange" close the
+    // owner saw on native Back while the on-screen Back (a plain pop) slid. These are the same distances as
+    // popEnter / popExit, so both Backs look alike. Linear easing because the gesture drives the seek: the
+    // system's progress is already eased, and the emphasized curve would jump the page ahead of the finger.
+    fun predictivePopEnter(reduced: Boolean): EnterTransition =
+        if (reduced) fadeIn(tween(REDUCED_MS, easing = LinearEasing))
+        else slideInHorizontally(tween(POP_MS, easing = LinearEasing)) { -it / UNDER_SHIFT_DIV } +
+            fadeIn(tween(POP_MS, easing = LinearEasing), initialAlpha = UNDER_ALPHA)
+
+    fun predictivePopExit(reduced: Boolean): ExitTransition =
+        if (reduced) fadeOut(tween(REDUCED_MS, easing = LinearEasing))
+        else slideOutHorizontally(tween(POP_MS, easing = LinearEasing)) { it }
 
     /** Reduced motion: the same short cross-fade both ways. */
     const val REDUCED_MS = 150

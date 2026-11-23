@@ -462,6 +462,8 @@ fun PageStreamFinderDialog(
                         factory = { ctx ->
                             // OL-1: a kept page comes back as it was (no reload).
                             keep?.webView?.let { kept ->
+                                kept.settings.allowFileAccess = false
+                                kept.settings.allowContentAccess = false
                                 (kept.parent as? android.view.ViewGroup)?.removeView(kept)
                                 keep.adopt(ctx)
                                 kept.onResume()

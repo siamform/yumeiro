@@ -6,36 +6,30 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-23 ~00:30 +06: CI 45047538777 hit the 40 min limit (3 unit test faults + test JVM out of its 512 MB heap).
-Fixed in 4c62fe3b (tests isolated; test JVM 3 GB, fork every 150 classes). New CI 45051586296 running.
-Device: Own12PinGuardDeviceTest OK both phones (45051247401); NF1 not checked (onshort.net down, 45049508477).
-Website branch is r17-v210 in siamform/yumeiro-web.
-2026-11-23 ~00:50 +06: CI 45051586296 finished: 1914 tests, 5 failed, no OOM. All 5 fixed in 3a18b985 (2 real bugs:
-NavGuard dropped Back on a page opened right after a Back; PlaylistStore re-added removed defaults to current files;
-3 test faults, see commit). Each class passed locally (Robolectric). C6LoaderTest added. New CI 45057299595.
-2026-11-23 ~01:45 +06: CI 45057299595 green (1944 unit tests, 0 failed, 11 opt-in skipped; APKs built). Upgrade
-checks from v2.0.0: phone 45061470350 (review APK of 45057299595), TV 45061494331. Docs: proof/open items updated.
-Phone upgrade 45061470350 FAILED on one value: playlists.json version 2 -> 3 (my bump in 3a18b985; it also
-re-ran the v1->v2 migration). Fixed in the next commit: version stays 2, new offeredDefaults list. New CI 45062571312;
-phone upgrade again after it.
-2026-11-23 ~04:00 +06: CI 45062571312 green (1944 unit tests, 0 failed). Phone upgrade v2.0.0 -> 2.1.0 with that review
-APK: PASS 45067511656 (0 lost, clip resumed, fatal 0, verifier 0). TV upgrade 45061494331: install over 2.0.0 Success,
-FATAL 0, verifier 0; data compare and resume Not checked (android-tv image has no root, as in 44684601986).
-Next: PR release-2.2.0 -> main, merge commit, release.yml v2.1.0.
-
-## OWN-15 finding
-Device 45039700220 (on b53c609a) FAILED on api33 and api36: test a (current profile locked, PIN typed) times out
-"the logo to go" (splash_screen_root still there 15 s after the gate closed). Test b passes. So the bug is real or
-the test's wait does not let the splash LaunchedEffect run (it polls with Thread.sleep). Check both: the gate
-composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen ends via delay(900).
+2026-11-23 18:05 +06 (R20, owner message 5: website download button, 22 CodeQL warnings, release prep, social images; branch
+**r19-restore**). Ledger rows "(R20)" after TG-PAGE-2 in docs/BUGS-AND-FIXES-2.0.0.md.
+- WEB-DL-1: yumeiro-web PR #7 (fix-download-button): processor-check button no longer overflows phones. Local build +
+  Playwright verified (Vercel preview built, but it needs the owner's Vercel login to open). Not merged.
+- CQ-1 (00a59132, 2f8f17c6): #89 and #97-#104 fixed in code, the rest documented suppressions (AUDIT.md). CodeQL on the
+  branch: 22 -> 2 at 00a59132; 2f8f17c6 fixes the last 2 (#109/#110, apply blocks).
+- REL-2.2-PREP (d4846d8b): CHANGELOG v2.2.0, README "What's new in 2.2.0" (posters in a row), docs/assets/release-2.2
+  images + SOCIAL-CAPTIONS.md. Release PR #42 (r19-restore -> main) open, NOT merged: a merge auto-publishes a release.
+- R19 rows (ONLINE-INIT-1 ... TG-PAGE-2) unchanged; see ledger.
 
 ## Pending runs
-- None. Next: PR and release.
+- None. CodeQL 45170991902 on 2f8f17c6: 0 open alerts on r19-restore (was 22). CI 45170997499 on 2f8f17c6 green
+  (PageKeepHardeningTest 1/1, RemotePlaylistStreamTest 5/5, TokenHostsHttpsOnlyTest 3/3). PR #42 checks run on the PR.
 
 ## Next step
-1. CI green; then upgrade-check.yml (from v2.0.0, new_apk_run = that CI).
-2. CHANGELOG final, PR from docs/evidence/final/PR-2.1.0.md (release-2.2.0 -> main, merge commit), release.yml tag v2.1.0,
-   sha256 check, merge yumeiro-web r17-v210, delete old branches, owner message.
+1. Owner: review and approve release PR (r19-restore -> main) and yumeiro-web PR #7. On merge, the Release workflow
+   bumps to 2.2.0 (feat commits) and uses the CHANGELOG v2.2.0 notes. No merge / release / tag without approval.
+2. UI/UX audit continues (Search, Yumix source menu not covered yet).
+3. Blocked: Telegram signed-in search (no account), every real-device check (no device), real slow mobile network.
+
+## Next step (older)
+1. Live TV (E2-ALL): Yumeiro Live is published on the streams branch (playlists/yumeiro_live.m3u, 1.7 MB, sync 45071581763).
+   Device-check Live TV on both phones; curated per-country lists still off.
+2. Extensions: ExtensionsDeviceTest e13 "five feeds failed" on device; OWN-4 / OWN-5 device checks.
 
 ## Earlier state (before the audit; history, superseded where the audit says so)
 ## Last updated (pre-audit, 14:12, stale)

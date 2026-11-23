@@ -18,32 +18,6 @@ enum class ThemeMode(val label: String, val description: String) {
     DYNAMIC("Material You", "Colors from your wallpaper (Android 12+)"),
     TIME("Time of day", "Morning, noon, afternoon, evening and midnight moods"),
     AFTERGLOW("Afterglow", "Warm ember accent on deep black"),
-    /** F-10 (ADR-017): glass bars, sheets and mini player over a misty moonlit scene. */
-    GLASS("Kasumi", "Misty glass bars and player over a moonlit scene"),
-}
-
-/**
- * F-10 (ADR-017): how see-through the Kasumi chrome is. No backdrop blur in this release (no GPU cost on any
- * device); GLASS = translucent chrome, TINT = nearly solid, for low-RAM phones, TV, battery saver, a hot phone
- * or "Remove animations / reduce transparency" in accessibility.
- */
-enum class GlassTier {
-    GLASS, TINT;
-
-    companion object {
-        fun choose(lowEnd: Boolean, tv: Boolean, saver: Boolean, hot: Boolean, reduceTransparency: Boolean): GlassTier =
-            if (lowEnd || tv || saver || hot || reduceTransparency) TINT else GLASS
-
-        /** Reads the device state once per call (cheap system services, no I/O). */
-        fun current(context: Context): GlassTier {
-            val pm = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
-            val hot = android.os.Build.VERSION.SDK_INT >= 29 && (pm?.currentThermalStatus ?: 0) >= android.os.PowerManager.THERMAL_STATUS_SEVERE
-            val reduce = runCatching {
-                android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-            }.getOrDefault(false)
-            return choose(dev.asfakul.yumeiro.DeviceClass.lowEnd, dev.asfakul.yumeiro.Edition.isTv, pm?.isPowerSaveMode == true, hot, reduce)
-        }
-    }
 }
 
 enum class DayPart(val label: String) { MORNING("Morning"), NOON("Noon"), AFTERNOON("Afternoon"), EVENING("Evening"), MIDNIGHT("Midnight") }
@@ -93,12 +67,22 @@ object ThemeSettings {
     fun init(context: Context) {
         if (loaded) return
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        _mode.value = runCatching { ThemeMode.valueOf(p.getString(KEY_MODE, ThemeMode.SYSTEM.name)!!) }.getOrDefault(ThemeMode.SYSTEM)
+        _mode.value = modeFrom(p.getString(KEY_MODE, null))
         _amoled.value = p.getBoolean(KEY_AMOLED, false)
         _ambient.value = p.getBoolean(KEY_AMBIENT, true)
         _kana.value = p.getBoolean(KEY_KANA, true)
         _accent.value = AccentTone.from(p.getString(KEY_ACCENT, null))
         loaded = true
+    }
+
+    /**
+     * R19 THEME-1: the saved theme name. The Kasumi glass theme ("GLASS", 1.9.0-2.1.0) was removed (owner
+     * 2026-11-23); it was a dark theme, so people who chose it get Tsuki Night, not a light System theme.
+     */
+    fun modeFrom(saved: String?): ThemeMode = when (saved) {
+        null -> ThemeMode.SYSTEM
+        "GLASS" -> ThemeMode.DARK
+        else -> runCatching { ThemeMode.valueOf(saved) }.getOrDefault(ThemeMode.SYSTEM)
     }
 
     fun setMode(context: Context, mode: ThemeMode) {

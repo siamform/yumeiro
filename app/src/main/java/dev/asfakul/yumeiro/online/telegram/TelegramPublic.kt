@@ -91,7 +91,8 @@ object TelegramPublic {
         const val PRIVATE = "This is a private Telegram link. Yumeiro reads only public channels, without a Telegram account."
         const val OFFLINE = "Couldn't reach Telegram. Check the connection and try again."
         const val APP_ONLY = "Telegram shows this video only in its own app, not on its web preview, so Yumeiro can't play it."
-        fun noPosts(channel: String) = "Telegram shows no public posts for @$channel. The channel may be private, renamed or have its web preview turned off."
+        fun noPosts(channel: String) = "Telegram shows no public posts for @$channel. The channel may be private, renamed or have its web preview turned off. " +
+            "If you are a member, open it from your own signed-in Telegram account."
         fun noVideo(channel: String, id: Int) = "Post $id of @$channel has no video on Telegram's web preview."
         fun layout() = "Telegram's web preview changed and Yumeiro couldn't read it. Open the post in Telegram instead."
     }

@@ -42,6 +42,22 @@ object SetupGuides {
         ),
     )
 
+    /** TG-PAGE-2: the Telegram page's own help (it showed the Websites guide). */
+    val telegram = SetupGuide(
+        id = "telegram",
+        title = "Watch Telegram channels in Yumeiro",
+        intro = "Public channels play without an account: Yumeiro reads the channel's public preview at t.me and plays its video posts in its own player.",
+        steps = listOf(
+            SetupGuide.Step("Type a public channel as @name or paste its t.me link, then tap Add."),
+            SetupGuide.Step("Open the channel and tap a video post to play it."),
+            SetupGuide.Step("For your chats, groups and private channels you have joined, tap Sign in. Telegram sends you the login code."),
+        ),
+        tips = listOf(
+            "Yumeiro never sees your password and never joins a chat for you; private content needs your own membership.",
+            "A channel without a public preview can only be watched from an account that is allowed to see it.",
+        ),
+    )
+
 
     // region sources
 

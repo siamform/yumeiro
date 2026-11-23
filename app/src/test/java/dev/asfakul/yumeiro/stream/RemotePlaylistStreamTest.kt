@@ -91,10 +91,21 @@ class RemotePlaylistStreamTest {
 
     @Test fun analyzeReadsTheFileLineByLine() = runBlocking {
         server.enqueue(MockResponse.Builder().body("#EXTM3U url-tvg=\"https://epg.example/a.xml\"\n#EXTINF:-1 group-title=\"News\",A\nhttps://a/1.m3u8\n#EXTINF:-1 group-title=\"News\",B\nhttps://a/2.m3u8\n").build())
-        val a = PlaylistStore.analyze(server.url("/x.m3u").toString())
+        val a = PlaylistStore.analyze(context, server.url("/x.m3u").toString())
         assertEquals(2, a.channels); assertFalse(a.isHls); assertEquals(listOf("News" to 2), a.groups)
         server.enqueue(MockResponse.Builder().body("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1\nlow.m3u8\n").build())
-        val h = PlaylistStore.analyze(server.url("/h.m3u8").toString())
+        val h = PlaylistStore.analyze(context, server.url("/h.m3u8").toString())
         assertTrue(h.isHls); assertEquals(0, h.channels)
+    }
+
+    /** CQ-89: the "Analyse link" temp file lives in the app's own cache dir and is gone afterwards. */
+    @Test fun analyzeUsesTheAppCacheDirAndCleansUp() = runBlocking {
+        val sharedTmp = File(System.getProperty("java.io.tmpdir")!!)
+        fun leftovers(d: File) = d.listFiles { f -> f.name.startsWith("yu_analyze") }.orEmpty().toList()
+        val before = leftovers(sharedTmp).toSet()
+        server.enqueue(MockResponse.Builder().body("#EXTM3U\n#EXTINF:-1,A\nhttps://a/1.m3u8\n").build())
+        assertEquals(1, PlaylistStore.analyze(context, server.url("/c.m3u").toString()).channels)
+        assertTrue("temp file left in cacheDir", leftovers(context.cacheDir).isEmpty())
+        assertEquals("temp file went to java.io.tmpdir", before, leftovers(sharedTmp).toSet())
     }
 }

@@ -137,11 +137,21 @@ internal fun LibraryHero(
     }
 }
 
+/** UX-LIB-1: the library total of no files is 0, not "Unknown" (formatFileSize keeps "Unknown" for one item). */
+internal fun librarySize(bytes: Long): String = if (bytes <= 0) "0 MB" else formatFileSize(bytes)
+
 @Composable
 internal fun HeroStat(value: String, label: String, modifier: Modifier = Modifier) {
     Column(modifier.clip(RoundedCornerShape(16.dp)).background(TextPrimary.copy(alpha = 0.07f)).padding(horizontal = 12.dp, vertical = 10.dp)) {
-        Text(value, color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(label, color = TextSecondary, fontSize = 11.sp, maxLines = 1)
+        // UX-LIB-1: a quarter-width pill fits ~4 bold characters at 17 sp, so "153.4 MB" / "Unknown" showed as "Unkn…";
+        // the value now shrinks (down to 11 sp) to fit, and only then ellipsizes
+        androidx.compose.foundation.text.BasicText(
+            value,
+            style = androidx.compose.material3.LocalTextStyle.current.copy(color = TextPrimary, fontWeight = FontWeight.Bold),
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 17.sp, stepSize = 0.5.sp),
+        )
+        Text(label, color = TextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -230,7 +240,7 @@ internal fun LazyListScope.musicOverview(
                     HeroStat("${stats.audioCount}", "songs", Modifier.weight(1f))
                     HeroStat("${playlists.size}", "playlists", Modifier.weight(1f))
                     HeroStat(listenedLabel(listenedMs), "listened", Modifier.weight(1.2f))
-                    HeroStat(formatFileSize(stats.totalStorageUsedBytes), "on device", Modifier.weight(1.2f))
+                    HeroStat(librarySize(stats.totalStorageUsedBytes), "on device", Modifier.weight(1.2f))
                 }
             },
         )

@@ -59,13 +59,20 @@ object SavedSites {
     /** An error when [input] belongs on the other page, so nothing is saved where the user can't see it. */
     fun wrongPage(input: String, kind: Kind?): String? {
         if (kind == null || input.isBlank()) return null
-        val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(input.trim()) is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Channel
+        val link = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(input.trim())
+        val tg = link is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Channel
         return when {
+            // TG-PAGE-1: an invite link or private chat was refused as "not a t.me link". Say what it is instead.
+            link == dev.asfakul.yumeiro.online.telegram.TelegramPublic.Private -> PRIVATE_LINK
             kind == Kind.TELEGRAM && !tg -> "Type @channel or a t.me link. Websites go on the Websites page."
             kind == Kind.WEBSITE && tg -> "That's a Telegram channel. Add it on the Telegram page."
             else -> null
         }
     }
+
+    /** TG-PAGE-1: private chats and invite links are never opened without the user's own signed-in membership. */
+    const val PRIVATE_LINK = "That's a private chat or invite link. Only members can see it, so it opens only in your own " +
+        "signed-in Telegram account (Your Telegram account, above), and only if you have already joined it. Yumeiro never joins chats for you."
 
     fun ordered(list: List<Site>): List<Site> = list.filter { it.pinned } + list.filterNot { it.pinned }
 

@@ -18,8 +18,21 @@ import androidx.compose.runtime.mutableStateOf
  * destroying its own. Only [release] destroys it.
  */
 class PageKeep(val pageUrl: String) {
-    /** The kept page. Its context is a [MutableContextWrapper] so it can move to a new Activity. */
-    internal var webView: WebView? = null
+    /**
+     * The kept page. Its context is a [MutableContextWrapper] so it can move to a new Activity.
+     * CQ-97..104: held in a private field (read directly, not through a getter). Whoever hands a WebView in
+     * gets file and content:// access switched off again here, so a kept page can never read app files.
+     */
+    private var page: WebView? = null
+    internal var webView: WebView?
+        get() = page
+        set(value) {
+            if (value != null) {
+                value.settings.allowFileAccess = false
+                value.settings.allowContentAccess = false
+            }
+            page = value
+        }
     internal val capture = PageStreamCapture()
     internal val found = mutableStateListOf<CapturedStream>()
     internal val pageTitle = mutableStateOf("")
@@ -29,35 +42,36 @@ class PageKeep(val pageUrl: String) {
     internal val panel = mutableStateOf(StreamPanel.OPEN)
 
     /** Device tests: the kept page itself (same instance after hide / show = not re-created). */
-    @get:androidx.annotation.VisibleForTesting val webViewForTest: WebView? get() = webView
+    @get:androidx.annotation.VisibleForTesting val webViewForTest: WebView? get() = page
 
     /** True while the WebView is alive (false after [release], e.g. on low memory: the page reloads at [currentUrl]). */
-    val alive: Boolean get() = webView != null
+    val alive: Boolean get() = page != null
     val title: String get() = pageTitle.value
     val address: String get() = currentUrl.value
 
     /** Re-points the kept WebView at [activity] (Activity re-created) before it is shown again. */
     internal fun adopt(activity: android.content.Context) {
-        (webView?.context as? MutableContextWrapper)?.baseContext = activity
+        (page?.context as? MutableContextWrapper)?.baseContext = activity
     }
 
     /** Off screen: the page's own players stop (no sound behind the app) and timers ease off. */
     fun pause() {
-        webView?.apply {
-            evaluateJavascript(PAUSE_JS, null)
-            onPause()
-        }
+        // A plain local, not page?.apply { }: CodeQL counts apply's result as a new, unhardened WebView.
+        val w = page ?: return
+        w.evaluateJavascript(PAUSE_JS, null)
+        w.onPause()
     }
 
-    fun resume() { webView?.onResume() }
+    fun resume() { page?.onResume() }
 
     /** Destroys the page (closing the tab, or low memory). Captures are cleared; the address is kept. */
     fun release() {
-        webView?.apply {
-            (parent as? android.view.ViewGroup)?.removeView(this)
-            stopLoading(); onPause(); destroy()
+        val w = page
+        if (w != null) {
+            (w.parent as? android.view.ViewGroup)?.removeView(w)
+            w.stopLoading(); w.onPause(); w.destroy()
         }
-        webView = null
+        page = null
         synchronized(capture) { capture.reset() }
         found.clear()
     }

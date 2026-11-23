@@ -74,7 +74,7 @@ import kotlinx.coroutines.withContext
 private const val AUTO_PAGES_MAX = 5
 
 @Composable
-fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
+fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onPlay: (StreamRequest) -> Unit, onSignIn: (() -> Unit)? = null) {
     val context = LocalContext.current
     val p = LocalMtPalette.current
     val scope = rememberCoroutineScope()
@@ -220,6 +220,8 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                 Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(error!!, color = p.textSecondary, fontSize = 14.sp, modifier = Modifier.testTag("tg_error"))
                     TextButton(onClick = { load(before) }, modifier = Modifier.testTag("tg_retry")) { Text(if (before != null) "Older posts" else "Try again") }
+                    // TG-PAGE-1: no public preview → the way in is the user's own account (members only).
+                    if (onSignIn != null && before == null) TextButton(onClick = onSignIn, modifier = Modifier.testTag("tg_error_account")) { Text("Open my Telegram account") }
                 }
             }
             if (loading) item(key = "loading") {

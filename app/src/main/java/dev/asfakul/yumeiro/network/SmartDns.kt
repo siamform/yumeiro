@@ -10,6 +10,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.dnsoverhttps.DnsOverHttps
 import java.io.IOException
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
@@ -291,16 +292,33 @@ object SmartDns : Dns {
         val override = alternativeOverride
         val addresses: List<InetAddress>
         var ttl = 120L
+        var partial = false
         if (override != null) {
             addresses = override(host, config)
         } else when (config.transport) {
-            DnsTransport.DOH -> addresses = try {
-                (if (config.fallback) fallbackDoh(config.provider) else doh(config.provider)).lookup(host)
-            } catch (e: UnknownHostException) {
-                // G12 X11-3: OkHttp's DnsOverHttps reports a failed request (timeout, refused, TLS) as
-                // UnknownHostException with the network error as its cause. Only a cause-less one is a
-                // real answer (NXDOMAIN, no records); the other means this resolver is unreachable.
-                throw unreachableOrAnswer(e)
+            DnsTransport.DOH -> {
+                val quick = config.fallback || config.quick
+                val found = try {
+                    (if (quick) fallbackDoh(config.provider) else doh(config.provider)).lookup(host)
+                } catch (e: UnknownHostException) {
+                    // G12 X11-3: OkHttp's DnsOverHttps reports a failed request (timeout, refused, TLS) as
+                    // UnknownHostException with the network error as its cause. Only a cause-less one is a
+                    // real answer (NXDOMAIN, no records); the other means this resolver is unreachable.
+                    throw unreachableOrAnswer(e)
+                }
+                // LIVE-DNS-1: DnsOverHttps sends A and AAAA as two requests and returns whatever came back. On a
+                // slow link the A answer can time out while AAAA arrives (probe 45143967998: raw.githubusercontent
+                // got only IPv6, the emulated link has no IPv6, so both Live TV playlists failed for ~150 s, the
+                // 120 s cache plus retries, before IPv4 was ever tried). An answer with no IPv4 asks once more for
+                // A alone; if that fails too, the IPv6-only answer is kept only briefly so the next lookup retries.
+                addresses = if (found.isEmpty() || found.any { it is Inet4Address }) found else {
+                    val asked = runCatching { v4Doh(config.provider, quick).lookup(host) }
+                    val v4 = asked.getOrNull().orEmpty().filterIsInstance<Inet4Address>()
+                    // A real "no A records" answer (cause-less UnknownHostException) is an IPv6-only host: keep the TTL.
+                    val noARecords = asked.exceptionOrNull().let { it is UnknownHostException && unreachableOrAnswer(it) === it }
+                    if (v4.isEmpty() && !noARecords) partial = true
+                    v4 + found
+                }
             }
             DnsTransport.DOT, DnsTransport.PLAIN -> {
                 var last: IOException? = null
@@ -314,7 +332,7 @@ object SmartDns : Dns {
             }
         }
         if (addresses.isEmpty()) throw UnknownHostException("$host: no addresses from ${config.provider.label}")
-        cache[host] = addresses to (now() + ttl.coerceIn(30, 600) * 1000)
+        cache[host] = addresses to (now() + if (partial) PARTIAL_ANSWER_MS else ttl.coerceIn(30, 600) * 1000)
         lastSource[host] = DnsSource.ALTERNATIVE
         return addresses
     }
@@ -340,13 +358,13 @@ object SmartDns : Dns {
         OkHttpClient.Builder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(5, TimeUnit.SECONDS).build()
     }
 
-    private fun buildDoh(provider: DnsProvider, client: OkHttpClient): Dns {
+    private fun buildDoh(provider: DnsProvider, client: OkHttpClient, ipv6: Boolean = true): Dns {
         val (url, bootstrap) = dohEndpoint(provider)
         return DnsOverHttps.Builder()
             .client(client)
             .url(url.toHttpUrl())
             .bootstrapDnsHosts(bootstrap.map { InetAddress.getByName(it) })
-            .includeIPv6(true)
+            .includeIPv6(ipv6)
             .resolvePrivateAddresses(false)
             .build()
     }
@@ -367,8 +385,23 @@ object SmartDns : Dns {
             .callTimeout(budget, TimeUnit.MILLISECONDS).build())
     }
 
+    /** LIVE-DNS-1 test hook: replaces the A-only DNS-over-HTTPS client. */
+    @Volatile internal var dohV4Factory: ((DnsProvider) -> Dns)? = null
+    private val v4Clients = ConcurrentHashMap<Pair<DnsProvider, Boolean>, Dns>()
+    /** How long an answer with IPv6 only (its IPv4 request failed) is kept: short, so the next lookup asks again. */
+    internal const val PARTIAL_ANSWER_MS = 10_000L
+
+    /** LIVE-DNS-1: A records only, on the same engine (shared dispatcher and pool, like [fallbackDoh]). */
+    private fun v4Doh(provider: DnsProvider, quick: Boolean): Dns = dohV4Factory?.invoke(provider) ?: v4Clients.getOrPut(provider to quick) {
+        val base = bootstrapClient(provider)
+        val client = if (!quick) base else FALLBACK_ATTEMPT_MS.let { b ->
+            base.newBuilder().connectTimeout(b, TimeUnit.MILLISECONDS).readTimeout(b, TimeUnit.MILLISECONDS).callTimeout(b, TimeUnit.MILLISECONDS).build()
+        }
+        buildDoh(provider, client, ipv6 = false)
+    }
+
     /** Tests: drop the built engines so a changed [dohEndpoint] takes effect. */
-    internal fun resetEnginesForTests() { dohClients.clear(); fallbackClients.clear(); bootstrapClients.clear() }
+    internal fun resetEnginesForTests() { dohClients.clear(); fallbackClients.clear(); bootstrapClients.clear(); v4Clients.clear() }
 
     private fun failure(host: String, config: DnsConfig, cause: Exception) =
         UnknownHostException("Unable to resolve host \"$host\" with system DNS or ${config.provider.label} (${config.transport.label}): ${cause.message}")

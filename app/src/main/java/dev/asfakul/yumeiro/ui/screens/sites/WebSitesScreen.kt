@@ -116,6 +116,11 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     // F-02 (ADR-052): the signed-in account opens in place, like a channel.
     var account by rememberSaveable { mutableStateOf(false) }
     val accountEnabled = remember(telegramPage) { telegramPage && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.enabled(context) }
+    val accountUnavailable = remember(telegramPage) { if (telegramPage) dev.asfakul.yumeiro.online.telegram.td.TgAccounts.unavailableReason(context) else null }
+    // Read off the main thread (SharedPreferences + profile id); refreshed each time the page comes back from the account.
+    val signedIn by androidx.compose.runtime.produceState(false, accountEnabled, account) {
+        if (accountEnabled) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.signedInHint(context) }
+    }
     if (account && accountEnabled) {
         TelegramAccountScreen(onBack = { account = false }, onPlay = { req -> IncomingMedia.open(context, req) })
         return
@@ -129,6 +134,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         TelegramChannelScreen(
             channel = tgChannel, name = site.name, onBack = { open = null },
             onPlay = { req -> IncomingMedia.open(context, req) },
+            onSignIn = if (accountEnabled) ({ open = null; account = true }) else null,
         )
         return
     }
@@ -160,7 +166,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
 
     if (help) TsukiDialog(
         onDismissRequest = { help = false },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(SetupGuides.websites, startExpanded = true) } },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(if (telegramPage) SetupGuides.telegram else SetupGuides.websites, startExpanded = true) } },
         confirmButton = { androidx.compose.material3.TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text("Got it") } },
     )
 
@@ -168,10 +174,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         var text by rememberSaveable { mutableStateOf("") }
         TsukiDialog(
             onDismissRequest = { importing = false },
-            title = { Text("Add websites from a list") },
+            title = { Text(if (telegramPage) "Add channels from a list" else "Add websites from a list") },
             text = {
                 Column {
-                    Text("Paste links, one per line. Sites you already saved stay as they are.", fontSize = 13.sp)
+                    Text(if (telegramPage) "Paste @names or t.me links, one per line. Channels you already saved stay as they are." else "Paste links, one per line. Sites you already saved stay as they are.", fontSize = 13.sp)
                     OutlinedTextField(text, { text = it }, minLines = 4, maxLines = 8, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("site_import_field"))
                 }
             },
@@ -180,9 +186,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     val r = SavedSites.importText(context, text)
                     importing = false
                     dev.asfakul.yumeiro.ui.components.AppMessages.info(context, buildString {
-                        append(if (r.added == 1) "1 website added" else "${r.added} websites added")
+                        val noun = if (telegramPage) "channel" else "website"
+                        append(if (r.added == 1) "1 $noun added" else "${r.added} ${noun}s added")
                         if (r.duplicates > 0) append(", ${r.duplicates} already saved")
-                        if (r.bad > 0) append(", ${r.bad} not web addresses")
+                        if (r.bad > 0) append(if (telegramPage) ", ${r.bad} not channel links" else ", ${r.bad} not web addresses")
                         if (r.overLimit > 0) append(", ${r.overLimit} over the 200 limit")
                     })
                 }, enabled = text.isNotBlank(), modifier = Modifier.testTag("site_import_confirm")) { Text("Add") }
@@ -208,13 +215,13 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             title = if (telegramPage) "Telegram" else "Websites", onBack = onBack,
             subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else if (telegramPage) "Public channels, no login" else "Play videos from any site",
         ) {
-            IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add websites from a list", tint = p.textSecondary) }
+            IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, if (telegramPage) "Add channels from a list" else "Add websites from a list", tint = p.textSecondary) }
             if (sites.isNotEmpty()) IconButton(onClick = {
                 val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
                     .putExtra(android.content.Intent.EXTRA_TEXT, SavedSites.export(sites))
-                runCatching { context.startActivity(android.content.Intent.createChooser(send, "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, "Share website list", tint = p.textSecondary) }
-            IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "How websites work", tint = p.textSecondary) }
+                runCatching { context.startActivity(android.content.Intent.createChooser(send, if (telegramPage) "Share channel list" else "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, if (telegramPage) "Share channel list" else "Share website list", tint = p.textSecondary) }
+            IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, if (telegramPage) "How Telegram works" else "How websites work", tint = p.textSecondary) }
         }
         LazyColumn(
             Modifier.fillMaxSize(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("websites"),
@@ -240,16 +247,36 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     }
                 }
             }
+            // TG-PAGE-1: a clear way in. The card says whether this profile is signed in and has a real button;
+            // when sign-in can't run on this phone it says why instead of disappearing.
             if (accountEnabled) item("tg_account_card") {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
-                        .clickable { account = true }.heightIn(min = 56.dp).padding(16.dp).testTag("tg_account_card"),
+                        .clickable(onClickLabel = if (signedIn) "Open your chats" else "Sign in to Telegram") { account = true }
+                        .heightIn(min = 56.dp).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp).testTag("tg_account_card"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Your Telegram account", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
-                        Text("Sign in to play videos and audio from your chats, groups and channels", color = p.textSecondary, fontSize = 12.sp)
+                        Text(if (signedIn) "Your Telegram account" else "Sign in to Telegram", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (signedIn) "Signed in. Videos and audio from your chats, groups and channels, including private ones you have joined"
+                            else "Watch videos from your chats, groups and the private channels you have joined. Telegram sends the code; Yumeiro never sees your password",
+                            color = p.textSecondary, fontSize = 12.sp,
+                        )
                     }
+                    Spacer(Modifier.width(10.dp))
+                    androidx.compose.material3.Button(
+                        onClick = { account = true },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
+                        modifier = Modifier.heightIn(min = 48.dp).testTag("tg_account_button"),
+                    ) { Text(if (signedIn) "Open" else "Sign in", fontWeight = FontWeight.SemiBold) }
+                }
+            } else if (telegramPage && accountUnavailable != null) item("tg_account_unavailable") {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh).padding(16.dp).testTag("tg_account_unavailable"),
+                ) {
+                    Text("Sign-in isn't available here", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(accountUnavailable, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                 }
             }
             item("add") {
@@ -262,7 +289,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = input, onValueChange = { input = it; error = null }, singleLine = true,
-                            placeholder = { Text("example.com or @channel") }, isError = error != null,
+                            placeholder = { Text(if (telegramPage) "@channel or t.me/channel" else "example.com or @channel") }, isError = error != null,
                             leadingIcon = { Icon(Icons.Default.Public, null, tint = p.textSecondary) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { add() }),
@@ -273,9 +300,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         Spacer(Modifier.width(10.dp))
                         Box(
                             Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(p.accent)
-                                .combinedClickable(onClickLabel = "Add website", onClick = { add() }).testTag("site_add"),
+                                .combinedClickable(onClickLabel = if (telegramPage) "Add channel" else "Add website", onClick = { add() }).testTag("site_add"),
                             contentAlignment = Alignment.Center,
-                        ) { Icon(Icons.Default.Add, "Add website", tint = p.onAccent) }
+                        ) { Icon(Icons.Default.Add, if (telegramPage) "Add channel" else "Add website", tint = p.onAccent) }
                     }
                     error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
                 }
@@ -283,7 +310,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             if (sites.size >= 6) item("search") {
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
-                    placeholder = { Text("Search your websites") },
+                    placeholder = { Text(if (telegramPage) "Search your channels" else "Search your websites") },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
@@ -291,7 +318,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 )
             }
             if (sites.isNotEmpty() && shown.isEmpty()) item("no_match") {
-                Text("No saved website matches \"$query\"", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(8.dp).testTag("site_no_match"))
+                Text(if (telegramPage) "No saved channel matches \"$query\"" else "No saved website matches \"$query\"", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(8.dp).testTag("site_no_match"))
             }
             if (sites.isEmpty()) item("empty") {
                 Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -301,8 +328,8 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(30.dp)) }
                     Spacer(Modifier.height(12.dp))
-                    Text("No websites yet", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("Add a site you watch on. Its videos play in Yumeiro.", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text(if (telegramPage) "No channels yet" else "No websites yet", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(if (telegramPage) "Add a public channel with @name or a t.me link. Its video posts play in Yumeiro." else "Add a site you watch on. Its videos play in Yumeiro.", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             } else items(shown, key = { it.url }) { site ->
                 SiteRow(

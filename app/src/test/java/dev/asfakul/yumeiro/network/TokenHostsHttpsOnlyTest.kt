@@ -36,6 +36,13 @@ class TokenHostsHttpsOnlyTest {
         assertTrue("token hosts allowed over plain HTTP: $missing", missing.isEmpty())
     }
 
+    /** CQ-87/88 (2026-11-23): third-party API hosts whose CodeQL pinning alerts are accepted stay HTTPS-only. */
+    @Test fun acceptedUnpinnedApiHostsAreHttpsOnly() {
+        val hosts = listOf("api.tvmaze.com", "api.ani.zip", "data.simkl.in", "simkl.in")
+        val missing = hosts.filterNot(::covered)
+        assertTrue("API hosts allowed over plain HTTP: $missing", missing.isEmpty())
+    }
+
     @Test fun cleartextStaysOnForUserStreams() {
         // IPTV, cameras and LAN servers use http://; turning it off globally would break them.
         assertTrue(xml.contains("<base-config cleartextTrafficPermitted=\"true\">"))

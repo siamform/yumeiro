@@ -85,8 +85,6 @@ object FeatureFlags {
         MUSIC_PLAYER_ON_USE("gate1_music_player_on_use", true),
         /** F-17: profile statistics (on-device activity map, streaks, totals, milestones). */
         PROFILE_STATS("f17_profile_stats", true),
-        /** F-10: Kasumi glass theme in Appearance (off = it falls back to Tsuki Night). */
-        GLASS_THEME("f10_glass_theme", true),
         /** TV-4 (ADR-036): Home's library search offers "Search online" (Yumix) for the committed words. */
         TV4_ONLINE_SEARCH("tv4_online_search", true),
         /** F-14 (ADR-040): a dead Live TV link tries the channel's other links before Auto-zap or the error card. */

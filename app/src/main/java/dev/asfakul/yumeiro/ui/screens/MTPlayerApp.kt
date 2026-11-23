@@ -1058,11 +1058,16 @@ fun MTPlayerApp(
                     exitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.pushExit(reducedMotionOn) },
                     popEnterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popEnter(reducedMotionOn) },
                     popExitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popExit(reducedMotionOn) },
+                    // R19 NAV-1: the system Back gesture runs these, not popEnter / popExit (library default: scale-down).
+                    predictivePopEnterTransition = { _ -> dev.asfakul.yumeiro.ui.components.PageMotion.predictivePopEnter(reducedMotionOn) },
+                    predictivePopExitTransition = { _ -> dev.asfakul.yumeiro.ui.components.PageMotion.predictivePopExit(reducedMotionOn) },
                     sizeTransform = null
                 ) {
                     // The five bottom-bar tabs live in one pager: swipe anywhere on a page (rows and
                     // carousels keep their own drags first), the page follows the finger like Facebook / Instagram.
                     composable(Screen.Home.route) {
+                        // NAV-1: coming back to Home (pop) shows the tab content in the first frame, not a blank page.
+                        remember { nextFramePages.restoring(); true } // once per Home entry composition (lint: remember must not return Unit)
                         // One opaque layer: page background, the tab pager and the tab chrome
                         // (top bar, dock), so the whole tab moves as one piece in page transitions.
                         Box(Modifier.fillMaxSize().pageBackground()) {

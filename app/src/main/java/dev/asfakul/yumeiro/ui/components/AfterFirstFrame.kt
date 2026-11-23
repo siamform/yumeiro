@@ -46,9 +46,11 @@ fun AfterFirstFrame(enabled: Boolean = true, content: @Composable () -> Unit) {
  */
 @Composable
 fun NextFramePage(enabled: Boolean, content: @Composable () -> Unit) {
-    if (!enabled) { content(); return }
-    var ready by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { withFrameNanos { }; ready = true }
+    // NAV-1: one call site for [content] whether it waits or not. With two (`if (!enabled) content()` and
+    // `if (ready) content()`) a page first shown deferred and shown again at once (after a pop) had a different
+    // composite key, so its rememberSaveable state (Live TV's open pane, scroll positions) was not restored.
+    var ready by remember { mutableStateOf(!enabled) }
+    if (!ready) LaunchedEffect(Unit) { withFrameNanos { }; ready = true }
     if (ready) content()
 }
 
@@ -61,4 +63,13 @@ class NextFramePages(private val on: Boolean) {
         if (!firstShown) { firstShown = true; return false }
         return true
     }
+
+    /**
+     * NAV-1 (R19, field run 45134330301): Home's page is composed again when a page on top of it is closed
+     * (arrow, Back key, swipe). That page is on screen at once, under the closing page's slide, so waiting a
+     * frame left it empty: the "blank page underneath" for 1-4 frames (183-283 ms each on the CI emulator).
+     * Called when the Home entry composes; the next page composition shows its content at once. Far tab
+     * jumps (pager hidden at alpha 0) still wait a frame.
+     */
+    fun restoring() { firstShown = false }
 }
