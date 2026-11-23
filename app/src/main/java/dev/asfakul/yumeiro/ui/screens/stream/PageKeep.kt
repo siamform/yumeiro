@@ -56,19 +56,20 @@ class PageKeep(val pageUrl: String) {
 
     /** Off screen: the page's own players stop (no sound behind the app) and timers ease off. */
     fun pause() {
-        page?.apply {
-            evaluateJavascript(PAUSE_JS, null)
-            onPause()
-        }
+        // A plain local, not page?.apply { }: CodeQL counts apply's result as a new, unhardened WebView.
+        val w = page ?: return
+        w.evaluateJavascript(PAUSE_JS, null)
+        w.onPause()
     }
 
     fun resume() { page?.onResume() }
 
     /** Destroys the page (closing the tab, or low memory). Captures are cleared; the address is kept. */
     fun release() {
-        page?.apply {
-            (parent as? android.view.ViewGroup)?.removeView(this)
-            stopLoading(); onPause(); destroy()
+        val w = page
+        if (w != null) {
+            (w.parent as? android.view.ViewGroup)?.removeView(w)
+            w.stopLoading(); w.onPause(); w.destroy()
         }
         page = null
         synchronized(capture) { capture.reset() }
