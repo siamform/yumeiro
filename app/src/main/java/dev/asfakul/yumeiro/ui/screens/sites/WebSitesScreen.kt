@@ -424,7 +424,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             }
             // WEB-RECENT-1 (owner list 5): sites opened in the browser come here by themselves; + saves one.
             val recent = if (telegramPage) emptyList() else dev.asfakul.yumeiro.online.web.SiteHistory.unsaved(visits, allSites).let { v ->
-                if (query.isBlank()) v else v.filter { it.name.contains(query.trim(), true) || it.url.contains(query.trim(), true) }
+                // WEB-RECENT-2: a typed address (archive.org/details/…) also matches the site it belongs to.
+                val qHost = SavedSites.normalize(query.trim())?.let { SavedSites.hostOf(it) }
+                if (query.isBlank()) v else v.filter { it.name.contains(query.trim(), true) || it.url.contains(query.trim(), true) || (qHost != null && SavedSites.hostOf(it.url) == qHost) }
             }.take(10)
             if (recent.isNotEmpty()) {
                 item("recent_head") {
