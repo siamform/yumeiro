@@ -59,6 +59,9 @@ object WebPageExtractor {
             val hint = StreamSniffer.fromUrl(abs)
             if (origin != "iframe" && hint == null && origin == "script") return
             if (hint?.kind == MediaKind.WEB_PAGE) return
+            // SD-2: JSON-LD `contentUrl` also names the site logo (schema.org ImageObject, every Yoast/WordPress page);
+            // a picture, font or stylesheet address is never the video.
+            if (hint == null && notMedia(abs)) return
             out.putIfAbsent(abs, PageCandidate(abs, hint, origin))
         }
 
@@ -104,6 +107,16 @@ object WebPageExtractor {
             hasLoginForm = LOGIN.containsMatchIn(html),
             refreshUrl = refresh?.let { absolutize(it, pageUrl) },
         )
+    }
+
+    /** SD-2: file types that are never a stream (by the path's extension). */
+    private val NOT_MEDIA_EXT = setOf("ico", "png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "bmp", "css", "js", "woff", "woff2", "ttf", "otf", "eot", "json", "xml")
+
+    internal fun notMedia(url: String): Boolean {
+        val path = runCatching { URI(url).path }.getOrNull() ?: return false
+        val name = path.substringAfterLast('/')
+        if ('.' !in name) return false
+        return name.substringAfterLast('.').lowercase() in NOT_MEDIA_EXT
     }
 
     private fun attrs(tag: String): Map<String, String> =

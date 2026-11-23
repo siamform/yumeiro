@@ -339,7 +339,7 @@ object StreamResolver {
             )
             val p = StreamProbe.probe(candidate, userAgent, client)
             if (p.ok && p.sniff.isPlayableMedia) return Resolution.Playable(candidate.copy(format = p.sniff.format), p.sniff)
-            if (p.ok && p.sniff.kind == MediaKind.UNKNOWN && p.text == null) return Resolution.Playable(candidate.copy(format = StreamFormat.PROGRESSIVE), p.sniff)
+            if (p.ok && p.sniff.kind == MediaKind.UNKNOWN && p.text == null && !notMediaAnswer(p)) return Resolution.Playable(candidate.copy(format = StreamFormat.PROGRESSIVE), p.sniff)
         }
 
         val reason = buildString {
@@ -351,6 +351,16 @@ object StreamResolver {
             if (page.mentionsDrm && sessionRule == null) append("\n\nThe page uses DRM (encrypted media). DRM streams play only when the site's licence server accepts this device.")
         }
         return Resolution.NeedsBrowser(pageUrl, reason, request.copy(title = request.title.ifBlank { page.title.orEmpty() }))
+    }
+
+    /**
+     * SD-2: an unknown binary answer that is plainly a picture or a font (by Content-Type) is not a video. Without this
+     * a page's `favicon.ico` was handed to the player ("Unsupported stream format", field probe 45251110253). A
+     * disguised playlist served as image/jpeg is still found: it is sniffed as HLS by its content, not UNKNOWN.
+     */
+    internal fun notMediaAnswer(p: ProbeResult): Boolean {
+        val ct = p.contentType?.substringBefore(';')?.trim()?.lowercase().orEmpty()
+        return ct.startsWith("image/") || ct.startsWith("font/") || ct == "application/font-woff" || ct == "text/css"
     }
 
     /** Maps network / HTTP problems to actionable messages. */
