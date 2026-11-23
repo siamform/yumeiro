@@ -63,6 +63,11 @@ PY
 
 answer_system() { # permission dialogs only (not the app's own guide)
   tap_text "Allow" "While using the app" "Allow all" "Allow access to media only" > /dev/null 2>&1 || true
+  # the emulator's own launcher sometimes shows "Pixel Launcher isn't responding" over everything (45139112809):
+  # answer Wait so the rest of the run sees the app, and note it so the run is not read as an app fault
+  if grep -q "isn&apos;t responding\|isn't responding" "$OUT/tap.xml" 2>/dev/null; then
+    tap_text "Wait" > /dev/null 2>&1 && note "answered a system ANR dialog (not the app): Wait"
+  fi
 }
 
 launch() {
@@ -82,7 +87,7 @@ run_steps() {
         for i in $(seq 1 30); do answer_system; tap_text "Next" "Continue" "Get started" "Start tour" "~Take the tour" "Finish" "Done" "Got it" || true; sleep 3; done ;;
       wait*) n=${s#wait }; end=$(( $(date +%s) + n ))
         while [ "$(date +%s)" -lt "$end" ]; do answer_system; dump "wait"; sleep 10; done ;;
-      tap*) t=${s#tap }; tap_text "$t" "~$t" || note "tap miss [$t]"; sleep 1; dump "after-tap" ;;
+      tap*) t=${s#tap }; answer_system; tap_text "$t" "~$t" || note "tap miss [$t]"; sleep 1; dump "after-tap" ;;
       find*) # scroll the page up (up to 6 swipes) until TEXT is on screen, then tap it
         t=${s#find }; ok=0
         for i in 1 2 3 4 5 6 7; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 1500 540 700 300; sleep 1; done
