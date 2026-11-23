@@ -1546,7 +1546,10 @@ fun MTPlayerApp(
                 val isYt = video.id.startsWith("yt:")
                 // Stream tab: previous / next channel of the open playlist, like episodes.
                 val isStream = video.id.startsWith("stream:")
-                val streamChannels by dev.asfakul.yumeiro.stream.StreamRepository.playlist.collectAsStateWithLifecycle()
+                val streamPlaylist by dev.asfakul.yumeiro.stream.StreamRepository.playlist.collectAsStateWithLifecycle()
+                val streamQueue by dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.queue.collectAsStateWithLifecycle()
+                // UP-NEXT-1: next / previous only within the list this video belongs to, never the last Live TV playlist.
+                val streamChannels = remember(streamPlaylist, streamQueue, video.uri) { dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.upNext(streamPlaylist, streamQueue, video.uri) }
                 val streamNext = remember(video.uri, streamChannels, isStream) { if (isStream) dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.neighbour(streamChannels, video.uri, 1) else null }
                 val streamNextItem = remember(streamNext) { streamNext?.toVideoItem() }
                 val streamPrev = remember(video.uri, streamChannels, isStream) { if (isStream) dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.neighbour(streamChannels, video.uri, -1) else null }

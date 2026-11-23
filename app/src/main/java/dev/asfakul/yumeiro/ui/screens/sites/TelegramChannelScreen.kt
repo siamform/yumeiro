@@ -203,17 +203,9 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
             items(posts, key = { it.id }) { post ->
                 TelegramPostRow(post, isNew = post.id in newIds) {
                     if (!post.playable) { appOnly = post; return@TelegramPostRow }
-                    onPlay(
-                        StreamRequest(
-                            url = post.videoUrl!!,
-                            title = post.text.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: "@$channel · ${post.id}",
-                            format = StreamFormat.PROGRESSIVE,
-                            referer = "https://t.me/",
-                            pageUrl = post.link,
-                            logoUrl = post.thumbUrl,
-                            group = StreamResolver.TELEGRAM_GROUP,
-                        ),
-                    )
+                    // UP-NEXT-1: "Up next" on the watch page is this channel's other videos.
+                    dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.setQueue("@$channel", posts.filter { it.playable }.map { tgRequest(it, channel) })
+                    onPlay(tgRequest(post, channel))
                 }
             }
             if (error != null && posts.isEmpty()) item(key = "error") {
@@ -232,6 +224,17 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
         }
     }
 }
+
+/** The player request for a playable public post (its file address is temporary; TelegramPlayback renews it). */
+internal fun tgRequest(post: TelegramPublic.VideoPost, channel: String) = StreamRequest(
+    url = post.videoUrl!!,
+    title = post.text.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: "@$channel · ${post.id}",
+    format = StreamFormat.PROGRESSIVE,
+    referer = "https://t.me/",
+    pageUrl = post.link,
+    logoUrl = post.thumbUrl,
+    group = StreamResolver.TELEGRAM_GROUP,
+)
 
 @Composable
 private fun TelegramChannelHeader(page: TelegramPublic.Page) {
