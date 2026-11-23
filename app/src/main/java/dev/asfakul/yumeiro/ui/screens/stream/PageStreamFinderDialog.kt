@@ -338,6 +338,8 @@ fun PageStreamFinderDialog(
     keep: PageKeep? = null,
     /** OL-1: hides the page and keeps it (Minimize button; Back at the first page). Null = no minimize. */
     onMinimize: (() -> Unit)? = null,
+    /** WEB-BAR-1 (owner list 5): Yumeiro's browser for the Websites page: bottom bar, element blocker, visited sites. */
+    browser: Boolean = false,
 ) {
     val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
@@ -370,6 +372,19 @@ fun PageStreamFinderDialog(
     val main = remember { Handler(Looper.getMainLooper()) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    // WEB-BAR-1: page history state for Back / Forward, and the element picker.
+    var canBack by remember { mutableStateOf(false) }
+    var canForward by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
+    // Notes of the browser bar, shown inside the page (an app message would sit behind this full-screen window).
+    var barNote by remember { mutableStateOf<BarNote?>(null) }
+    androidx.compose.runtime.LaunchedEffect(barNote) { if (barNote != null) { kotlinx.coroutines.delay(5_000); barNote = null } }
+    fun history(view: WebView?) { view?.let { canBack = it.canGoBack(); canForward = it.canGoForward() } }
+    /** WEB-BLOCK-1: generic ad-box rules plus the site's own picked elements. */
+    fun applyBlock(view: WebView?, url: String?) {
+        if (!browser || view == null || url == null) return
+        view.evaluateJavascript(dev.asfakul.yumeiro.online.web.ElementBlocker.styleJs(dev.asfakul.yumeiro.online.web.ElementBlocker.css(dev.asfakul.yumeiro.online.web.ElementBlocker.rulesFor(appContext, url))), null)
+    }
     // TB-PREVIEW-1 (owner list 19): TeraBox captures that turned out to be the 30-second preview (never auto-played again),
     // and the TeraBox share this page belongs to (resolved through TeraBox's API once the user has signed in here).
     val rejected = remember(pageUrl) { HashSet<String>() }
@@ -551,8 +566,23 @@ fun PageStreamFinderDialog(
                                         main.post { drmNote = "This page uses DRM ($system). It plays here only if the site's licence server accepts this app; protection is never bypassed." }
                                     }
                                 }, "MTFinder")
+                                if (browser) addJavascriptInterface(object {
+                                    @JavascriptInterface fun onPicked(selector: String) = main.post {
+                                        val url = currentUrl
+                                        picking = false
+                                        barNote = if (dev.asfakul.yumeiro.online.web.ElementBlocker.add(appContext, url, selector)) BarNote("Hidden on this site from now on", "Undo") {
+                                            dev.asfakul.yumeiro.online.web.ElementBlocker.undoLast(appContext, url)
+                                            webViewRef?.reload()
+                                        } else BarNote("That part can't be blocked", null, null)
+                                    }
+                                    @JavascriptInterface fun onPickEnd() = main.post { picking = false }
+                                }, "YuBlock")
                                 webChromeClient = object : android.webkit.WebChromeClient() {
-                                    override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress }
+                                    override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                        progress = newProgress
+                                        // Hide ad boxes as soon as the page has a body, not only when every image is in.
+                                        if (newProgress >= 60) applyBlock(view, view?.url)
+                                    }
                                     override fun onReceivedTitle(view: WebView?, title: String?) { pageTitle = title.orEmpty() }
                                 }
                                 SafeWebView.harden(this)
@@ -572,6 +602,7 @@ fun PageStreamFinderDialog(
                                         return null // the page loads normally; we only observe
                                     }
                                     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                        history(view)
                                         // OL-3: an in-page navigation (single-page sites) to another address is another video.
                                         if (url != null && !isReload && url.substringBefore('#') != currentUrl.substringBefore('#')) {
                                             currentUrl = url
@@ -589,6 +620,10 @@ fun PageStreamFinderDialog(
                                     }
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         view?.evaluateJavascript(PageStreamCapture.HOOK_JS, null)
+                                        history(view)
+                                        applyBlock(view, url)
+                                        // WEB-RECENT-1: the site goes to "Recently visited" on the Websites page.
+                                        if (browser && url != null) dev.asfakul.yumeiro.online.web.SiteHistory.visit(appContext, url, view?.title)
                                         resumeTeraBox()
                                     }
                                 }
@@ -619,6 +654,22 @@ fun PageStreamFinderDialog(
                         webViewRef?.evaluateJavascript(PageStreamCapture.RESCAN_JS, null)
                     },
                     onPlay = { play(it) },
+                )
+                barNote?.takeIf { browser }?.let { n -> BrowserNote(n) { barNote = null } }
+                if (browser) BrowserBar(
+                    canBack = canBack, canForward = canForward, picking = picking,
+                    onBack = { webViewRef?.let { if (it.canGoBack()) it.goBack() } },
+                    onForward = { webViewRef?.let { if (it.canGoForward()) it.goForward() } },
+                    onReload = { webViewRef?.reload() },
+                    onBlock = {
+                        picking = !picking
+                        webViewRef?.evaluateJavascript(dev.asfakul.yumeiro.online.web.ElementBlocker.PICK_JS, null)
+                        barNote = if (picking) BarNote("Tap the part of the page to hide. Tap the block button again to stop.", null, null) else null
+                    },
+                    onOpenOutside = {
+                        if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote("No browser on this phone can open the page", null, null)
+                    },
+                    accent = SpotifyGreen,
                 )
             }
         }

@@ -130,6 +130,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.torrent.TorrentPlan", // B-31 info-hash, episode in file names
         "dev.asfakul.yumeiro.stream.LiveCountry", // Live TV country filter
         "dev.asfakul.yumeiro.stream.LiveFindKt", // LIVE-1 Live TV channel and country search
+        "dev.asfakul.yumeiro.online.web.SiteMetaKt", // WEB-ADD-1 site name and icon from the page
         "dev.asfakul.yumeiro.profiles.Profiles", // F-19 answer normalising
         "dev.asfakul.yumeiro.stream.M3uParser",
         "dev.asfakul.yumeiro.stream.PlaylistMarketKt",

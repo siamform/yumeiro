@@ -34,6 +34,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.focus.focusRequester
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.PushPin
@@ -107,10 +109,34 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     val shown = remember(sites, query) { SavedSites.filter(SavedSites.ordered(sites), query) }
     androidx.activity.compose.BackHandler(enabled = query.isNotEmpty()) { query = "" }
 
+    // WEB-ADD-1 / WEB-SEARCH-1 (owner list 5): on the Websites page "+" opens the add card and the search icon
+    // opens one box that searches saved sites or goes to an address / web search.
+    var adding by rememberSaveable { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    val webScope = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.web.SiteHistory.init(context) }
+    val visits by dev.asfakul.yumeiro.online.web.SiteHistory.visits.collectAsState()
+    val rememberVisits by dev.asfakul.yumeiro.online.web.SiteHistory.on.collectAsState()
+
+    /** Reads the new site's own name and icon in the background (the row shows the guess until then). */
+    fun readMeta(url: String) {
+        if (telegramPage || SavedSites.kindOf(url) != SavedSites.Kind.WEBSITE) return
+        webScope.launch {
+            val meta = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                dev.asfakul.yumeiro.online.web.SiteMeta.fetch(dev.asfakul.yumeiro.network.NetworkClient.get(context), url)
+            } ?: return@launch
+            SavedSites.applyMeta(context, url, meta)
+        }
+    }
+
     fun add() {
         // F-02: "@name" or a t.me channel link saves the channel's public page (handled in SavedSites.add).
-        val err = SavedSites.wrongPage(input, only) ?: SavedSites.add(context, input)
-        if (err != null) error = err else { input = ""; error = null }
+        val typed = input
+        val err = SavedSites.wrongPage(typed, only) ?: SavedSites.add(context, typed)
+        if (err != null) error = err else {
+            input = ""; error = null; adding = false
+            SavedSites.find(typed)?.let { readMeta(it.url) }
+        }
     }
 
     // F-02 (ADR-052): the signed-in account opens in place, like a channel.
@@ -148,6 +174,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     // the Websites page only. Before, the last website browsed showed as a shortcut on the Telegram page.
     val tabs = remember(telegramPage) { !telegramPage && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
     val tab by WebsiteTab.tab.collectAsState()
+    /** An address or web search that is not saved: opens in the browser (and lands in Recently visited). */
+    fun openUnsaved(url: String, name: String) {
+        if (tabs) WebsiteTab.open(context, url, name) else open = SavedSites.Site(url, name)
+    }
     tab?.takeIf { tabs && it.visible }?.let { t ->
         PageStreamFinderDialog(
             pageUrl = t.keep.pageUrl,
@@ -155,6 +185,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             base = null,
             keep = t.keep,
             onMinimize = { WebsiteTab.minimize(byPlay = false) },
+            browser = true,
             onPlay = { req -> WebsiteTab.minimize(byPlay = true); IncomingMedia.open(context, req.copy(title = req.title.ifBlank { t.name })) },
             onDismiss = { WebsiteTab.close() },
         )
@@ -167,6 +198,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             base = null,
             onPlay = { req -> open = null; IncomingMedia.open(context, req.copy(title = req.title.ifBlank { site.name })) },
             onDismiss = { open = null },
+            browser = !telegramPage,
         )
     }
 
@@ -221,6 +253,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             title = if (telegramPage) "Telegram" else "Websites", onBack = onBack,
             subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else if (telegramPage) "Public channels, no login" else "Play videos from any site",
         ) {
+            if (!telegramPage) {
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, { searchOpen = !searchOpen; if (!searchOpen) query = "" }, "site_search_toggle", "Search or type an address")
+                IconButton(onClick = { adding = !adding }, modifier = Modifier.testTag("site_add_open")) { Icon(Icons.Default.Add, if (adding) "Close add website" else "Add website", tint = if (adding) p.accent else p.textPrimary) }
+            }
             IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, if (telegramPage) "Add channels from a list" else "Add websites from a list", tint = p.textSecondary) }
             if (sites.isNotEmpty()) IconButton(onClick = {
                 val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
@@ -319,8 +355,37 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 }
             }
             // TG-ADD-1 (owner list 8A): on the Telegram page, adding a public channel comes first.
-            if (!telegramPage) item("add") { addCard() }
-            if (sites.size >= 6) item("search") {
+            if (!telegramPage && (adding || sites.isEmpty())) item("add") { addCard() }
+            if (!telegramPage && searchOpen) item("search") {
+                val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+                LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = query, onValueChange = { query = it }, singleLine = true,
+                        placeholder = { Text("Search your sites or type an address") },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { SiteGo.target(query)?.let { (url, name) -> openUnsaved(url, name) } }),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
+                        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("site_search"),
+                    )
+                    SiteGo.target(query)?.let { (url, name) ->
+                        val web = SiteGo.isSearch(url)
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceContainerHigh)
+                                .combinedClickable(onClickLabel = if (web) "Search the web" else "Open", onClick = { openUnsaved(url, name) })
+                                .padding(horizontal = 14.dp, vertical = 12.dp).testTag(if (web) "site_web_search" else "site_go"),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(if (web) Icons.Default.Search else Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(if (web) "Search the web for \"${query.trim()}\"" else "Go to ${SavedSites.hostOf(url) ?: url}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+            if (telegramPage && sites.size >= 6) item("search") {
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
                     placeholder = { Text(if (telegramPage) "Search your channels" else "Search your websites") },
@@ -356,6 +421,35 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     onMove = if (query.isBlank()) ({ up -> SavedSites.moveSite(context, site.url, up) }) else null,
                     modifier = Modifier.animateItem(),
                 )
+            }
+            // WEB-RECENT-1 (owner list 5): sites opened in the browser come here by themselves; + saves one.
+            val recent = if (telegramPage) emptyList() else dev.asfakul.yumeiro.online.web.SiteHistory.unsaved(visits, allSites).let { v ->
+                if (query.isBlank()) v else v.filter { it.name.contains(query.trim(), true) || it.url.contains(query.trim(), true) }
+            }.take(10)
+            if (recent.isNotEmpty()) {
+                item("recent_head") {
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Recently visited", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.TextButton(onClick = { dev.asfakul.yumeiro.online.web.SiteHistory.clear(context) }, modifier = Modifier.testTag("recent_clear")) { Text("Clear") }
+                    }
+                }
+                items(recent, key = { "recent_" + it.url }) { v ->
+                    RecentRow(v, onOpen = { openUnsaved(v.url, v.name) }, onSave = {
+                        if (SavedSites.add(context, v.url, v.name) == null) { SavedSites.find(v.url)?.let { readMeta(it.url) } }
+                    }, onForget = { dev.asfakul.yumeiro.online.web.SiteHistory.forget(context, v.url) }, modifier = Modifier.animateItem())
+                }
+            }
+            if (!telegramPage) item("recent_switch") {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).padding(horizontal = 4.dp, vertical = 2.dp).testTag("recent_switch_row"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Remember sites I visit", color = p.textPrimary, fontSize = 14.sp)
+                        Text("Shown under Recently visited, on this phone only", color = p.textTertiary, fontSize = 12.sp)
+                    }
+                    androidx.compose.material3.Switch(rememberVisits, { dev.asfakul.yumeiro.online.web.SiteHistory.setOn(context, it) }, modifier = Modifier.testTag("recent_switch"))
+                }
             }
             // The step-by-step guide lives behind the "?" in the header (not in the list) so the
             // saved sites stay the focus of the page.
@@ -400,7 +494,7 @@ private fun SiteRow(
         } else Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(site.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             AsyncImage(
-                model = "https://www.google.com/s2/favicons?domain=${site.host}&sz=64", contentDescription = null,
+                model = site.iconUrl ?: "https://www.google.com/s2/favicons?domain=${site.host}&sz=64", contentDescription = null,
                 modifier = Modifier.size(26.dp).clip(RoundedCornerShape(6.dp)),
             )
         }
@@ -421,5 +515,46 @@ private fun SiteRow(
                 DropdownMenuItem(text = { Text("Remove") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onRemove() }, modifier = Modifier.testTag("site_remove"))
             }
         }
+    }
+}
+
+/** WEB-SEARCH-1: what the Websites search box goes to: an address, or a web search for anything else. Pure. */
+internal object SiteGo {
+    const val SEARCH = "https://duckduckgo.com/?q="
+
+    /** (url, name) for [query], or null when it is empty. */
+    fun target(query: String): Pair<String, String>? {
+        val q = query.trim()
+        if (q.isEmpty()) return null
+        val url = SavedSites.normalize(q)?.takeIf { SavedSites.kindOf(it) == SavedSites.Kind.WEBSITE && (q.contains('.') || q.contains("://")) }
+        return if (url != null) url to SavedSites.defaultName(url)
+        else SEARCH + java.net.URLEncoder.encode(q, "UTF-8") to q.take(40)
+    }
+
+    fun isSearch(url: String) = url.startsWith(SEARCH)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RecentRow(v: dev.asfakul.yumeiro.online.web.SiteHistory.Visit, onOpen: () -> Unit, onSave: () -> Unit, onForget: () -> Unit, modifier: Modifier = Modifier) {
+    val p = LocalMtPalette.current
+    val host = remember(v.url) { SavedSites.hostOf(v.url) ?: v.url }
+    Row(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh.copy(alpha = 0.6f))
+            .combinedClickable(onClickLabel = "Open ${v.name}", onLongClick = onForget, onClick = onOpen)
+            .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("recent_row"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Text(v.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.Bold)
+            AsyncImage(model = v.iconUrl ?: "https://www.google.com/s2/favicons?domain=$host&sz=64", contentDescription = null, modifier = Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(v.name, color = p.textPrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(host, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        IconButton(onClick = onSave, modifier = Modifier.testTag("recent_save")) { Icon(Icons.Default.Add, "Save ${v.name}", tint = p.accent) }
+        IconButton(onClick = onForget, modifier = Modifier.testTag("recent_forget")) { Icon(Icons.Default.Close, "Remove ${v.name} from recent", tint = p.textSecondary) }
     }
 }

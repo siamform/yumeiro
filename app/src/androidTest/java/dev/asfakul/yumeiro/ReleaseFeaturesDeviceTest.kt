@@ -120,7 +120,10 @@ class ReleaseFeaturesDeviceTest {
         }
         try {
             compose.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = {}) } } }
-            assertTrue("no site_search with 6 sites", waitTag("site_search"))
+            // WEB-SEARCH-1: the search sits behind the header's search icon (owner list 5).
+            assertTrue("no search icon", waitTag("site_search_toggle"))
+            compose.onAllNodesWithTag("site_search_toggle", true).onFirst().performClick()
+            assertTrue("no site_search after the icon", waitTag("site_search"))
             compose.onAllNodesWithTag("site_search", true).onFirst().performTextInput("delta")
             compose.waitUntil(5_000) { compose.onAllNodesWithTag("site_row", true).fetchSemanticsNodes().size == 1 }
             compose.onAllNodesWithTag("site_search", true).onFirst().performTextInput("zzz")

@@ -18,7 +18,7 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 2 | Settings sub-pages leave the previous page visible underneath for about 2 s | NAV-2 | CI pending | Opaque layers, and the sliding page gets its own zIndex. screenrecord on the emulator gets only about 10 frames, so this can only be proven by the Robolectric test |
 | 3 | Extension Sources page redesign (add repo / browse / install clearly separated) | SRC-HUB-1 | implemented, Robolectric tested; emulator check pending | Installed / Browse / Repositories parts |
 | 4 | Manga translation is broken: engine research, downloadable engine, on-screen auto-translate, language packs | — | not started | Plan below (largest item) |
-| 5 | Websites page: "+" with the name read from metadata, search icon, auto-add visited sites, Back / Forward / Reload / Open in Chrome, ad blocker | — | not started | Plan below |
+| 5 | Websites page: "+" with the name read from metadata, search icon, auto-add visited sites, Back / Forward / Reload / Open in Chrome, ad blocker | WEB-5 | implemented, Robolectric tested; emulator check pending | Visited sites go to "Recently visited" (one tap to save), not straight into the saved list |
 | 6 | Stream detector misses streams (test site a5x2nt.movielinkbd.at) | — | not started | Plan below |
 | 7 | The Telegram page shows the last website shortcut | TG-TAB-1 | CI pending | |
 | 8A | Telegram: own avatar and name; channel and group avatars and names; "+ Add Public Channel" at the top | TG-8ABC-1 | CI pending | |
