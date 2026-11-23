@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -98,6 +98,8 @@ run_steps() {
       rec*) # rec NAME: record the screen for 5 s from now (runs while the next steps happen)
         r=${s#rec }; adb shell "screenrecord --time-limit 5 --bit-rate 12000000 /sdcard/rec-$r.mp4" > /dev/null 2>&1 &
         sleep 0.6; note "recording [$r]" ;;
+      type*) # type TEXT into the focused field, as the on-screen keyboard would (LIVE-1 search probes)
+        t=${s#type }; adb shell input text "'${t// /%s}'"; note "typed [$t]"; sleep 1; dump "after-type" ;;
       send*) # send TEXT: share a link to Yumeiro like another app's Share sheet would (text/plain)
         t=${s#send }; adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "'$t'" -p "$P" > /dev/null 2>&1
         note "shared [$t] to the app"; sleep 1 ;;

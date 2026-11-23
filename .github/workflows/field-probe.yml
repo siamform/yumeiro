@@ -20,7 +20,7 @@ on:
         required: false
         default: ""
       steps:
-        description: "Scenario: skip | tour | wait N | tap TEXT | back | home | shot NAME, separated by ;"
+        description: "Scenario: skip | tour | wait N | tap TEXT | find TEXT | type TEXT | back | home | shot NAME, separated by ;"
         required: false
         default: "skip;wait 60;tap Videos;wait 60;tap Music;wait 60"
       net:
