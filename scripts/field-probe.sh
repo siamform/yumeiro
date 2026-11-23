@@ -98,6 +98,9 @@ run_steps() {
       rec*) # rec NAME: record the screen for 5 s from now (runs while the next steps happen)
         r=${s#rec }; adb shell "screenrecord --time-limit 5 --bit-rate 12000000 /sdcard/rec-$r.mp4" > /dev/null 2>&1 &
         sleep 0.6; note "recording [$r]" ;;
+      send*) # send TEXT: share a link to Yumeiro like another app's Share sheet would (text/plain)
+        t=${s#send }; adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "'$t'" -p "$P" > /dev/null 2>&1
+        note "shared [$t] to the app"; sleep 1 ;;
       dismiss) tap_text "Close" "All set" "✕" "Not now" "Later" > /dev/null 2>&1 && note "dismissed a popup" || true; sleep 1 ;;
       top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
