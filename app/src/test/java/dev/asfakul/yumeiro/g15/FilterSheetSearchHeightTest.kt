@@ -10,6 +10,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import dev.asfakul.yumeiro.ui.screens.online.SourceFilterSheet
 import dev.asfakul.yumeiro.ui.screens.online.SourceStatus
@@ -51,6 +52,8 @@ class FilterSheetSearchHeightTest {
         val top = rule.onNodeWithTag("online_filter_sheet").fetchSemanticsNode().boundsInRoot.top
         assertTrue("the sheet opened at ${(top / heightPx * 100).toInt()} % of the screen; with 30 extensions it must open fully (top in the top 40 %)", top < heightPx * 0.4f)
 
+        rule.onNodeWithTag("online_filter-search-open").performClick() // YF-2: search sits behind the header icon
+        rule.waitForIdle()
         rule.onNodeWithTag("online_filter_search").performTextInput("anime")
         rule.waitForIdle()
         val hits = listOf("Anime One", "Anime Two", "Anime Three")

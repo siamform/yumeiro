@@ -123,6 +123,8 @@ class YumixShowcaseTest {
             if (open) SourceFilterSheet(names, sel, status = { SourceStatus.Ready(12) }, onPick = { sel = it }, onDismiss = { open = false })
         }
         rule.mainClock.advanceTimeBy(800)
+        rule.onNodeWithTag("online_filter-search-open").performClick() // YF-2: search sits behind the header icon
+        rule.mainClock.advanceTimeBy(300)
         rule.onNodeWithTag("online_filter_search").assertExists().performTextInput("anim")
         rule.mainClock.advanceTimeBy(400)
         rule.onNodeWithTag("online_filter_AnimePahe").assertExists()

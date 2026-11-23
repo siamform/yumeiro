@@ -390,9 +390,12 @@ fun OnlineHomeScreen(
         remember { dev.asfakul.yumeiro.online.PinnedExtensions.init(context); true }
         // F-21: language chip, source count, ecosystem and repo per row; built once per provider set.
         val labels = remember(providers, showFilter) { if (showFilter && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS)) providers.associate { it.name to dev.asfakul.yumeiro.online.ExtensionLabels.forApi(it) } else emptyMap() }
+        val sourceOf = remember(providers, showFilter) { if (showFilter) providers.associate { it.name to dev.asfakul.yumeiro.sources.SourceHub.ecosystemOf(it).label } else emptyMap() }
         if (showFilter) SourceFilterSheet(
             names = channelNames, selected = selected,
             pins = pins, details = labels::get,
+            // YF-2 (owner list 10): source chips from each provider's own ecosystem (CloudStream, Vega, SkyStream…).
+            group = sourceOf::get,
             onTogglePin = { n ->
                 if (!dev.asfakul.yumeiro.online.PinnedExtensions.toggle(context, n))
                     dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "You can pin up to ${dev.asfakul.yumeiro.online.PinnedExtensions.MAX} extensions. Unpin one first", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)

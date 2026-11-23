@@ -620,7 +620,7 @@ fun WatchNumberGrid(
 
 /** Search box used by the channel list (Stream watch page). */
 @Composable
-fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag: String, modifier: Modifier = Modifier) {
+fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag: String, modifier: Modifier = Modifier, fieldModifier: Modifier = Modifier) {
     val p = LocalMtPalette.current
     Row(
         modifier.clip(RoundedCornerShape(12.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)).padding(horizontal = 12.dp, vertical = 10.dp),
@@ -653,7 +653,7 @@ fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag
                     state = state, lineLimits = androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine,
                     textStyle = textStyle, cursorBrush = SolidColor(p.accent),
                     keyboardOptions = KeyboardOptions(showKeyboardOnFocus = false),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().then(fieldModifier)
                         .onPreviewKeyEvent { e ->
                             val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
                             if (ok && e.type == KeyEventType.KeyUp) keyboard?.show()
@@ -665,7 +665,7 @@ fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag
                 BasicTextField(
                     value = query, onValueChange = onQuery, singleLine = true,
                     textStyle = textStyle, cursorBrush = SolidColor(p.accent),
-                    modifier = Modifier.fillMaxWidth().testTag(tag),
+                    modifier = Modifier.fillMaxWidth().then(fieldModifier).testTag(tag),
                 )
             }
         }

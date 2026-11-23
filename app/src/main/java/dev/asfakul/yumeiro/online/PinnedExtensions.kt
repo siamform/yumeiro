@@ -17,7 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * (the name is what the feed and the filter use), at most [MAX].
  */
 object PinnedExtensions {
-    const val MAX = 8
+    /** YF-2 (owner list 10): 30 (was 8), enough for a big extension set; the sheet shows "n of 30". */
+    const val MAX = 30
     private const val KEY = "pinned"
     private var prefs: SharedPreferences? = null
     private val _pins = MutableStateFlow<List<String>>(emptyList())

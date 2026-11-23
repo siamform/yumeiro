@@ -124,6 +124,8 @@ class Nbug15RedesignDeviceTest {
         click("live_filter_button")
         wait("filter sheet lists both playlists") { has("live_filter_sheet") && has("live_filter_$idA") && has("live_filter_$idB") }
         val title = inside("live_filter_sheet", "Show videos from")
+        compose.onAllNodesWithTag("live_filter-search-open", true)[0].performClick() // YF-2: search behind the header icon
+        wait("search field opens") { has("live_filter_search") }
         compose.onAllNodesWithTag("live_filter_search", true)[0].performTextInput(nameB)
         wait("search keeps only the playlist typed") { has("live_filter_$idB") && !has("live_filter_$idA") }
         compose.onAllNodesWithTag("live_filter_search", true)[0].performTextClearance()

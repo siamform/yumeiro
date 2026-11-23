@@ -117,6 +117,8 @@ class Nbug10FilterSearchDeviceTest {
         log("query '$query' matches ${expectedNames.size}: $expectedNames")
         assertTrue("query '$query' matches fewer than 3 of $all", expectedNames.size >= 3)
 
+        rule.onAllNodesWithTag("online_filter-search-open", true)[0].performClick() // YF-2: search behind the header icon
+        rule.waitUntil(5_000) { rule.onAllNodesWithTag("online_filter_search", true).fetchSemanticsNodes().isNotEmpty() }
         rule.onAllNodesWithTag("online_filter_search", true)[0].performClick()
         rule.onAllNodesWithTag("online_filter_search", true)[0].performTextInput(query)
         // The system keyboard's own start-up is not ours: on the 2 GB emulator the trimmed keyboard process showed
