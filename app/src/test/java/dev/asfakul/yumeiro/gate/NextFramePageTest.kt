@@ -83,7 +83,8 @@ class NextFramePageTest {
             if (shown) holder.SaveableStateProvider("page") {
                 NextFramePage(defer) {
                     var pane by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("hub") }
-                    androidx.compose.runtime.SideEffect { seen = pane }
+                    val now = pane // read in composition, so a change recomposes and the SideEffect sees it
+                    androidx.compose.runtime.SideEffect { seen = now }
                     androidx.compose.runtime.LaunchedEffect(Unit) { if (open) { open = false; pane = "playlists" } }
                 }
             }
