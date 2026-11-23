@@ -1,0 +1,10 @@
+#EXTM3U
+#EXT-X-TARGETDURATION:15
+#EXT-X-DISCONTINUITY
+#EXTINF:10,
+https://v5-dm.freeterabox.com/video/netdisk-videotran-hybcloud/58a1cf1395d42286553990f81ee65a4f_1074_38_ts/1f2a91fda812f1fa8e2b0a45187426f7?q=removed
+#EXTINF:10,
+https://v5-dm.freeterabox.com/video/netdisk-videotran-hybcloud/58a1cf1395d42286553990f81ee65a4f_1074_38_ts/1f2a91fda812f1fa8e2b0a45187426f7?q=removed
+#EXTINF:10,
+https://v5-dm.freeterabox.com/video/netdisk-videotran-hybcloud/58a1cf1395d42286553990f81ee65a4f_1074_38_ts/1f2a91fda812f1fa8e2b0a45187426f7?q=removed
+#EXT-X-ENDLIST

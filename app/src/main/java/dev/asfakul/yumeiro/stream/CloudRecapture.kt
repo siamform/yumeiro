@@ -84,6 +84,12 @@ object CloudRecapture {
             override suspend fun refresh(context: Context, request: StreamRequest): StreamRequest? {
                 val page = request.pageUrl ?: return null
                 if (!budget.take(page)) return null
+                // TB-PREVIEW-1: a TeraBox share gets a fresh link from TeraBox's API (the full file for a signed-in
+                // user). Capturing its page again off screen could only bring back the anonymous 30-second preview.
+                TeraBoxApi.shareIn(page)?.let { share ->
+                    val r = runCatching { StreamResolver.resolve(context.applicationContext, request.copy(url = share, format = StreamFormat.AUTO)) }.getOrNull()
+                    return (r as? Resolution.Playable)?.request
+                }
                 return capture(context.applicationContext, page, request)
             }
         })

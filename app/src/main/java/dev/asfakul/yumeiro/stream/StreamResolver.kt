@@ -124,6 +124,35 @@ object StreamResolver {
         return Resolution.Handoff(route.pageUrl, "the DiskWala app", "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)}). ${DiskWalaApi.APP_ONLY}")
     }
 
+    /**
+     * TB-PREVIEW-1 (owner list 19): checks a stream caught on a TeraBox page before it plays. TeraBox's own web player
+     * gets the 30-second preview when nobody is signed in; that capture used to play as is. A preview is never played:
+     * the original share (the page it came from) is resolved through [TeraBoxApi] instead, which gives the full file
+     * to a signed-in user, or asks for a sign-in. Any other capture passes unchanged.
+     */
+    fun checkCapture(
+        request: StreamRequest,
+        client: OkHttpClient,
+        sharePage: String? = null,
+        fetch: (StreamRequest) -> String? = { req -> playlistText(client, req) },
+    ): Resolution {
+        if (!TeraBoxApi.isWebStream(request.url)) return Resolution.Playable(request, null)
+        val body = runCatching { fetch(request) }.getOrNull()
+        if (body != null && !TeraBoxApi.isPreviewCapture(body)) return Resolution.Playable(request, Sniff(MediaKind.HLS, "TeraBox", "page"))
+        val share = TeraBoxApi.shareIn(sharePage, request.pageUrl)
+            ?: return Resolution.NeedsBrowser(TERABOX_SIGN_IN, TeraBoxApi.SIGN_IN_REASON, request, auto = false)
+        val shareRequest = request.copy(url = share, format = StreamFormat.AUTO, pageUrl = share)
+        return resolveTeraBox(shareRequest, LinkHosts.Browser(share, "TeraBox", TeraBoxApi.SIGN_IN_REASON, auto = false), client)
+    }
+
+    private fun playlistText(client: OkHttpClient, request: StreamRequest): String? {
+        val b = okhttp3.Request.Builder().url(request.url)
+        request.userAgent?.let { b.header("User-Agent", it) }
+        request.referer?.let { b.header("Referer", it) }
+        request.cookie?.let { b.header("Cookie", it) }
+        return client.newCall(b.build()).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
+    }
+
     /** TeraBox's sign-in page; the cookie it leaves in the web view is what [TeraBoxApi] reuses. */
     const val TERABOX_SIGN_IN = "https://www.terabox.app/wap/outlogin/login"
 

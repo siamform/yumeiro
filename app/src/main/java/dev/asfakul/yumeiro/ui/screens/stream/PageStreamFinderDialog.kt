@@ -66,6 +66,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.net.URI
+import kotlinx.coroutines.launch
 
 internal const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
@@ -367,6 +368,14 @@ fun PageStreamFinderDialog(
     androidx.compose.runtime.LaunchedEffect(autoNote) { if (autoNote != null) showHint = true }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val main = remember { Handler(Looper.getMainLooper()) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    // TB-PREVIEW-1 (owner list 19): TeraBox captures that turned out to be the 30-second preview (never auto-played again),
+    // and the TeraBox share this page belongs to (resolved through TeraBox's API once the user has signed in here).
+    val rejected = remember(pageUrl) { HashSet<String>() }
+    val teraShare = remember(pageUrl, base) { dev.asfakul.yumeiro.stream.TeraBoxApi.shareIn(base?.url, base?.pageUrl, pageUrl) }
+    var teraResumed by remember(pageUrl) { mutableStateOf(false) }
+    val teraSignedInAtOpen = remember(pageUrl) { teraShare != null && dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(teraCookies()) }
 
     fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
 
@@ -387,6 +396,25 @@ fun PageStreamFinderDialog(
         }
     }
 
+    /** TB-PREVIEW-1: plays what TeraBox's API or the capture check gave, or keeps the page with the reason. */
+    fun afterTeraCheck(r: dev.asfakul.yumeiro.stream.Resolution?, capturedUrl: String?) {
+        when (r) {
+            is dev.asfakul.yumeiro.stream.Resolution.Playable -> { webViewRef?.onPause(); onPlay(r.request) }
+            else -> {
+                capturedUrl?.let { rejected += it }
+                played = false
+                autoActive = false
+                autoNote = when (r) {
+                    is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser -> r.reason
+                    is dev.asfakul.yumeiro.stream.Resolution.Failed -> "${r.title}. ${r.message}"
+                    else -> dev.asfakul.yumeiro.stream.TeraBoxApi.SIGN_IN_REASON
+                }
+                // Sign-in needed: take the user to TeraBox's sign-in page in this same browser.
+                if (r is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser && r.pageUrl != currentUrl) webViewRef?.loadUrl(r.pageUrl)
+            }
+        }
+    }
+
     fun play(c: CapturedStream) {
         if (played) return // a second capture or a double tap never opens two players
         played = true
@@ -400,8 +428,35 @@ fun PageStreamFinderDialog(
                 base = base,
             )
         }
+        if (dev.asfakul.yumeiro.stream.TeraBoxApi.isWebStream(c.url)) {
+            // TB-PREVIEW-1: TeraBox's page player may hold only the 30-second preview; check it before playing.
+            autoStep = "Checking the TeraBox stream"
+            val share = teraShare ?: currentUrl
+            scope.launch {
+                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { dev.asfakul.yumeiro.stream.StreamResolver.checkCapture(request, dev.asfakul.yumeiro.network.NetworkClient.get(appContext), share) }.getOrNull()
+                }
+                afterTeraCheck(r, c.url)
+            }
+            return
+        }
         wv?.onPause()
         onPlay(request)
+    }
+
+    /** TB-PREVIEW-1: the user just signed in to TeraBox on this page: play the share in full without asking again. */
+    fun resumeTeraBox() {
+        val share = teraShare ?: return
+        if (teraResumed || played || teraSignedInAtOpen) return
+        if (!dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(teraCookies())) return
+        teraResumed = true
+        played = true
+        autoNote = "Signed in. Getting the full video from TeraBox"
+        val req = (base ?: StreamRequest(url = share)).copy(url = share, format = StreamFormat.AUTO, pageUrl = share)
+        scope.launch {
+            val r = runCatching { dev.asfakul.yumeiro.stream.StreamResolver.resolve(appContext, req) }.getOrNull()
+            afterTeraCheck(r, null)
+        }
     }
 
     if (auto) {
@@ -418,7 +473,7 @@ fun PageStreamFinderDialog(
             if (!autoActive || played || found.isEmpty()) return@LaunchedEffect
             autoStep = "Picking up the stream"
             kotlinx.coroutines.delay(PageStreamCapture.AUTO_SETTLE_MS)
-            PageStreamCapture.bestForAuto(found.toList())?.let { play(it) }
+            PageStreamCapture.bestForAuto(found.filter { it.url !in rejected })?.let { play(it) }
         }
         // Nudge the page's player a few times while the page settles (players load late).
         androidx.compose.runtime.LaunchedEffect(pageUrl, progress >= 100, autoActive) {
@@ -534,6 +589,7 @@ fun PageStreamFinderDialog(
                                     }
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         view?.evaluateJavascript(PageStreamCapture.HOOK_JS, null)
+                                        resumeTeraBox()
                                     }
                                 }
                                 val headers = buildMap {
@@ -568,3 +624,7 @@ fun PageStreamFinderDialog(
         }
     }
 }
+
+/** TB-PREVIEW-1: the cookies the web view holds for TeraBox's sign-in hosts (the `ndus` sign-in lives on one of them). */
+private fun teraCookies(): String = listOf("https://www.terabox.app", "https://www.terabox.com", "https://www.1024terabox.com")
+    .mapNotNull { runCatching { CookieManager.getInstance().getCookie(it) }.getOrNull() }.joinToString("; ")

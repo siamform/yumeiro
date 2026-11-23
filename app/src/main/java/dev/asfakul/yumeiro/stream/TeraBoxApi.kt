@@ -117,6 +117,30 @@ object TeraBoxApi {
     fun isPreview(m3u8: String, fileBytes: Long): Boolean =
         "#EXT-X-ENDLIST" in m3u8 && playlistSeconds(m3u8) <= 60.0 && fileBytes > 40L * 1024 * 1024
 
+    /**
+     * TB-PREVIEW-1: the stream TeraBox's own web player asks for (`…/share/streaming?…` on a TeraBox host). When the
+     * share page was shown (to sign in or do TeraBox's check), the page finder caught this address and played it
+     * straight away, so the anonymous 30-second preview played and TeraBoxApi's preview rule was skipped.
+     */
+    fun isWebStream(url: String): Boolean {
+        val u = url.trim().toHttpUrlOrNull() ?: return false
+        val h = u.host.lowercase()
+        return (BOX_HOSTS.any { h.contains(it) } || h.contains("dubox")) && u.encodedPath.contains("/share/streaming")
+    }
+
+    /**
+     * TB-PREVIEW-1: a captured playlist is the preview when it is closed and lasts a minute or less (TeraBox sends
+     * 3 x 10 s). The file size is unknown at capture time; a genuinely short clip is then resolved through the API,
+     * which plays it in full for a signed-in user.
+     */
+    fun isPreviewCapture(m3u8: String): Boolean =
+        m3u8.trimStart().startsWith("#EXTM3U") && "#EXT-X-ENDLIST" in m3u8 && playlistSeconds(m3u8) <= 60.0
+
+    /** TB-PREVIEW-1: the first of [urls] that is a TeraBox share link (the page the capture came from). */
+    fun shareIn(vararg urls: String?): String? = urls.firstOrNull { u ->
+        u != null && shortUrl(u) != null && (u.toHttpUrlOrNull()?.host?.lowercase()?.let { h -> BOX_HOSTS.any { h.contains(it) } || h.contains("dubox") } == true)
+    }
+
     private fun JsonObject.str(k: String): String? = (this[k])?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }
 
     /** The desktop-client identity TeraBox answers API callers with (same as Hikari's reference client). */
