@@ -117,6 +117,8 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                         title = r.value.title.ifBlank { name }
                         if (q.isEmpty()) {
                             header = r.value
+                            val photo = r.value.avatarUrl.orEmpty()
+                            scope.launch(Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.TelegramAvatars.remember(context, channel, photo) }
                             r.value.posts.maxOfOrNull { it.id }?.let { TelegramSeen.mark(context, channel, it) }
                         }
                     }

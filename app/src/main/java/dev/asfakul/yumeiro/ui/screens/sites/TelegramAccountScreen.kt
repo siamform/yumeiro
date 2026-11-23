@@ -6,6 +6,21 @@
 package dev.asfakul.yumeiro.ui.screens.sites
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import dev.asfakul.yumeiro.online.telegram.td.TgCounts
+import dev.asfakul.yumeiro.online.telegram.td.TgMe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -298,6 +313,15 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
         }
     }
     LaunchedEffect(s) { load() }
+    // TG-ME-1 (owner list 8A): who is signed in, with their photo; remembered for the Telegram page's account card.
+    val appContext = LocalContext.current.applicationContext
+    val me by produceState<Pair<TgMe, String?>?>(null, s) {
+        val m = library.me() ?: return@produceState
+        value = m to null
+        val photo = library.smallFile(m.photoFileId)
+        value = m to photo
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { TgAccounts.rememberMe(appContext, m.name, photo) }
+    }
 
     openChat?.let { chat ->
         TelegramChatVideos(s, library, chat, onBack = { openChat = null }, onPlay = onPlay)
@@ -321,6 +345,20 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
         SubPageHeader(title = "Your Telegram", subtitle = if (chats.isNotEmpty()) "${chats.size} chats" else "Chats", onBack = onBack) {
             TextButton(onClick = { confirmLogout = true }, modifier = Modifier.testTag("tg_logout")) { Text("Sign out") }
         }
+        me?.let { (m, photo) ->
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(18.dp))
+                    .background(p.surfaceContainerHigh).padding(12.dp).semantics(mergeDescendants = true) {}.testTag("tg_me"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TelegramAvatar(photo, m.name, size = 48.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(m.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (m.username.isNotBlank()) "@${m.username} · signed in" else "Signed in", color = p.textSecondary, fontSize = 12.sp, maxLines = 1)
+                }
+            }
+        }
         OutlinedTextField(
             value = filter, onValueChange = { filter = it }, singleLine = true,
             label = { Text("Find a chat") },
@@ -332,12 +370,19 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(shown, key = { it.id }) { chat ->
-                Column(
+                // TG-AVATAR-1 (owner list 8A): each chat with its own photo (TDLib's small copy, fetched as it scrolls in).
+                val photo by produceState<String?>(null, chat.photoFileId) { value = library.smallFile(chat.photoFileId) }
+                Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceContainerHigh)
-                        .clickable { openChat = chat }.heightIn(min = 56.dp).padding(14.dp).testTag("tg_chat_${chat.id}"),
+                        .clickable { openChat = chat }.heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 10.dp).testTag("tg_chat_${chat.id}"),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(chat.title.ifBlank { "Untitled chat" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(when (chat.kind) { TgChat.Kind.CHANNEL -> "Channel"; TgChat.Kind.GROUP -> "Group"; TgChat.Kind.PRIVATE -> "Chat" }, color = p.textSecondary, fontSize = 12.sp)
+                    TelegramAvatar(photo, chat.title, size = 44.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(chat.title.ifBlank { "Untitled chat" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(when (chat.kind) { TgChat.Kind.CHANNEL -> "Channel"; TgChat.Kind.GROUP -> "Group"; TgChat.Kind.PRIVATE -> "Chat" }, color = p.textSecondary, fontSize = 12.sp)
+                    }
                 }
             }
             if (!loading && shown.isEmpty()) item("empty") {
@@ -364,7 +409,7 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
     var query by remember(chat.id) { mutableStateOf("") }
     var job by remember(chat.id) { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var pages by remember(chat.id) { mutableStateOf(0) }
-    val list = rememberLazyListState()
+    val list = rememberLazyGridState()
 
     fun load(from: Long) {
         loading = true; error = null
@@ -397,8 +442,10 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
     }
     BackHandler { if (query.isNotEmpty()) { input = ""; search("") } else onBack() }
 
+    // TG-COUNT-1 (owner list 8B): what the chat holds, from Telegram's own counts.
+    val counts by produceState<TgCounts?>(null, chat.id) { value = runCatching { library.counts(chat.id) }.getOrNull() }
     Column(Modifier.fillMaxSize().testTag("tg_chat_videos")) {
-        SubPageHeader(title = chat.title.ifBlank { "Chat" }, subtitle = "Videos and audio", onBack = onBack)
+        SubPageHeader(title = chat.title.ifBlank { "Chat" }, subtitle = counts?.label()?.ifBlank { null } ?: "Videos and audio", onBack = onBack)
         OutlinedTextField(
             value = input, onValueChange = { input = it }, singleLine = true,
             label = { Text("Search this chat") },
@@ -407,52 +454,84 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
             trailingIcon = { IconButton(onClick = { search(input) }, modifier = Modifier.testTag("tg_video_search_go")) { Icon(Icons.Default.Search, "Search") } },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("tg_video_search"),
         )
-        LazyColumn(
-            Modifier.fillMaxSize(), state = list,
+        // TG-GRID-1 (owner list 8C): a gallery. Each video shows its own preview frame with the length on it; tap plays
+        // (no autoplay, so no data is spent on previews beyond Telegram's small thumbnail).
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(160.dp), state = list, modifier = Modifier.fillMaxSize().testTag("tg_video_grid"),
             contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 140.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            items(videos, key = { it.messageId }) { v ->
+            gridItems(videos, key = { it.messageId }) { v ->
                 val title = v.caption.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: v.name.ifBlank { chat.title }
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceContainerHigh)
-                        .clickable {
-                            onPlay(StreamRequest(url = TgAccounts.streamUrl(s, v), title = title, format = StreamFormat.PROGRESSIVE))
-                        }
-                        .heightIn(min = 56.dp).padding(start = 14.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("tg_video_${v.messageId}"),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(v.caption.lineSequence().firstOrNull()?.ifBlank { null } ?: v.name.ifBlank { if (v.audio) "Audio" else "Video" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(videoInfo(v), color = p.textSecondary, fontSize = 12.sp)
-                    }
-                    IconButton(onClick = {
+                TgVideoTile(
+                    v, title = v.caption.lineSequence().firstOrNull()?.ifBlank { null } ?: v.name.ifBlank { if (v.audio) "Audio" else "Video" },
+                    thumb = { library.smallFile(v.thumbFileId) },
+                    onPlay = { onPlay(StreamRequest(url = TgAccounts.streamUrl(s, v), title = title, format = StreamFormat.PROGRESSIVE)) },
+                    onDownload = {
                         val req = StreamRequest(url = TgAccounts.downloadUrl(s, v), title = title, format = StreamFormat.PROGRESSIVE)
                         // OL-4: the same Offline / Permanent popup as every other download.
                         dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, req, sourceUrl = "https://t.me/c/${chat.id}/${v.messageId}") { dev.asfakul.yumeiro.ui.components.AppMessages.info(context, it) }
-                    }, modifier = Modifier.size(48.dp).testTag("tg_download_${v.messageId}")) {
-                        Icon(Icons.Default.Download, "Download $title", tint = p.textSecondary)
-                    }
-                }
+                    },
+                )
             }
-            error?.let { e -> item("error") {
+            error?.let { e -> item("error", span = { GridItemSpan(maxLineSpan) }) {
                 Text(e, color = p.textSecondary, modifier = Modifier.padding(16.dp).testTag("tg_videos_error"))
             } }
-            if (loading) item("loading") {
+            if (loading) item("loading", span = { GridItemSpan(maxLineSpan) }) {
                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
-            } else if (next != 0L) item("more") {
+            } else if (next != 0L) item("more", span = { GridItemSpan(maxLineSpan) }) {
                 TextButton(onClick = { pages = 0; load(next) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("tg_videos_more")) { Text("Older") }
             }
         }
     }
 }
 
-internal fun videoInfo(v: TgVideo): String = buildList {
-    if (v.audio) add("Audio")
-    if (v.durationSec > 0) add("%d:%02d".format(v.durationSec / 60, v.durationSec % 60))
-    if (v.height > 0) add("${v.height}p")
-    if (v.size > 0) add(if (v.size >= 1_000_000_000) "%.1f GB".format(v.size / 1e9) else "${v.size / 1_000_000} MB")
+/** TG-GRID-1: one gallery tile: 16:9 preview (or a music tile), length and quality on the picture, title, size, download. */
+@Composable
+private fun TgVideoTile(v: TgVideo, title: String, thumb: suspend () -> String?, onPlay: () -> Unit, onDownload: () -> Unit) {
+    val p = LocalMtPalette.current
+    val path by produceState<String?>(null, v.thumbFileId) { if (v.thumbFileId != 0) value = thumb() }
+    Column(Modifier.fillMaxWidth().testTag("tg_video_${v.messageId}")) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)).background(p.surfaceContainerHigh)
+                .clickable(onClickLabel = "Play $title", onClick = onPlay),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (v.audio) Icon(Icons.Default.MusicNote, null, tint = p.accentBright, modifier = Modifier.size(34.dp))
+            else Icon(Icons.Default.PlayArrow, null, tint = p.textTertiary, modifier = Modifier.size(34.dp))
+            path?.let { AsyncImage(model = java.io.File(it), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+            tileBadges(v).takeIf { it.isNotBlank() }?.let { b ->
+                Text(
+                    b, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(6.dp))
+                        .background(Color.Black.copy(alpha = 0.68f)).padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(title, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                sizeText(v.size)?.let { Text(it, color = p.textSecondary, fontSize = 11.sp) }
+            }
+            IconButton(onClick = onDownload, modifier = Modifier.size(40.dp).testTag("tg_download_${v.messageId}")) {
+                Icon(Icons.Default.Download, "Download $title", tint = p.textSecondary, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+/** Length and quality shown on the picture: "12:04 · 720p"; audio shows only its length. */
+internal fun tileBadges(v: TgVideo): String = buildList {
+    if (v.durationSec > 0) add(if (v.durationSec >= 3600) "%d:%02d:%02d".format(v.durationSec / 3600, v.durationSec / 60 % 60, v.durationSec % 60) else "%d:%02d".format(v.durationSec / 60, v.durationSec % 60))
+    if (!v.audio && v.height > 0) add("${v.height}p")
 }.joinToString(" · ")
+
+internal fun sizeText(size: Long): String? = when {
+    size <= 0 -> null
+    size >= 1_000_000_000 -> "%.1f GB".format(size / 1e9)
+    else -> "${maxOf(1, size / 1_000_000)} MB"
+}
+
 
 /**
  * OWN-3: the user's own Telegram API ID and API hash (my.telegram.org -> API development tools), like Hikari.

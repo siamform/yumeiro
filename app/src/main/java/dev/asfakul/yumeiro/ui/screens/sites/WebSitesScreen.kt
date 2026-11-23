@@ -121,6 +121,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     val signedIn by androidx.compose.runtime.produceState(false, accountEnabled, account) {
         if (accountEnabled) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.signedInHint(context) }
     }
+    // TG-ME-1 (owner list 8A): the signed-in user's name and photo, as the account page last read them.
+    val me by androidx.compose.runtime.produceState<dev.asfakul.yumeiro.online.telegram.td.TgAccounts.MeHint?>(null, accountEnabled, account, signedIn) {
+        value = if (accountEnabled && signedIn) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.meHint(context) } else null
+    }
     if (account && accountEnabled) {
         TelegramAccountScreen(onBack = { account = false }, onPlay = { req -> IncomingMedia.open(context, req) })
         return
@@ -225,63 +229,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, if (telegramPage) "Share channel list" else "Share website list", tint = p.textSecondary) }
             IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, if (telegramPage) "How Telegram works" else "How websites work", tint = p.textSecondary) }
         }
-        LazyColumn(
-            Modifier.fillMaxSize(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("websites"),
-            contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 140.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            // OL-1: the website kept in the background, one tap from where it was.
-            tab?.takeIf { tabs && !it.visible }?.let { t ->
-                item("website_tab_card") {
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
-                            .clickable { WebsiteTab.resume() }.heightIn(min = 56.dp).padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("website_tab_card"),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Open tab · ${t.name}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(t.keep.title.ifBlank { t.keep.address }, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        androidx.compose.material3.TextButton(onClick = { WebsiteTab.resume() }, modifier = Modifier.testTag("website_tab_resume")) { Text("Resume") }
-                        IconButton(onClick = { WebsiteTab.close() }, modifier = Modifier.testTag("website_tab_close")) { Icon(Icons.Default.Close, "Close tab", tint = p.textSecondary) }
-                    }
-                }
-            }
-            // TG-PAGE-1: a clear way in. The card says whether this profile is signed in and has a real button;
-            // when sign-in can't run on this phone it says why instead of disappearing.
-            if (accountEnabled) item("tg_account_card") {
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
-                        .clickable(onClickLabel = if (signedIn) "Open your chats" else "Sign in to Telegram") { account = true }
-                        .heightIn(min = 56.dp).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp).testTag("tg_account_card"),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(if (signedIn) "Your Telegram account" else "Sign in to Telegram", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            if (signedIn) "Signed in. Videos and audio from your chats, groups and channels, including private ones you have joined"
-                            else "Watch videos from your chats, groups and the private channels you have joined. Telegram sends the code; Yumeiro never sees your password",
-                            color = p.textSecondary, fontSize = 12.sp,
-                        )
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    androidx.compose.material3.Button(
-                        onClick = { account = true },
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
-                        modifier = Modifier.heightIn(min = 48.dp).testTag("tg_account_button"),
-                    ) { Text(if (signedIn) "Open" else "Sign in", fontWeight = FontWeight.SemiBold) }
-                }
-            } else if (telegramPage && accountUnavailable != null) item("tg_account_unavailable") {
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh).padding(16.dp).testTag("tg_account_unavailable"),
-                ) {
-                    Text("Sign-in isn't available here", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
-                    Text(accountUnavailable, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
-                }
-            }
-            item("add") {
+        val addCard: @Composable () -> Unit = {
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
                         .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
@@ -308,7 +256,70 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     }
                     error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
                 }
+        }
+        LazyColumn(
+            Modifier.fillMaxSize(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("websites"),
+            contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 140.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // OL-1: the website kept in the background, one tap from where it was.
+            tab?.takeIf { tabs && !it.visible }?.let { t ->
+                item("website_tab_card") {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                            .clickable { WebsiteTab.resume() }.heightIn(min = 56.dp).padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("website_tab_card"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Open tab · ${t.name}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(t.keep.title.ifBlank { t.keep.address }, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        androidx.compose.material3.TextButton(onClick = { WebsiteTab.resume() }, modifier = Modifier.testTag("website_tab_resume")) { Text("Resume") }
+                        IconButton(onClick = { WebsiteTab.close() }, modifier = Modifier.testTag("website_tab_close")) { Icon(Icons.Default.Close, "Close tab", tint = p.textSecondary) }
+                    }
+                }
             }
+            // TG-PAGE-1: a clear way in. The card says whether this profile is signed in and has a real button;
+            // when sign-in can't run on this phone it says why instead of disappearing.
+            if (telegramPage) item("add") { addCard() }
+            if (accountEnabled) item("tg_account_card") {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                        .clickable(onClickLabel = if (signedIn) "Open your chats" else "Sign in to Telegram") { account = true }
+                        .heightIn(min = 56.dp).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp).testTag("tg_account_card"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (signedIn) {
+                        TelegramAvatar(me?.photoPath, me?.name ?: "Telegram", size = 44.dp, modifier = Modifier.testTag("tg_account_avatar"))
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(if (signedIn) me?.name ?: "Your Telegram account" else "Sign in to Telegram", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            if (signedIn) "Signed in. Videos and audio from your chats, groups and channels, including private ones you have joined"
+                            else "Watch videos from your chats, groups and the private channels you have joined. Telegram sends the code; Yumeiro never sees your password",
+                            color = p.textSecondary, fontSize = 12.sp,
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    androidx.compose.material3.Button(
+                        onClick = { account = true },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
+                        modifier = Modifier.heightIn(min = 48.dp).testTag("tg_account_button"),
+                    ) { Text(if (signedIn) "Open" else "Sign in", fontWeight = FontWeight.SemiBold) }
+                }
+            } else if (telegramPage && accountUnavailable != null) item("tg_account_unavailable") {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh).padding(16.dp).testTag("tg_account_unavailable"),
+                ) {
+                    Text("Sign-in isn't available here", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(accountUnavailable, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+            // TG-ADD-1 (owner list 8A): on the Telegram page, adding a public channel comes first.
+            if (!telegramPage) item("add") { addCard() }
             if (sites.size >= 6) item("search") {
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
@@ -377,7 +388,16 @@ private fun SiteRow(
             .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp).testTag("site_row"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        // TG-AVATAR-1 (owner list 8A): a saved Telegram channel shows its own photo, not t.me's favicon.
+        val channel = remember(site.url) { dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(site.url) }
+        if (channel != null) {
+            val context = LocalContext.current
+            val photo by androidx.compose.runtime.produceState<String?>(null, channel) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.TelegramAvatars.cached(context, channel) }
+                dev.asfakul.yumeiro.online.telegram.TelegramAvatars.get(context, channel)?.let { value = it }
+            }
+            TelegramAvatar(photo, site.name, size = 44.dp, modifier = Modifier.testTag("site_avatar"))
+        } else Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(site.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             AsyncImage(
                 model = "https://www.google.com/s2/favicons?domain=${site.host}&sz=64", contentDescription = null,
