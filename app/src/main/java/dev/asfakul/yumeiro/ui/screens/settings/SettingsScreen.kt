@@ -8,6 +8,7 @@ package dev.asfakul.yumeiro.ui.screens.settings
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import dev.asfakul.yumeiro.ui.theme.legibleOnTheme
+import dev.asfakul.yumeiro.ui.theme.pageBackground
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
@@ -146,13 +147,18 @@ fun SettingsScreen(
             transitionSpec = { dev.asfakul.yumeiro.ui.components.PageMotion.pushOrPop(this, forward = targetState != null, reduced = reducedSettingsMotion).using(null) },
             label = "settings_page",
         ) { page ->
-            if (page == null) SettingsHome(onBack = onBackClick, onOpen = ::go)
-            else CategoryPage(
-                page, onBack = { openName = null },
-                onRescanClick = onRescanClick, onNavigateToEqualizer = onNavigateToEqualizer,
-                onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory,
-                onOpenPage = onOpenPage, onOpenCategory = ::go,
-            )
+            // NAV-2 (owner report): both pages were see-through, so while a category slid in the Settings home
+            // (only dimmed to 55 %, not hidden) showed under it. Each page now draws its own opaque background,
+            // like every NavHost destination (OpaquePage).
+            Box(Modifier.fillMaxSize().pageBackground().testTag(if (page == null) "settings_layer_home" else "settings_layer_page")) {
+                if (page == null) SettingsHome(onBack = onBackClick, onOpen = ::go)
+                else CategoryPage(
+                    page, onBack = { openName = null },
+                    onRescanClick = onRescanClick, onNavigateToEqualizer = onNavigateToEqualizer,
+                    onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory,
+                    onOpenPage = onOpenPage, onOpenCategory = ::go,
+                )
+            }
         }
         if (showGuide) UserGuideScreen(onBack = { showGuide = false })
     }

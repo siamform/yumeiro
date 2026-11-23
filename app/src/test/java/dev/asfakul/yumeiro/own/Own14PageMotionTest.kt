@@ -31,4 +31,13 @@ class Own14PageMotionTest {
         val settings = src("ui/screens/settings/SettingsScreen.kt")
         assertTrue(settings.contains("PageMotion.pushOrPop("))
     }
+
+    /** NAV-2: the Settings home showed under a category while it slid in, and covered it on Back. */
+    @Test fun settingsPagesAreOpaqueAndTheSlidingPageStaysOnTop() {
+        assertEquals(1f, PageMotion.slidingZ(forward = true))
+        assertTrue("on Back the closing page must stay above the page coming back", PageMotion.slidingZ(forward = false) < PageMotion.slidingZ(forward = true))
+        val settings = src("ui/screens/settings/SettingsScreen.kt")
+        val layer = settings.substringAfter("label = \"settings_page\",").substringBefore("if (showGuide)")
+        assertTrue("each Settings page must paint its own background", layer.contains(".pageBackground()"))
+    }
 }
