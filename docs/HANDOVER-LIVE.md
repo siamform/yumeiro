@@ -6,6 +6,30 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
+2026-11-23 16:08 +06 (R19, owner directive 2 "complete bug resolution", branch **r19-restore**, head 979014b9).
+Verification labels: CI / emulator / real device (none available) / untested / blocked. Ledger rows "(R19)" in
+docs/BUGS-AND-FIXES-2.0.0.md after OWN-12 hold the evidence and run ids.
+- ONLINE-INIT-1 (07cd54de FCM storm, d35e2aa9 DNS budget): emulator verified for skip / tour / update scenarios
+  (Job-didn't-exist lines 153,438 -> 4). Firebase notifications and Cloudflare kept.
+- LIVE-DNS-1 (ad56caff + 979014b9 test): IPv6-only DoH answer asks for A records; emulator: IPv4 at 17.5 s (was 174.5 s).
+- LIVE-SLOW-1 (24a78259): CI verified; emulated umts still 0 channels on a fresh install. The emulated link is taken by Google
+  Play services (~5 MB in 240 s); inconclusive, not an app defect proof. Real slow network: blocked (no device).
+- NAV-1 / NAV-1b (60540fb0, 79570c07, 89434454, dcdf875c): emulator + CI verified.
+- THEME-1 (d3f16b9a): glass removed, Kasumi gone; probe 45145661829 screenshots of all 5 themes: solid, emulator verified.
+- ENGINE-1 (16d216f9): 10 extensions at once, isolation holds, 4/10 played, 6 extension/site faults (ledger).
+- LEGACY-EXT-1/2, TG-PAGE-1, UX-MARKET-1, PERF-IDLE-1: see ledger.
+Probe tooling: answer_system taps "Wait" on system ANR dialogs (f669199f); before it, r8 skip/live/theme probes were invalid.
+
+## Pending runs
+- CI 45151409433 on 979014b9 (DohIpv4AnswerTest fix). If red: `gh run view 45151409433 -R siamform/yumeiro --log-failed`.
+
+## Next step
+1. Confirm CI 45151409433 green.
+2. Live TV slow link: probe with a less degraded profile (NET=edge) after Play services settle (wait step), with a saved
+   playlist (second launch) to check the last-known-good path.
+3. Telegram signed-in search needs an account (blocked). Real-device checks for everything: blocked (no device).
+4. No merge / release / tag without owner approval.
+
 2026-11-23 ~12:30 +06 (R19, new agent): working branch is now **r19-restore** (from r18-live-ext). Owner brief R19 =
 10 audit sections; every earlier "done" is treated as unverified. Skills: ui-ux-pro-max (design), kotlin-agent-skills,
 rea (problem solving), jeffallan/claude-skills architecture-designer (system design / ADRs; Kotlin skill for Android).
@@ -62,10 +86,7 @@ composes MTPlayerApp only after the PIN (MainActivity line ~91), SplashScreen en
   before the swap). Next: seed at the gate or swap the client before the drama source starts; and look at the app side:
   one slow host makes every drama shelf wait 20-25 s in line (feed speed, owner focus).
 
-## Pending runs
-- None.
-
-## Next step
+## Next step (older)
 1. Live TV (E2-ALL): Yumeiro Live is published on the streams branch (playlists/yumeiro_live.m3u, 1.7 MB, sync 45071581763).
    Device-check Live TV on both phones; curated per-country lists still off.
 2. Extensions: ExtensionsDeviceTest e13 "five feeds failed" on device; OWN-4 / OWN-5 device checks.
