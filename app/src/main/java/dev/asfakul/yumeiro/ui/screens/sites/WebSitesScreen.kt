@@ -166,7 +166,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
 
     if (help) TsukiDialog(
         onDismissRequest = { help = false },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(SetupGuides.websites, startExpanded = true) } },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(if (telegramPage) SetupGuides.telegram else SetupGuides.websites, startExpanded = true) } },
         confirmButton = { androidx.compose.material3.TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text("Got it") } },
     )
 
@@ -174,10 +174,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         var text by rememberSaveable { mutableStateOf("") }
         TsukiDialog(
             onDismissRequest = { importing = false },
-            title = { Text("Add websites from a list") },
+            title = { Text(if (telegramPage) "Add channels from a list" else "Add websites from a list") },
             text = {
                 Column {
-                    Text("Paste links, one per line. Sites you already saved stay as they are.", fontSize = 13.sp)
+                    Text(if (telegramPage) "Paste @names or t.me links, one per line. Channels you already saved stay as they are." else "Paste links, one per line. Sites you already saved stay as they are.", fontSize = 13.sp)
                     OutlinedTextField(text, { text = it }, minLines = 4, maxLines = 8, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("site_import_field"))
                 }
             },
@@ -186,9 +186,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     val r = SavedSites.importText(context, text)
                     importing = false
                     dev.asfakul.yumeiro.ui.components.AppMessages.info(context, buildString {
-                        append(if (r.added == 1) "1 website added" else "${r.added} websites added")
+                        val noun = if (telegramPage) "channel" else "website"
+                        append(if (r.added == 1) "1 $noun added" else "${r.added} ${noun}s added")
                         if (r.duplicates > 0) append(", ${r.duplicates} already saved")
-                        if (r.bad > 0) append(", ${r.bad} not web addresses")
+                        if (r.bad > 0) append(if (telegramPage) ", ${r.bad} not channel links" else ", ${r.bad} not web addresses")
                         if (r.overLimit > 0) append(", ${r.overLimit} over the 200 limit")
                     })
                 }, enabled = text.isNotBlank(), modifier = Modifier.testTag("site_import_confirm")) { Text("Add") }
@@ -214,13 +215,13 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             title = if (telegramPage) "Telegram" else "Websites", onBack = onBack,
             subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else if (telegramPage) "Public channels, no login" else "Play videos from any site",
         ) {
-            IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add websites from a list", tint = p.textSecondary) }
+            IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, if (telegramPage) "Add channels from a list" else "Add websites from a list", tint = p.textSecondary) }
             if (sites.isNotEmpty()) IconButton(onClick = {
                 val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
                     .putExtra(android.content.Intent.EXTRA_TEXT, SavedSites.export(sites))
-                runCatching { context.startActivity(android.content.Intent.createChooser(send, "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, "Share website list", tint = p.textSecondary) }
-            IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, "How websites work", tint = p.textSecondary) }
+                runCatching { context.startActivity(android.content.Intent.createChooser(send, if (telegramPage) "Share channel list" else "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, if (telegramPage) "Share channel list" else "Share website list", tint = p.textSecondary) }
+            IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, if (telegramPage) "How Telegram works" else "How websites work", tint = p.textSecondary) }
         }
         LazyColumn(
             Modifier.fillMaxSize(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("websites"),
