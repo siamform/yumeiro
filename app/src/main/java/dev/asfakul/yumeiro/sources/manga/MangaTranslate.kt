@@ -130,8 +130,26 @@ object MangaTranslate {
                         top += b.height
                         if (top < totalH) seams += top
                     }
+                    // TL-3: a seam that cuts through a line of letters leaves half-height glyphs on both sides, which
+                    // OCR misreads ("MUCL" for "MUCHAS GRACIAS", device test D). Read a band across each seam too; a
+                    // line found across the seam there replaces the half-reads.
+                    var spliced: List<MangaTlPlan.Box> = boxes
+                    for ((i, seam) in seams.withIndex()) {
+                        val up = strips[i]; val down = strips[i + 1]
+                        val above = minOf(MangaTlPlan.SEAM_BAND, up.height); val below = minOf(MangaTlPlan.SEAM_BAND, down.height)
+                        val band = runCatching { Bitmap.createBitmap(maxOf(up.width, down.width), above + below, Bitmap.Config.ARGB_8888) }.getOrNull() ?: continue
+                        try {
+                            val cv = android.graphics.Canvas(band)
+                            cv.drawColor(android.graphics.Color.WHITE)
+                            cv.drawBitmap(up, android.graphics.Rect(0, up.height - above, up.width, up.height), android.graphics.Rect(0, 0, up.width, above), null)
+                            cv.drawBitmap(down, android.graphics.Rect(0, 0, down.width, below), android.graphics.Rect(0, above, down.width, above + below), null)
+                            val bandTop = seam - above
+                            val found = runCatching { e.ocr(band, script) }.getOrDefault(emptyList()).map { it.copy(t = it.t + bandTop, b = it.b + bandTop) }
+                            spliced = MangaTlPlan.spliceBand(spliced, found, bandTop, seam + below, seam)
+                        } finally { band.recycle() }
+                    }
                     // A webtoon is decoded in strips; a bubble cut by a seam is read as two halves. Join them back.
-                    return MangaTlPlan.mergeSeams(boxes, seams, script).filter { MangaTlPlan.keep(it, width, totalH, script) }
+                    return MangaTlPlan.mergeSeams(spliced, seams, script).filter { MangaTlPlan.keep(it, width, totalH, script) }
                 }
                 var from = s.from
                 var kept = read(MangaTlPlan.script(from))
@@ -342,6 +360,20 @@ object MangaTlPlan {
      * overlapping by half the narrower width are joined into one, text in reading order.
      */
     const val SEAM_PX = 8
+
+    /** TL-3: pixels taken from each side of a seam for the extra band read (a few lines of bubble text). */
+    const val SEAM_BAND = 160
+
+    /**
+     * TL-3: [found] = boxes read on a band [bandTop, bandBottom) across [seam]. A box that crosses the seam and sits
+     * inside the band (not cut by its edges) is a whole line; the strip boxes it overlaps were half-reads and go.
+     */
+    fun spliceBand(boxes: List<Box>, found: List<Box>, bandTop: Int, bandBottom: Int, seam: Int): List<Box> {
+        val whole = found.filter { it.t < seam && it.b > seam && it.t > bandTop + 1 && it.b < bandBottom - 1 && it.text.isNotBlank() }
+        if (whole.isEmpty()) return boxes
+        fun overlaps(a: Box, b: Box) = a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b
+        return boxes.filter { s -> whole.none { overlaps(it, s) } } + whole
+    }
     fun mergeSeams(boxes: List<Box>, seams: List<Int>, src: Src): List<Box> {
         if (seams.isEmpty() || boxes.size < 2) return boxes
         val out = boxes.toMutableList()

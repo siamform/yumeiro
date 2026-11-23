@@ -31,8 +31,10 @@ class MangaTranslateTest {
         var ocrCalls = 0; var closed = 0
         override fun ocr(bitmap: Bitmap, src: MangaTlPlan.Src): List<MangaTlPlan.Box> {
             ocrCalls++; scripts += src
-            return boxes
+            // TL-3: the extra read across a strip seam is the only bitmap SEAM_BAND * 2 tall.
+            return if (bitmap.height == MangaTlPlan.SEAM_BAND * 2) band else boxes
         }
+        var band = emptyList<MangaTlPlan.Box>()
         var boxes = listOf(MangaTlPlan.Box(10, 10, 210, 110, "こんにちは"), MangaTlPlan.Box(5, 90, 25, 99, "12"))
         val scripts = ArrayList<MangaTlPlan.Src>(); val pairs = ArrayList<String>(); var fail = false
         override fun ready(from: String, dst: String) = true
@@ -102,14 +104,14 @@ class MangaTranslateTest {
         assertEquals("page number dropped, both strips read", 2, out.size)
         assertEquals("Hello", out[0].text)
         assertEquals(10, out[0].t); assertEquals(1010, out[1].t) // second strip offset by the first's height
-        assertEquals(2, fake.ocrCalls)
+        assertEquals("2 strips + 1 seam band", 3, fake.ocrCalls)
         MangaTranslate.release()
         assertEquals("models released", 1, fake.closed)
         assertEquals(out, MangaTranslate.page(c, "src|p0|0", strips, s))
-        assertEquals("served from cache, no new OCR", 2, fake.ocrCalls)
+        assertEquals("served from cache, no new OCR", 3, fake.ocrCalls)
         MangaTranslate.clear(c)
         MangaTranslate.page(c, "src|p0|0", strips, s)
-        assertEquals("Clear caches really clears", 4, fake.ocrCalls)
+        assertEquals("Clear caches really clears", 6, fake.ocrCalls)
     }
 
     @Test fun settingsRoundTripAndDefaultTarget() {
@@ -171,7 +173,7 @@ class MangaTranslateTest {
         val out = MangaTranslate.page(c, "src|tall|0", strips, s)
         assertEquals("strip 1 bottom + strip 2 top joined: ${out.map { it.source }}", 3, out.size)
         assertTrue(out.any { it.t == 940 && it.b == 1060 && it.source == "¿A DÓNDE ¿A DÓNDE" })
-        assertEquals("read with the Latin reader", listOf(MangaTlPlan.Src.LATIN, MangaTlPlan.Src.LATIN), fake.scripts)
+        assertEquals("read with the Latin reader (2 strips + 1 seam band)", List(3) { MangaTlPlan.Src.LATIN }, fake.scripts)
         assertEquals("translated from Spanish, not as English", listOf("es>en"), fake.pairs)
     }
 
@@ -195,5 +197,29 @@ class MangaTranslateTest {
         fake.boxes = listOf(MangaTlPlan.Box(10, 10, 310, 110, "WHERE ARE YOU GOING?"))
         val en = runCatching { MangaTranslate.page(c, "src|auto|1", strip, MangaTranslate.Settings(true, MangaTlPlan.AUTO, "en", false)) }.exceptionOrNull()
         assertTrue("English page, English target: $en", en is MangaTranslate.SameLanguage)
+    }
+
+    // TL-3: device test D showed a seam through the letters gives "MUCL"; the seam band's whole line replaces it.
+    @Test fun aLineReadAcrossTheSeamReplacesTheHalfReads() {
+        val half = MangaTlPlan.Box(255, 981, 363, 1000, "MUCL")
+        val far = MangaTlPlan.Box(100, 100, 300, 140, "HOLA")
+        val line = MangaTlPlan.Box(250, 982, 650, 1016, "MUCHAS GRACIAS")
+        val cut = MangaTlPlan.Box(250, 841, 650, 1010, "EDGE")
+        assertEquals(listOf(far, line), MangaTlPlan.spliceBand(listOf(far, half), listOf(line), 840, 1160, 1000))
+        assertEquals("a box cut by the band edge is not trusted", listOf(far, half), MangaTlPlan.spliceBand(listOf(far, half), listOf(cut), 840, 1160, 1000))
+        val below = MangaTlPlan.Box(250, 1020, 650, 1050, "NO")
+        assertEquals("band boxes off the seam are ignored", listOf(half), MangaTlPlan.spliceBand(listOf(half), listOf(below), 840, 1160, 1000))
+    }
+
+    @Test fun tallPagePipelineUsesTheSeamBandLine() = runBlocking {
+        fake.boxes = listOf(MangaTlPlan.Box(255, 981, 363, 1000, "MUCL"))
+        // Band covers page y 840..1160; the line sits at 142..176 in the band = 982..1016 on the page.
+        fake.band = listOf(MangaTlPlan.Box(250, 142, 650, 176, "MUCHAS GRACIAS"))
+        val s = MangaTranslate.Settings(true, "es", "en", false)
+        val strips = listOf(Bitmap.createBitmap(900, 1000, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(900, 1000, Bitmap.Config.ARGB_8888))
+        val out = MangaTranslate.page(c, "src|seamband|0", strips, s)
+        assertTrue("whole line kept, half-read gone: ${out.map { it.source }}", out.any { it.source == "MUCHAS GRACIAS" && it.t <= 982 && it.b >= 1016 })
+        // (The fake gives every strip the same box, so strip 2 has its own "MUCL" lower down, away from the seam.)
+        assertFalse(out.any { it.source == "MUCL" && it.t < 1100 })
     }
 }
