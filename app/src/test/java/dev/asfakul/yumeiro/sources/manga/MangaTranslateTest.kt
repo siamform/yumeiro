@@ -30,12 +30,17 @@ class MangaTranslateTest {
     private class Fake : MangaTlEngine {
         var ocrCalls = 0; var closed = 0
         override fun ocr(bitmap: Bitmap, src: MangaTlPlan.Src): List<MangaTlPlan.Box> {
-            ocrCalls++
-            return listOf(MangaTlPlan.Box(10, 10, 210, 110, "こんにちは"), MangaTlPlan.Box(5, 90, 25, 99, "12"))
+            ocrCalls++; scripts += src
+            return boxes
         }
-        override fun ready(src: MangaTlPlan.Src, dst: String) = true
-        override fun prepare(src: MangaTlPlan.Src, dst: String, wifiOnly: Boolean) {}
-        override fun translate(texts: List<String>, src: MangaTlPlan.Src, dst: String) = texts.map { if (it == "こんにちは") "Hello" else "?" }
+        var boxes = listOf(MangaTlPlan.Box(10, 10, 210, 110, "こんにちは"), MangaTlPlan.Box(5, 90, 25, 99, "12"))
+        val scripts = ArrayList<MangaTlPlan.Src>(); val pairs = ArrayList<String>(); var fail = false
+        override fun ready(from: String, dst: String) = true
+        override fun prepare(from: String, dst: String, wifiOnly: Boolean) { pairs += "prepare $from>$dst" }
+        override fun translate(texts: List<String>, from: String, dst: String): List<String> {
+            pairs += "$from>$dst"
+            return texts.map { if (fail) "" else if (it == "こんにちは") "Hello" else "[$it]" }
+        }
         override fun close() { closed++ }
     }
     private val fake = Fake()
@@ -82,16 +87,16 @@ class MangaTranslateTest {
     }
 
     @Test fun cacheKeyAndStorage() {
-        val k = MangaTlPlan.key("p1", ja, "en")
-        assertEquals(k, MangaTlPlan.key("p1", ja, "en"))
-        assertNotEquals(k, MangaTlPlan.key("p1", ja, "bn"))
-        assertNotEquals(k, MangaTlPlan.key("p1", MangaTlPlan.Src.KO, "en"))
+        val k = MangaTlPlan.key("p1", "ja", "en")
+        assertEquals(k, MangaTlPlan.key("p1", "ja", "en"))
+        assertNotEquals(k, MangaTlPlan.key("p1", "ja", "bn"))
+        assertNotEquals(k, MangaTlPlan.key("p1", "ko", "en"))
         val list = listOf(MangaTlPlan.Bubble(1, 2, 3, 4, "こんにちは", "Hello \"there\""))
         assertEquals(list, MangaTlPlan.decode(MangaTlPlan.encode(list)))
     }
 
     @Test fun pagePipelineOffsetsStripsTranslatesAndCaches() = runBlocking {
-        val s = MangaTranslate.Settings(true, ja, "en", false)
+        val s = MangaTranslate.Settings(true, "ja", "en", false)
         val strips = listOf(Bitmap.createBitmap(800, 1000, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(800, 1000, Bitmap.Config.ARGB_8888))
         val out = MangaTranslate.page(c, "src|p0|0", strips, s)
         assertEquals("page number dropped, both strips read", 2, out.size)
@@ -110,8 +115,85 @@ class MangaTranslateTest {
     @Test fun settingsRoundTripAndDefaultTarget() {
         assertEquals("bn", MangaTlPlan.defaultTarget("bn"))
         assertEquals("en", MangaTlPlan.defaultTarget("xx"))
-        MangaTranslate.save(c, MangaTranslate.Settings(true, MangaTlPlan.Src.KO, "id", true))
-        assertEquals(MangaTranslate.Settings(true, MangaTlPlan.Src.KO, "id", true), MangaTranslate.settings(c))
-        MangaTranslate.save(c, MangaTranslate.Settings(false, ja, "en", false))
+        MangaTranslate.save(c, MangaTranslate.Settings(true, "ko", "id", true))
+        assertEquals(MangaTranslate.Settings(true, "ko", "id", true), MangaTranslate.settings(c))
+        // Old saved values ("ja", "zh", "ko", "en") stay valid; nothing saved means Auto.
+        c.getSharedPreferences("manga_reader", 0).edit().remove("tl_src").commit()
+        assertEquals(MangaTlPlan.AUTO, MangaTranslate.settings(c).from)
+        MangaTranslate.save(c, MangaTranslate.Settings(false, "ja", "en", false))
+    }
+
+    // TL-2 -------------------------------------------------------------------------------------------------
+
+    @Test fun autoFollowsTheSourceLanguageAndLatinLanguagesKeepTheirOwnCode() {
+        assertEquals("pt", MangaTlPlan.fromProvider("pt-BR"))
+        assertEquals("es", MangaTlPlan.fromProvider("es-419"))
+        assertEquals("zh", MangaTlPlan.fromProvider("zh-Hans"))
+        assertEquals("ja", MangaTlPlan.fromProvider("JA"))
+        assertEquals(null, MangaTlPlan.fromProvider("all"))
+        assertEquals(null, MangaTlPlan.fromProvider(null))
+        val auto = MangaTranslate.Settings(true, MangaTlPlan.AUTO, "bn", false)
+        assertEquals("es", MangaTranslate.resolve(auto, "es").from)
+        assertEquals(MangaTlPlan.Src.LATIN, MangaTranslate.resolve(auto, "es").src)
+        assertEquals("a fixed choice wins over the source", "ko", MangaTranslate.resolve(auto.copy(from = "ko"), "es").from)
+        assertEquals(MangaTlPlan.AUTO, MangaTranslate.resolve(auto, "multi").from)
+    }
+
+    @Test fun detectReadsTheScript() {
+        assertEquals("ja", MangaTlPlan.detect("こんにちは 元気ですか"))
+        assertEquals("ja", MangaTlPlan.detect("東京都の天気は晴れです"))
+        assertEquals("ko", MangaTlPlan.detect("안녕하세요"))
+        assertEquals("zh", MangaTlPlan.detect("你好我们走吧"))
+        assertEquals("en", MangaTlPlan.detect("WHERE ARE YOU GOING?"))
+        assertEquals("en", MangaTlPlan.detect(""))
+    }
+
+    @Test fun bubblesCutByAStripSeamAreJoined() {
+        val top = MangaTlPlan.Box(100, 1900, 400, 2046, "WHERE ARE YOU")
+        val bottom = MangaTlPlan.Box(110, 2050, 390, 2120, "GOING?")
+        val other = MangaTlPlan.Box(500, 2048, 700, 2200, "NO")
+        val far = MangaTlPlan.Box(100, 300, 300, 400, "HEY")
+        val out = MangaTlPlan.mergeSeams(listOf(far, top, other, bottom), listOf(2048), MangaTlPlan.Src.LATIN)
+        assertEquals(3, out.size)
+        assertTrue(out.contains(MangaTlPlan.Box(100, 1900, 400, 2120, "WHERE ARE YOU GOING?")))
+        assertTrue("a box beside it is not swallowed", out.contains(other))
+        assertTrue(out.contains(far))
+        val ja = MangaTlPlan.mergeSeams(listOf(MangaTlPlan.Box(0, 2000, 50, 2048, "こんに"), MangaTlPlan.Box(0, 2048, 50, 2100, "ちは")), listOf(2048), MangaTlPlan.Src.JA)
+        assertEquals("こんにちは", ja.single().text)
+        assertEquals("no seam, no change", listOf(top, bottom), MangaTlPlan.mergeSeams(listOf(top, bottom), emptyList(), MangaTlPlan.Src.LATIN))
+    }
+
+    @Test fun tallPagePipelineJoinsTheSeamBubbleAndTranslatesFromSpanish() = runBlocking {
+        // Each strip returns the same boxes; strip 1's bubble ends on the seam, strip 2's starts on it.
+        fake.boxes = listOf(MangaTlPlan.Box(100, 0, 400, 60, "¿A DÓNDE"), MangaTlPlan.Box(100, 940, 400, 1000, "¿A DÓNDE"))
+        val s = MangaTranslate.Settings(true, "es", "en", false)
+        val strips = listOf(Bitmap.createBitmap(800, 1000, Bitmap.Config.ARGB_8888), Bitmap.createBitmap(800, 1000, Bitmap.Config.ARGB_8888))
+        val out = MangaTranslate.page(c, "src|tall|0", strips, s)
+        assertEquals("strip 1 bottom + strip 2 top joined: ${out.map { it.source }}", 3, out.size)
+        assertTrue(out.any { it.t == 940 && it.b == 1060 && it.source == "¿A DÓNDE ¿A DÓNDE" })
+        assertEquals("read with the Latin reader", listOf(MangaTlPlan.Src.LATIN, MangaTlPlan.Src.LATIN), fake.scripts)
+        assertEquals("translated from Spanish, not as English", listOf("es>en"), fake.pairs)
+    }
+
+    @Test fun sameLanguageAndFailedTranslationsAreReportedNotHidden() = runBlocking {
+        val strip = listOf(Bitmap.createBitmap(800, 1000, Bitmap.Config.ARGB_8888))
+        val same = runCatching { MangaTranslate.page(c, "src|p|0", strip, MangaTranslate.Settings(true, "en", "en", false)) }.exceptionOrNull()
+        assertTrue("English → English: $same", same is MangaTranslate.SameLanguage)
+        assertEquals("no OCR for nothing", 0, fake.ocrCalls)
+        fake.fail = true
+        val failed = runCatching { MangaTranslate.page(c, "src|p|1", strip, MangaTranslate.Settings(true, "ja", "en", false)) }.exceptionOrNull()
+        assertTrue("every bubble failed: $failed", failed is MangaTranslate.TranslateFailed)
+        fake.fail = false
+        assertEquals("a failure is not cached; the retry translates", "Hello", MangaTranslate.page(c, "src|p|1", strip, MangaTranslate.Settings(true, "ja", "en", false)).first().text)
+    }
+
+    @Test fun autoWithAnUnknownSourceReadsTheLanguageFromThePage() = runBlocking {
+        val strip = listOf(Bitmap.createBitmap(800, 1000, Bitmap.Config.ARGB_8888))
+        val out = MangaTranslate.page(c, "src|auto|0", strip, MangaTranslate.Settings(true, MangaTlPlan.AUTO, "bn", false))
+        assertEquals("pack already there: no download, translated from Japanese", listOf("ja>bn"), fake.pairs)
+        assertEquals(1, out.size)
+        fake.boxes = listOf(MangaTlPlan.Box(10, 10, 310, 110, "WHERE ARE YOU GOING?"))
+        val en = runCatching { MangaTranslate.page(c, "src|auto|1", strip, MangaTranslate.Settings(true, MangaTlPlan.AUTO, "en", false)) }.exceptionOrNull()
+        assertTrue("English page, English target: $en", en is MangaTranslate.SameLanguage)
     }
 }

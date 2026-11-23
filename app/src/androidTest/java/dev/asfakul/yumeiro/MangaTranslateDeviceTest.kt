@@ -53,7 +53,7 @@ class MangaTranslateDeviceTest {
     private val ctx = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
     private fun log(s: String) = Log.i("YuMangaTl", s)
     private val bytes by lazy { InstrumentationRegistry.getInstrumentation().context.assets.open("manga/tl_page.png").use { it.readBytes() } }
-    private val s = MangaTranslate.Settings(true, MangaTlPlan.Src.JA, "en", false)
+    private val s = MangaTranslate.Settings(true, "ja", "en", false)
 
     @After fun tearDown() {
         runCatching { SourceHub.remove("yu_test_tl_bridge") }
@@ -125,5 +125,79 @@ class MangaTranslateDeviceTest {
         log("TL_B off boxes=${boxes().size}")
         assertTrue("translations still shown after turning it off", boxes().isEmpty())
         log("TL_RESULT_B PASS")
+    }
+
+    // TL-2 ------------------------------------------------------------------------------------------------
+
+    /** A drawn page: white bubbles with black Latin text on grey "art" (real OCR reads the pixels). */
+    private fun drawnPage(w: Int, h: Int, vararg bubbles: Pair<Int, String>): android.graphics.Bitmap {
+        val b = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val cv = android.graphics.Canvas(b)
+        cv.drawColor(android.graphics.Color.rgb(170, 170, 170))
+        val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
+        val ink = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.BLACK; textSize = 46f; typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }
+        for ((top, text) in bubbles) {
+            cv.drawOval(60f, top.toFloat(), w - 60f, top + 220f, fill)
+            val tw = ink.measureText(text)
+            cv.drawText(text, (w - tw) / 2f, top + 125f, ink)
+        }
+        return b
+    }
+
+    /** TL-2: a Spanish page is translated from Spanish (the first version sent all Latin text as English). */
+    @Test fun c_spanishPageIsTranslatedFromSpanishOnDevice() = runBlocking<Unit> {
+        MangaTranslate.clear(ctx)
+        val es = MangaTranslate.resolve(MangaTranslate.Settings(true, MangaTlPlan.AUTO, "en", false), "es-419")
+        log("TL_C resolved from=${es.from} script=${es.src}")
+        assertTrue("Auto + es-419 source → es: ${es.from}", es.from == "es")
+        val t0 = SystemClock.elapsedRealtime()
+        val prep = MangaTranslate.prepare(ctx, es)
+        log("TL_C prepare=${prep.isSuccess} ms=${SystemClock.elapsedRealtime() - t0}")
+        assertTrue("es pack: ${prep.exceptionOrNull()}", prep.isSuccess)
+        val page = drawnPage(900, 1300, 200 to "¿DÓNDE ESTÁ MI GATO?", 800 to "MUCHAS GRACIAS")
+        val out = MangaTranslate.page(ctx, "fixture|es_page", listOf(page), es)
+        log("TL_C bubbles=${out.map { it.source + " -> " + it.text }}")
+        val all = out.joinToString(" | ") { it.text.lowercase() }
+        assertTrue("cat not in $all", "cat" in all)
+        assertTrue("thank not in $all", "thank" in all)
+        log("TL_RESULT_C PASS")
+    }
+
+    /** TL-2: a bubble cut by the strip seam of a tall (webtoon) page comes back as one sentence. */
+    @Test fun d_bubbleOnAStripSeamIsReadAsOne() = runBlocking<Unit> {
+        MangaTranslate.clear(ctx)
+        val es = MangaTranslate.Settings(true, "es", "en", false)
+        assertTrue(MangaTranslate.prepare(ctx, es).isSuccess)
+        // One bubble drawn across y = 1000, then cut there like the reader's strips.
+        val whole = drawnPage(900, 2000, 890 to "MUCHAS GRACIAS")
+        val a = android.graphics.Bitmap.createBitmap(whole, 0, 0, 900, 1000)
+        val b = android.graphics.Bitmap.createBitmap(whole, 0, 1000, 900, 1000)
+        val out = MangaTranslate.page(ctx, "fixture|seam", listOf(a, b), es)
+        log("TL_D bubbles=${out.map { "[" + it.t + "-" + it.b + "] " + it.source + " -> " + it.text }}")
+        assertTrue("one bubble expected, got ${out.size}: $out", out.size == 1)
+        assertTrue("translated: $out", "thank" in out.single().text.lowercase())
+        log("TL_RESULT_D PASS")
+    }
+
+    /** TL-2: English chapter, English target: the reader says so instead of doing nothing; packs are listed. */
+    @Test fun e_sameLanguageIsExplainedAndPacksAreListed() {
+        val en = object : MangaProvider by fake { override val id = "yu_test_tl_en"; override val lang = "en" }
+        MangaTranslate.save(ctx, MangaTranslate.Settings(true, MangaTlPlan.AUTO, "en", false))
+        SourceHub.publishManga("yu_test_tl_bridge", listOf(en))
+        compose.setContent { Box(Modifier.fillMaxSize()) { MangaReaderScreen(en.id, "yutl://m", "YuTl", "yutl://m/1", "YuTl Chapter 1", onBack = {}) } }
+        compose.waitUntil(20_000) { runCatching { compose.onNodeWithTag("tl_status").fetchSemanticsNode() }.isSuccess }
+        val msg = compose.onNodeWithTag("tl_status").fetchSemanticsNode().config.getOrElse(SemanticsProperties.Text) { emptyList() }.joinToString()
+        log("TL_E status=$msg")
+        assertTrue("same-language note: $msg", "already in English" in msg)
+        FirstRun.shot("tl_same")
+        compose.onNodeWithTag("tl_status").performClick()
+        compose.waitUntil(20_000) { runCatching { compose.onNodeWithTag("tl_pack_es").fetchSemanticsNode() }.isSuccess || runCatching { compose.onNodeWithTag("tl_pack_ja").fetchSemanticsNode() }.isSuccess }
+        FirstRun.shot("tl_packs")
+        val packs = runBlocking { MangaTranslate.packs(ctx) }
+        log("TL_E packs=$packs")
+        assertTrue("downloaded packs listed: $packs", packs.isNotEmpty())
+        log("TL_RESULT_E PASS")
     }
 }

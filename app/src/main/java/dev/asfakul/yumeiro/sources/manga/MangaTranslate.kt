@@ -36,22 +36,44 @@ object MangaTranslate {
     /** Disk cache cap; oldest pages go first. */
     const val DISK_MAX_BYTES = 8L * 1024 * 1024
 
-    data class Settings(val on: Boolean, val src: MangaTlPlan.Src, val dst: String, val wifiOnly: Boolean)
+    /**
+     * TL-2: [from] is a language code ("ja", "es"...) or [MangaTlPlan.AUTO] (the source's language, else read
+     * from the page). The OCR script follows from it ([src]); the first version had only four scripts and
+     * sent every Latin-script page to the translator as English, so Spanish or Indonesian manga came out wrong.
+     */
+    data class Settings(val on: Boolean, val from: String, val dst: String, val wifiOnly: Boolean) {
+        val src: MangaTlPlan.Src get() = MangaTlPlan.script(from)
+    }
+
+    /** Why a page has no translations, for the reader to say so instead of showing nothing. */
+    class SameLanguage(val lang: String) : Exception("already $lang")
+    class TranslateFailed : Exception("translation failed")
 
     fun settings(c: Context): Settings {
         val p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return Settings(
             on = p.getBoolean("tl_on", false),
-            src = MangaTlPlan.Src.of(p.getString("tl_src", null)),
+            from = p.getString("tl_src", null)?.takeIf { it in MangaTlPlan.FROM } ?: MangaTlPlan.AUTO,
             dst = p.getString("tl_dst", null)?.takeIf { it in MangaTlPlan.TARGETS } ?: MangaTlPlan.defaultTarget(java.util.Locale.getDefault().language),
             wifiOnly = p.getBoolean("tl_wifi_only", false),
         )
     }
 
     fun save(c: Context, s: Settings) {
-        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("tl_on", s.on).putString("tl_src", s.src.code)
+        c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("tl_on", s.on).putString("tl_src", s.from)
             .putString("tl_dst", s.dst).putBoolean("tl_wifi_only", s.wifiOnly).apply()
     }
+
+    /**
+     * TL-2: Google's ML Kit translation terms allow phones, tablets and computers only, not TVs. Yumeiro TV and a
+     * phone build on a TV box therefore have no page translation.
+     */
+    fun allowedOn(c: Context): Boolean = !dev.asfakul.yumeiro.Edition.isTv &&
+        !c.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+
+    /** The concrete settings for one chapter: Auto becomes the source's language when it is known. */
+    fun resolve(s: Settings, providerLang: String?): Settings =
+        if (s.from != MangaTlPlan.AUTO) s else MangaTlPlan.fromProvider(providerLang)?.let { s.copy(from = it) } ?: s
 
     /** Swappable for tests; the real one is created on first use. */
     @Volatile var engineFactory: (Context) -> MangaTlEngine = { MlKitTlEngine(it.applicationContext) }
@@ -64,38 +86,67 @@ object MangaTranslate {
         engine ?: engineFactory(c).also { engine = it; watchMemory(c) }
     }
 
-    /** Downloads the language pack if needed. Blocking network; call off the main thread. */
+    /**
+     * Downloads the language pack if needed. Blocking network; call off the main thread. With Auto and an unknown
+     * source language nothing is fetched yet: the page decides ([page]).
+     */
     suspend fun prepare(c: Context, s: Settings): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching { lock.withLock { engine(c).prepare(s.src, s.dst, s.wifiOnly) } }
+        if (s.from == MangaTlPlan.AUTO || s.from == s.dst) return@withContext Result.success(Unit)
+        runCatching { lock.withLock { engine(c).prepare(s.from, s.dst, s.wifiOnly) } }
             .onFailure { Log.w(TAG, "prepare: ${it.javaClass.simpleName}") }
     }
 
-    fun ready(c: Context, s: Settings): Boolean = runCatching { engine(c).ready(s.src, s.dst) }.getOrDefault(false)
+    fun ready(c: Context, s: Settings): Boolean =
+        s.from == MangaTlPlan.AUTO || s.from == s.dst || runCatching { engine(c).ready(s.from, s.dst) }.getOrDefault(false)
+
+    /** TL-2: language packs on this phone (codes; English is built in), and removing one. Blocking. */
+    suspend fun packs(c: Context): List<String> = withContext(Dispatchers.IO) { runCatching { engine(c).packs() }.getOrDefault(emptyList()) }
+    suspend fun deletePack(c: Context, code: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching { lock.withLock { engine(c).deletePack(code) } }.isSuccess.also { if (it) mem.evictAll() }
+    }
 
     /**
      * Translated bubbles for one page (all strips of a tall page, in page pixels). Memory → disk → work.
-     * One page at a time, so a fast scroll never stacks OCR jobs.
+     * One page at a time, so a fast scroll never stacks OCR jobs. Throws [SameLanguage] when the page is already
+     * in the target language and [TranslateFailed] when every bubble failed to translate (nothing is cached then).
      */
     suspend fun page(c: Context, pageId: String, strips: List<Bitmap>, s: Settings): List<MangaTlPlan.Bubble> {
-        val key = MangaTlPlan.key(pageId, s.src, s.dst)
+        if (s.from == s.dst) throw SameLanguage(s.dst)
+        val key = MangaTlPlan.key(pageId, s.from, s.dst)
         mem.get(key)?.let { return it }
         return withContext(Dispatchers.Default) {
             lock.withLock {
                 mem.get(key)?.let { return@withLock it }
                 readDisk(c, key)?.let { mem.put(key, it); return@withLock it }
                 val e = engine(c)
-                val boxes = ArrayList<MangaTlPlan.Box>()
-                var top = 0
                 val totalH = strips.sumOf { it.height }
                 val width = strips.maxOfOrNull { it.width } ?: 0
-                for (b in strips) {
-                    e.ocr(b, s.src).forEach { boxes += it.copy(t = it.t + top, b = it.b + top) }
-                    top += b.height
+                fun read(script: MangaTlPlan.Src): List<MangaTlPlan.Box> {
+                    val boxes = ArrayList<MangaTlPlan.Box>()
+                    val seams = ArrayList<Int>()
+                    var top = 0
+                    for (b in strips) {
+                        e.ocr(b, script).forEach { boxes += it.copy(t = it.t + top, b = it.b + top) }
+                        top += b.height
+                        if (top < totalH) seams += top
+                    }
+                    // A webtoon is decoded in strips; a bubble cut by a seam is read as two halves. Join them back.
+                    return MangaTlPlan.mergeSeams(boxes, seams, script).filter { MangaTlPlan.keep(it, width, totalH, script) }
                 }
-                val kept = boxes.filter { MangaTlPlan.keep(it, width, totalH, s.src) }
+                var from = s.from
+                var kept = read(MangaTlPlan.script(from))
+                if (from == MangaTlPlan.AUTO) {
+                    // Source language unknown: the Japanese reader also reads Latin and Han; the text says which.
+                    from = MangaTlPlan.detect(kept.joinToString(" ") { it.text })
+                    if (from == "ko" || MangaTlPlan.script(from) == MangaTlPlan.Src.LATIN) kept = read(MangaTlPlan.script(from))
+                    if (from == s.dst) throw SameLanguage(from)
+                    if (kept.isNotEmpty() && !e.ready(from, s.dst)) withContext(Dispatchers.IO) { e.prepare(from, s.dst, s.wifiOnly) }
+                }
                 val out = if (kept.isEmpty()) emptyList() else {
-                    val tl = e.translate(kept.map { it.text }, s.src, s.dst)
-                    kept.zip(tl).mapNotNull { (b, t) -> t.trim().takeIf { it.isNotEmpty() }?.let { MangaTlPlan.Bubble(b.l, b.t, b.r, b.b, b.text, it) } }
+                    val tl = e.translate(kept.map { it.text }, from, s.dst)
+                    val bubbles = kept.zip(tl).mapNotNull { (b, t) -> t.trim().takeIf { it.isNotEmpty() }?.let { MangaTlPlan.Bubble(b.l, b.t, b.r, b.b, b.text, it) } }
+                    if (bubbles.isEmpty()) throw TranslateFailed()
+                    bubbles
                 }
                 mem.put(key, out)
                 writeDisk(c, key, out)
@@ -103,7 +154,6 @@ object MangaTranslate {
             }
         }
     }
-
     /** Reader closed or the phone is short of memory: models leave RAM (cached results stay). */
     fun release() {
         val e = synchronized(this) { engine.also { engine = null } }
@@ -142,9 +192,12 @@ object MangaTranslate {
 /** What the reader needs from an OCR + translation engine (ML Kit in the app, a fake in unit tests). */
 interface MangaTlEngine {
     fun ocr(bitmap: Bitmap, src: MangaTlPlan.Src): List<MangaTlPlan.Box>
-    fun ready(src: MangaTlPlan.Src, dst: String): Boolean
-    fun prepare(src: MangaTlPlan.Src, dst: String, wifiOnly: Boolean)
-    fun translate(texts: List<String>, src: MangaTlPlan.Src, dst: String): List<String>
+    /** [from] and [dst] are language codes (ML Kit BCP-47 tags). */
+    fun ready(from: String, dst: String): Boolean
+    fun prepare(from: String, dst: String, wifiOnly: Boolean)
+    fun translate(texts: List<String>, from: String, dst: String): List<String>
+    fun packs(): List<String> = emptyList()
+    fun deletePack(code: String) {}
     fun close()
 }
 
@@ -172,10 +225,10 @@ class MlKitTlEngine(private val app: Context) : MangaTlEngine {
         }
     }
 
-    private fun translator(src: MangaTlPlan.Src, dst: String) = synchronized(translators) {
-        translators.getOrPut("${src.code}>$dst") {
+    private fun translator(from: String, dst: String) = synchronized(translators) {
+        translators.getOrPut("$from>$dst") {
             val o = com.google.mlkit.nl.translate.TranslatorOptions.Builder()
-                .setSourceLanguage(com.google.mlkit.nl.translate.TranslateLanguage.fromLanguageTag(src.code) ?: error("unsupported ${src.code}"))
+                .setSourceLanguage(com.google.mlkit.nl.translate.TranslateLanguage.fromLanguageTag(from) ?: error("unsupported $from"))
                 .setTargetLanguage(com.google.mlkit.nl.translate.TranslateLanguage.fromLanguageTag(dst) ?: error("unsupported $dst"))
                 .build()
             com.google.mlkit.nl.translate.Translation.getClient(o)
@@ -196,23 +249,34 @@ class MlKitTlEngine(private val app: Context) : MangaTlEngine {
         } finally { if (img !== bitmap) img.recycle() }
     }
 
-    override fun ready(src: MangaTlPlan.Src, dst: String): Boolean {
+    override fun ready(from: String, dst: String): Boolean {
         val m = com.google.mlkit.common.model.RemoteModelManager.getInstance()
         fun has(tag: String) = tag == "en" || runCatching {
             await(m.isModelDownloaded(com.google.mlkit.nl.translate.TranslateRemoteModel.Builder(tag).build()), 10)
         }.getOrDefault(false)
-        return has(src.code) && has(dst)
+        return has(from) && has(dst)
     }
 
-    override fun prepare(src: MangaTlPlan.Src, dst: String, wifiOnly: Boolean) {
+    override fun prepare(from: String, dst: String, wifiOnly: Boolean) {
         val cond = com.google.mlkit.common.model.DownloadConditions.Builder().apply { if (wifiOnly) requireWifi() }.build()
-        await(translator(src, dst).downloadModelIfNeeded(cond), 300)
+        await(translator(from, dst).downloadModelIfNeeded(cond), 300)
     }
 
-    override fun translate(texts: List<String>, src: MangaTlPlan.Src, dst: String): List<String> {
-        if (src.code == dst) return texts
-        val t = translator(src, dst)
-        return texts.map { s -> runCatching { await(t.translate(s), 20) }.getOrDefault("") }
+    override fun translate(texts: List<String>, from: String, dst: String): List<String> {
+        if (from == dst) return texts
+        val t = translator(from, dst)
+        return texts.map { s -> runCatching { await(t.translate(s), 20) }.onFailure { Log.w("MangaTranslate", "translate: ${it.javaClass.simpleName}") }.getOrDefault("") }
+    }
+
+    override fun packs(): List<String> = await(
+        com.google.mlkit.common.model.RemoteModelManager.getInstance().getDownloadedModels(com.google.mlkit.nl.translate.TranslateRemoteModel::class.java), 10,
+    ).map { it.language }.filter { it != "en" }.sorted()
+
+    override fun deletePack(code: String) {
+        if (code == "en") return
+        // Translators holding the pack are closed first, so the files can go.
+        synchronized(translators) { translators.keys.filter { it.startsWith("$code>") || it.endsWith(">$code") }.forEach { k -> translators.remove(k)?.let { runCatching { it.close() } } } }
+        await(com.google.mlkit.common.model.RemoteModelManager.getInstance().deleteDownloadedModel(com.google.mlkit.nl.translate.TranslateRemoteModel.Builder(code).build()), 30)
     }
 
     override fun close() {
@@ -224,13 +288,81 @@ class MlKitTlEngine(private val app: Context) : MangaTlEngine {
 /** Pure, unit-tested parts of F-11. */
 object MangaTlPlan {
     /** Bump when OCR or joining changes, so old cached pages are redone. */
-    const val ENGINE = "mlkit-1"
+    const val ENGINE = "mlkit-2" // TL-2: language codes, joined seams
     const val OCR_MAX_EDGE = 2048
 
     enum class Src(val code: String, val label: String) {
-        JA("ja", "Japanese"), ZH("zh", "Chinese"), KO("ko", "Korean"), LATIN("en", "English");
+        JA("ja", "Japanese"), ZH("zh", "Chinese"), KO("ko", "Korean"), LATIN("en", "Latin script");
         val cjk get() = this != LATIN
         companion object { fun of(code: String?) = entries.firstOrNull { it.code == code } ?: JA }
+    }
+
+    /** "Auto": the source's own language when it says, else read from the page ([detect]). */
+    const val AUTO = "auto"
+
+    /**
+     * TL-2: languages a page can be read from. Japanese, Chinese and Korean have their own text readers; the
+     * rest share ML Kit's Latin reader (accents included) and are translated from their own language.
+     */
+    val FROM = linkedMapOf(
+        AUTO to "Auto", "ja" to "Japanese", "zh" to "Chinese", "ko" to "Korean", "en" to "English", "es" to "Spanish",
+        "pt" to "Portuguese", "fr" to "French", "id" to "Indonesian", "vi" to "Vietnamese", "it" to "Italian", "de" to "German", "tr" to "Turkish",
+    )
+
+    fun script(from: String): Src = when (from) { "ja", AUTO -> Src.JA; "zh" -> Src.ZH; "ko" -> Src.KO; else -> Src.LATIN }
+
+    /** A source's language tag ("ja", "pt-BR", "es-419", "zh-Hans") → a [FROM] code, or null ("all", "multi", unknown). */
+    fun fromProvider(lang: String?): String? {
+        val base = lang?.trim()?.lowercase()?.substringBefore('-')?.substringBefore('_') ?: return null
+        return base.takeIf { it != AUTO && it in FROM }
+    }
+
+    /** Which language a page's text is in, by script: kana → Japanese, Hangul → Korean, Han only → Chinese, else English. */
+    fun detect(text: String): String {
+        var kana = 0; var hangul = 0; var han = 0; var latin = 0
+        for (ch in text) {
+            when (Character.UnicodeBlock.of(ch)) {
+                Character.UnicodeBlock.HIRAGANA, Character.UnicodeBlock.KATAKANA, Character.UnicodeBlock.KATAKANA_PHONETIC_EXTENSIONS -> kana++
+                Character.UnicodeBlock.HANGUL_SYLLABLES, Character.UnicodeBlock.HANGUL_JAMO, Character.UnicodeBlock.HANGUL_COMPATIBILITY_JAMO -> hangul++
+                Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS, Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A -> han++
+                else -> if (ch.isLetter()) latin++
+            }
+        }
+        return when {
+            kana > 0 && kana * 5 >= han -> "ja"
+            hangul > 0 && hangul >= kana -> "ko"
+            han > 0 && han >= latin -> if (kana > 0) "ja" else "zh"
+            else -> "en"
+        }
+    }
+
+    /**
+     * TL-2: a tall page is read strip by strip, so a bubble crossing a seam came back as two half-sentences,
+     * each translated on its own. Boxes touching the same seam from both sides (within [SEAM_PX]) and
+     * overlapping by half the narrower width are joined into one, text in reading order.
+     */
+    const val SEAM_PX = 8
+    fun mergeSeams(boxes: List<Box>, seams: List<Int>, src: Src): List<Box> {
+        if (seams.isEmpty() || boxes.size < 2) return boxes
+        val out = boxes.toMutableList()
+        for (seam in seams) {
+            var i = 0
+            while (i < out.size) {
+                val a = out[i]
+                if (a.b < seam - SEAM_PX || a.b > seam + SEAM_PX || a.t >= seam) { i++; continue }
+                val j = out.indices.firstOrNull { k ->
+                    val b = out[k]
+                    k != i && b.t >= seam - SEAM_PX && b.t <= seam + SEAM_PX && b.b > seam &&
+                        (minOf(a.r, b.r) - maxOf(a.l, b.l)) * 2 >= minOf(a.r - a.l, b.r - b.l)
+                }
+                if (j == null) { i++; continue }
+                val b = out[j]
+                out[i] = Box(minOf(a.l, b.l), a.t, maxOf(a.r, b.r), b.b, join(listOf(a.text, b.text), src))
+                out.removeAt(j)
+                if (j < i) i--
+            }
+        }
+        return out
     }
 
     /** Target languages offered (all supported by ML Kit translation). */
@@ -289,8 +421,8 @@ object MangaTlPlan {
 
     fun ocrScale(w: Int, h: Int): Float { val m = maxOf(w, h); return if (m <= OCR_MAX_EDGE) 1f else OCR_MAX_EDGE.toFloat() / m }
 
-    fun key(pageId: String, src: Src, dst: String): String =
-        MessageDigest.getInstance("SHA-256").digest("$ENGINE|${src.code}|$dst|$pageId".toByteArray()).take(16).joinToString("") { "%02x".format(it) }
+    fun key(pageId: String, from: String, dst: String): String =
+        MessageDigest.getInstance("SHA-256").digest("$ENGINE|$from|$dst|$pageId".toByteArray()).take(16).joinToString("") { "%02x".format(it) }
 
     /**
      * Where page pixels land on screen. Fit (paged mode) letterboxes in the container; fill-width
