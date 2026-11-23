@@ -61,4 +61,13 @@ class NextFramePages(private val on: Boolean) {
         if (!firstShown) { firstShown = true; return false }
         return true
     }
+
+    /**
+     * NAV-1 (R19, field run 45134330301): Home's page is composed again when a page on top of it is closed
+     * (arrow, Back key, swipe). That page is on screen at once, under the closing page's slide, so waiting a
+     * frame left it empty: the "blank page underneath" for 1-4 frames (183-283 ms each on the CI emulator).
+     * Called when the Home entry composes; the next page composition shows its content at once. Far tab
+     * jumps (pager hidden at alpha 0) still wait a frame.
+     */
+    fun restoring() { firstShown = false }
 }

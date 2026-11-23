@@ -58,4 +58,12 @@ class NextFramePageTest {
     @Test fun flagIsOnByDefault() {
         assertTrue(FeatureFlags.Flag.TAB_NEXT_FRAME.default)
     }
+
+    /** NAV-1: the page shown again under a closing page draws its content in the first frame. */
+    @Test fun pageShownAgainAfterAPopDoesNotWait() {
+        val pages = NextFramePages(true)
+        assertEquals(listOf(false, true), List(2) { pages.deferNext() })
+        pages.restoring() // Home entry composed again (a sub page was closed)
+        assertEquals(listOf(false, true), List(2) { pages.deferNext() })
+    }
 }

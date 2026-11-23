@@ -1066,6 +1066,8 @@ fun MTPlayerApp(
                     // The five bottom-bar tabs live in one pager: swipe anywhere on a page (rows and
                     // carousels keep their own drags first), the page follows the finger like Facebook / Instagram.
                     composable(Screen.Home.route) {
+                        // NAV-1: coming back to Home (pop) shows the tab content in the first frame, not a blank page.
+                        remember { nextFramePages.restoring() }
                         // One opaque layer: page background, the tab pager and the tab chrome
                         // (top bar, dock), so the whole tab moves as one piece in page transitions.
                         Box(Modifier.fillMaxSize().pageBackground()) {
