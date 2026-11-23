@@ -182,8 +182,11 @@ object TelegramPublic {
         return Page(channel, title, posts.distinctBy { it.id }, before, avatar, subscribers, description)
     }
 
+    // TG-PLAY-1: Telegram puts a hidden "This media is not supported in your browser / VIEW IN TELEGRAM" block next to
+    // EVERY preview video (a browser shows it only when it can't play the file). Treating that block as "app only"
+    // made every public video open the Telegram app. Only a player with no file address (e.g. "Media is too big")
+    // is app-only.
     private fun videoOf(player: Element): String? {
-        if (player.selectFirst(".message_media_not_supported") != null) return null
         val v = player.selectFirst("video") ?: return null
         return v.attr("src").ifBlank { v.attr("data-src") }.takeIf { it.startsWith("http") }
     }
