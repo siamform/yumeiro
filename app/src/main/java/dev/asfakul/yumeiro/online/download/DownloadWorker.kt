@@ -253,7 +253,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(item.url) -> {
                 dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
                 val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
-                if (server.isBlank()) throw NoLink("This is a torrent. Add your TorrServer address in Settings › Network to download it")
+                if (server.isBlank()) throw NoLink("This is a torrent. Add your TorrServer address in Settings › Video quality & playback › Torrent streaming to download it")
                 direct(dev.asfakul.yumeiro.stream.LinkHosts.torrServerUrl(server, item.url, item.title, m3u = false), emptyMap(), part, p = progress)()
             }
             else -> direct(item.url, item.headers, part, p = progress)()

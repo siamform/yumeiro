@@ -83,6 +83,11 @@ object StreamResolver {
                 Sniff(MediaKind.VIDEO, "Torrent", "engine"),
             )
         }
+        // TOR-3: the built-in engine is on this phone but its privacy notice isn't accepted yet, and there is no
+        // TorrServer: say where to turn it on instead of only pointing at TorrServer.
+        if (torrent != null && TorrentSettings.server.value.isBlank() && !TorrentSettings.engineAccepted.value &&
+            dev.asfakul.yumeiro.stream.torrent.TorrentStreams.offered(context)
+        ) return@withContext torrentEngineOff(torrent.link)
         dev.asfakul.yumeiro.online.telegram.TelegramPublic.enabled = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
         val r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
         // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).
@@ -93,6 +98,16 @@ object StreamResolver {
         }
         r
     }
+
+    /** TOR-3: the built-in torrent engine exists here but is off until the user reads its notice. Pure. */
+    internal fun torrentEngineOff(link: String): Resolution = Resolution.Handoff(
+        link, "a torrent app",
+        TORRENT_ENGINE_OFF,
+    )
+
+    internal const val TORRENT_ENGINE_OFF = "Torrents play in Yumeiro once you turn on the built-in torrent engine in " +
+        "Settings › Video quality & playback › Torrent streaming (it explains first what sharing a torrent means). You can also add a TorrServer address there, " +
+        "or open this link in a torrent app."
 
     /** F-02 (ADR-042): plays the video Telegram's public web preview links for this post. */
     private fun resolveTelegram(request: StreamRequest, route: LinkHosts.TelegramPost, client: OkHttpClient): Resolution {
@@ -201,7 +216,7 @@ object StreamResolver {
                 val server = TorrentSettings.server.value
                 if (server.isBlank()) return Resolution.Handoff(
                     route.link, "a torrent app",
-                    "Yumeiro streams torrents through TorrServer. Add your TorrServer address in Settings › Network, or open this link in a torrent app.",
+                    "Yumeiro streams torrents through TorrServer. Add your TorrServer address in Settings › Video quality & playback › Torrent streaming, or open this link in a torrent app.",
                 )
                 return resolveBlocking(request.copy(url = LinkHosts.torrServerUrl(server, route.link, request.title), format = StreamFormat.AUTO), userAgent, client, thorough = true)
                     .let { r -> if (r is Resolution.Failed) Resolution.Failed("TorrServer didn't answer", "Check that TorrServer is running at $server. ${r.message}") else r }
