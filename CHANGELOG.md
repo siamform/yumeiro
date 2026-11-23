@@ -2,6 +2,59 @@
 
 All notable changes to Yumeiro.
 
+## v2.2.0: online at once, one Back, solid themes
+
+Follows 2.1.0. Update straight from 2.1.0, 2.0.0 or 1.9.0; profiles, history, downloads and settings carry over.
+Every item says how it was checked: (CI) = unit / build tests in GitHub Actions, (emulator) = run on an Android
+emulator with the real app, (not yet on a real phone) where that is still open. Nothing below was checked on a real
+phone yet; docs/HANDOVER-LIVE.md lists the open real-device checks.
+
+### Fixed
+- Online pages work right after a fresh install or an update. Extension Market, YouTube, Yumix, online music and Live TV
+  could stay unusable for 3 to 5 minutes: a push-notification sync re-queued itself without end and flooded Android's
+  job queue (153,438 queue errors in 2.1.0, 4 now). Firebase notifications and Cloudflare DNS are kept
+  (ONLINE-INIT-1, emulator).
+- Start-up no longer waits on one slow DNS resolver: the built-in Cloudflare DNS gets 3.5 s, then the phone's own DNS
+  (ONLINE-INIT-1, CI).
+- Live TV lists loaded only after about 3 minutes on networks without IPv6. An IPv6-only DNS answer now asks again for
+  IPv4 (IPv4 used at 17.5 s instead of 174.5 s) (LIVE-DNS-1, CI + emulator).
+- Live TV on a slow or broken connection shows the saved list at once instead of "0 channels". The saved list is
+  replaced only by a complete download, the smallest list loads first, and failed automatic updates wait 1, 2, 4 ...
+  30 minutes; pulling to refresh always tries again. After a relaunch all 7,555 channels were back within 5 s
+  (LIVE-SLOW-1, CI + emulator; real slow mobile networks not yet checked).
+- Back works the same everywhere. The Back key, the 3-button bar, the swipe gesture and the edge swipe now close a page
+  with the same slide as the on-screen arrow. No blank page or page bleeding through during the slide, and a page
+  keeps its scroll and state after a quick Back (NAV-1, NAV-1b, CI + emulator recordings).
+- One broken extension no longer holds the others: ten popular extensions installed together all loaded in
+  parallel (ENGINE-1, emulator).
+- HindiSubAnime and other extensions whose newest copy can't read the site any more: Yumeiro offers "Try vNN from
+  <repository>", an older copy that still works. HindiSubAnime home, details, episodes and playback passed
+  (LEGACY-EXT-2 / B-32b, emulator).
+- Library: the "on device" size no longer shows as "Unkn..."; it shrinks to fit, and an empty library says "0 MB"
+  (UX-LIB-1, CI + emulator).
+- Live TV no longer shows the same country filter twice for Yumeiro Live (UX-LIVE-1, CI + emulator).
+
+### Changed
+- Glassmorphism removed. Every theme now uses solid surfaces for the dock, mini player, sheets and cards; text stays
+  readable on any wallpaper or poster. The Kasumi (glass) theme is gone: if you used it, Yumeiro opens in Tsuki
+  Night (THEME-1, CI + emulator on all five themes).
+- Unsupported extensions now say why: the missing part, the library it needs (CloudStream API, NiceHttp, Rhino,
+  Jackson ...), the version Yumeiro supports and what to do next (LEGACY-EXT-1, CI).
+- Extension Market: tap a card to see the full details: description, authors, types, repository, other copies,
+  compatibility and an install button (UX-MARKET-1, CI).
+- Telegram page: a clear account card (Signed in / Sign in to Telegram), a note when Telegram sign-in isn't available
+  for your processor, and wording about channels instead of websites in search, import, share and help. Telegram's
+  own sign-in and security are unchanged (TG-PAGE-1, TG-PAGE-2, CI; signed-in search not yet checked).
+
+### Faster and lighter
+- No drawing while the app sits still: 0 idle frames on Home, Videos, Music and Library (PERF-IDLE-1, emulator).
+
+### Security
+- All 22 open code-scanning alerts reviewed. Fixed in code: the "Analyse link" temp file now lives in the app's own
+  cache, and a kept website page can never read app files or content:// links. The rest are documented as by design
+  in docs/security/AUDIT.md (crypto-js support for scrapers, third-party hosts, native libraries checked against a
+  pinned SHA-256) (CQ-1, CI + CodeQL).
+
 ## v2.1.0: faster feeds, more sources, no freezes
 
 Follows 2.0.0. Update straight from 2.0.0, 1.9.0 or 1.8.x; profiles, history, downloads and settings carry over.

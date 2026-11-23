@@ -30,16 +30,44 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
 
 ---
 
+## What's new in 2.2.0
+
+<!-- RELEASE-2.2-IMAGES: a table keeps the four posters side by side (loose <img> tags stacked one under another) -->
+<p align="center"><img src="docs/assets/release-2.2/hero-readme-1600x800.png" alt="Yumeiro 2.2.0: online right after install, Live TV keeps its channels, one Back, solid themes" width="860"></p>
+
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-01-online-1080x1350.png" width="200" alt="Online at once" /></td>
+    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-02-live-tv-1080x1350.png" width="200" alt="Live TV keeps its channels" /></td>
+    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-03-themes-1080x1350.png" width="200" alt="Solid themes" /></td>
+    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-04-back-1080x1350.png" width="200" alt="One Back everywhere" /></td>
+  </tr>
+</table>
+
+Yumeiro 2.2.0 follows 2.1.0. Full notes, with how each item was checked: [CHANGELOG.md](CHANGELOG.md).
+
+| | |
+|---|---|
+| **Online at once** | Extension Market, YouTube, Yumix, online music and Live TV work right after an install or update; no more 3 to 5 minute wait. |
+| **Live TV keeps its channels** | The saved list shows at once, even on a slow link, and is only replaced by a complete download. Lists no longer wait minutes for IPv4. |
+| **One Back** | The Back key, button bar, swipe and edge swipe close a page with the same slide as the on-screen arrow, without a blank page. |
+| **Solid themes** | Glass effects removed from every theme; Kasumi users move to Tsuki Night. |
+| **Clearer extensions** | Unsupported extensions say what is missing and what to do; HindiSubAnime-style breakages offer an older working copy; Market cards open full details. |
+| **Telegram page** | A clear sign-in card and wording about channels, not websites. Telegram's own sign-in is unchanged. |
+| **Small fixes** | Library shows its size instead of "Unkn...", Live TV shows one country filter, nothing redrawn while the app sits still. |
+
 ## What's new in 2.1.0
 
 <!-- RELEASE-2.1-IMAGES -->
 <p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.1.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
-<p align="center">
-<img src="docs/assets/release-2.1/post-01-no-freeze-1080x1350.png" alt="No more freezes" width="200">
-<img src="docs/assets/release-2.1/post-02-downloader-1080x1350.png" alt="A friendlier downloader" width="200">
-<img src="docs/assets/release-2.1/post-03-shortcuts-1080x1350.png" alt="More Home shortcuts" width="200">
-<img src="docs/assets/release-2.1/post-04-telegram-1080x1350.png" alt="Telegram has its own page" width="200">
-</p>
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-01-no-freeze-1080x1350.png" width="200" alt="No more freezes" /></td>
+    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-02-downloader-1080x1350.png" width="200" alt="A friendlier downloader" /></td>
+    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-03-shortcuts-1080x1350.png" width="200" alt="More Home shortcuts" /></td>
+    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-04-telegram-1080x1350.png" width="200" alt="Telegram has its own page" /></td>
+  </tr>
+</table>
 
 Yumeiro 2.1.0 follows 2.0.0. Full notes:
 [CHANGELOG.md](CHANGELOG.md). Things that still need a real phone: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TESTS-2.1.md).
