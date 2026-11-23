@@ -59,6 +59,7 @@ import dev.asfakul.yumeiro.stream.MediaKind
 import dev.asfakul.yumeiro.stream.PlatformRules
 import dev.asfakul.yumeiro.stream.StreamFormat
 import dev.asfakul.yumeiro.stream.StreamRequest
+import dev.asfakul.yumeiro.stream.Sniff
 import dev.asfakul.yumeiro.stream.StreamSniffer
 import dev.asfakul.yumeiro.ui.theme.DarkSurface
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
@@ -109,7 +110,32 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
     var drmSystem: String? = null
 
     /** @return the new capture, or null when the request isn't a stream (or was already seen). */
-    fun onRequest(url: String, method: String, headers: Map<String, String>): CapturedStream? {
+    fun onRequest(url: String, method: String, headers: Map<String, String>): CapturedStream? = onRequest(url, method, headers, null)
+
+    /**
+     * SD-1: what the page itself proved is media. [kind] comes from [MEDIA_TAP_JS] ("hls-master", "hls",
+     * "dash": the response body starts like a playlist) or from a `<video>` element's own source
+     * ("element"). Hosts hide playlists behind addresses without an extension and even a fake
+     * image/jpeg type, so the address alone can't tell.
+     */
+    fun onPageMedia(url: String, kind: String): CapturedStream? {
+        val hint = when (kind) {
+            "hls-master" -> Sniff(MediaKind.HLS, "master", "page")
+            "hls" -> {
+                // A master's variant playlists are the same video: offer the master only.
+                if (seen.values.any { it.kind == MediaKind.HLS && it.label.endsWith("master") }) return null
+                Sniff(MediaKind.HLS, null, "page")
+            }
+            "dash" -> Sniff(MediaKind.DASH, null, "page")
+            // A <video> element's source is media whatever its address looks like; a known extension still wins.
+            "element" -> StreamSniffer.fromUrl(url) ?: Sniff(MediaKind.VIDEO, null, "element")
+            "audio" -> StreamSniffer.fromUrl(url) ?: Sniff(MediaKind.AUDIO, null, "element")
+            else -> return null
+        }
+        return onRequest(url, "GET", emptyMap(), hint)
+    }
+
+    private fun onRequest(url: String, method: String, headers: Map<String, String>, hint: Sniff?): CapturedStream? {
         if (!url.startsWith("http", ignoreCase = true)) return null
         // A hostile page can call the JS bridge in a loop with endless unique URLs: cap memory.
         if (url.length > MAX_URL || seen.size >= MAX_CAPTURES) return null
@@ -120,7 +146,7 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
             if (licenseUrl == null) licenseUrl = url
             return null
         }
-        val sniff = StreamSniffer.fromUrl(url) ?: return null
+        val sniff = hint ?: StreamSniffer.fromUrl(url) ?: return null
         if (!sniff.isPlayableMedia) return null
         // Segments are noise; manifests and whole files are what the player needs.
         if (SEGMENT_EXT.any { lower.substringBefore('?').endsWith(it) } && sniff.kind != MediaKind.AUDIO) {
@@ -218,9 +244,12 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
   } catch(e) {}
   function scan(){
     try {
-      document.querySelectorAll('video,audio,source').forEach(function(v){
+      document.querySelectorAll('video,audio,video source,audio source').forEach(function(v){
         var s = v.currentSrc || v.src;
-        if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) MTFinder.onMedia(s);
+        if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) {
+          var a = (v.tagName === 'AUDIO' || (v.parentNode && v.parentNode.tagName === 'AUDIO'));
+          if (a && MTFinder.onManifest) MTFinder.onManifest(s, 'audio'); else MTFinder.onMedia(s);
+        }
       });
     } catch(e) {}
   }
@@ -262,9 +291,12 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
         const val RESCAN_JS = """
 (function(){
   try {
-    document.querySelectorAll('video,audio,source').forEach(function(v){
+    document.querySelectorAll('video,audio,video source,audio source').forEach(function(v){
       var s = v.currentSrc || v.src;
-      if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) MTFinder.onMedia(s);
+      if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) {
+        var a = (v.tagName === 'AUDIO' || (v.parentNode && v.parentNode.tagName === 'AUDIO'));
+        if (a && MTFinder.onManifest) MTFinder.onManifest(s, 'audio'); else MTFinder.onMedia(s);
+      }
     });
     var since = (window.__mtLoadAt || 0) - 2000; // OL-3: only what the video playing now fetched
     (performance.getEntriesByType('resource') || []).forEach(function(e){
@@ -300,6 +332,68 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
   } catch(e) { return 'error'; }
 })();
 """
+
+        /**
+         * SD-1: runs at document start in every frame (players often sit in an iframe). It reads only the
+         * first bytes of what the page's own XHR / fetch calls get back and reports playlists
+         * (`#EXTM3U`, `<MPD`) with `MTFinder.onManifest(url, kind)`. Nothing is changed or blocked: the
+         * page gets its response untouched, and a fetch body is read from a clone that is cancelled after
+         * its first chunk, so a large file is never downloaded twice.
+         */
+        const val MEDIA_TAP_JS = """
+(function(){
+  if (window.__yuTap) return; window.__yuTap = true;
+  function kind(t){
+    if (!t) return '';
+    var s = String(t).slice(0, 4096).replace(/^\uFEFF/, '').replace(/^\s+/, '');
+    if (s.indexOf('#EXTM3U') === 0) return s.indexOf('#EXT-X-STREAM-INF') >= 0 ? 'hls-master' : 'hls';
+    if (/^(<\?xml[^>]*>\s*)?<MPD[\s>]/.test(s)) return 'dash';
+    return '';
+  }
+  function tell(u, k){ try { if (k && window.MTFinder && MTFinder.onManifest) MTFinder.onManifest(String(u), k); } catch(e) {} }
+  function bytes(a, n){ var s = ''; n = Math.min(a.length, n); for (var i = 0; i < n; i++) s += String.fromCharCode(a[i]); return s; }
+  try {
+    var X = XMLHttpRequest.prototype, op = X.open, sd = X.send;
+    X.open = function(m, u){ try { this.__yuU = new URL(u, location.href).href; } catch(e) {} return op.apply(this, arguments); };
+    X.send = function(){
+      var x = this;
+      try {
+        x.addEventListener('load', function(){
+          try {
+            var rt = x.responseType, t = '';
+            if (rt === '' || rt === 'text') t = x.responseText;
+            else if (rt === 'arraybuffer' && x.response) t = bytes(new Uint8Array(x.response), 4096);
+            tell(x.responseURL || x.__yuU, kind(t));
+          } catch(e) {}
+        });
+      } catch(e) {}
+      return sd.apply(this, arguments);
+    };
+  } catch(e) {}
+  try {
+    var f = window.fetch;
+    if (f) window.fetch = function(){
+      return f.apply(this, arguments).then(function(r){
+        try {
+          if (r && r.body && r.clone && !r.bodyUsed) {
+            var rd = r.clone().body.getReader();
+            rd.read().then(function(c){ try { rd.cancel(); } catch(e) {} if (c && c.value) tell(r.url, kind(bytes(c.value, 4096))); }).catch(function(){});
+          }
+        } catch(e) {}
+        return r;
+      });
+    };
+  } catch(e) {}
+})();
+"""
+
+        /** SD-1: adds [MEDIA_TAP_JS] to every frame of [web] where the WebView supports document-start scripts. */
+        @android.annotation.SuppressLint("RequiresFeature")
+        fun addMediaTap(web: android.webkit.WebView): Boolean = runCatching {
+            if (!androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) return@runCatching false
+            androidx.webkit.WebViewCompat.addDocumentStartJavaScript(web, MEDIA_TAP_JS, setOf("*"))
+            true
+        }.getOrDefault(false)
 
         /** How long auto mode waits for the page's stream before showing the page itself. */
         const val AUTO_TIMEOUT_MS = 25_000L
@@ -407,6 +501,12 @@ fun PageStreamFinderDialog(
 
     fun record(url: String, method: String, headers: Map<String, String>) {
         synchronized(capture) { capture.onRequest(url, method, headers) }?.let { c ->
+            main.post { if (found.none { it.url == c.url }) { found.clear(); found.addAll(synchronized(capture) { capture.all() }) } }
+        }
+    }
+
+    fun pageMedia(url: String, kind: String) {
+        synchronized(capture) { capture.onPageMedia(url, kind) }?.let { c ->
             main.post { if (found.none { it.url == c.url }) { found.clear(); found.addAll(synchronized(capture) { capture.all() }) } }
         }
     }
@@ -557,7 +657,8 @@ fun PageStreamFinderDialog(
                                 CookieManager.getInstance().setAcceptCookie(true)
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 addJavascriptInterface(object {
-                                    @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
+                                    @JavascriptInterface fun onMedia(src: String) = pageMedia(src, "element")
+                                    @JavascriptInterface fun onManifest(url: String, kind: String) = pageMedia(url, kind)
                                     @JavascriptInterface fun onNewMedia(title: String) = switched(title)
                                     @JavascriptInterface fun onTitle(title: String) = titled(title)
                                     @JavascriptInterface fun onDrm(system: String) {
@@ -588,6 +689,8 @@ fun PageStreamFinderDialog(
                                 SafeWebView.harden(this)
                                 // Pop-ups and click-catcher ad overlays stay off while the user browses.
                                 SafeWebView.addAdShield(this)
+                                // SD-1: playlists the page's player loads are found by their content, in every frame.
+                                PageStreamCapture.addMediaTap(this)
                                 // DL-WEB: a file link on the page opens the shared download popup.
                                 dev.asfakul.yumeiro.online.web.WebDownloads.attach(this) { currentUrl }
                                 webViewClient = object : SafeWebViewClient(onGone = { onDismiss() }) {

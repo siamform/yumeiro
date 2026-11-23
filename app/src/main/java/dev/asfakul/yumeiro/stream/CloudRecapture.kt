@@ -116,11 +116,17 @@ object CloudRecapture {
                 fun record(url: String, method: String, headers: Map<String, String>) {
                     synchronized(capture) { capture.onRequest(url, method, headers) }?.let { first.complete(Unit) }
                 }
+                fun page(url: String, kind: String) {
+                    synchronized(capture) { capture.onPageMedia(url, kind) }?.let { first.complete(Unit) }
+                }
                 addJavascriptInterface(object {
-                    @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
+                    @JavascriptInterface fun onMedia(src: String) = page(src, "element")
+                    @JavascriptInterface fun onManifest(url: String, kind: String) = page(url, kind)
                     @JavascriptInterface fun onDrm(system: String) = Unit
                 }, "MTFinder")
                 SafeWebView.harden(this)
+                // SD-1: playlists behind addresses without an extension are found by their content.
+                PageStreamCapture.addMediaTap(this)
                 webViewClient = object : SafeWebViewClient(onGone = { needsUser.complete(Unit) }) {
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                         val scheme = request?.url?.scheme?.lowercase()
