@@ -120,6 +120,9 @@ data class OnlineDetail(
     val imdbId: String? = null,
     val tmdbId: Int? = null,
     val unsupportedReason: String? = null,
+    /** META-1: cast and trailer addresses the extension gave (CloudStream `actors` / `trailers`). */
+    val cast: List<OnlineCast> = emptyList(),
+    val trailers: List<String> = emptyList(),
 ) {
     val versions: List<String> get() = episodes.keys.toList()
     fun seasons(version: String): List<OnlineSeason> =
@@ -127,6 +130,9 @@ data class OnlineDetail(
             OnlineSeason(s, s?.let { seasonNames[it] ?: "Season $it" } ?: "Episodes")
         }
 }
+
+/** META-1: one cast member: name, character (or role) and photo when the extension has them. */
+data class OnlineCast(val name: String, val role: String? = null, val image: String? = null)
 
 data class OnlineLink(
     val name: String,
@@ -554,6 +560,12 @@ object OnlineRepository {
             aniListId = runCatching { with(LoadResponse) { r.getAniListId() }?.toIntOrNull() }.getOrNull(),
             imdbId = runCatching { with(LoadResponse) { r.getImdbId() } }.getOrNull()?.takeIf { it.startsWith("tt") },
             tmdbId = runCatching { with(LoadResponse) { r.getTMDbId() }?.toIntOrNull() }.getOrNull(),
+            cast = runCatching {
+                r.actors.orEmpty().mapNotNull { a ->
+                    a.actor.name.trim().takeIf { it.isNotEmpty() }?.let { OnlineCast(it, a.roleString?.trim()?.ifBlank { null }, a.actor.image?.takeIf { u -> u.startsWith("http") }) }
+                }.distinctBy { it.name }.take(30)
+            }.getOrDefault(emptyList()),
+            trailers = runCatching { r.trailers.map { it.extractorUrl.trim() }.filter { it.startsWith("http") }.distinct().take(6) }.getOrDefault(emptyList()),
         )
     }
 

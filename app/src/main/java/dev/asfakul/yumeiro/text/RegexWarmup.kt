@@ -71,6 +71,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.network.SmartDnsKt",
         "dev.asfakul.yumeiro.notify.FcmPlan",
         "dev.asfakul.yumeiro.online.AudioLanguages",
+        "dev.asfakul.yumeiro.online.meta.TitleFacts",
         "dev.asfakul.yumeiro.online.EpisodeMatcherKt",
         "dev.asfakul.yumeiro.online.ExtensionFormats",
         "dev.asfakul.yumeiro.online.ExtensionManagerKt",

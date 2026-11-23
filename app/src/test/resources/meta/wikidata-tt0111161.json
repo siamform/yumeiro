@@ -1,0 +1,21 @@
+{
+  "head" : {
+    "vars" : [ "companies", "langs", "countries" ]
+  },
+  "results" : {
+    "bindings" : [ {
+      "companies" : {
+        "type" : "literal",
+        "value" : "Castle Rock Entertainment|Columbia Pictures"
+      },
+      "langs" : {
+        "type" : "literal",
+        "value" : "English"
+      },
+      "countries" : {
+        "type" : "literal",
+        "value" : "United States"
+      }
+    } ]
+  }
+}

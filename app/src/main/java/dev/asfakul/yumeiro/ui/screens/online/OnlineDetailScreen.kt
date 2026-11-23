@@ -218,6 +218,14 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
         downloads.filter { it.api == d.api && it.titleUrl == d.url && it.status == dev.asfakul.yumeiro.online.download.OnlineDownloads.Status.DONE }.mapNotNull { it.data }.toSet()
     }
 
+    // META-1 (owner list 13): release date, IMDb rating and votes, country, language, director, writers, companies,
+    // cast and trailers; the extension's own answer at once, the free sources (TitleFacts) when they arrive.
+    val facts by androidx.compose.runtime.produceState(dev.asfakul.yumeiro.online.meta.TitleFacts.fromDetail(d), d.api, d.url) {
+        value = dev.asfakul.yumeiro.online.meta.TitleFacts.load(ctx, d)
+    }
+    val year = d.year ?: facts.released?.take(4)?.toIntOrNull()
+    val runtime = d.durationMin ?: facts.runtimeMin
+
     LazyColumn(Modifier.fillMaxSize().testTag("online_detail_list"), contentPadding = PaddingValues(bottom = 48.dp)) {
         item("hero") {
             Box(Modifier.fillMaxWidth()) {
@@ -245,14 +253,22 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                         Spacer(Modifier.height(6.dp))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Pill(d.type)
-                            d.year?.let { Pill("$it", TextSecondary) }
-                            d.durationMin?.let { Pill(if (it >= 60) "${it / 60}h ${it % 60}m" else "${it}m", TextSecondary) }
-                            d.contentRating?.let { Pill(it, TextSecondary) }
+                            year?.let { Pill("$it", TextSecondary) }
+                            runtime?.let { Pill(if (it >= 60) "${it / 60}h ${it % 60}m" else "${it}m", TextSecondary) }
+                            (d.contentRating ?: facts.certification)?.let { Pill(it, TextSecondary) }
                             d.score?.takeIf { it > 0 }?.let {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(14.dp))
                                     Text(String.format(java.util.Locale.US, " %.1f", it), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
+                            }
+                        }
+                        facts.rating?.let { r ->
+                            Row(Modifier.padding(top = 6.dp).testTag("online_detail_imdb"), verticalAlignment = Alignment.CenterVertically) {
+                                Text("IMDb", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF5C518)).padding(horizontal = 5.dp, vertical = 1.dp))
+                                Text(String.format(java.util.Locale.US, " %.1f", r), color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                facts.votes?.let { Text(" · " + dev.asfakul.yumeiro.online.meta.TitleFacts.votesText(it), color = TextSecondary, fontSize = 12.sp) }
                             }
                         }
                         Text(d.api, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
@@ -314,6 +330,70 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
             }
         }
 
+        val aboutRows = dev.asfakul.yumeiro.online.meta.TitleFacts.rows(facts, d.kind)
+        if (aboutRows.isNotEmpty()) item("about") {
+            Column(
+                Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    .background(TextPrimary.copy(alpha = 0.05f)).padding(horizontal = 14.dp, vertical = 10.dp).testTag("online_detail_about"),
+            ) {
+                aboutRows.forEach { (label, value) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).semantics(mergeDescendants = true) {}) {
+                        Text(label, color = TextTertiary, fontSize = 12.sp, modifier = Modifier.width(118.dp))
+                        Text(value, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+        if (facts.cast.isNotEmpty()) item("cast") {
+            Column(Modifier.padding(bottom = 8.dp)) {
+                SectionHeader("Cast", "${facts.cast.size}")
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.testTag("online_detail_cast"),
+                ) {
+                    items(facts.cast, key = { it.name }) { c ->
+                        Column(Modifier.width(76.dp).semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(64.dp).clip(CircleShape).background(TextPrimary.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                                Text(c.name.firstOrNull { it.isLetter() }?.uppercase() ?: "?", color = TextSecondary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                c.image?.let { coil.compose.AsyncImage(model = it, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                            }
+                            Text(c.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp))
+                            c.role?.let { Text(it, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+                        }
+                    }
+                }
+            }
+        }
+        if (facts.trailers.isNotEmpty()) item("trailers") {
+            Column(Modifier.padding(bottom = 8.dp)) {
+                SectionHeader(if (facts.trailers.size == 1) "Trailer" else "Trailers")
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.testTag("online_detail_trailers"),
+                ) {
+                    items(facts.trailers, key = { it.url }) { t ->
+                        val yt = dev.asfakul.yumeiro.online.meta.TitleFacts.youTubeId(t.url)
+                        Column(Modifier.width(220.dp)) {
+                            Box(
+                                Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(TextPrimary.copy(alpha = 0.08f))
+                                    .clickable(onClickLabel = "Play ${t.name}") {
+                                        // Trailers play in Yumeiro's own player (YouTube links go through the login-free extractor).
+                                        dev.asfakul.yumeiro.stream.IncomingMedia.open(ctx, dev.asfakul.yumeiro.stream.StreamRequest(url = t.url, title = "${d.name} · ${t.name}"))
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                yt?.let { coil.compose.AsyncImage(model = "https://i.ytimg.com/vi/$it/mqdefault.jpg", contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+                                Box(Modifier.size(44.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.PlayArrow, null, tint = Color.White)
+                                }
+                            }
+                            Text(t.name, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                }
+            }
+        }
         if (versions.size > 1 || versions.firstOrNull()?.isNotEmpty() == true && versions.size == 1 && d.kind == OnlineKind.ANIME) {
             item("versions") {
                 Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
