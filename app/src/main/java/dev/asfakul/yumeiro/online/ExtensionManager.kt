@@ -36,6 +36,10 @@ import java.security.MessageDigest
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_EXTENSIONMANAGER_1 = Regex("[^A-Za-z0-9_.\\-]")
+private val RX_EXTENSIONMANAGER_INCLASS = Regex("in class L([^;]+);")
+private val RX_EXTENSIONMANAGER_DESC = Regex("L([A-Za-z_\$][\\w\$/]*);")
+private val RX_EXTENSIONMANAGER_DOTTED = Regex("([a-z][\\w\$]*(?:\\.[\\w\$]+){2,})")
+private val RX_EXTENSIONMANAGER_MEMBER = Regex("No (?:\\w+ )*(?:method|field) ([\\w\$<>]+)")
 
 /**
  * Installs, loads, updates and removes CloudStream-compatible extensions.
@@ -778,19 +782,60 @@ object ExtensionManager {
         runCatching { extractorApis.toList().filter { it.sourcePlugin == filename }.forEach { extractorApis.remove(it) } }
     }
 
+    /** CloudStream library the extension runtime is built on (gradle/libs.versions.toml cloudstreamLibrary). */
+    internal const val CS_LIBRARY = "4.8.0"
+
+    /**
+     * LEGACY-EXT-1 (R19): says why an extension can't load, which part of which library it needs, which versions
+     * Yumeiro runs and what to do, instead of only "uses a CloudStream part this version doesn't have yet".
+     * Pure: the caller adds the extension name.
+     */
     internal fun describeLoadError(t: Throwable): String {
         val root = generateSequence(t) { it.cause }.last()
-        val missing = root.message?.substringAfterLast('/')?.substringAfterLast('.')?.substringBefore(';')?.take(60)
+        val msg = root.message.orEmpty()
+        val symbol = missingSymbol(msg)
+        val lib = symbol?.let { libraryOf(it) }
+        val needs = symbol?.let { " Missing: ${shortSymbol(it)}${lib?.let { l -> " ($l)" } ?: ""}." } ?: ""
+        val runs = " Yumeiro runs extensions for CloudStream $CS_LIBRARY (plugin API ${OnlineRuntime.API_VERSION})."
         return when (root) {
-            is NoClassDefFoundError, is ClassNotFoundException ->
-                if (root.message.orEmpty().contains("popcorn", ignoreCase = true)) "made for a different app (not CloudStream-compatible)"
-                else "uses a CloudStream part this version doesn't have yet${missing?.let { " ($it)" } ?: ""}. Update Yumeiro or try another source"
+            is NoClassDefFoundError, is ClassNotFoundException -> when {
+                msg.contains("popcorn", ignoreCase = true) -> "made for a different app (not CloudStream-compatible).$needs Look for a CloudStream copy of this source"
+                lib == null || lib.startsWith("CloudStream") ->
+                    "uses a CloudStream part this version doesn't have yet.$needs$runs Install an older copy of this extension, or another source for the same site"
+                else -> "needs a library Yumeiro doesn't include.$needs$runs Install another copy of this extension, or another source for the same site"
+            }
             is NoSuchMethodError, is NoSuchFieldError, is AbstractMethodError, is IncompatibleClassChangeError ->
-                "built for a different CloudStream version${missing?.let { " ($it)" } ?: ""}. Look for an updated copy of this extension"
+                "built for a different CloudStream version.$needs$runs Look for an updated copy of this extension, or an older one built for $CS_LIBRARY"
             is ClassCastException -> "not a CloudStream extension"
             is OutOfMemoryError -> "too large to load on this device"
-            else -> root.message?.take(120) ?: root.javaClass.simpleName
+            is UnsatisfiedLinkError -> "needs native code for another processor (${android.os.Build.SUPPORTED_ABIS.firstOrNull().orEmpty()}).$needs Try another source"
+            else -> msg.take(120).ifBlank { root.javaClass.simpleName }
         }
+    }
+
+    /** `Lcom/x/Y;` / `com.x.Y` / `No virtual method foo(..) in class Lcom/x/Y;` → `com.x.Y` or `com.x.Y.foo`. */
+    internal fun missingSymbol(msg: String): String? {
+        val cls = (RX_EXTENSIONMANAGER_INCLASS.find(msg) ?: RX_EXTENSIONMANAGER_DESC.find(msg))?.groupValues?.get(1)?.replace('/', '.')
+            ?: RX_EXTENSIONMANAGER_DOTTED.find(msg)?.groupValues?.get(1)
+            ?: return null
+        val member = RX_EXTENSIONMANAGER_MEMBER.find(msg)?.groupValues?.get(1)
+        return if (member != null) "$cls.$member" else cls
+    }
+
+    private fun shortSymbol(s: String): String = s.split('.').takeLast(2).joinToString(".").take(80)
+
+    internal fun libraryOf(symbol: String): String? = when {
+        symbol.startsWith("com.lagradost.nicehttp") -> "NiceHttp, CloudStream's web library"
+        symbol.startsWith("com.lagradost.") -> "CloudStream extension API"
+        symbol.startsWith("org.mozilla.javascript") -> "Rhino JavaScript engine"
+        symbol.startsWith("com.fasterxml.jackson") -> "Jackson JSON"
+        symbol.startsWith("kotlinx.coroutines") -> "Kotlin coroutines"
+        symbol.startsWith("kotlin.") -> "Kotlin runtime"
+        symbol.startsWith("org.jsoup") -> "Jsoup"
+        symbol.startsWith("okhttp3") -> "OkHttp"
+        symbol.startsWith("com.google.gson") -> "Gson"
+        symbol.startsWith("androidx.") || symbol.startsWith("android.") -> "Android"
+        else -> null
     }
 
     // endregion
