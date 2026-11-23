@@ -378,6 +378,8 @@ private fun CategoryPage(
                 Category.APPEARANCE -> item("c") { AppearanceSettingsCard() }
                 Category.PLAYER -> {
                     item("c") { VideoPlayerSettingsCard() }
+                    // PC-1 (owner list 11): the player's buttons are set where the player is (was under Video quality).
+                    item("controls") { GroupLabel("Player controls"); SettingsCard { PlayerControlsCard() } }
                     item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
                 }
                 Category.NAVIGATION -> item("c") { NavigationBarSettingsCard() }
@@ -387,10 +389,6 @@ private fun CategoryPage(
                         SettingsCard { dev.asfakul.yumeiro.ui.screens.profiles.ProfilesSettings(context as? android.app.Activity) }
                     }
                     item("adult") { GroupLabel("18+ content (this profile)"); OnlineSettingsCard(OnlinePart.ADULT) }
-                }
-                Category.PLAYER -> {
-                    item("c") { VideoPlayerSettingsCard() }
-                    item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
                 }
                 Category.VIDEO_QUALITY -> {
                     item("q") { QualityAndAudioCard() }

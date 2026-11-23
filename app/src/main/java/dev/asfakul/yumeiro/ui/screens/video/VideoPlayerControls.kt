@@ -207,7 +207,9 @@ fun VideoPlayerTopBar(
         ) {
             val fit = TopBarFit.split(visible, maxWidth.value, qualityLabel)
             // OWN-19: the full-screen bar keeps only the main buttons; the docked bar is already small.
-            val split = if (!compact && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_ESSENTIALS)) TopBarFit.essentials(fit) else fit
+            // PC-1: how many stay on the bar is the user's (Settings > Video player > Player controls), default 3.
+            val barCount by dev.asfakul.yumeiro.player.VideoPrefs.barCount.collectAsState()
+            val split = if (!compact && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_ESSENTIALS)) TopBarFit.essentials(fit, barCount) else fit
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(TopBarFit.GAP_DP.dp)
@@ -510,8 +512,12 @@ fun VideoPlayerCenterControls(
         horizontalArrangement = Arrangement.spacedBy(if (compact) 22.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (!compact) CenterRoundButton(Icons.Default.SkipPrevious, "Previous video", onPrevious, "video_previous_btn", 46, 28, enabledLook = hasPrevious)
-        CenterRoundButton(Icons.Default.FastRewind, "Rewind 10s", onRewind10s, "video_rewind_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
+        // PC-1 (owner list 11): each of these can be switched off in Settings > Video player.
+        val off by dev.asfakul.yumeiro.player.VideoPrefs.extrasOff.collectAsState()
+        val skips = !compact && dev.asfakul.yumeiro.player.VideoPrefs.Extra.PREV_NEXT !in off
+        val seeks = dev.asfakul.yumeiro.player.VideoPrefs.Extra.SEEK !in off
+        if (skips) CenterRoundButton(Icons.Default.SkipPrevious, "Previous video", onPrevious, "video_previous_btn", 46, 28, enabledLook = hasPrevious)
+        if (seeks) CenterRoundButton(Icons.Default.FastRewind, "Rewind 10s", onRewind10s, "video_rewind_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
 
         // Play / Pause / Replay
         Box(
@@ -540,8 +546,8 @@ fun VideoPlayerCenterControls(
             )
         }
 
-        CenterRoundButton(Icons.Default.FastForward, "Forward 10s", onForward10s, "video_forward_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
-        if (!compact) CenterRoundButton(Icons.Default.SkipNext, "Next video", onNext, "video_next_btn", 46, 28, enabledLook = hasNext)
+        if (seeks) CenterRoundButton(Icons.Default.FastForward, "Forward 10s", onForward10s, "video_forward_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
+        if (skips) CenterRoundButton(Icons.Default.SkipNext, "Next video", onNext, "video_next_btn", 46, 28, enabledLook = hasNext)
     }
 }
 
@@ -642,6 +648,11 @@ fun VideoPlayerBottomBar(
     /** BUG-5 TV-5: TV layout is always full screen, so it has no full-screen toggle. */
     showFullscreenButton: Boolean = true,
 ) {
+    // PC-1 (owner list 11): the full-screen player's button can be switched off; the docked player keeps it,
+    // it is the only way up to full screen there.
+    val extrasOff by dev.asfakul.yumeiro.player.VideoPrefs.extrasOff.collectAsState()
+    @Suppress("NAME_SHADOWING")
+    val showFullscreenButton = showFullscreenButton && (compact || dev.asfakul.yumeiro.player.VideoPrefs.Extra.FULLSCREEN !in extrasOff)
     if (compact) {
         val known = durationMs.takeIf { it > dev.asfakul.yumeiro.player.SeekMath.UNKNOWN }
         val pos = if (isUserSeeking) dev.asfakul.yumeiro.player.SeekMath.positionFor(sliderProgress, known) ?: currentPositionMs else currentPositionMs

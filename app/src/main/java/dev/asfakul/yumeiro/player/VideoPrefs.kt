@@ -59,6 +59,21 @@ object VideoPrefs {
         ASPECT("Aspect ratio"), PIP("Picture-in-picture"), LOCK("Lock"), INFO("Video info"),
     }
 
+    /**
+     * PC-1 (owner list 11): the player's other buttons, each can be switched off in Settings > Video player.
+     * Off = not drawn; the gestures (double tap to seek, swipe) and the keys keep working.
+     */
+    enum class Extra(val label: String, val hint: String) {
+        PREV_NEXT("Previous and next video", "The skip buttons beside rewind and forward"),
+        SEEK("Rewind and forward 10 s", "The round 10 s buttons beside play; double tap still seeks"),
+        FULLSCREEN("Fullscreen button", "The button at the end of the seek bar; turning the phone still works"),
+    }
+
+    /** PC-1: how many top-bar buttons stay on the bar before the rest go into More (OWN-19 default 3). */
+    const val BAR_MIN = 1
+    const val BAR_MAX = 6
+    const val BAR_DEFAULT = 3
+
     /** Fields the "Stats for nerds" style overlay can show. */
     enum class InfoField(val label: String) {
         RESOLUTION("Resolution"), SOURCE("Source"), PROVIDER("Provider"), QUALITY("Quality"),
@@ -87,6 +102,8 @@ object VideoPrefs {
     private val _externalApp = MutableStateFlow(""); val externalApp: StateFlow<String> = _externalApp.asStateFlow()
     private val _controls = MutableStateFlow(Control.entries.toList()); val controls: StateFlow<List<Control>> = _controls.asStateFlow()
     private val _hidden = MutableStateFlow<Set<Control>>(emptySet()); val hidden: StateFlow<Set<Control>> = _hidden.asStateFlow()
+    private val _extrasOff = MutableStateFlow<Set<Extra>>(emptySet()); val extrasOff: StateFlow<Set<Extra>> = _extrasOff.asStateFlow()
+    private val _barCount = MutableStateFlow(BAR_DEFAULT); val barCount: StateFlow<Int> = _barCount.asStateFlow()
     private val _resume = MutableStateFlow(true); val resume: StateFlow<Boolean> = _resume.asStateFlow()
     private val _infoOverlay = MutableStateFlow(false); val infoOverlay: StateFlow<Boolean> = _infoOverlay.asStateFlow()
     private val _infoFields = MutableStateFlow(DEFAULT_INFO_FIELDS); val infoFields: StateFlow<Set<InfoField>> = _infoFields.asStateFlow()
@@ -107,6 +124,8 @@ object VideoPrefs {
         _externalApp.value = p.getString("external_app", "").orEmpty()
         _controls.value = orderFrom(p.getString("controls", null))
         _hidden.value = p.getString("hidden_controls", null).orEmpty().split(',').mapNotNull { n -> Control.entries.firstOrNull { it.name == n } }.toSet()
+        _extrasOff.value = p.getString("extras_off", null).orEmpty().split(',').mapNotNull { n -> Extra.entries.firstOrNull { it.name == n } }.toSet()
+        _barCount.value = p.getInt("bar_count", BAR_DEFAULT).coerceIn(BAR_MIN, BAR_MAX)
         _resume.value = p.getBoolean("resume", true)
         _infoOverlay.value = p.getBoolean("info_overlay", false)
         _infoFields.value = p.getString("info_fields", null)?.let { s -> s.split(',').mapNotNull { n -> InfoField.entries.firstOrNull { it.name == n } }.toSet() } ?: DEFAULT_INFO_FIELDS
@@ -141,6 +160,19 @@ object VideoPrefs {
         _controls.value = order; _hidden.value = hidden
         edit(c) { putString("controls", order.joinToString(",") { it.name }); putString("hidden_controls", hidden.joinToString(",") { it.name }) }
     }
+    fun setExtra(c: Context, e: Extra, on: Boolean) {
+        val next = if (on) _extrasOff.value - e else _extrasOff.value + e
+        _extrasOff.value = next; edit(c) { putString("extras_off", next.joinToString(",") { it.name }) }
+    }
+    fun setBarCount(c: Context, n: Int) { val v = n.coerceIn(BAR_MIN, BAR_MAX); _barCount.value = v; edit(c) { putInt("bar_count", v) } }
+
+    /** PC-1: where each top-bar button shows: on the bar (first [barCount] shown), in More, or hidden. Pure. */
+    enum class Place { BAR, MORE, HIDDEN }
+    fun placeOf(order: List<Control>, hidden: Set<Control>, barCount: Int): Map<Control, Place> {
+        var shown = 0
+        return order.associateWith { c -> if (c in hidden) Place.HIDDEN else if (shown++ < barCount) Place.BAR else Place.MORE }
+    }
+
     fun setResume(c: Context, v: Boolean) { _resume.value = v; edit(c) { putBoolean("resume", v) } }
     fun setInfoOverlay(c: Context, v: Boolean) { _infoOverlay.value = v; edit(c) { putBoolean("info_overlay", v) } }
     fun setInfoFields(c: Context, v: Set<InfoField>) { _infoFields.value = v; edit(c) { putString("info_fields", v.joinToString(",") { it.name }) } }

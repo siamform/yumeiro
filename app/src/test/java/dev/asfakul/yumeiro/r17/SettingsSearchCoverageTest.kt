@@ -24,7 +24,9 @@ class SettingsSearchCoverageTest {
         put(Category.APPEARANCE, "Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents")
         // FINAL-47: one subject per page (Profiles, Video player, Video quality, Subtitles, Music, Downloads).
         put(Category.PROFILES, "Add profile", "Show 18+ content", "Keep 18+ activity private")
-        put(Category.PLAYER, "Background play", "Picture-in-picture", "Volume boost up to 200 %", "Player info overlay", "Back button while a video plays")
+        put(Category.PLAYER, "Background play", "Picture-in-picture", "Volume boost up to 200 %", "Player info overlay", "Back button while a video plays",
+            // PC-1: player controls moved here from Video quality.
+            "Previous and next video", "Rewind and forward 10 s", "Fullscreen button")
         put(Category.VIDEO_QUALITY, "Default quality", "Default audio", "Default speed", "Resume playback", "Video decoder", "Video renderer",
             "Anime4K enhancement", "Default player", "Torrent streaming")
         put(Category.SUBTITLES, "Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro (anime)", "Skip automatically")
