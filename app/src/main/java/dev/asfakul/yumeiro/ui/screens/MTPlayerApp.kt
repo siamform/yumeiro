@@ -1058,6 +1058,9 @@ fun MTPlayerApp(
                     exitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.pushExit(reducedMotionOn) },
                     popEnterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popEnter(reducedMotionOn) },
                     popExitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popExit(reducedMotionOn) },
+                    // R19 NAV-1: the system Back gesture runs these, not popEnter / popExit (library default: scale-down).
+                    predictivePopEnterTransition = { _ -> dev.asfakul.yumeiro.ui.components.PageMotion.predictivePopEnter(reducedMotionOn) },
+                    predictivePopExitTransition = { _ -> dev.asfakul.yumeiro.ui.components.PageMotion.predictivePopExit(reducedMotionOn) },
                     sizeTransform = null
                 ) {
                     // The five bottom-bar tabs live in one pager: swipe anywhere on a page (rows and
