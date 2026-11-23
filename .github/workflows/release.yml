@@ -90,6 +90,16 @@ jobs:
           printf '%s' "$MT_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
           echo "MT_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # Release 45179237099 (2.2.0): 53 Robolectric classes failed before any test ran, because the android-all
+      # jar download from Maven Central broke (IOException in MavenArtifactFetcher), same as CI 45041431667.
+      # CI already caches these jars; the release job did not. Cache them here too.
+      - name: Cache Robolectric Android jars
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: robolectric-
+
       - name: Build signed release APK
         env:
           MT_KEYSTORE_PASSWORD: ${{ secrets.MT_KEYSTORE_PASSWORD }}
@@ -119,7 +129,17 @@ jobs:
         # daemon ran out of memory (GC overhead). Same tasks, two calls: release APKs first, then the unit tests.
         run: |
           ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease ${{ vars.YUMEIRO_ABI_SPLITS == 'true' && '-Pyumeiro.abiSplits=true' || '' }}
-          ./gradlew --no-configuration-cache --no-build-cache testMobileDebugUnitTest ${{ vars.YUMEIRO_ABI_SPLITS == 'true' && '-Pyumeiro.abiSplits=true' || '' }}
+          # One retry, and only when the Robolectric jar download failed (no test ran); a real test failure stops the release.
+          tests() { ./gradlew --no-configuration-cache --no-build-cache testMobileDebugUnitTest ${{ vars.YUMEIRO_ABI_SPLITS == 'true' && '-Pyumeiro.abiSplits=true' || '' }} 2>&1 | tee "$RUNNER_TEMP/unit-tests.log"; return "${PIPESTATUS[0]}"; }
+          if ! tests; then
+            if grep -q 'MavenArtifactFetcher' "$RUNNER_TEMP/unit-tests.log"; then
+              echo "::warning::Robolectric jar download failed (network); retrying the unit tests once"
+              sleep 30
+              tests
+            else
+              exit 1
+            fi
+          fi
 
       - name: Remove keystore from the runner
         if: always()
