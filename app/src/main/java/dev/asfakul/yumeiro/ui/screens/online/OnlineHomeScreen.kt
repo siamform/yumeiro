@@ -635,6 +635,19 @@ fun OnlineHomeScreen(
                     val name: String = sel
                     val api = providers.firstOrNull { it.name == name }
                     val h = homes[name]
+                    // B-32 (R19): the site works but this copy finds nothing → offer another repository's copy.
+                    val nothingParsed = (h as? ProviderHome.Failed)?.fix?.kind == dev.asfakul.yumeiro.online.EmptyHome.Kind.NOTHING_PARSED
+                    val marketState by dev.asfakul.yumeiro.online.ExtensionMarket.state.collectAsState()
+                    LaunchedEffect(nothingParsed) {
+                        if (nothingParsed && dev.asfakul.yumeiro.online.ExtensionMarket.catalog == null) dev.asfakul.yumeiro.online.ExtensionMarket.load(context)
+                    }
+                    val otherCopy = remember(nothingParsed, api, engine.installed, marketState) {
+                        if (!nothingParsed || api == null) null
+                        else ExtensionManager.extensionOf(api)?.let { mine ->
+                            (marketState as? dev.asfakul.yumeiro.online.ExtensionMarket.State.Ready)?.catalog?.extensions
+                                ?.let { dev.asfakul.yumeiro.online.OtherCopy.pick(mine, engine.installed, it) }
+                        }
+                    }
                     HuePage(
                         name = name, api = api,
                         rows = (h as? ProviderHome.Ready)?.rows,
@@ -646,6 +659,27 @@ fun OnlineHomeScreen(
                         onSearch = onOpenSearch,
                         onRetry = { if (api != null) scope.launch { loadOne(api, true) } },
                         openItem = openItem, openInfo = openInfo,
+                        otherCopy = otherCopy,
+                        onTryCopy = { copy ->
+                            scope.launch {
+                                runCatching { ExtensionManager.install(context, copy) }
+                                    .onSuccess { inst ->
+                                        dev.asfakul.yumeiro.online.OnlineRepository.clearCaches()
+                                        val err = ExtensionManager.state.value.info(inst.key).error
+                                        // PIN-2 names the second copy "Name · Repo"; switch the page to it.
+                                        val base = name.substringBefore(" · ")
+                                        val next = ExtensionManager.providers().firstOrNull { p ->
+                                            p.name != name && p.name.startsWith(base) && ExtensionManager.extensionOf(p)?.key == inst.key
+                                        }
+                                        when {
+                                            err != null -> dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "${inst.name} v${inst.version} installed but couldn't start: $err")
+                                            next != null -> { selected = next.name; dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Showing ${next.name} (v${inst.version})") }
+                                            else -> dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "${inst.name} v${inst.version} from ${inst.repoName} installed")
+                                        }
+                                    }
+                                    .onFailure { if (it !is dev.asfakul.yumeiro.online.ExtensionReview.Declined) dev.asfakul.yumeiro.ui.components.AppMessages.error(context, dev.asfakul.yumeiro.online.OnlineErrors.friendly(it)) }
+                            }
+                        },
                     )
                 }
                 }
