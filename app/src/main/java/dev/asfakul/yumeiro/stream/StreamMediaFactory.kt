@@ -48,9 +48,13 @@ object StreamMediaFactory {
     private val factories: MutableMap<ExoPlayer, MediaSource.Factory> = Collections.synchronizedMap(WeakHashMap())
     private val adFilters: MutableMap<ExoPlayer, AdFilterDataSource.Factory> = Collections.synchronizedMap(WeakHashMap())
 
-    /** True for links that are fetched over the network (as opposed to local files / content URIs). */
+    /**
+     * True for links that are fetched over the network (as opposed to local files / content URIs).
+     * TOR-2: a magnet link is one too. It wasn't, so a magnet opened from another app (or a shared info-hash) skipped
+     * the player's resolve step and went to ExoPlayer as is: "Malformed URL" (field probe 45253665347).
+     */
     fun isNetworkUri(uri: String): Boolean = uri.trim().lowercase().let {
-        it.startsWith("http://") || it.startsWith("https://") || it.startsWith("rtsp://") || it.startsWith("rtmp://")
+        it.startsWith("http://") || it.startsWith("https://") || it.startsWith("rtsp://") || it.startsWith("rtmp://") || it.startsWith("magnet:")
     }
 
     /** Media buffer budget for a heap of [memoryClassMb]: ~1/6 of it, kept between 16 and 64 MB. */

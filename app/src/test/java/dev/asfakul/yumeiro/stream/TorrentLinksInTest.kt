@@ -53,4 +53,12 @@ class TorrentLinksInTest {
         val found = ctx.packageManager.queryIntentActivities(view, 0).map { it.activityInfo.packageName }
         assertTrue("magnet: resolves to $found", ctx.packageName in found)
     }
+
+    // TOR-2: the player resolves a magnet (built-in torrent engine) instead of handing it to ExoPlayer as a URL.
+    @Test fun aMagnetIsANetworkLinkThatThePlayerResolvesFirst() {
+        val m = IncomingMedia.linkFromText(hash)!!
+        assertTrue(StreamMediaFactory.isNetworkUri(m))
+        assertTrue("not playable without resolving", !StreamResolver.isConfident(StreamRequest(url = m)))
+        assertTrue(!StreamMediaFactory.isNetworkUri("file:///sdcard/a.mp4") && !StreamMediaFactory.isNetworkUri("content://media/1"))
+    }
 }
