@@ -12,6 +12,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import dev.asfakul.yumeiro.FeatureFlags
 import dev.asfakul.yumeiro.ui.components.NextFramePage
 import dev.asfakul.yumeiro.ui.components.NextFramePages
@@ -65,5 +67,31 @@ class NextFramePageTest {
         assertEquals(listOf(false, true), List(2) { pages.deferNext() })
         pages.restoring() // Home entry composed again (a sub page was closed)
         assertEquals(listOf(false, true), List(2) { pages.deferNext() })
+    }
+
+    /**
+     * NAV-1 regression (CI 45138713013, AppNavigationCrashTest.playlistOpensOnItsOwnPageAndBackReturns): a page first
+     * composed deferred and composed again without waiting must get its saved state back.
+     */
+    @Test fun savedStateSurvivesDeferredThenImmediate() {
+        var shown by androidx.compose.runtime.mutableStateOf(true)
+        var defer by androidx.compose.runtime.mutableStateOf(true)
+        var seen = ""
+        var open = true // the user opens the Playlists pane once, on the first showing only
+        rule.setContent {
+            val holder = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
+            if (shown) holder.SaveableStateProvider("page") {
+                NextFramePage(defer) {
+                    var pane by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("hub") }
+                    androidx.compose.runtime.SideEffect { seen = pane }
+                    androidx.compose.runtime.LaunchedEffect(Unit) { if (open) { open = false; pane = "playlists" } }
+                }
+            }
+        }
+        rule.waitForIdle()
+        assertEquals("playlists", seen)
+        shown = false; rule.waitForIdle()
+        defer = false; shown = true; rule.waitForIdle()
+        assertEquals("playlists", seen)
     }
 }

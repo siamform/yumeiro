@@ -46,9 +46,11 @@ fun AfterFirstFrame(enabled: Boolean = true, content: @Composable () -> Unit) {
  */
 @Composable
 fun NextFramePage(enabled: Boolean, content: @Composable () -> Unit) {
-    if (!enabled) { content(); return }
-    var ready by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { withFrameNanos { }; ready = true }
+    // NAV-1: one call site for [content] whether it waits or not. With two (`if (!enabled) content()` and
+    // `if (ready) content()`) a page first shown deferred and shown again at once (after a pop) had a different
+    // composite key, so its rememberSaveable state (Live TV's open pane, scroll positions) was not restored.
+    var ready by remember { mutableStateOf(!enabled) }
+    if (!ready) LaunchedEffect(Unit) { withFrameNanos { }; ready = true }
     if (ready) content()
 }
 
