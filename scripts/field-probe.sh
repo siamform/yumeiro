@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | back | home | shot NAME),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | top | back | home | shot NAME),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -83,6 +83,11 @@ run_steps() {
       wait*) n=${s#wait }; end=$(( $(date +%s) + n ))
         while [ "$(date +%s)" -lt "$end" ]; do answer_system; dump "wait"; sleep 10; done ;;
       tap*) t=${s#tap }; tap_text "$t" "~$t" || note "tap miss [$t]"; sleep 1; dump "after-tap" ;;
+      find*) # scroll the page up (up to 6 swipes) until TEXT is on screen, then tap it
+        t=${s#find }; ok=0
+        for i in 1 2 3 4 5 6 7; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 1500 540 700 300; sleep 1; done
+        [ $ok = 1 ] || note "find miss [$t]"; sleep 1; dump "after-find" ;;
+      top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
       shot*) dump "${s#shot }" ;;
