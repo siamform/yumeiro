@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -45,6 +46,22 @@ object TgAccounts {
      */
     fun enabled(context: Context): Boolean =
         FeatureFlags.on(context, FeatureFlags.Flag.TELEGRAM_LOGIN) && TdEngine.available()
+
+    /** TG-PAGE-1: why sign-in can't be offered on this phone, or null when it can. */
+    fun unavailableReason(context: Context): String? = when {
+        !FeatureFlags.on(context, FeatureFlags.Flag.TELEGRAM_LOGIN) -> "Telegram sign-in is turned off in this build."
+        !TdEngine.available() -> "Telegram sign-in needs Telegram's own library (TDLib), and there is no copy for this phone's processor (" +
+            Build.SUPPORTED_ABIS.firstOrNull().orEmpty() + "). Public channels still work."
+        else -> null
+    }
+
+    private const val HINT_PREFS = "telegram_account_hint"
+    /** TG-PAGE-1: last state TDLib reported for [Profiles.currentId]: signed in or not. A hint for the page only. */
+    fun signedInHint(context: Context): Boolean =
+        context.applicationContext.getSharedPreferences(HINT_PREFS, Context.MODE_PRIVATE).getBoolean(safe(Profiles.currentId(context.applicationContext)), false)
+    private fun setSignedInHint(context: Context, profile: String, on: Boolean) {
+        context.getSharedPreferences(HINT_PREFS, Context.MODE_PRIVATE).edit().putBoolean(safe(profile), on).apply()
+    }
 
     /** OWN-3: sign-in needs keys first (no build keys and none typed). */
     fun needsKeys(context: Context): Boolean = TgKeys.effective(context) == null
@@ -81,7 +98,20 @@ object TgAccounts {
             )
             // Errors only in TDLib's own log (logcat); never message text or numbers.
             runCatching { hub.execute(buildJsonObject { put("@type", "setLogVerbosityLevel"); put("new_verbosity_level", 1) }) }
-            TgSession(hub.newClient(), params, scope).also { session = it; sessionProfile = profile }
+            TgSession(hub.newClient(), params, scope).also { s ->
+                session = s; sessionProfile = profile
+                // TG-PAGE-1: remember whether this profile is signed in, so the Telegram page can say so without
+                // starting TDLib (it downloads and loads a native library). Only TDLib's own state sets it.
+                scope.launch {
+                    s.state.collect { st ->
+                        when (st) {
+                            TgAuthState.Ready -> setSignedInHint(app, profile, true)
+                            TgAuthState.WaitPhone, TgAuthState.LoggingOut -> setSignedInHint(app, profile, false)
+                            else -> Unit
+                        }
+                    }
+                }
+            }
         }
     }
 
