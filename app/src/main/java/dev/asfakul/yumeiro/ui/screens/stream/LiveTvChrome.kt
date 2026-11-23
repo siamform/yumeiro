@@ -25,7 +25,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -117,28 +125,19 @@ internal fun LivePinnedBar(pins: List<StreamPlaylist>, selected: String?, onPick
 
 /** Category chips: "All · N", then every category with its count (scrolls sideways, nothing clipped). */
 @Composable
-internal fun LiveCategoryBar(categories: List<LiveChannelFeed.Category>, total: Int, selected: String?, onPick: (String?) -> Unit) {
-    LazyRow(Modifier.fillMaxWidth().testTag("live_categories"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item("all") { LiveChip("All · $total", selected == null, "live_cat_all") { onPick(null) } }
+internal fun LiveCategoryBar(
+    categories: List<LiveChannelFeed.Category>, total: Int, selected: String?,
+    tag: String = "live_categories", prefix: String = "live_cat_", onPick: (String?) -> Unit,
+) {
+    LazyRow(Modifier.fillMaxWidth().testTag(tag), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item("all") { LiveChip("All · $total", selected == null, "${prefix}all") { onPick(null) } }
         items(categories, key = { "c_" + it.name }) { c ->
-            LiveChip("${c.name} · ${c.count}", selected.equals(c.name, ignoreCase = true), "live_cat_${c.name}") { onPick(if (selected.equals(c.name, ignoreCase = true)) null else c.name) }
+            LiveChip("${c.name} · ${c.count}", selected.equals(c.name, ignoreCase = true), "$prefix${c.name}") { onPick(if (selected.equals(c.name, ignoreCase = true)) null else c.name) }
         }
     }
 }
 
 /** The merged feed's rows (category headings and tile rows) for a LazyColumn. */
-/** 2.1.0: country chips ("Any country", then "Bangladesh · 40" …); shown when the feed spans 2+ countries. */
-@Composable
-internal fun LiveCountryBar(countries: List<LiveChannelFeed.Category>, selected: String?, onPick: (String?) -> Unit) {
-    LazyRow(Modifier.fillMaxWidth().padding(top = 8.dp).testTag("live_countries"), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item("any") { LiveChip("Any country", selected == null, "live_country_all") { onPick(null) } }
-        items(countries, key = { "k_" + it.name }) { c ->
-            val on = selected.equals(c.name, ignoreCase = true)
-            LiveChip("${dev.asfakul.yumeiro.stream.LiveCountry.name(c.name)} · ${c.count}", on, "live_country_${c.name}") { onPick(if (on) null else c.name) }
-        }
-    }
-}
-
 internal fun LazyListScope.liveFeedItems(rows: List<LiveChannelFeed.Row>, columns: Int, onPlay: (LiveChannelFeed.Entry) -> Unit) {
     items(rows, key = { it.key }, contentType = { if (it is LiveChannelFeed.Row.Header) "live_cat_h" else "live_row" }) { r ->
         when (r) {
@@ -200,3 +199,173 @@ internal fun PlaylistsSectionLabel(text: String, tag: String) {
     )
 }
 
+
+// ---- LIVE-1 (owner list R21, item 1): search and country, Yumix-style ------------------------------------
+
+/**
+ * A round 48 dp icon button for the Live TV header (search, country). [label] is shown next to the icon when the
+ * filter is in use (the picked country's flag and name), so the header says what the list shows.
+ */
+@Composable
+internal fun LiveIconButton(
+    icon: ImageVector, description: String, tag: String, onClick: () -> Unit, active: Boolean = false, label: String? = null,
+) {
+    val pal = LocalMtPalette.current
+    Row(
+        Modifier.heightIn(min = 48.dp).widthIn(min = 48.dp).clip(RoundedCornerShape(50))
+            .clickable(role = Role.Button, onClickLabel = description, onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = description }
+            .testTag(tag),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+    ) {
+        Row(
+            Modifier.clip(RoundedCornerShape(50)).background(if (active) pal.accent.copy(alpha = 0.16f) else GlassFill)
+                .padding(horizontal = if (label != null) 12.dp else 9.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, null, tint = if (active) pal.accent else TextPrimary, modifier = Modifier.size(18.dp))
+            if (label != null) {
+                Spacer(Modifier.width(6.dp))
+                Text(label, color = if (active) pal.accent else TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 110.dp))
+            }
+        }
+    }
+}
+
+/** The search box under the Live TV header, with how many channels match. */
+@Composable
+internal fun LiveSearchBox(query: String, onQuery: (String) -> Unit, matches: Int?, onClose: () -> Unit) {
+    val focus = androidx.compose.runtime.remember { androidx.compose.ui.focus.FocusRequester() }
+    Column(Modifier.fillMaxWidth().testTag("live_search")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                query = query, onQuery = { onQuery(it.take(60)) }, hint = "Search channels", tag = "live_search_field",
+                modifier = Modifier.weight(1f), fieldModifier = Modifier.focusRequester(focus),
+            )
+            LiveIconButton(Icons.Default.Close, "Close search", "live_search_close", onClick = onClose)
+        }
+        if (query.isNotBlank() && matches != null) Text(
+            if (matches == 1) "1 channel" else "$matches channels", color = TextTertiary, fontSize = 12.sp,
+            modifier = Modifier.padding(start = 4.dp, top = 6.dp).testTag("live_search_count"),
+        )
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { if (!dev.asfakul.yumeiro.Edition.isTv) runCatching { focus.requestFocus() } }
+}
+
+/** No channel matched: say what was searched and offer the ways out (never a blank page). */
+@Composable
+internal fun LiveSearchEmpty(query: String, scoped: String?, onClear: () -> Unit, onWiden: (() -> Unit)?) {
+    val pal = LocalMtPalette.current
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(16.dp)).background(GlassFill).padding(16.dp).testTag("live_search_empty")) {
+        Text("No channel called \"${query.trim()}\"", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text(
+            if (scoped != null) "Only $scoped is searched now. Search every channel, or check the spelling." else "Check the spelling, or try fewer words (for example \"sports\").",
+            color = TextSecondary, fontSize = 12.sp,
+        )
+        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (onWiden != null) Text(
+                "Search every channel", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = onWiden).padding(horizontal = 8.dp, vertical = 14.dp).testTag("live_search_widen"),
+            )
+            Text(
+                "Clear search", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = onClear).padding(horizontal = 8.dp, vertical = 14.dp).testTag("live_search_clear"),
+            )
+        }
+    }
+}
+
+/**
+ * The Country sheet: a search field, the countries picked lately, then every country in the loaded lists with
+ * its flag and channel count (most channels first). Built from the data ([LiveFind.countries]), never a fixed
+ * list; it replaces the long sideways row of country chips. Full height on every device (TV remotes cannot drag
+ * a sheet up, and on phones the keyboard would cover matches).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun LiveCountrySheet(
+    countries: List<dev.asfakul.yumeiro.stream.LiveFind.Country>, selected: String?, recent: List<String>, total: Int,
+    onPick: (dev.asfakul.yumeiro.stream.LiveFind.Country?) -> Unit, onDismiss: () -> Unit,
+) {
+    val pal = LocalMtPalette.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var query by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    val shown = androidx.compose.runtime.remember(countries, query) { dev.asfakul.yumeiro.stream.LiveFind.filterCountries(countries, query) }
+    val recentRows = androidx.compose.runtime.remember(countries, recent, query) {
+        if (query.isNotBlank()) emptyList() else recent.mapNotNull { k -> countries.firstOrNull { it.key.equals(k, ignoreCase = true) } }.take(5)
+    }
+    ModalBottomSheet(
+        onDismissRequest = onDismiss, containerColor = pal.surface, sheetState = sheetState,
+        shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet,
+        dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(),
+    ) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("live_country_sheet")) {
+            Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Country", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
+                    Text("${countries.size} countries in your playlists", color = TextSecondary, fontSize = 12.sp)
+                }
+                if (selected != null) Text(
+                    "Clear", color = pal.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(50)).clickable(role = Role.Button) { onPick(null) }.padding(horizontal = 12.dp, vertical = 14.dp).testTag("live_country_clear"),
+                )
+            }
+            if (countries.size > 6) dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+                query = query, onQuery = { query = it.take(40) }, hint = "Search countries", tag = "live_country_search",
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 560.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
+                if (query.isBlank()) item("any") { LiveCountryRow(null, "Every country", "All $total channels", selected == null) { onPick(null) } }
+                if (recentRows.isNotEmpty()) {
+                    item("h_recent") { LiveSheetHead("Recent") }
+                    items(recentRows, key = { "r_" + it.key }) { c -> LiveCountryRow(c, c.label, "${c.count} channels", selected.equals(c.key, ignoreCase = true), tagPrefix = "live_country_recent") { onPick(c) } }
+                    item("h_all") { LiveSheetHead("All countries") }
+                }
+                if (shown.isEmpty()) item("none") {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("live_country_empty")) {
+                        Text("No country called \"${query.trim()}\"", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Your playlists have channels from ${countries.size} countries. Check the spelling.", color = TextSecondary, fontSize = 12.sp)
+                    }
+                }
+                items(shown, key = { "c_" + it.key }) { c -> LiveCountryRow(c, c.label, "${c.count} channels", selected.equals(c.key, ignoreCase = true)) { onPick(c) } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LiveSheetHead(title: String) {
+    Text(
+        title.uppercase(), color = TextTertiary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp,
+        modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 4.dp).semantics { heading() },
+    )
+}
+
+@Composable
+private fun LiveCountryRow(
+    c: dev.asfakul.yumeiro.stream.LiveFind.Country?, title: String, sub: String, sel: Boolean,
+    tagPrefix: String = "live_country", onClick: () -> Unit,
+) {
+    val pal = LocalMtPalette.current
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
+            .background(if (sel) pal.accent.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .selectable(selected = sel, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag(if (c == null) "${tagPrefix}_any" else "${tagPrefix}_${c.key}"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+            val flag = dev.asfakul.yumeiro.stream.LiveFind.flag(c?.code)
+            if (flag != null) Text(flag, fontSize = 20.sp)
+            else Icon(Icons.Default.Public, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = TextPrimary, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(sub, color = TextSecondary, fontSize = 12.sp, maxLines = 1)
+        }
+        if (sel) Icon(Icons.Default.Check, "Selected", tint = pal.accent, modifier = Modifier.size(20.dp))
+    }
+}

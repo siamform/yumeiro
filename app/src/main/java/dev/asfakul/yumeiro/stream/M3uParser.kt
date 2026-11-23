@@ -71,14 +71,14 @@ object M3uParser {
      */
     fun parseLines(lines: Sequence<String>, baseHeaders: StreamRequest? = null, baseUrl: String? = null): List<StreamRequest> {
         val out = mutableListOf<StreamRequest>()
-        var title = ""; var logo: String? = null; var group: String? = null; var tvgId: String? = null; var country: String? = null
+        var title = ""; var logo: String? = null; var group: String? = null; var tvgId: String? = null; var country: String? = null; var genre: String? = null
         var ua: String? = null; var referer: String? = null; var origin: String? = null
         var cookie: String? = null; var extra = mutableMapOf<String, String>()
         var drm = DrmScheme.NONE; var license: String? = null
         var format = StreamFormat.AUTO
 
         fun reset() {
-            title = ""; logo = null; group = null; tvgId = null; country = null; ua = null; referer = null; origin = null
+            title = ""; logo = null; group = null; tvgId = null; country = null; genre = null; ua = null; referer = null; origin = null
             cookie = null; extra = mutableMapOf(); drm = DrmScheme.NONE; license = null; format = StreamFormat.AUTO
         }
 
@@ -109,6 +109,8 @@ object M3uParser {
                         logo = attrs["tvg-logo"]?.ifBlank { null }
                         tvgId = attrs["tvg-id"]?.ifBlank { null } // F-15: guide (XMLTV) channel id
                         country = LiveCountry.of(attrs["tvg-country"], tvgId)
+                        // LIVE-1: iptv-org / Yumeiro Live put the genre here when group-title is the country.
+                        genre = attrs["tvg-category"]?.substringBefore(';')?.trim()?.ifBlank { null }
                         group = attrs["group-title"]?.ifBlank { null }
                         attrs["http-user-agent"]?.ifBlank { null }?.let { ua = it }
                         attrs["http-referrer"]?.ifBlank { null }?.let { referer = it }
@@ -176,6 +178,7 @@ object M3uParser {
                                 logoUrl = logo,
                                 tvgId = tvgId,
                                 country = country,
+                                genre = genre,
                                 group = group,
                             )
                         }
@@ -207,6 +210,7 @@ object M3uWriter {
             append("#EXTINF:-1")
             c.tvgId?.takeIf { it.isNotBlank() }?.let { append(" tvg-id=\"").append(attr(it)).append('"') }
             c.country?.takeIf { it.isNotBlank() }?.let { append(" tvg-country=\"").append(attr(it)).append('"') }
+            c.genre?.takeIf { it.isNotBlank() }?.let { append(" tvg-category=\"").append(attr(it)).append('"') }
             append(" tvg-name=\"").append(attr(c.displayTitle)).append('"')
             c.logoUrl?.takeIf { it.isNotBlank() }?.let { append(" tvg-logo=\"").append(attr(it)).append('"') }
             c.group?.takeIf { it.isNotBlank() }?.let { append(" group-title=\"").append(attr(it)).append('"') }

@@ -64,6 +64,7 @@ import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Stream
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.AddLink
@@ -348,7 +349,12 @@ fun StreamScreen(
     var liveGroup by rememberSaveable(liveSel) { mutableStateOf<String?>(null) }
     // 2.1.0: country chip (null = every country), from tvg-country / the iptv-org tvg-id suffix.
     var liveCountry by rememberSaveable(liveSel) { mutableStateOf<String?>(null) }
-    var liveLimit by rememberSaveable(liveSel, liveGroup, liveCountry) { mutableStateOf(LiveChannelFeed.PAGE) }
+    // LIVE-1 (owner list R21, item 1): search by channel name behind a header icon, and a Country sheet.
+    var liveSearching by rememberSaveable { mutableStateOf(false) }
+    var liveGenre by rememberSaveable(liveSel) { mutableStateOf<String?>(null) }
+    var liveQuery by rememberSaveable { mutableStateOf("") }
+    var countryOpen by rememberSaveable { mutableStateOf(false) }
+    var liveLimit by rememberSaveable(liveSel, liveGroup, liveCountry, liveGenre, liveQuery) { mutableStateOf(LiveChannelFeed.PAGE) }
     var filterOpen by rememberSaveable { mutableStateOf(false) }
     var toolsOpen by rememberSaveable { mutableStateOf(false) }
     var playlistQuery by rememberSaveable { mutableStateOf("") }
@@ -411,7 +417,21 @@ fun StreamScreen(
     }
     val feedLoading = feedIds.count { loads[it]?.loading != false }
     val feedFailed = feedIds.mapNotNull { id -> activePlaylists.firstOrNull { it.id == id }?.takeIf { loads[id]?.let { l -> !l.loading && l.error != null && l.channels.isEmpty() } == true } }
-    val feedShown = remember(feed, liveGroup, liveCountry) { LiveChannelFeed.filter(feed, liveGroup, liveCountry) }
+    val feedFiltered = remember(feed, liveGroup, liveCountry, liveGenre) { LiveChannelFeed.filter(feed, liveGroup, liveCountry, liveGenre) }
+    // LIVE-1: the name search runs off the main thread (Yumeiro Live has 7 500+ channels), a beat after typing.
+    val feedShown by androidx.compose.runtime.produceState(feedFiltered, feedFiltered, liveQuery) {
+        value = if (liveQuery.isBlank()) feedFiltered else {
+            kotlinx.coroutines.delay(120)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { dev.asfakul.yumeiro.stream.LiveFind.search(feedFiltered, liveQuery) }
+        }
+    }
+    val liveCountries = remember(feed) { dev.asfakul.yumeiro.stream.LiveFind.countries(feed) }
+    val countriesByCategory = remember(feed) { dev.asfakul.yumeiro.stream.LiveFind.categoriesAreCountries(feed) }
+    val countryKey = if (countriesByCategory) liveGroup else liveCountry
+    val countryPicked = liveCountries.firstOrNull { it.key.equals(countryKey, ignoreCase = true) }
+    val countryRecent by androidx.compose.runtime.produceState(emptyList<String>(), countryOpen) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { LiveCountryRecent.read(app) }
+    }
     LaunchedEffect(feed) { if (liveGroup != null && feedLoading == 0 && feed.categories.none { it.name.equals(liveGroup, ignoreCase = true) }) liveGroup = null }
     LaunchedEffect(feed) { if (liveCountry != null && feedLoading == 0 && (!feed.showCountryChips || feed.countries.none { it.name.equals(liveCountry, ignoreCase = true) })) liveCountry = null }
     // Near the end = the footer or one of the last two shown tile rows is on screen. Read from the item
@@ -436,8 +456,8 @@ fun StreamScreen(
         androidx.compose.runtime.withFrameNanos { }
         if (liveNearEnd) liveLimit = LiveChannelFeed.nextLimit(liveLimit, feedShown.size)
     }
-    val feedRows = remember(feed, feedShown, liveLimit, liveColumns, liveGroup) {
-        LiveChannelFeed.rows(feedShown, liveLimit, liveColumns, feed.categories.associate { it.name to it.count }, headers = liveGroup == null && liveCountry == null)
+    val feedRows = remember(feed, feedShown, liveLimit, liveColumns, liveGroup, liveCountry, liveGenre, liveQuery) {
+        LiveChannelFeed.rows(feedShown, liveLimit, liveColumns, feed.categories.associate { it.name to it.count }, headers = liveGroup == null && liveCountry == null && liveGenre == null && liveQuery.isBlank())
     }
     fun playEntry(e: LiveChannelFeed.Entry) {
         val p = activePlaylists.firstOrNull { it.id == e.playlistId }
@@ -732,12 +752,25 @@ fun StreamScreen(
                 if (activePlaylists.isEmpty()) "Channels" else if (liveSel != null || (feedLoading == 0 && feed.size > 0)) "${feed.size} channels" else "$total channels",
                 top = 4.dp,
                 trailing = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (activePlaylists.isNotEmpty()) LiveHeaderButton(
-                            selName ?: "Filter", Icons.Default.FilterList, "live_filter_button", onClick = { filterOpen = true },
-                            active = selName != null, description = if (selName != null) "Showing $selName. Change filter" else "Show videos from",
-                        )
-                        LiveHeaderButton("Tools", Icons.Default.Apps, "live_tools_button", onClick = { toolsOpen = true }, description = "Tools and playlists")
+                    // LIVE-1: Yumix-style icon header. Search and Country open on demand (no always-on bars);
+                    // a filter in use shows its name, so the header says what the list holds.
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (activePlaylists.isNotEmpty()) {
+                            LiveIconButton(
+                                Icons.Default.Search, if (liveSearching) "Close channel search" else "Search channels", "live_search_button",
+                                onClick = { if (liveSearching) { liveSearching = false; liveQuery = "" } else liveSearching = true }, active = liveSearching,
+                            )
+                            if (liveCountries.size > 1) LiveIconButton(
+                                Icons.Default.Public, countryPicked?.let { "Showing ${it.label}. Change country" } ?: "Pick a country", "live_country_button",
+                                onClick = { countryOpen = true }, active = countryPicked != null,
+                                label = countryPicked?.let { c -> listOfNotNull(dev.asfakul.yumeiro.stream.LiveFind.flag(c.code), c.label).joinToString(" ") },
+                            )
+                            LiveIconButton(
+                                Icons.Default.FilterList, if (selName != null) "Showing $selName. Change filter" else "Show videos from", "live_filter_button",
+                                onClick = { filterOpen = true }, active = selName != null, label = selName,
+                            )
+                        }
+                        LiveIconButton(Icons.Default.Apps, "Tools and playlists", "live_tools_button", onClick = { toolsOpen = true })
                     }
                 },
             )
@@ -745,12 +778,22 @@ fun StreamScreen(
         }
         val pinned = pinIds.mapNotNull { id -> activePlaylists.firstOrNull { it.id == id } }
         if (pinned.isNotEmpty()) item(key = "live_pins") { LivePinnedBar(pinned, liveSel) { liveSel = it } }
-        if (liveSel == null && liveRecent.isNotEmpty()) item(key = "live_recent") {
+        if (liveSearching && activePlaylists.isNotEmpty()) item(key = "live_search") {
+            LiveSearchBox(liveQuery, { liveQuery = it }, matches = if (liveQuery.isBlank()) null else feedShown.size, onClose = { liveSearching = false; liveQuery = "" })
+        }
+        if (liveSel == null && liveRecent.isNotEmpty() && liveQuery.isBlank()) item(key = "live_recent") {
             LiveRecentRow(liveRecent, onPlay = { playRecent(it) }, onClear = { StreamRepository.clearLive(context) })
         }
         if (activePlaylists.isNotEmpty()) {
-            if (feed.categories.size > 1) item(key = "live_cats") { LiveCategoryBar(feed.categories, feed.size, liveGroup) { liveGroup = it } }
-            if (feed.showCountryChips) item(key = "live_countries") { LiveCountryBar(feed.countries, liveCountry) { liveCountry = it } }
+            // LIVE-1: one chip row at most. When the categories are the countries (Yumeiro Live), they live in the
+            // Country sheet instead of a second long row; real categories (Sports, News...) keep their chips.
+            if (feed.categories.size > 1 && !countriesByCategory) item(key = "live_cats") { LiveCategoryBar(feed.categories, feed.size, liveGroup) { liveGroup = it } }
+            else if (countriesByCategory && feed.genres.size > 1) item(key = "live_genres") {
+                // The country already sits in the header; the one chip row shows the genres (News, Sports...) of
+                // the channels the country filter leaves, with their counts.
+                val inScope = remember(feed, liveGroup) { if (liveGroup == null) feed.genres else LiveChannelFeed.filter(feed, liveGroup).mapNotNull { it.channel.genre }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { LiveChannelFeed.Category(it.key, it.value) } }
+                if (inScope.size > 1) LiveCategoryBar(inScope, inScope.sumOf { it.count }, liveGenre, tag = "live_genres", prefix = "live_genre_") { liveGenre = it }
+            }
             if (feedFailed.isNotEmpty()) item(key = "live_failed") {
                 LiveProblem(
                     if (feedFailed.size == 1) "${feedFailed[0].name} didn't load. ${loads[feedFailed[0].id]?.error.orEmpty()}".trim()
@@ -763,6 +806,14 @@ fun StreamScreen(
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(liveColumns) { LiveTileSkeleton(Modifier.weight(1f)) } }
                 }
                 feed.size == 0 -> { if (feedFailed.isEmpty()) item(key = "live_empty") { LiveProblem("No channels in these playlists right now", onRetry = { feedIds.forEach { id -> activePlaylists.firstOrNull { it.id == id }?.let { loadLive(it, force = true) } } }) } }
+                liveQuery.isNotBlank() && feedShown.isEmpty() -> item(key = "live_search_empty") {
+                    val scoped = listOfNotNull(activePlaylists.firstOrNull { it.id == liveSel }?.name, countryPicked?.label, liveGroup?.takeIf { !countriesByCategory }, liveGenre)
+                    LiveSearchEmpty(
+                        liveQuery, scoped.takeIf { it.isNotEmpty() }?.joinToString(" · "),
+                        onClear = { liveQuery = "" },
+                        onWiden = if (scoped.isEmpty()) null else ({ liveSel = null; liveGroup = null; liveCountry = null; liveGenre = null }),
+                    )
+                }
                 else -> {
                     liveFeedItems(feedRows, liveColumns) { playEntry(it) }
                     item(key = "live_feed_footer_${feedShown.size}") { LiveFeedFooter(liveLimit.coerceAtMost(feedShown.size), feedShown.size, feedLoading) }
@@ -788,6 +839,15 @@ fun StreamScreen(
     }
 
     if (toolsOpen) LiveToolsSheet(tools) { toolsOpen = false }
+    if (countryOpen) LiveCountrySheet(
+        liveCountries, countryKey, countryRecent, feed.size,
+        onPick = { c ->
+            if (countriesByCategory) liveGroup = c?.key else liveCountry = c?.key
+            if (c != null) dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { LiveCountryRecent.add(app, c.key) } }
+            countryOpen = false
+        },
+        onDismiss = { countryOpen = false },
+    )
     if (filterOpen) dev.asfakul.yumeiro.ui.screens.online.SourceFilterSheet(
         names = activePlaylists.map { it.id },
         selected = liveSel,

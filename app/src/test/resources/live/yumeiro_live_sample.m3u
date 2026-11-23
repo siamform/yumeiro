@@ -1,0 +1,63 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="AnandaTV.bd" tvg-country="BD" tvg-logo="https://i.imgur.com/jkbo7Qe.png" group-title="Bangladesh" tvg-category="Entertainment",Ananda TV
+https://app.ncare.live/c3VydmVyX8RpbEU9Mi8xNy8yMDE0GIDU6RgzQ6NTAgdEoaeFzbF92YWxIZTO0U0ezN1IzMyfvcGVMZEJCTEFWeVN3PTOmdFsaWRtaW51aiPhnPTI2/anandatv.stream/live-orgin/anandatv.stream/playlist.m3u8
+#EXTINF:-1 tvg-id="ATNBangla.bd" tvg-country="BD" tvg-logo="https://i.imgur.com/K1HmMRz.png" group-title="Bangladesh" tvg-category="General",ATN Bangla
+https://tvsen5.aynaott.com/atnbangla/index.m3u8
+#EXTINF:-1 tvg-id="BanglaVision.bd" tvg-country="BD" tvg-logo="https://i.imgur.com/nCWgp38.png" group-title="Bangladesh" tvg-category="General",Bangla Vision
+https://tvsen5.aynaott.com/banglavision/index.m3u8
+#EXTINF:-1 tvg-id="BoishakhiTV.bd" tvg-country="BD" tvg-logo="https://i.imgur.com/gxL05Y4.png" group-title="Bangladesh" tvg-category="General",Boishakhi TV
+https://boishakhi.sonarbanglatv.com/boishakhi/boishakhitv/index.m3u8
+#EXTINF:-1 tvg-id="ChannelS.bd" tvg-country="BD" tvg-logo="https://www.channels.com.bd/storage/project_files/logo/2024-05-14a_n17156821814310.png" group-title="Bangladesh" tvg-category="Culture",Channel S
+https://app.ncare.live/c3VydmVyX8RpbEU9Mi8xNy8yMDE0GIDU6RgzQ6NTAgdEoaeFzbF92YWxIZTO0U0ezN1IzMyfvcGVMZEJCTEFWeVN3PTOmdFsaWRtaW51aiPhnPTI2/channels.stream/live-orgin/channels.stream/playlist.m3u8
+#EXTINF:-1 tvg-id="DurontoTV.bd" tvg-country="BD" tvg-logo="https://i.imgur.com/gXsddRK.png" group-title="Bangladesh" tvg-category="Kids",Duronto TV
+https://tvsen6.aynaott.com/6xyZ3N4oHv2KBJdB6W4p/index.m3u8
+#EXTINF:-1 tvg-id="TVCidade.cv" tvg-country="CV" tvg-logo="https://i.imgur.com/gmSu21X.jpg" group-title="Cape Verde" tvg-category="Music",TV Cidade
+https://stmv1.srvif.com/tvcidade/tvcidade/playlist.m3u8
+#EXTINF:-1 tvg-id="BonceTV.cw" tvg-country="CW" tvg-logo="https://i.imgur.com/7cVkllH.png" group-title="Curacao" tvg-category="Entertainment",Bonce TV
+https://seswa.bonce.tv/hls/bonceswa.m3u8
+#EXTINF:-1 tvg-id="BarakaTelevision.cd" tvg-country="CD" tvg-logo="https://i.imgur.com/IKXddHN.png" group-title="Democratic Republic of the Congo" tvg-category="News",Baraka Television
+https://stream.berosat.live:19360/baraka-hd/baraka-hd.m3u8
+#EXTINF:-1 tvg-id="EspoirTV.cd" tvg-country="CD" tvg-logo="https://i.imgur.com/sBsAHqb.jpeg" group-title="Democratic Republic of the Congo" tvg-category="General",Espoir TV
+https://stream.berosat.live/hls/espoir-tv-stream/espoir-tv-stream.m3u8
+#EXTINF:-1 tvg-id="AndTV.in" tvg-country="IN" tvg-logo="https://dtil.tmsimg.com/assets/GNLZZGG0022RLRS.png?lock=720x540" group-title="India" tvg-category="Movies",&TV
+https://3f56f997.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/U2Ftc3VuZy1nYl9BbmRUVl9ITFM/playlist.m3u8
+#EXTINF:-1 tvg-id="10TV.in" tvg-country="IN" tvg-logo="https://dtil.tmsimg.com/assets/s142495_ld_h15_aa.png?lock=720x540" group-title="India" tvg-category="News",10 TV
+https://mumbai-edge.smartplaytv.in/10TV/index.m3u8
+#EXTINF:-1 tvg-id="24News.in" tvg-country="IN" tvg-logo="https://i.imgur.com/xraizkS.png" group-title="India" tvg-category="News",24 News
+https://mumt07.tangotv.in/zHjX9OFlTWENTYFOURNEWS/index.m3u8
+#EXTINF:-1 tvg-id="4TVNews.in" tvg-country="IN" tvg-logo="https://i.imgur.com/DSAaC2b.png" group-title="India" tvg-category="News",4TV News
+https://cdn.pishow.tv/ott/live/1007/master.m3u8
+#EXTINF:-1 tvg-id="6TVTelugu.in" tvg-country="IN" tvg-logo="https://i.imgur.com/l3EcRnZ.png" group-title="India" tvg-category="News",6 TV Telugu
+https://mumbai-edge.smartplaytv.in/6TVTelugu/index.m3u8
+#EXTINF:-1 tvg-id="7SMusic.in" tvg-country="IN" tvg-logo="https://i.imgur.com/zDiIhdN.png" group-title="India" tvg-category="Music",7S Music
+https://cdn.pishow.tv/ott/live/1257/master.m3u8
+#EXTINF:-1 tvg-id="7Info.ci" tvg-country="CI" tvg-logo="https://i.imgur.com/jcl1nNR.png" group-title="Ivory Coast" tvg-category="News",7 Info
+https://video1.getstreamhosting.com:1936/8042/8042/playlist.m3u8
+#EXTINF:-1 tvg-id="BenieTV.ci" tvg-country="CI" tvg-logo="https://i.imgur.com/7FXi05e.jpeg" group-title="Ivory Coast" tvg-category="Religious",Benie TV
+https://tv.voozmedia.fun/benietv/index.m3u8
+#EXTINF:-1 tvg-id="DRTVInternational.cg" tvg-country="CG" tvg-logo="https://i.imgur.com/rGbTvtZ.png" group-title="Republic of the Congo" tvg-category="General",DRTV International
+https://vps122407.serveur-vps.net/hls/drtv.m3u8
+#EXTINF:-1 tvg-id="Esaie45Tele.cg" tvg-country="CG" tvg-logo="https://i.imgur.com/nc9QBnD.png" group-title="Republic of the Congo" tvg-category="Religious",Esaie 45 Tele
+https://stream.berosat.live/hls/esaie45-tv/esaie45-tv.m3u8
+#EXTINF:-1 tvg-id="24TV.tr" tvg-country="TR" tvg-logo="https://i.imgur.com/8FO41es.png" group-title="Turkiye" tvg-category="News",24 TV
+https://turkmedya-live.ercdn.net/tv24/tv24.m3u8
+#EXTINF:-1 tvg-id="360.tr" tvg-country="TR" tvg-logo="https://i.imgur.com/agn47sQ.png" group-title="Turkiye" tvg-category="News",360
+https://turkmedya-live.ercdn.net/tv360/tv360.m3u8
+#EXTINF:-1 tvg-id="00sReplay.us" tvg-country="US" tvg-logo="https://images.pluto.tv/channels/62ba60f059624e000781c436/colorLogoPNG.png" group-title="United States" tvg-category="Movies",00s Replay
+https://jmp2.uk/plu-62ba60f059624e000781c436.m3u8
+#EXTINF:-1 tvg-id="24HourFreeMovies.us" tvg-country="US" tvg-logo="https://i.imgur.com/iSVnzR1.png" group-title="United States" tvg-category="Movies",24 Hour Free Movies
+https://d1j2u714xk898n.cloudfront.net/scheduler/scheduleMaster/145.m3u8
+#EXTINF:-1 tvg-id="30ADarcizzleOffshore.us" tvg-country="US" tvg-logo="https://i.imgur.com/Q4l2uao.png" group-title="United States" tvg-category="Outdoor",30A Darcizzle Offshore
+https://30a-tv.com/darcizzle.m3u8
+#EXTINF:-1 tvg-id="30AGeorgiaHollywoodReview.us" tvg-country="US" tvg-logo="https://images.axios.com/JiG3RuYBwpU_WZFeU6HHjt03FAU=/111x0:1191x1080/320x320/2023/11/09/1699558891265.jpg" group-title="United States" tvg-category="Entertainment",30A Georgia Hollywood Review
+https://30a-tv.com/gh.m3u8
+#EXTINF:-1 tvg-id="30AGolfKingdom.us" tvg-country="US" tvg-logo="https://i.imgur.com/Lv53nh4.png" group-title="United States" tvg-category="Sports",30A Golf Kingdom
+https://30a-tv.com/feeds/vidaa/golf.m3u8
+#EXTINF:-1 tvg-id="30AInvestmentPitch.us" tvg-country="US" tvg-logo="https://i.imgur.com/CKCtZo7.png" group-title="United States" tvg-category="Business",30A Investment Pitch
+https://30a-tv.com/feeds/xodglobal/30atv.m3u8
+#EXTINF:-1 tvg-id="30ALionelNation.us" tvg-country="US" tvg-logo="https://m.media-amazon.com/images/I/71dgsQwVcNL.png" group-title="United States" tvg-category="News",30A Lionel Nation
+https://30a-tv.com/ln.m3u8
+#EXTINF:-1 tvg-id="30ALoomeredTV.us" tvg-country="US" tvg-logo="https://cbs12.com/resources/media/0c1ecad8-fb09-4bb2-beaa-fc561dfe624a-small21x9_LoomerStill.jpg?1603419052801" group-title="United States" tvg-category="News",30A Loomered TV
+https://30a-tv.com/loomer.m3u8
+#EXTINF:-1 tvg-id="VaticanMedia.va" tvg-country="VA" tvg-logo="https://i.imgur.com/9cUUx8H.png" group-title="Vatican City" tvg-category="General",Vatican Media
+https://r.eu.cdn-redge.media/livehls/oeu/mt/live/vatican_media_europa/live.livx/playlist.m3u8

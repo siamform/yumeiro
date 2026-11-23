@@ -35,6 +35,8 @@ object LiveChannelFeed {
         val countries: List<Category> = emptyList(),
         /** UX-LIVE-1: the country chips would repeat the category chips (see [countriesRepeatCategories]). */
         val countriesAreCategories: Boolean = false,
+        /** LIVE-1: genres from `tvg-category` (News, Sports...), most channels first; empty when none are given. */
+        val genres: List<Category> = emptyList(),
     ) {
         val size get() = entries.size
         /** Country chips are worth showing: 2+ countries that are not already the categories. */
@@ -70,7 +72,11 @@ object LiveChannelFeed {
         // Country filter (2.1.0): ISO codes with their channel counts, most channels first.
         val byCountry = raw.mapNotNull { it.channel.country }.groupingBy { it }.eachCount()
         val countries = byCountry.entries.sortedWith(compareBy({ -it.value }, { it.key })).map { Category(it.key, it.value) }
-        val feed = Feed(entries, keys.map { Category(display.getValue(it), counts[it] ?: 0) }, countries)
+        val byGenre = HashMap<String, Int>()
+        val genreName = LinkedHashMap<String, String>()
+        raw.forEach { e -> e.channel.genre?.let { g -> val k = g.lowercase(java.util.Locale.ROOT); genreName.getOrPut(k) { g }; byGenre[k] = (byGenre[k] ?: 0) + 1 } }
+        val genres = byGenre.entries.sortedWith(compareBy({ -it.value }, { it.key })).map { Category(genreName.getValue(it.key), it.value) }
+        val feed = Feed(entries, keys.map { Category(display.getValue(it), counts[it] ?: 0) }, countries, genres = genres)
         return if (countries.size > 1 && countriesRepeatCategories(feed)) feed.copy(countriesAreCategories = true) else feed
     }
 
@@ -83,23 +89,27 @@ object LiveChannelFeed {
     fun countriesRepeatCategories(feed: Feed, locale: java.util.Locale = java.util.Locale.getDefault()): Boolean {
         var withCountry = 0
         var same = 0
+        // LIVE-1: also the playlist's own spelling ("Turkiye", "Ivory Coast", "Bosnia and Herzegovina"), once per category.
+        val iso = HashMap<String, String?>()
         for (e in feed.entries) {
             val code = e.channel.country ?: continue
             withCountry++
             if (e.category.equals(LiveCountry.name(code, java.util.Locale.ENGLISH), ignoreCase = true) ||
                 e.category.equals(LiveCountry.name(code, locale), ignoreCase = true) ||
-                e.category.equals(code, ignoreCase = true)
+                e.category.equals(code, ignoreCase = true) ||
+                code.equals(iso.getOrPut(e.category) { LiveFind.isoForName(e.category) }, ignoreCase = true)
             ) same++
         }
         return withCountry > 0 && same * 5 >= withCountry * 4
     }
 
     /** The feed's entries in [category] and [country] (null = all), in feed order. */
-    fun filter(feed: Feed, category: String?, country: String? = null): List<Entry> =
-        if (category == null && country == null) feed.entries
+    fun filter(feed: Feed, category: String?, country: String? = null, genre: String? = null): List<Entry> =
+        if (category == null && country == null && genre == null) feed.entries
         else feed.entries.filter { e ->
             (category == null || e.category.equals(category, ignoreCase = true)) &&
-                (country == null || e.channel.country.equals(country, ignoreCase = true))
+                (country == null || e.channel.country.equals(country, ignoreCase = true)) &&
+                (genre == null || e.channel.genre.equals(genre, ignoreCase = true))
         }
 
     /** How many to show after the list neared its end: one more [PAGE], never past [total]. */

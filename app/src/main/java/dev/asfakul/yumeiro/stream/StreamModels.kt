@@ -88,6 +88,8 @@ data class StreamRequest(
     val tvgId: String? = null,
     /** Live TV country filter: ISO 3166 code from `tvg-country` or the iptv-org `tvg-id` suffix ("Name.bd@SD"). */
     val country: String? = null,
+    /** LIVE-1: the channel's genre from `tvg-category` ("News", "Sports"), when the playlist gives one. */
+    val genre: String? = null,
 ) {
     /** Headers to use for a request to [uri]: a subtitle's / audio track's own headers if it has some. */
     fun headersFor(uri: String): Map<String, String>? =
