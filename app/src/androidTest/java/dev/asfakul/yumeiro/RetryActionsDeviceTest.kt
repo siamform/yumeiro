@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -119,27 +120,19 @@ class RetryActionsDeviceTest {
         compose.waitForIdle()
     }
 
-    /** Opens the URL dialog through the section's "Add", types [url] and confirms. */
-    private fun addThroughDialog(list: String, section: String, url: String) {
+    /**
+     * SRC-HUB-1: repositories and add-ons are added in the page's link field (Repositories part; Browse for
+     * Stremio add-ons), no dialog. Types [url] and taps Add.
+     */
+    private fun addThroughField(list: String, part: String, field: String, url: String) {
         wait("$list list") { has(list) }
-        compose.onNodeWithTag(list, true).performScrollToNode(hasText(section, substring = true))
+        compose.onNodeWithTag("hub_part_$part", true).performClick()
         compose.waitForIdle()
-        // The section row's own "Add" is the one right after its title; the market may show other "Add"s.
-        val adds = compose.onAllNodesWithText("Add", useUnmergedTree = true)
-        val n = adds.fetchSemanticsNodes().size
-        assertTrue("an Add button on screen", n > 0)
-        val sectionTop = compose.onAllNodesWithText(section, substring = true, useUnmergedTree = true).fetchSemanticsNodes().first().boundsInRoot.top
-        val idx = adds.fetchSemanticsNodes().withIndex()
-            .filter { kotlin.math.abs(it.value.boundsInRoot.top - sectionTop) < 120f }
-            .minByOrNull { kotlin.math.abs(it.value.boundsInRoot.top - sectionTop) }?.index
-        assertTrue("the '$section' Add button", idx != null)
-        adds[idx!!].performClick()
-        wait("URL dialog") { has("hub_url_field") }
-        compose.onNodeWithTag("hub_url_field", true).performTextInput(url)
+        compose.onNodeWithTag(list, true).performScrollToNode(hasTestTag("${field}_field"))
         compose.waitForIdle()
-        // Dialog confirm: the last "Add" (the dialog is drawn on top, after the page).
-        val confirm = compose.onAllNodesWithText("Add", useUnmergedTree = true)
-        confirm[confirm.fetchSemanticsNodes().size - 1].performClick()
+        compose.onNodeWithTag("${field}_field", true).performTextInput(url)
+        compose.waitForIdle()
+        compose.onNodeWithTag("${field}_add", true).performClick()
     }
 
     /** A real tap on the screen at the node's centre: goes through window order like a finger. */
@@ -173,7 +166,7 @@ class RetryActionsDeviceTest {
     @Test fun a_javascriptRepoRetry() {
         val url = server.url("/repo/index.json").toString()
         show(3)
-        addThroughDialog("hub_js", "Your repositories", url)
+        addThroughField("hub_js", "repos", "hub_js_add", url)
         failThenRetry("a", "Repository added · 1 sources")
         wait("a: repo saved") { JsSources.state.value.repos.any { it == url } }
         addedJs = url
@@ -182,7 +175,7 @@ class RetryActionsDeviceTest {
     @Test fun b_stremioAddonRetry() {
         val url = server.url("/addon/manifest.json").toString()
         show(2)
-        addThroughDialog("hub_stremio", "Your add-ons", url)
+        addThroughField("hub_stremio", "browse", "hub_stremio_add", url)
         failThenRetry("b", "ER12 Test added")
         wait("b: add-on saved") { StremioAddons.addons.value.any { it.manifestUrl == url } }
         addedStremio = url
@@ -191,7 +184,7 @@ class RetryActionsDeviceTest {
     @Test fun c_mihonRepoRetry() {
         val url = server.url("/mihon/index.min.json").toString()
         show(1)
-        addThroughDialog("hub_tachiyomi_manga", "Your repositories", url)
+        addThroughField("hub_tachiyomi_manga", "repos", "hub_tachiyomi_manga_add", url)
         failThenRetry("c", "Repository added · 1 extensions")
         val base = dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensions.normalizeRepo(url)
         wait("c: repo saved") { dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensions.state.value.repos.any { it.url == base } }

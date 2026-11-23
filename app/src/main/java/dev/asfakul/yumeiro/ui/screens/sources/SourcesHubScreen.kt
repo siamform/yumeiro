@@ -204,7 +204,6 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
     var available by remember(kind) { mutableStateOf<List<TachiyomiExtensions.Available>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf<String?>(null) }
-    var addRepo by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var trustAsk by remember { mutableStateOf<TachiyomiExtensions.Installed?>(null) }
 
@@ -214,98 +213,114 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
         loading = false
     }
     LaunchedEffect(kind, repos.size) { if (repos.isNotEmpty()) refresh() }
-    fun addRepoUrl(url: String): kotlinx.coroutines.Job = scope.launch {
+    suspend fun addRepo(url: String): Boolean {
         loading = true
-        TachiyomiExtensions.addRepo(context, url, kind)
-            .onSuccess { AppMessages.success(context, "Repository added · $it extensions"); refresh() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { addRepoUrl(url) } }
+        val r = TachiyomiExtensions.addRepo(context, url, kind)
+        r.onSuccess { AppMessages.success(context, "Repository added · $it extensions"); refresh() }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { scope.launch { addRepo(url) } } }
         loading = false
+        return r.isSuccess
     }
+    fun addRepoUrl(url: String) { scope.launch { addRepo(url) } }
 
     val installedPkgs = installed.associateBy { it.pkg }
     val shown = available
         .filter { adult || it.entry.nsfw == 0 }
         .filter { query.isBlank() || it.displayName.contains(query, true) || it.entry.lang.equals(query, true) }
         .sortedBy { it.displayName.lowercase() }
+    // SRC-HUB-1: Installed / Browse / Repositories instead of one long mixed list.
+    // The tab follows what is loaded until the user picks a part (the lists arrive after the first frame).
+    var picked by rememberSaveable(kind) { mutableStateOf<HubPart?>(null) }
+    val part = picked ?: HubParts.default(installed.size, repos.size)
+    val updates = installed.count { e -> available.any { it.entry.pkg == e.pkg && e.versionCode < it.entry.code } }
 
     Column(Modifier.fillMaxSize()) {
+        HubPartRow(part, mapOf(HubPart.INSTALLED to installed.size, HubPart.BROWSE to available.size.takeIf { repos.isNotEmpty() }, HubPart.REPOS to repos.size)) { picked = it }
         if (loading || busy != null) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_tachiyomi_" + kind.name), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("about") {
-                Text(
-                    if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
-                    else "Mihon / Tachiyomi manga extensions (lib 1.2–1.5). Their titles appear in the Manga section.",
-                    color = TextSecondary, fontSize = 13.sp,
-                )
-            }
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon) }
-            item("market") {
-                val repoUrls = repos.map { it.url }.toSet()
-                RepoMarket(
-                    kind = if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.sources.SourceMarket.Kind.ANIYOMI else dev.asfakul.yumeiro.sources.SourceMarket.Kind.MIHON,
-                    label = kind.label,
-                    isAdded = { runCatching { TachiyomiExtensions.normalizeRepo(it) in repoUrls }.getOrDefault(false) },
-                    startExpanded = repos.isEmpty(),
-                    onAdd = { addRepoUrl(it) },
-                )
-            }
-            item("repos") { SectionTitle("Your repositories", "Or paste any repo link (index.min.json)", "Add" to { addRepo = true }) }
-            if (repos.isEmpty()) note("norepo", "No repositories yet. Pick one from Discover above, or paste a link you trust.")
-            items(repos, key = { "r" + it.url }) { r ->
-                HubCard(r.name.ifBlank { r.url }, r.url) {
-                    IconButton(onClick = { scope.launch { TachiyomiExtensions.removeRepo(context, r.url); available = available.filterNot { it.repo.url == r.url } } }) {
-                        Icon(Icons.Default.Delete, "Remove", tint = TextSecondary)
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_tachiyomi_" + kind.name + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            when (part) {
+                HubPart.INSTALLED -> {
+                    item("installed") { SectionTitle("Installed", "${installed.size} extension${if (installed.size == 1) "" else "s"}" + if (updates > 0) " · $updates to update in Browse" else "") }
+                    if (installed.isEmpty()) item("noinst") {
+                        HubEmpty("Nothing installed yet.", if (repos.isEmpty()) "Add a repository" to { picked = HubPart.REPOS } else "Browse extensions" to { picked = HubPart.BROWSE })
+                    }
+                    items(installed, key = { "i" + it.pkg }) { e ->
+                        HubCard(
+                            title = e.name,
+                            subtitle = "v${e.versionName} · ${e.sources} source${if (e.sources == 1) "" else "s"}" + (if (e.nsfw) " · 18+" else ""),
+                            badge = if (e.trusted) "Trusted" else null,
+                            warning = e.error ?: if (!e.trusted) "Not trusted yet. Its code won't run until you trust it." else null,
+                        ) {
+                            if (!e.trusted && e.signature != null) TextButton(onClick = { trustAsk = e }) { Text("Trust", color = SpotifyGreen) }
+                            IconButton(onClick = { scope.launch { TachiyomiExtensions.uninstall(context, e.pkg); afterChange() } }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
+                        }
                     }
                 }
-            }
-            item("installed") { SectionTitle("Installed", "${installed.size} extension${if (installed.size == 1) "" else "s"}") }
-            if (installed.isEmpty()) note("noinst", "Nothing installed yet.")
-            items(installed, key = { "i" + it.pkg }) { e ->
-                HubCard(
-                    title = e.name,
-                    subtitle = "v${e.versionName} · ${e.sources} source${if (e.sources == 1) "" else "s"}" + (if (e.nsfw) " · 18+" else ""),
-                    badge = if (e.trusted) "Trusted" else null,
-                    warning = e.error ?: if (!e.trusted) "Not trusted yet. Its code won't run until you trust it." else null,
-                ) {
-                    if (!e.trusted && e.signature != null) TextButton(onClick = { trustAsk = e }) { Text("Trust", color = SpotifyGreen) }
-                    IconButton(onClick = { scope.launch { TachiyomiExtensions.uninstall(context, e.pkg); afterChange() } }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
-                }
-            }
-            if (repos.isNotEmpty()) {
-                item("available") {
-                    SectionTitle("Available", "${shown.size} in your repositories", "Refresh" to { scope.launch { refresh() } })
-                    OutlinedTextField(query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
-                        placeholder = { Text("Filter by name or language (en, ja…)") }, modifier = Modifier.fillMaxWidth().testTag("hub_filter"))
-                }
-                items(shown.take(400), key = { "a" + it.repo.url + it.entry.pkg }) { a ->
-                    val have = installedPkgs[a.entry.pkg]
-                    val upd = have != null && have.versionCode < a.entry.code
-                    HubCard(a.displayName, "${a.entry.lang.uppercase()} · v${a.entry.version}" + (if (a.entry.nsfw == 1) " · 18+" else ""), badge = if (have != null && !upd) "Installed" else null) {
-                        if (have == null || upd) Button(
-                            onClick = {
-                                scope.launch {
-                                    busy = a.entry.pkg
-                                    TachiyomiExtensions.install(context, a)
-                                        .onSuccess { AppMessages.success(context, "${a.displayName} installed"); afterChange() }
-                                        .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
-                                    busy = null
-                                }
-                            },
-                            enabled = busy == null,
-                            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp),
-                        ) { Text(if (upd) "Update" else "Install") }
+                HubPart.BROWSE -> {
+                    if (repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its extensions are listed here.", "Add a repository" to { picked = HubPart.REPOS }) }
+                    else {
+                        item("available") {
+                            SectionTitle("Available", "${shown.size} in your ${repos.size} repositor${if (repos.size == 1) "y" else "ies"}", "Refresh" to { scope.launch { refresh() } })
+                            OutlinedTextField(query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
+                                placeholder = { Text("Filter by name or language (en, ja…)") }, modifier = Modifier.fillMaxWidth().testTag("hub_filter"))
+                        }
+                        if (shown.isEmpty() && !loading) note("noavail", if (query.isBlank()) "Your repositories list nothing for this app yet. Pull Refresh or add another repository." else "Nothing matches \"$query\".")
+                        items(shown.take(400), key = { "a" + it.repo.url + it.entry.pkg }) { a ->
+                            val have = installedPkgs[a.entry.pkg]
+                            val upd = have != null && have.versionCode < a.entry.code
+                            HubCard(a.displayName, "${a.entry.lang.uppercase()} · v${a.entry.version}" + (if (a.entry.nsfw == 1) " · 18+" else ""), badge = if (have != null && !upd) "Installed" else null) {
+                                if (have == null || upd) Button(
+                                    onClick = {
+                                        scope.launch {
+                                            busy = a.entry.pkg
+                                            TachiyomiExtensions.install(context, a)
+                                                .onSuccess { AppMessages.success(context, "${a.displayName} installed"); afterChange() }
+                                                .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+                                            busy = null
+                                        }
+                                    },
+                                    enabled = busy == null,
+                                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp),
+                                ) { Text(if (upd) "Update" else "Install") }
+                            }
+                        }
                     }
+                }
+                HubPart.REPOS -> {
+                    item("about") {
+                        Text(
+                            if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
+                            else "Mihon / Tachiyomi manga extensions (lib 1.2–1.5). Their titles appear in the Manga section.",
+                            color = TextSecondary, fontSize = 13.sp,
+                        )
+                    }
+                    item("add") {
+                        AddLinkField("Add a ${kind.label} repository", "https://…/index.min.json", "GitHub repo links, raw links or the index.min.json URL. Only add repositories you trust.",
+                            "hub_tachiyomi_${kind.name.lowercase()}_add") { addRepo(it) }
+                    }
+                    item("repos") { SectionTitle("Your repositories", "${repos.size} added") }
+                    if (repos.isEmpty()) note("norepo", "No repositories yet. Paste a link above, or pick one from Discover below.")
+                    items(repos, key = { "r" + it.url }) { r ->
+                        HubCard(r.name.ifBlank { r.url }, r.url) {
+                            IconButton(onClick = { scope.launch { TachiyomiExtensions.removeRepo(context, r.url); available = available.filterNot { it.repo.url == r.url } } }) {
+                                Icon(Icons.Default.Delete, "Remove", tint = TextSecondary)
+                            }
+                        }
+                    }
+                    item("market") {
+                        val repoUrls = repos.map { it.url }.toSet()
+                        RepoMarket(
+                            kind = if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.sources.SourceMarket.Kind.ANIYOMI else dev.asfakul.yumeiro.sources.SourceMarket.Kind.MIHON,
+                            label = kind.label,
+                            isAdded = { runCatching { TachiyomiExtensions.normalizeRepo(it) in repoUrls }.getOrDefault(false) },
+                            startExpanded = repos.isEmpty(),
+                            onAdd = { addRepoUrl(it) },
+                        )
+                    }
+                    item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon) }
                 }
             }
         }
-    }
-    if (addRepo) UrlDialog(
-        title = "Add ${kind.label} repository", hint = "Repository link",
-        examples = "Works with GitHub repo links, raw links or the index.min.json URL.",
-        onDismiss = { addRepo = false },
-    ) { url ->
-        addRepo = false
-        addRepoUrl(url)
     }
     trustAsk?.let { e ->
         TsukiDialog(
@@ -336,42 +351,51 @@ private fun StremioTab() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val addons by StremioAddons.addons.collectAsState()
-    var add by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
-    fun addUrl(url: String): kotlinx.coroutines.Job = scope.launch {
+    suspend fun addAddon(url: String): Boolean {
         busy = true
-        StremioAddons.add(context, url)
-            .onSuccess { AppMessages.success(context, "${it.name} added"); afterChange() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { addUrl(url) } }
+        val r = StremioAddons.add(context, url)
+        r.onSuccess { AppMessages.success(context, "${it.name} added"); afterChange() }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { scope.launch { addAddon(url) } } }
         busy = false
+        return r.isSuccess
     }
+    fun addUrl(url: String) { scope.launch { addAddon(url) } }
+    // SRC-HUB-1: add-ons have no repositories, so two parts: what you added, and where to get more.
+    var picked by rememberSaveable { mutableStateOf<HubPart?>(null) }
+    val part = picked ?: if (addons.isNotEmpty()) HubPart.INSTALLED else HubPart.BROWSE
     Column(Modifier.fillMaxSize()) {
+        HubPartRow(part, mapOf(HubPart.INSTALLED to addons.size), parts = listOf(HubPart.INSTALLED, HubPart.BROWSE)) { picked = it }
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_stremio"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("about") {
-                Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
-                    color = TextSecondary, fontSize = 13.sp)
-            }
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio) }
-            item("market") {
-                val have = addons.map { it.manifestUrl }.toSet()
-                AddonMarket(isAdded = { StremioAddons.normalize(it) in have }, startExpanded = addons.isEmpty(), onAdd = { addUrl(it) })
-            }
-            item("head") { SectionTitle("Your add-ons", "${addons.size} added · or paste a manifest link", "Add" to { add = true }) }
-            if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
-                HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
-                    TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text("Add", color = SpotifyGreen) }
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_stremio" + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (part == HubPart.INSTALLED) {
+                item("head") { SectionTitle("Your add-ons", "${addons.size} added") }
+                if (addons.isEmpty()) item("none") { HubEmpty("No add-ons yet.", "Get add-ons" to { picked = HubPart.BROWSE }) }
+                items(addons, key = { it.manifestUrl }) { a ->
+                    val res = a.resources.joinToString(" · ") { it.name }
+                    HubCard(a.name, "v${a.version} · ${a.types.joinToString()} · $res", badge = if (a.catalogs.isNotEmpty()) "${a.catalogs.size} catalogs" else null) {
+                        IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { StremioAddons.remove(context, a.manifestUrl) }; afterChange() } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                    }
                 }
-            }
-            items(addons, key = { it.manifestUrl }) { a ->
-                val res = a.resources.joinToString(" · ") { it.name }
-                HubCard(a.name, "v${a.version} · ${a.types.joinToString()} · $res", badge = if (a.catalogs.isNotEmpty()) "${a.catalogs.size} catalogs" else null) {
-                    IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { StremioAddons.remove(context, a.manifestUrl) }; afterChange() } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+            } else {
+                item("about") {
+                    Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
+                        color = TextSecondary, fontSize = 13.sp)
                 }
+                item("add") { AddLinkField("Add a Stremio add-on", "https://…/manifest.json", "stremio:// links work too.", "hub_stremio_add") { addAddon(it) } }
+                if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
+                    HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
+                        TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text("Add", color = SpotifyGreen) }
+                    }
+                }
+                item("market") {
+                    val have = addons.map { it.manifestUrl }.toSet()
+                    AddonMarket(isAdded = { StremioAddons.normalize(it) in have }, startExpanded = addons.isEmpty(), onAdd = { addUrl(it) })
+                }
+                item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio) }
             }
         }
     }
-    if (add) UrlDialog("Add Stremio add-on", "Manifest link", "Example: https://…/manifest.json (stremio:// links work too)", { add = false }) { add = false; addUrl(it) }
 }
 
 // endregion
@@ -386,75 +410,92 @@ private fun JsTab() {
     val adult by OnlineSettings.adult.collectAsState()
     var available by remember { mutableStateOf<List<JsSources.Entry>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
-    var add by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     suspend fun refresh() { loading = true; available = runCatching { JsSources.available(context) }.getOrDefault(available); loading = false }
     LaunchedEffect(state.repos.size) { if (state.repos.isNotEmpty()) refresh() }
-    fun addRepoUrl(url: String): kotlinx.coroutines.Job = scope.launch {
+    suspend fun addRepo(url: String): Boolean {
         loading = true
-        JsSources.addRepo(context, url)
-            .onSuccess { AppMessages.success(context, "Repository added · $it sources"); refresh() }
-            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { addRepoUrl(url) } }
+        val r = JsSources.addRepo(context, url)
+        r.onSuccess { AppMessages.success(context, "Repository added · $it sources"); refresh() }
+            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it), "Retry") { scope.launch { addRepo(url) } } }
         loading = false
+        return r.isSuccess
     }
+    fun addRepoUrl(url: String) { scope.launch { addRepo(url) } }
     val installedIds = state.installed.associateBy { it.id }
     val shown = available.filter { it.isJs && (adult || !it.nsfw) && (query.isBlank() || it.name.contains(query, true) || it.lang.equals(query, true)) }.sortedBy { it.name.lowercase() }
+    // SRC-HUB-1: Installed / Browse / Repositories.
+    var picked by rememberSaveable { mutableStateOf<HubPart?>(null) }
+    val part = picked ?: HubParts.default(state.installed.size, state.repos.size)
 
     Column(Modifier.fillMaxSize()) {
+        HubPartRow(part, mapOf(HubPart.INSTALLED to state.installed.size, HubPart.BROWSE to available.count { it.isJs }.takeIf { state.repos.isNotEmpty() }, HubPart.REPOS to state.repos.size)) { picked = it }
         if (loading) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
-        LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_js"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("about") {
-                Text("JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online.",
-                    color = TextSecondary, fontSize = 13.sp)
-            }
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript) }
-            item("market") {
-                val have = state.repos.toSet()
-                RepoMarket(
-                    kind = dev.asfakul.yumeiro.sources.SourceMarket.Kind.MANGAYOMI, label = "Mangayomi",
-                    isAdded = { runCatching { JsSources.normalizeRepo(it) in have }.getOrDefault(false) },
-                    startExpanded = state.repos.isEmpty(),
-                    onAdd = { addRepoUrl(it) },
-                )
-            }
-            item("repos") { SectionTitle("Your repositories", "Or paste any index.json link", "Add" to { add = true }) }
-            if (state.repos.isEmpty()) note("norepo", "No repositories yet. Pick one from Discover above, or paste a link you trust.")
-            items(state.repos, key = { "r$it" }) { r ->
-                HubCard(r.substringAfter("://").substringBefore("/"), r) {
-                    IconButton(onClick = { scope.launch(Dispatchers.IO) { JsSources.removeRepo(context, r) } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
-                }
-            }
-            item("inst") { SectionTitle("Installed", "${state.installed.size} sources") }
-            items(state.installed, key = { "i" + it.id }) { e ->
-                HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}") {
-                    IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { JsSources.uninstall(context, e.id) }; afterChange() } }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
-                }
-            }
-            if (state.repos.isNotEmpty()) {
-                item("avail") {
-                    SectionTitle("Available", "${shown.size} JavaScript sources", "Refresh" to { scope.launch { refresh() } })
-                    OutlinedTextField(query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
-                        placeholder = { Text("Filter by name or language") }, modifier = Modifier.fillMaxWidth())
-                }
-                items(shown.take(400), key = { "a" + it.id }) { e ->
-                    val have = installedIds[e.id]
-                    val upd = have != null && have.version != e.version
-                    HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}" + if (e.nsfw) " · 18+" else "", badge = if (have != null && !upd) "Installed" else null) {
-                        if (have == null || upd) IconButton(onClick = {
-                            scope.launch {
-                                JsSources.install(context, e)
-                                    .onSuccess { AppMessages.success(context, "${e.name} installed"); afterChange() }
-                                    .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
-                            }
-                        }) { Icon(if (upd) Icons.Default.Refresh else Icons.Default.Download, if (upd) "Update" else "Install", tint = SpotifyGreen) }
+        LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_js" + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            when (part) {
+                HubPart.INSTALLED -> {
+                    item("inst") { SectionTitle("Installed", "${state.installed.size} sources") }
+                    if (state.installed.isEmpty()) item("noinst") {
+                        HubEmpty("Nothing installed yet.", if (state.repos.isEmpty()) "Add a repository" to { picked = HubPart.REPOS } else "Browse sources" to { picked = HubPart.BROWSE })
                     }
+                    items(state.installed, key = { "i" + it.id }) { e ->
+                        HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}") {
+                            IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { JsSources.uninstall(context, e.id) }; afterChange() } }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
+                        }
+                    }
+                }
+                HubPart.BROWSE -> {
+                    if (state.repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its sources are listed here.", "Add a repository" to { picked = HubPart.REPOS }) }
+                    else {
+                        item("avail") {
+                            SectionTitle("Available", "${shown.size} JavaScript sources", "Refresh" to { scope.launch { refresh() } })
+                            OutlinedTextField(query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
+                                placeholder = { Text("Filter by name or language") }, modifier = Modifier.fillMaxWidth())
+                        }
+                        if (shown.isEmpty() && !loading) note("noavail", if (query.isBlank()) "Your repositories list no JavaScript sources yet." else "Nothing matches \"$query\".")
+                        items(shown.take(400), key = { "a" + it.id }) { e ->
+                            val have = installedIds[e.id]
+                            val upd = have != null && have.version != e.version
+                            HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}" + if (e.nsfw) " · 18+" else "", badge = if (have != null && !upd) "Installed" else null) {
+                                if (have == null || upd) IconButton(onClick = {
+                                    scope.launch {
+                                        JsSources.install(context, e)
+                                            .onSuccess { AppMessages.success(context, "${e.name} installed"); afterChange() }
+                                            .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
+                                    }
+                                }) { Icon(if (upd) Icons.Default.Refresh else Icons.Default.Download, if (upd) "Update" else "Install", tint = SpotifyGreen) }
+                            }
+                        }
+                    }
+                }
+                HubPart.REPOS -> {
+                    item("about") {
+                        Text("JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online.",
+                            color = TextSecondary, fontSize = 13.sp)
+                    }
+                    item("add") {
+                        AddLinkField("Add a JavaScript repository", "https://…/index.json", "Mangayomi-format repositories. Only JavaScript sources are used.", "hub_js_add") { addRepo(it) }
+                    }
+                    item("repos") { SectionTitle("Your repositories", "${state.repos.size} added") }
+                    if (state.repos.isEmpty()) note("norepo", "No repositories yet. Paste a link above, or pick one from Discover below.")
+                    items(state.repos, key = { "r$it" }) { r ->
+                        HubCard(r.substringAfter("://").substringBefore("/"), r) {
+                            IconButton(onClick = { scope.launch(Dispatchers.IO) { JsSources.removeRepo(context, r) } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                        }
+                    }
+                    item("market") {
+                        val have = state.repos.toSet()
+                        RepoMarket(
+                            kind = dev.asfakul.yumeiro.sources.SourceMarket.Kind.MANGAYOMI, label = "Mangayomi",
+                            isAdded = { runCatching { JsSources.normalizeRepo(it) in have }.getOrDefault(false) },
+                            startExpanded = state.repos.isEmpty(),
+                            onAdd = { addRepoUrl(it) },
+                        )
+                    }
+                    item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript) }
                 }
             }
         }
-    }
-    if (add) UrlDialog("Add JavaScript repository", "index.json link", "Mangayomi-format repositories. Only JavaScript sources are used.", { add = false }) { url ->
-        add = false
-        addRepoUrl(url)
     }
 }
 
