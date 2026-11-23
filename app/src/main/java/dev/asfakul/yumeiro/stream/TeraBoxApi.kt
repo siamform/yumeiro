@@ -154,9 +154,33 @@ object TeraBoxApi {
 
     private fun q(s: String?) = java.net.URLEncoder.encode(s.orEmpty(), "UTF-8")
 
+    /**
+     * TB-PREVIEW-2: the origins worth asking, in order. TeraBox ties a sign-in (`ndus`) to the site it was made on:
+     * measured 2026-11-24 with a real account, terabox.app's own API gave the full HLS (10532 s, 1057 segments) for a
+     * 1024terabox.com share, while the share's host without its own sign-in gave only the 30 s preview. So the hosts
+     * whose cookies hold a sign-in go first (the share's host before the app's sign-in host), each with its own cookies.
+     */
+    internal fun origins(shareUrl: String, cookies: (String) -> String?): List<String> {
+        val own = originFor(shareUrl)
+        if (base != DEFAULT_BASE) return listOf(own)
+        val all = listOf(own, DEFAULT_BASE, "https://www.1024tera.com", "https://www.terabox.com", "https://www.1024terabox.com").distinct()
+        val signed = all.filter { o -> signedIn(runCatching { cookies(o) }.getOrNull()) }
+        return signed.ifEmpty { listOf(own) }
+    }
+
     fun resolve(client: OkHttpClient, shareUrl: String, userAgent: String = DESKTOP_UA): Result {
         val short = shortUrl(shareUrl) ?: return Result.Failed("Not a TeraBox share link")
-        val origin = originFor(shareUrl)
+        var best: Result? = null
+        for (origin in origins(shareUrl, cookieSource)) {
+            val r = resolveOn(client, shareUrl, short, origin, userAgent)
+            if (r is Result.Ok) return r
+            // Keep the most useful answer: a human check beats "sign in", which beats a plain failure.
+            if (best == null || r is Result.NeedsVerify || (r is Result.NeedsSignIn && best is Result.Failed)) best = r
+        }
+        return best ?: Result.NeedsSignIn
+    }
+
+    private fun resolveOn(client: OkHttpClient, shareUrl: String, short: String, origin: String, userAgent: String): Result {
         val first = attempt(client, shareUrl, short, origin, userAgent)
         // OWN-10: a "verify" or refused list is often just a stale session: read the page again once with a fresh
         // session (only the user's saved sign-in, a new browserid). Never more than one retry, never solving a check.
@@ -170,7 +194,8 @@ object TeraBoxApi {
 
     private fun attempt(client: OkHttpClient, shareUrl: String, short: String, origin: String, userAgent: String): Result {
         val jar = linkedMapOf<String, String>()
-        listOf(origin, base, "https://www.terabox.com", "https://www.1024terabox.com").distinct().mapNotNull { runCatching { cookieSource(it) }.getOrNull() }
+        // TB-PREVIEW-2: only this origin's own cookies; a sign-in from another TeraBox site isn't honoured here.
+        listOfNotNull(runCatching { cookieSource(origin) }.getOrNull())
             .joinToString(";").split(';').forEach { c -> c.split('=', limit = 2).takeIf { it.size == 2 }?.let { jar.putIfAbsent(it[0].trim(), it[1].trim()) } }
         fun cookie() = jar.entries.joinToString("; ") { "${it.key}=${it.value}" }.ifBlank { null }
         fun get(url: String, referer: String = "$origin/"): String? {

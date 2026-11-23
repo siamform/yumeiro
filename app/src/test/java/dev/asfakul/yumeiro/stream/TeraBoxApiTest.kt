@@ -198,4 +198,22 @@ class TeraBoxApiTest {
         val r = TeraBoxApi.resolve(OkHttpClient(), share)
         assertTrue("got $r", r is TeraBoxApi.Result.Failed && "extraction code" in r.reason)
     }
+
+    // TB-PREVIEW-2: a sign-in made on terabox.app (the app's sign-in page) is used on terabox.app for a 1024terabox.com
+    // share, instead of sending terabox.app's cookie to 1024terabox.com (which then gave only the 30 s preview).
+    @Test fun signInHostIsAskedFirstWhenTheShareHostHasNoSignIn() {
+        val cookies = { o: String -> if (o == "https://www.terabox.app") "ndus=Yapp" else "browserid=x" }
+        assertEquals(listOf("https://www.terabox.app"), TeraBoxApi.origins("https://1024terabox.com/s/1abc", cookies))
+    }
+
+    @Test fun shareHostGoesFirstWhenBothAreSignedIn() {
+        val cookies = { _: String -> "ndus=Y" }
+        val o = TeraBoxApi.origins("https://www.1024terabox.com/s/1abc", cookies)
+        assertEquals("https://www.1024terabox.com", o.first())
+        assertTrue("https://www.terabox.app" in o)
+    }
+
+    @Test fun noSignInAnywhereKeepsTheShareHost() {
+        assertEquals(listOf("https://www.1024tera.com"), TeraBoxApi.origins("https://www.1024tera.com/s/1abc") { null })
+    }
 }
