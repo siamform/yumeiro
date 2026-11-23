@@ -591,7 +591,10 @@ fun OnlineHomeScreen(
                             PosterShelf("Favorites", null, favorites.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         // F-08: one compact entry to the release calendar (kill switch FeatureFlags.UPCOMING).
-                        if (onOpenUpcoming != null && upcomingOn) st.item("upcoming_entry") { UpcomingEntryCard(onOpenUpcoming) }
+                        if (onOpenUpcoming != null && upcomingOn) st.item("upcoming_entry") {
+                            // UP-BANNER-1 (R21 item 16A): a rotating "Coming up" card; the plain entry when nothing is due.
+                            UpcomingBanner(onOpenUpcoming, onSearch = { q -> OnlineSearchPending.query = q; onOpenSearch() })
+                        }
                         if (picks.isNotEmpty()) st.item("feed_label") {
                             PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
@@ -791,7 +794,7 @@ fun VideoSourceSwitch(
 }
 
 @Composable
-private fun UpcomingEntryCard(onClick: () -> Unit) {
+internal fun UpcomingEntryCard(onClick: () -> Unit) {
     androidx.compose.foundation.layout.Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(16.dp))
             .background(dev.asfakul.yumeiro.ui.theme.GlassFill).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp)

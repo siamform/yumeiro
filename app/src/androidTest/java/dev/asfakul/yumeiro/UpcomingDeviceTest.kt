@@ -47,6 +47,13 @@ class UpcomingDeviceTest {
     }.getOrDefault(false)
 
     private fun count(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().size
+    // UP-FILTER-1 (R21 item 16B): Series / Movies / Anime sit in the Category sheet.
+    private fun kind(k: String) {
+        if (count("upcoming_kind_$k") == 0) { rule.onAllNodesWithTag("upcoming_category_button", true)[0].performClick(); rule.waitUntil(5_000) { count("upcoming_kind_$k") > 0 } }
+        rule.onAllNodesWithTag("upcoming_kind_$k", true)[0].performClick(); rule.waitForIdle()
+        if (count("upcoming_category_sheet_done") > 0) { rule.onAllNodesWithTag("upcoming_category_sheet_done", true)[0].performClick(); rule.waitForIdle() }
+        rule.waitUntil(5_000) { count("upcoming_category_sheet") == 0 }
+    }
     private fun waitEntries(what: String) {
         val ok = runCatching { rule.waitUntil(90_000) { count("upcoming_entry") > 0 || count("upcoming_error") > 0 || count("upcoming_empty") > 0 }; true }.getOrDefault(false)
         assertTrue("$what: nothing after 90 s", ok)
@@ -61,14 +68,14 @@ class UpcomingDeviceTest {
         val heap0 = rt.totalMemory() - rt.freeMemory()
         val t0 = System.currentTimeMillis()
         rule.setContent { MTPlayerTheme { UpcomingScreen(onBack = {}, onSearch = { searched = it }) } }
-        rule.waitUntil(5_000) { count("upcoming_kind_series") > 0 }
-        rule.onAllNodesWithTag("upcoming_kind_series", true)[0].performClick()
+        rule.waitUntil(5_000) { count("upcoming_category_button") > 0 }
+        kind("series")
         waitEntries("series")
         val heap1 = rt.totalMemory() - rt.freeMemory()
         log("F08_RESULT series ${System.currentTimeMillis() - t0}ms entries=${count("upcoming_entry")} heapDeltaMB=${(heap1 - heap0) / 1048576}")
         for (k in listOf("movies", "anime")) {
             val t = System.currentTimeMillis()
-            rule.onAllNodesWithTag("upcoming_kind_$k", true)[0].performClick()
+            kind(k)
             rule.waitForIdle()
             waitEntries(k)
             log("F08_RESULT $k ${System.currentTimeMillis() - t}ms entries=${count("upcoming_entry")}")
@@ -81,14 +88,14 @@ class UpcomingDeviceTest {
         // Offline: every request fails; the page keeps the saved calendar and says so.
         original = field.get(NetworkClient)
         field.set(NetworkClient, OkHttpClient.Builder().addInterceptor(Interceptor { throw java.io.IOException("offline (test)") }).build())
-        rule.onAllNodesWithTag("upcoming_kind_series", true)[0].performClick()
+        kind("series")
         waitEntries("series cached")
-        rule.onAllNodesWithTag("upcoming_kind_anime", true)[0].performClick()
+        kind("anime")
         waitEntries("anime cached")
         // Force a refresh (cache is fresh, so a plain switch reads it): the retry path marks it stale.
         File(ctx.cacheDir, "upcoming_anime.json").setLastModified(System.currentTimeMillis() - 7 * 3600_000L)
-        rule.onAllNodesWithTag("upcoming_kind_movies", true)[0].performClick(); waitEntries("movies cached")
-        rule.onAllNodesWithTag("upcoming_kind_anime", true)[0].performClick()
+        kind("movies"); waitEntries("movies cached")
+        kind("anime")
         val stale = runCatching { rule.waitUntil(30_000) { count("upcoming_stale") > 0 }; true }.getOrDefault(false)
         assertTrue("offline: no 'showing the last saved calendar' note", stale)
         assertTrue("offline: entries gone", count("upcoming_entry") > 0)
