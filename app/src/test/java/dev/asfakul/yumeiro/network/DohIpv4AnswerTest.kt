@@ -37,7 +37,8 @@ class DohIpv4AnswerTest {
         SmartDns.system = Dns { h -> throw UnknownHostException(h) } // only the encrypted resolver answers
         SmartDns.online = { true }
         SmartDns.now = { clock }
-        NetworkSettings.setForTests(DnsConfig())
+        // The fresh-install default since OWN-7: Cloudflare over HTTPS, Always.
+        NetworkSettings.setForTests(DnsConfig(DnsProvider.CLOUDFLARE, DnsTransport.DOH, DnsMode.ALWAYS))
         SmartDns.dohFactory = { _ -> Dns { listOf(v6) } } // the AAAA half came back, the A half did not
     }
 
