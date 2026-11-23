@@ -8,7 +8,12 @@ package dev.asfakul.yumeiro.stream
 import dev.asfakul.yumeiro.security.TrustedSources
 import android.content.Context
 import android.net.Uri
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -166,6 +171,31 @@ object PlaylistStore {
     /** E2-ALL: defaults this store has already offered once (added, or the user had them / removed them). */
     private var offeredDefaults = mutableSetOf<String>()
     @Volatile private var loadedDir: File? = null
+
+    /*
+     * LIVE-SLOW-1 (R19). On a slow link Live TV showed nothing for 20-40 s and then "Last update failed":
+     *  - a stale (>2 h) playlist with a saved copy waited for the new download before showing the saved
+     *    channels (and kept them hidden for the whole timeout when the download failed);
+     *  - every playlist downloaded at once, so the 1.7 MB list shared the link with the 100 KB BDIX list
+     *    and both were slow; every visit retried a failing source at once.
+     * Now: the saved copy (last known good, only ever replaced by a complete, valid download) is shown at
+     * once and the update runs behind it; automatic downloads take turns (smaller playlists first, the
+     * caller orders them); a failed automatic update waits 1, 2, 4 … 30 min before the next try. A refresh
+     * the user asks for always runs now.
+     */
+    private val bgScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val autoGate = Semaphore(1)
+    private val bgRunning = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val failures = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Long>>()
+    internal fun backoffMs(failCount: Int): Long = if (failCount <= 0) 0L else minOf(30L, 1L shl minOf(failCount - 1, 5)) * 60_000L
+    internal fun inBackoff(id: String, now: Long = System.currentTimeMillis()): Boolean =
+        failures[id]?.let { (n, at) -> now - at < backoffMs(n) } ?: false
+    /** LIVE-SLOW-1: smaller playlists first; unknown sizes before the known big default. */
+    fun loadOrder(list: List<StreamPlaylist>): List<StreamPlaylist> =
+        list.sortedWith(compareBy<StreamPlaylist>({ it.id == DefaultPlaylists.YUMEIRO_LIVE && it.channelCount == 0 }, { it.channelCount }))
+    private fun noteResult(id: String, ok: Boolean) {
+        if (ok) failures.remove(id) else failures.compute(id) { _, old -> (old?.first ?: 0) + 1 to System.currentTimeMillis() }
+    }
     /** Device tests only: the next call loads the index from disk again. */
     internal fun unloadForTests() { loadedDir = null }
 
@@ -332,7 +362,8 @@ object PlaylistStore {
 
     /**
      * Channels of [id]. Remote playlists are downloaded when there is no cache, when [forceRefresh]
-     * is set, or when the cache is older than 2 hours (the cache is used if the download fails).
+     * is set, or when the cache is older than 2 hours (LIVE-SLOW-1: then the saved copy is returned at once and
+     * the update runs in the background).
      */
     suspend fun channels(context: Context, id: String, forceRefresh: Boolean = false): List<StreamRequest> = withContext(Dispatchers.IO) {
         mutex.withLock { ensureLoaded(context) }
@@ -341,9 +372,21 @@ object PlaylistStore {
         if (!p.isLocal) {
             // Market playlists update through the catalog (sha256), others when older than 2 h.
             val stale = p.autoUpdate && !p.isMarket && System.currentTimeMillis() - p.lastUpdated > STALE_MS
-            if (forceRefresh || !file.exists() || stale) {
-                val result = runCatching { refresh(context, id) }
-                if (result.isFailure && !file.exists()) throw result.exceptionOrNull() ?: IllegalStateException("Download failed")
+            when {
+                forceRefresh -> {
+                    val result = runCatching { refresh(context, id) }.also { noteResult(id, it.isSuccess) }
+                    if (result.isFailure && !file.exists()) throw result.exceptionOrNull() ?: IllegalStateException("Download failed")
+                }
+                !file.exists() -> {
+                    // Nothing saved yet: this caller has to wait, but takes its turn with other automatic downloads.
+                    val result = runCatching { autoGate.withPermit { if (!file.exists()) refresh(context, id) } }.also { noteResult(id, it.isSuccess) }
+                    if (result.isFailure && !file.exists()) throw result.exceptionOrNull() ?: IllegalStateException("Download failed")
+                }
+                // Saved copy shown now; the update replaces it later (lastUpdated changes, the screen reloads).
+                stale && !inBackoff(id) && bgRunning.add(id) -> bgScope.launch {
+                    try { autoGate.withPermit { runCatching { refresh(context, id) }.also { noteResult(id, it.isSuccess) } } }
+                    finally { bgRunning.remove(id) }
+                }
             }
         }
         if (!file.exists()) return@withContext emptyList()
@@ -666,5 +709,7 @@ object PlaylistStore {
     // endregion
 
     /** For tests: forget the in-memory state so the next call reloads from disk. */
-    internal fun resetForTests() { loadedDir = null; _playlists.value = emptyList(); deletedDefaults = mutableSetOf(); offeredDefaults = mutableSetOf(); _lastSync.value = 0L }
+    /** Tests only: makes the saved copy of [id] look [ageMs] old. */
+    internal suspend fun ageForTests(context: Context, id: String, ageMs: Long) = edit(context) { replace(id) { it.copy(lastUpdated = System.currentTimeMillis() - ageMs) } }
+    internal fun resetForTests() { failures.clear(); bgRunning.clear(); loadedDir = null; _playlists.value = emptyList(); deletedDefaults = mutableSetOf(); offeredDefaults = mutableSetOf(); _lastSync.value = 0L }
 }

@@ -376,7 +376,10 @@ fun StreamScreen(
         val ids = activePlaylists.map { it.id }.toSet()
         loads.keys.filter { it !in ids }.forEach { loads.remove(it); loadedStamp.remove(it) }
         if (liveSel != null && liveSel !in ids) liveSel = null
-        activePlaylists.forEach { p -> if (loadedStamp[p.id] != p.lastUpdated) { loadedStamp[p.id] = p.lastUpdated; loadLive(p) } }
+        // LIVE-SLOW-1: automatic downloads take turns, so start the small ones first (the BDIX list
+        // shows in seconds on a slow link instead of sharing it with the big one). Before the first
+        // download the channel count is unknown; Yumeiro Live is the known big default (1.7 MB).
+        PlaylistStore.loadOrder(activePlaylists).forEach { p -> if (loadedStamp[p.id] != p.lastUpdated) { loadedStamp[p.id] = p.lastUpdated; loadLive(p) } }
     }
     fun playLive(p: StreamPlaylist, list: List<StreamRequest>, ch: StreamRequest) {
         // Same as the playlist page: the player gets the whole list, so channel up / down and
