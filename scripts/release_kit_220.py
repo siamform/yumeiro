@@ -83,8 +83,8 @@ def story(name):
     y = 500
     for l in LINES:
         d.ellipse([66, y + 16, 82, y + 32], fill=GOLD); d.text((104, y), l, font=F(MAN, 38), fill=INK); y += 62
-    p1 = phone("live_tv", 1000); p2 = phone("home_day", 1080)
-    im.paste(p1, (w - p1.width + 10, 800), p1); im.paste(p2, (-20, 760), p2)
+    p1 = phone("live_tv", 820); p2 = phone("home_day", 860)  # both end above the call-to-action bar
+    im.paste(p1, (w - p1.width + 10, 800), p1); im.paste(p2, (20, 760), p2)
     d.rounded_rectangle([60, h - 170, w - 60, h - 70], 50, fill=GOLD)
     t = "Get it: yumeiro.click"; ft = F(UNB, 40)
     d.text(((w - d.textlength(t, font=ft)) / 2, h - 146), t, font=ft, fill=BG1)
