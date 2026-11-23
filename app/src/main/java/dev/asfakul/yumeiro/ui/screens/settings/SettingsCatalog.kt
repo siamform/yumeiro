@@ -68,8 +68,8 @@ object SettingsCatalog {
             settings = listOf("Default quality", "Default audio", "Default speed", "Resume playback", "Video decoder", "Video renderer", "Anime4K enhancement",
                 "Default player", "Torrent streaming", "TorrServer")),
         SUBTITLES(Group.VIDEO, "Subtitles & intros", "Captions, subtitle style and search, skip intro and outro",
-            listOf("cc", "captions", "subs", "opensubtitles", "subdl", "subsource", "language", "aniskip", "intro", "outro", "opening", "ending"),
-            settings = listOf("Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro (anime)", "Skip automatically")),
+            listOf("cc", "captions", "subs", "opensubtitles", "subdl", "subsource", "language", "aniskip", "introdb", "intro", "outro", "opening", "ending"),
+            settings = listOf("Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro", "Skip automatically")),
 
         MUSIC(Group.MUSIC, "Music & sound", "Hi-Res, lossless or data saver for Wi-Fi and mobile, equalizer, lyrics, Last.fm",
             listOf("audio", "sound", "eq", "bass", "3d", "virtualizer", "quality", "flac", "lossless", "hi-res", "hires", "dolby", "atmos",

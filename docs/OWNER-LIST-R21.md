@@ -36,7 +36,7 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 16A | Upcoming: a rotating carousel on Yumix | UP-BANNER-1 | implemented, CI pending | |
 | 16B | Upcoming page redesign: 3 filter icon buttons, dynamic country and category | UP-FILTER-1 | implemented, CI pending | |
 | 17 | README cleanup | DOC-README-1 | done (docs) | README went from 545 to 245 lines, plus docs/WHATS-NEW.md, SCREENSHOTS.md, COMPARISON.md and FAQ.md |
-| 18 | Fix Skip Intro and add Skip Outro (AniSkip / IntroDB) | — | not started | |
+| 18 | Fix Skip Intro and add Skip Outro (AniSkip / IntroDB) | SKIP-1, SKIP-2 | implemented, unit tested on real API answers; emulator check pending | IntroDB needs the source to give an IMDb id |
 | 19a | TeraBox plays only a 30 s preview | TB-PREVIEW-1 | CI pending | The page finder played the page player's preview capture. Now: never plays a preview, resolves the share via the API, opens sign-in in the same browser and resumes by itself after sign-in. Full playback needs a TeraBox account (owner-side check) |
 | 19b | Diskwala links don't open | — | **blocked: owner decision** | See "DiskWala findings" below |
 | 20 | Yumeiro Mega Extension (all-in-one) | — | not started | Only legal sources; no 18+; no copied code |

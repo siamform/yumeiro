@@ -39,20 +39,38 @@ object AnimeSync {
     /** Episode number used by AniSkip / trackers (episode, else its position in the list). */
     fun episodeNumber(episode: OnlineEpisode?, index: Int): Int? = episode?.episode ?: (index + 1).takeIf { episode != null }
 
-    /** Loads skip times for the episode now playing. */
+    /**
+     * Loads skip times for the video now playing: AniSkip for anime (MyAnimeList id), IntroDB for other
+     * shows and movies that have an IMDb id (SKIP-2).
+     */
     fun load(context: Context, detail: OnlineDetail, episode: OnlineEpisode?, index: Int, durationMs: Long) {
-        val num = episodeNumber(episode, index) ?: run { _skips.value = null; return }
-        val key = "${detail.api}|${detail.url}|$num"
+        val anime = AnimeIds.isAnime(detail)
+        val imdb = detail.imdbId?.takeIf { it.isNotBlank() && !anime && detail.kind != OnlineKind.LIVE }
+        val num = episodeNumber(episode, index)
+        // A series episode is IMDb id + season (1 when the source gives none) + episode; a movie the IMDb id alone.
+        val tvEpisode = imdb != null && episode != null && detail.kind != OnlineKind.MOVIE
+        if (num == null && imdb == null) { _skips.value = null; return }
+        val key = "${detail.api}|${detail.url}|${num ?: 0}|${episode?.season ?: 0}"
         if (_skips.value?.key == key) return
         _skips.value = Skips(key, emptyList())
-        if (!OnlineSettings.skipIntro.value || !AnimeIds.isAnime(detail)) return
+        if (!OnlineSettings.skipIntro.value) return
+        if (!anime && imdb == null) return
+        if (tvEpisode && episode?.episode == null) return
         val app = context.applicationContext
         scope.launch {
             val client = NetworkClient.get(app)
-            val ids = runCatching { AnimeIds.of(client, detail) }.getOrNull() ?: return@launch
-            val mal = ids.mal ?: return@launch
-            val segs = AniSkip.segments(client, mal, num, durationMs)
-            if (_skips.value?.key == key) _skips.value = Skips(key, segs)
+            val mal = if (anime) (runCatching { AnimeIds.of(client, detail) }.getOrNull()?.mal ?: return@launch) else null
+            // SKIP-1: every submission is kept; the player picks the one that fits the video's length
+            // (known only once it plays). A failed request is tried again twice before giving up.
+            var segs: List<AniSkip.Segment>? = null
+            for (wait in listOf(0L, 3_000L, 10_000L)) {
+                if (wait > 0) kotlinx.coroutines.delay(wait)
+                if (_skips.value?.key != key) return@launch
+                segs = if (mal != null) AniSkip.fetch(client, mal, num ?: return@launch)
+                else IntroDb.fetch(client, imdb!!, if (tvEpisode) episode?.season ?: 1 else null, if (tvEpisode) episode?.episode else null)
+                if (segs != null) break
+            }
+            if (_skips.value?.key == key) _skips.value = Skips(key, segs.orEmpty())
         }
     }
 

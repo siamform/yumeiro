@@ -29,7 +29,7 @@ class SettingsSearchCoverageTest {
             "Previous and next video", "Rewind and forward 10 s", "Fullscreen button")
         put(Category.VIDEO_QUALITY, "Default quality", "Default audio", "Default speed", "Resume playback", "Video decoder", "Video renderer",
             "Anime4K enhancement", "Default player", "Torrent streaming")
-        put(Category.SUBTITLES, "Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro (anime)", "Skip automatically")
+        put(Category.SUBTITLES, "Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro", "Skip automatically")
         put(Category.MUSIC, "Audio quality", "Equalizer & sound effects", "Find lyrics online")
         put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page",
             "Hide the Private entry")
