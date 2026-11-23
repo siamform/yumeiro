@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | top | back | home | shot NAME),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | top | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -87,12 +87,21 @@ run_steps() {
         t=${s#find }; ok=0
         for i in 1 2 3 4 5 6 7; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 1500 540 700 300; sleep 1; done
         [ $ok = 1 ] || note "find miss [$t]"; sleep 1; dump "after-find" ;;
+      recpull*) r=${s#recpull }; sleep 5; adb pull "/sdcard/rec-$r.mp4" "$OUT/rec-$r.mp4" > /dev/null 2>&1 && note "pulled rec-$r.mp4" || note "rec miss [$r]" ;;
+      rec*) # rec NAME: record the screen for 5 s from now (runs while the next steps happen)
+        r=${s#rec }; adb shell "screenrecord --time-limit 5 --bit-rate 12000000 /sdcard/rec-$r.mp4" > /dev/null 2>&1 &
+        sleep 0.6; note "recording [$r]" ;;
       top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
       shot*) dump "${s#shot }" ;;
       gesturenav) adb shell cmd overlay enable com.android.internal.systemui.navbar.gestural > /dev/null 2>&1; sleep 3
         note "navigation_mode=$(adb shell settings get secure navigation_mode | tr -d '\r')" ;;
+      buttonnav) adb shell cmd overlay enable com.android.internal.systemui.navbar.threebutton > /dev/null 2>&1; sleep 3
+        note "navigation_mode=$(adb shell settings get secure navigation_mode | tr -d '\r')" ;;
+      swipeback) # a quick real Back swipe from the left edge (no hold), like most people do it
+        W=$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1); WX=${W%x*}; WY=${W#*x}
+        adb shell input swipe 2 $(( WY / 2 )) $(( WX * 2 / 3 )) $(( WY / 2 )) 180; note "swipe back"; sleep 1 ;;
       edgeback) # a real Back gesture from the left edge, held a third of the way across, screenshot, released
         W=$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1); WX=${W%x*}; WY=${W#*x}; Y=$(( WY / 2 )); X=$(( WX / 3 ))
         adb shell input motionevent DOWN 2 $Y
