@@ -9,15 +9,16 @@ Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DI
 2026-11-23 18:05 +06 (R20, owner message 5: website download button, 22 CodeQL warnings, release prep, social images; branch
 **r19-restore**). Ledger rows "(R20)" after TG-PAGE-2 in docs/BUGS-AND-FIXES-2.0.0.md.
 - WEB-DL-1: yumeiro-web PR #7 (fix-download-button): processor-check button no longer overflows phones. Local build +
-  Playwright verified; Vercel preview on the PR. Not merged.
+  Playwright verified (Vercel preview built, but it needs the owner's Vercel login to open). Not merged.
 - CQ-1 (00a59132, 2f8f17c6): #89 and #97-#104 fixed in code, the rest documented suppressions (AUDIT.md). CodeQL on the
   branch: 22 -> 2 at 00a59132; 2f8f17c6 fixes the last 2 (#109/#110, apply blocks).
 - REL-2.2-PREP (d4846d8b): CHANGELOG v2.2.0, README "What's new in 2.2.0" (posters in a row), docs/assets/release-2.2
-  images + SOCIAL-CAPTIONS.md. Release PR r19-restore -> main open, NOT merged.
+  images + SOCIAL-CAPTIONS.md. Release PR #42 (r19-restore -> main) open, NOT merged: a merge auto-publishes a release.
 - R19 rows (ONLINE-INIT-1 ... TG-PAGE-2) unchanged; see ledger.
 
 ## Pending runs
-- CodeQL 45170991902 and CI 45170997499 on 2f8f17c6; CI 45168860296 on 00a59132.
+- None. CodeQL 45170991902 on 2f8f17c6: 0 open alerts on r19-restore (was 22). CI 45170997499 on 2f8f17c6 green
+  (PageKeepHardeningTest 1/1, RemotePlaylistStreamTest 5/5, TokenHostsHttpsOnlyTest 3/3). PR #42 checks run on the PR.
 
 ## Next step
 1. Owner: review and approve release PR (r19-restore -> main) and yumeiro-web PR #7. On merge, the Release workflow
