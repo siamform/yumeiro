@@ -294,7 +294,9 @@ fun StreamScreen(
         }
         handoff = null
         if (format == StreamFormat.AUTO && looksLikeM3uPlaylist(u)) { loadPlaylist(u, Uri.parse(u).lastPathSegment); return }
-        val request = currentRequest()
+        // TOR-1: play what was checked above. Before, a pasted info-hash passed the check as its magnet link but the
+        // request still carried the bare hash, so the resolver saw no torrent and the play failed.
+        val request = currentRequest().copy(url = u)
         // A format picked by hand (or RTSP) is played exactly as before, without inspection.
         if (format != StreamFormat.AUTO || (!u.startsWith("http", ignoreCase = true) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u))) { IncomingMedia.open(context, request, recent = IncomingMedia.Recent.LINK); return }
         // Otherwise look at what the link really returns (headers, MIME type, redirects, content).
