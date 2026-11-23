@@ -417,6 +417,8 @@ fun StreamScreen(
     }
     val feedLoading = feedIds.count { loads[it]?.loading != false }
     val feedFailed = feedIds.mapNotNull { id -> activePlaylists.firstOrNull { it.id == id }?.takeIf { loads[id]?.let { l -> !l.loading && l.error != null && l.channels.isEmpty() } == true } }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val feedFiltered = remember(feed, liveGroup, liveCountry, liveGenre) { LiveChannelFeed.filter(feed, liveGroup, liveCountry, liveGenre) }
     // LIVE-1: the name search runs off the main thread (Yumeiro Live has 7 500+ channels), a beat after typing.
     val feedShown by androidx.compose.runtime.produceState(feedFiltered, feedFiltered, liveQuery) {
@@ -460,6 +462,8 @@ fun StreamScreen(
         LiveChannelFeed.rows(feedShown, liveLimit, liveColumns, feed.categories.associate { it.name to it.count }, headers = liveGroup == null && liveCountry == null && liveGenre == null && liveQuery.isBlank())
     }
     fun playEntry(e: LiveChannelFeed.Entry) {
+        // LIVE-1c: the search keyboard closes when a channel starts (it stayed over the player).
+        keyboard?.hide(); focusManager.clearFocus()
         val p = activePlaylists.firstOrNull { it.id == e.playlistId }
         val list = loads[e.playlistId]?.channels
         if (p != null && list != null) playLive(p, list, e.channel)
@@ -749,7 +753,11 @@ fun StreamScreen(
                 "生", "Live TV",
                 // The merged feed's count once every list is in (a stream in two playlists counts once);
                 // the saved counts while lists are still loading.
-                if (activePlaylists.isEmpty()) "Channels" else if (liveSel != null || (feedLoading == 0 && feed.size > 0)) "${feed.size} channels" else "$total channels",
+                // LIVE-1c: with a country or category picked the header counts those channels (probe 45247707490
+                // showed "7555 …", cut short, over a 32-channel Bangladesh list).
+                if (activePlaylists.isEmpty()) "Channels"
+                else if ((liveGroup != null || liveCountry != null || liveGenre != null) && feed.size > 0) "${feedFiltered.size} channels"
+                else if (liveSel != null || (feedLoading == 0 && feed.size > 0)) "${feed.size} channels" else "$total channels",
                 top = 4.dp,
                 trailing = {
                     // LIVE-1: Yumix-style icon header. Search and Country open on demand (no always-on bars);
