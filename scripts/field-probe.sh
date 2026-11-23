@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | top | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | find TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -77,7 +77,7 @@ run_steps() {
     s=$(echo "$s" | sed 's/^ *//;s/ *$//'); [ -n "$s" ] || continue
     case "$s" in
       skip) # answer the welcome guide by skipping everything, like an impatient user
-        for i in $(seq 1 12); do answer_system; tap_text "Skip" "Skip for now" "Skip tour" "~Skip" "Not now" "Maybe later" "Later" "Remind me later" "No thanks" || true; sleep 2; done ;;
+        for i in $(seq 1 12); do answer_system; tap_text "Skip" "Skip for now" "Skip tour" "~Skip" "Not now" "Maybe later" "Later" "Remind me later" "No thanks" "Close" "All set" "✕" || true; sleep 2; done ;;
       tour) # follow the guide and tour with Next / Continue like a careful new user
         for i in $(seq 1 30); do answer_system; tap_text "Next" "Continue" "Get started" "Start tour" "~Take the tour" "Finish" "Done" "Got it" || true; sleep 3; done ;;
       wait*) n=${s#wait }; end=$(( $(date +%s) + n ))
@@ -91,6 +91,7 @@ run_steps() {
       rec*) # rec NAME: record the screen for 5 s from now (runs while the next steps happen)
         r=${s#rec }; adb shell "screenrecord --time-limit 5 --bit-rate 12000000 /sdcard/rec-$r.mp4" > /dev/null 2>&1 &
         sleep 0.6; note "recording [$r]" ;;
+      dismiss) tap_text "Close" "All set" "✕" "Not now" "Later" > /dev/null 2>&1 && note "dismissed a popup" || true; sleep 1 ;;
       top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
