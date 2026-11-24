@@ -150,13 +150,6 @@ class YumeiroHubProvider(private val parts: List<MainAPI>) : MainAPI() {
     companion object {
         private const val SEP = "\u001F"
 
-        /** Round-robin over the lists, keeping each list's own order. */
-        internal fun <T> interleave(lists: List<List<T>>): List<T> {
-            val out = ArrayList<T>(lists.sumOf { it.size })
-            val longest = lists.maxOfOrNull { it.size } ?: 0
-            for (k in 0 until longest) for (l in lists) if (k < l.size) out += l[k]
-            return out
-        }
         private const val SEARCH_MS = 25_000L
 
         /** One result from each part in turn, so a slow or long part doesn't bury the others. */

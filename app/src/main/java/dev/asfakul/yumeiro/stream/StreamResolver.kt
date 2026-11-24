@@ -48,6 +48,9 @@ sealed interface Resolution {
 @OptIn(UnstableApi::class)
 object StreamResolver {
     private const val MAX_PAGE_CANDIDATES = 6
+    internal const val CHECK_PAGE_REASON = "This site checks visitors before it shows the page. Open it in the page browser: " +
+        "if the site asks you to tick a box, do it there (Yumeiro doesn't answer these checks for you). A short link then " +
+        "walks on to its real link by itself, and a video on the page is picked up."
     private const val MAX_IFRAME_DEPTH = 1
 
     fun defaultUserAgent(context: Context): String = Util.getUserAgent(context, "Yumeiro")
@@ -282,6 +285,9 @@ object StreamResolver {
                 probe = ok
             }
         }
+        // ADCHAIN-2: a visitor check in front of a page (link shorteners behind Cloudflare) goes to the page browser,
+        // where the user ticks it if the site asks; Yumeiro never answers it for them.
+        if (!probe.ok && probe.checkPage) return Resolution.NeedsBrowser(url, CHECK_PAGE_REASON, request)
         failureFor(probe, req)?.let { return it }
 
         return when (probe.sniff.kind) {

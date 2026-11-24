@@ -32,6 +32,12 @@ data class ProbeResult(
     val wwwAuthenticate: String?,
     val failure: NetworkFailure? = null,
     val failureMessage: String? = null,
+    /**
+     * ADCHAIN-2: the answer is a site's visitor check (Cloudflare "Just a moment…" / Turnstile, DDoS-Guard), not
+     * the content. Such a link is a web page for the page browser, not a refused stream (shrinkme.click answered
+     * 403 with its check page and the player said "Access denied", field probe 45399365323).
+     */
+    val checkPage: Boolean = false,
 ) {
     val ok: Boolean get() = failure == null && status in 200..299
 }
@@ -80,6 +86,11 @@ object StreamProbe {
                     complete = complete,
                     retryAfterSeconds = response.header("Retry-After")?.let(RetryAfter::parseSeconds),
                     wwwAuthenticate = response.header("WWW-Authenticate"),
+                    checkPage = response.code !in 200..299 && runCatching {
+                        dev.asfakul.yumeiro.online.web.BrowserCheck.classify(
+                            response.code, response.header("cf-mitigated"), response.header("Server"), response.header("cf-ray") != null, text.orEmpty(),
+                        ) == dev.asfakul.yumeiro.online.web.BrowserCheck.Verdict.CHALLENGE
+                    }.getOrDefault(false),
                 )
             }
         } catch (e: IOException) {
