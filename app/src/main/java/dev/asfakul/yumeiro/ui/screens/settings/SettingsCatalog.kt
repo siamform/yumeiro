@@ -96,7 +96,7 @@ object SettingsCatalog {
             listOf("websites", "sites", "browser", "web", "link", "ad block", "ads", "pop-up", "popup", "short link", "shortener"), route = "websites"),
         TRACKING(Group.SOURCES, "Tracking", "AniList, MyAnimeList, Kitsu, Trakt, Simkl and Last.fm sign-in",
             listOf("anilist", "mal", "myanimelist", "kitsu", "trakt", "simkl", "sync", "list", "progress", "account", "scrobble"), route = "tracking",
-            settings = listOf("Scrobble what I play", "Last.fm")),
+            settings = listOf("Scrobble what I play", "Last.fm", "Tracking V2")),
         YOUTUBE(Group.SOURCES, "YouTube account", "Optional sign-in for blocked or age-restricted videos",
             listOf("google", "login", "sign in", "bot", "age", "cookies", "cookie", "paste", "token", "youtube music"), route = "youtube"),
         TOGETHER(Group.SOURCES, "Watch together", "Sync playback with people on the same Wi-Fi",

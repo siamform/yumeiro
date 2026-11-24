@@ -34,7 +34,7 @@ class SettingsSearchCoverageTest {
         put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page",
             "Hide the Private entry")
         put(Category.LIBRARY, "Rescan this device")
-        put(Category.TRACKING, "Scrobble what I play")
+        put(Category.TRACKING, "Scrobble what I play", "Tracking V2")
         put(Category.NOTIFICATIONS, "Show notifications", "New episodes", "New extensions", "New stream playlists",
             "Yumeiro news", "Service alerts", "Suggestions", "Yumeiro chime", "Instant alerts", "In-app reminders",
             "Send a test notification", "Reliable alerts (UnifiedPush)")
