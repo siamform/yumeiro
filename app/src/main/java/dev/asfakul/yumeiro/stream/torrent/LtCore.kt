@@ -41,6 +41,8 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
     private val resumeTargets = ConcurrentHashMap<String, File>()
     /** B-31 speed: finished blocks per partial piece, per torrent, from the last piece_info_alert. */
     private val blockMaps = ConcurrentHashMap<String, Map<Int, java.util.BitSet>>()
+    /** B31-STALL-T: per piece, one packed int per block (state | peers << 4 | bytes << 12); only while tracing. */
+    private val blockNotes = ConcurrentHashMap<String, Map<Int, IntArray>>()
 
     init {
         sm.addListener(object : AlertListener {
@@ -53,7 +55,10 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
             override fun alert(alert: Alert<*>) {
                 val hash = runCatching { (alert as? TorrentAlert<*>)?.handle()?.infoHash()?.toHex() }.getOrNull()
                 when (alert) {
-                    is PieceInfoAlert -> if (hash != null) runCatching { blockMaps[hash] = finishedMap(alert) }
+                    is PieceInfoAlert -> if (hash != null) runCatching {
+                        blockMaps[hash] = finishedMap(alert)
+                        if (TorrentTrace.sink != null) blockNotes[hash] = notesMap(alert)
+                    }
                     is TorrentErrorAlert -> if (hash != null) errors[hash] = alert.error().message
                     is SaveResumeDataAlert -> if (hash != null) resumeTargets.remove(hash)?.let { f ->
                         runCatching {
@@ -206,6 +211,27 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
             out[p.pieceIndex()] = bits
         }
         return out
+    }
+
+    private fun notesMap(a: PieceInfoAlert): Map<Int, IntArray> {
+        val pieces = a.pieceInfo
+        val blocks = a.blockData
+        if (pieces.isEmpty()) return emptyMap()
+        val perPiece = blocks.size / pieces.size
+        val out = HashMap<Int, IntArray>(pieces.size)
+        pieces.forEachIndexed { k, p ->
+            out[p.pieceIndex()] = IntArray(p.blocksInPiece()) { b ->
+                val i = blocks.getOrNull(k * perPiece + b) ?: return@IntArray 0
+                i.state().swig().coerceIn(0, 15) or (i.numPeers().coerceIn(0, 255) shl 4) or (i.bytesProgress().coerceIn(0, 0x7FFFF) shl 12)
+            }
+        }
+        return out
+    }
+
+    override fun blockNote(hash: String, piece: Int, block: Int): String? {
+        val v = blockNotes[hash]?.get(piece)?.getOrNull(block) ?: return null
+        val state = when (v and 15) { 0 -> "none"; 1 -> "requested"; 2 -> "writing"; 3 -> "finished"; else -> "unknown" }
+        return "$state x${(v shr 4) and 255} ${v ushr 12}B"
     }
 
     override fun pause(hash: String) { handle(hash)?.pause() }

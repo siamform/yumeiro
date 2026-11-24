@@ -39,6 +39,8 @@ class FakeCore(private val dir: File, private val meta: TorrentMeta) : TorrentCo
     override fun streamWindow(hash: String, priorities: ByteArray) { windows += priorities; events += "window" }
     val blocks: MutableMap<Int, java.util.BitSet> = java.util.concurrent.ConcurrentHashMap()
     override fun finishedBlocks(hash: String, piece: Int): java.util.BitSet? = blocks[piece]
+    var note: String? = null
+    override fun blockNote(hash: String, piece: Int, block: Int): String? = note
     fun blocksIn(p: Int, vararg b: Int) { blocks[p] = java.util.BitSet().apply { b.forEach { set(it) } }; synchronized(signal) { signal.notifyAll() } }
 }
 
@@ -247,6 +249,19 @@ class TorrentSourceTest {
         try { src.read(0, ByteArray(10), 0, 10); fail() } catch (e: IOException) { assertTrue(e.message!!, e.message!!.contains("closed")) }
         t.join()
         assertTrue("waited ${System.currentTimeMillis() - start} ms", System.currentTimeMillis() - start < 1_500)
+    }
+
+    /** B31-STALL-T: the trace line says whether the block the read needs was asked for, and from how many peers. */
+    @Test fun traceNamesTheStateOfTheNeededBlock() {
+        val (core, src, _) = setup()
+        core.note = "requested x1 0B"
+        val lines = Collections.synchronizedList(ArrayList<String>())
+        TorrentTrace.sink = { lines += it }
+        try {
+            val t = Thread { Thread.sleep(150); core.arrive(0) }.apply { start() }
+            src.read(0, ByteArray(10), 0, 10); t.join()
+        } finally { TorrentTrace.sink = null }
+        assertTrue("trace: $lines", lines.any { it.startsWith("wait piece 0") && it.endsWith("need requested x1 0B") })
     }
 
     @Test fun timeoutAndErrorBecomeIOException() {

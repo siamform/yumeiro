@@ -113,7 +113,9 @@ class TorrentSource(
         val (peers, rate) = core.stats(meta.hash)
         return "wait piece $piece block ${inPiece / TorrentPlan.BLOCK}/${meta.pieceLength / TorrentPlan.BLOCK} " +
             "finished ${bits?.cardinality() ?: -1} firstGap ${bits?.nextClearBit(0) ?: -1} peers $peers rate ${rate / 1024} KiB/s " +
-            "after $waitedMs ms"
+            "after $waitedMs ms" +
+            // B31-STALL-T: is the needed block not asked for at all, or asked and stuck with a peer?
+            (core.blockNote(meta.hash, piece, (inPiece / TorrentPlan.BLOCK).toInt())?.let { " need $it" } ?: "")
     }
 
     private fun focus(piece: Int) {
