@@ -68,7 +68,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * (they stay one tap away on Home), and up to three shortcuts can be added (any feature: Yumix,
  * YouTube, YouTube Music, Mix, Manga, Live TV, Websites, Downloads, My List, History, Extensions,
  * Market, Sources, Source health, Search, Equalizer, Watch together, Inbox, Settings…), so the
- * icon-only bar holds 3 to 7 items. Home is
+ * bar (icon plus short label, NAV-BAR-2) holds 3 to 7 items. Home is
  * always first and can't be removed: it is where everything else is reachable from.
  */
 object NavPrefs {

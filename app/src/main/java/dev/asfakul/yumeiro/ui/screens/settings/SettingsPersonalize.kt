@@ -82,7 +82,7 @@ fun NavigationBarSettingsCard() {
             Spacer(Modifier.height(10.dp))
             NavPreview(items.map { it.label to it.selectedIcon })
             Spacer(Modifier.height(8.dp))
-            Text("${items.size} of ${NavPrefs.MAX_ITEMS} · icon-only, so up to seven fit a thumb",
+            Text("${items.size} of ${NavPrefs.MAX_ITEMS} · each with a short label; up to seven fit a thumb",
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.testTag("nav_settings_count"))
         }
 
