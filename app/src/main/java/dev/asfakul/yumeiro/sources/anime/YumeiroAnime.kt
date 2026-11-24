@@ -25,6 +25,10 @@ import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.newExtractorLink
 import dev.asfakul.yumeiro.FeatureFlags
 import dev.asfakul.yumeiro.youtube.YouTube
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -88,7 +92,7 @@ class YumeiroAnimeProvider(
         if (page > 1) return newHomePageResponse(request.name, emptyList(), false)
         if (request.data == ALL) {
             // Each channel's series in turn, newest first per channel; a slow or failing channel doesn't hold the rest.
-            val per = coroutineScope { CHANNELS.map { ch -> async { withTimeoutOrNull(SEARCH_MS) { series(ch) }.orEmpty() } }.awaitAll() }
+            val per = coroutineScope { CHANNELS.map { ch -> async { withTimeoutOrNull(HOME_MS) { warm(ch).await() }.orEmpty() } }.awaitAll() }
             val mixed = dev.asfakul.yumeiro.sources.hub.YumeiroHubProvider.interleave(per).distinctBy { it.list }
             return newHomePageResponse(request.name, mixed.map { it.toResult() }, false)
         }
@@ -99,7 +103,8 @@ class YumeiroAnimeProvider(
     override suspend fun search(query: String, page: Int): SearchResponseList {
         val words = words(query)
         if (words.isEmpty() || page > 1) return newSearchResponseList(emptyList(), false)
-        val all = coroutineScope { CHANNELS.map { ch -> async { withTimeoutOrNull(SEARCH_MS) { series(ch) }.orEmpty() } }.awaitAll() }.flatten()
+        // ANIME-2: a channel still loading keeps loading in the background (warm), so the next search has it.
+        val all = coroutineScope { CHANNELS.map { ch -> async { withTimeoutOrNull(SEARCH_MS) { warm(ch).await() }.orEmpty() } }.awaitAll() }.flatten()
         return newSearchResponseList(all.filter { s -> matches(s.title, words) }.map { it.toResult() }, false)
     }
 
@@ -145,6 +150,14 @@ class YumeiroAnimeProvider(
         posterUrl = poster
     }
 
+    /** ANIME-2: one shared load per channel that a search's time limit doesn't cancel. */
+    private fun warm(ch: AnimeChannel): Deferred<List<Series>> {
+        loading[ch.id]?.takeIf { it.isActive }?.let { return it }
+        val d = background.async { series(ch) }
+        loading[ch.id] = d
+        return d
+    }
+
     /** A channel's series: its playlists that look like a show (not clips, trailers, music or talk). Cached. */
     private suspend fun series(ch: AnimeChannel): List<Series> {
         cache[ch.id]?.takeIf { System.currentTimeMillis() - it.first < TTL_MS }?.let { return it.second }
@@ -163,7 +176,11 @@ class YumeiroAnimeProvider(
 
     companion object {
         private const val TTL_MS = 6 * 60 * 60 * 1000L
-        private const val SEARCH_MS = 20_000L
+        /** Per channel within a search; below YumeiroHubProvider.PART_MS so the hub gets an answer. */
+        private const val SEARCH_MS = 6_000L
+        private const val HOME_MS = 20_000L
+        private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        private val loading = ConcurrentHashMap<String, Deferred<List<Series>>>()
         const val ALL = "all"
         const val ALL_SHELF = "Official anime · full series"
         /** A video shorter than this is a clip, preview or trailer, not an episode. */

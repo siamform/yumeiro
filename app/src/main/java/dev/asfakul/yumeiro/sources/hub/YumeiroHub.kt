@@ -118,8 +118,17 @@ class YumeiroHubProvider(private val parts: List<MainAPI>) : MainAPI() {
     }
 
     override suspend fun search(query: String, page: Int): SearchResponseList {
+        // ANIME-2 (probe 45421421959): a part may not take the whole search budget, or the app's own 25 s limit ended the
+        // hub's search first and every part's results were lost ("Yumeiro (!)"). The parts that answer in time are shown.
         val lists = coroutineScope {
-            parts.map { p -> async { withTimeoutOrNull(SEARCH_MS) { runCatching { p.search(query, page) }.getOrNull() } } }.awaitAll()
+            parts.map { p ->
+                async {
+                    val t0 = System.currentTimeMillis()
+                    val r = withTimeoutOrNull(PART_MS) { runCatching { p.search(query, page) }.getOrNull() }
+                    runCatching { android.util.Log.w("YuHub", "search ${p.name}: ${r?.items?.size ?: "timeout/fail"} in ${System.currentTimeMillis() - t0} ms") }
+                    r
+                }
+            }.awaitAll()
         }
         return newSearchResponseList(interleave(lists.map { it?.items.orEmpty() }).distinctBy { it.url }, lists.any { it?.hasNext == true })
     }
@@ -150,7 +159,8 @@ class YumeiroHubProvider(private val parts: List<MainAPI>) : MainAPI() {
     companion object {
         private const val SEP = "\u001F"
 
-        private const val SEARCH_MS = 25_000L
+        /** Below OnlineRepository's shortest search limit (ExtensionSpeed.MIN_SEARCH_MS), so the hub always answers. */
+        internal const val PART_MS = 7_000L
 
         /** One result from each part in turn, so a slow or long part doesn't bury the others. */
         fun <T> interleave(lists: List<List<T>>): List<T> {
