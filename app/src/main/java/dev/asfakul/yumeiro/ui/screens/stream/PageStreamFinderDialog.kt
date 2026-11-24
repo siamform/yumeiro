@@ -673,8 +673,14 @@ fun PageStreamFinderDialog(
                     is dev.asfakul.yumeiro.stream.Resolution.Failed -> "${r.title}. ${r.message}"
                     else -> dev.asfakul.yumeiro.stream.TeraBoxApi.SIGN_IN_REASON
                 }
-                // Sign-in needed: take the user to TeraBox's sign-in page in this same browser.
-                if (r is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser && r.pageUrl != currentUrl) webViewRef?.loadUrl(r.pageUrl)
+                // TB-LOGIN: already signed in but TeraBox still answered with the preview: say so, never loop back to sign-in.
+                val toSignIn = r is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser && r.pageUrl == dev.asfakul.yumeiro.stream.StreamResolver.TERABOX_SIGN_IN
+                if (toSignIn && dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(teraCookies())) {
+                    autoNote = dev.asfakul.yumeiro.stream.TeraBoxApi.SIGNED_PREVIEW_REASON
+                } else if (r is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser && r.pageUrl != currentUrl) {
+                    // Sign-in needed: take the user to TeraBox's sign-in page in this same browser.
+                    webViewRef?.loadUrl(r.pageUrl)
+                }
             }
         }
     }
@@ -1049,5 +1055,5 @@ fun PageStreamFinderDialog(
 private fun canBackAny(view: WebView?): Boolean = runCatching { view?.canGoBack() == true }.getOrDefault(false)
 
 /** TB-PREVIEW-1: the cookies the web view holds for TeraBox's sign-in hosts (the `ndus` sign-in lives on one of them). */
-private fun teraCookies(): String = listOf("https://www.terabox.app", "https://www.terabox.com", "https://www.1024terabox.com", "https://www.1024tera.com")
+private fun teraCookies(): String = listOf("https://dm.terabox.app", "https://www.terabox.app", "https://www.terabox.com", "https://www.1024terabox.com", "https://www.1024tera.com")
     .mapNotNull { runCatching { CookieManager.getInstance().getCookie(it) }.getOrNull() }.joinToString("; ")

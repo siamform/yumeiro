@@ -62,6 +62,10 @@ object TeraBoxApi {
         "so Yumeiro won't use that. Sign in to your free TeraBox account on this page once, then go back and play the link again."
 
     /** Whether this device has any AV1 video decoder (Android 10+ ships one). Set in MTApplication. */
+    /** TB-LOGIN: shown instead of sending a signed-in user back to the sign-in page. */
+    const val SIGNED_PREVIEW_REASON = "You're signed in to TeraBox, but it still gives only the 30-second preview of this file, " +
+        "so Yumeiro won't play it. Try the link again in a minute, or play it in the TeraBox app."
+
     @Volatile var canPlayAv1: () -> Boolean = { true }
 
     /** An AV1 original on a phone with no AV1 decoder plays TeraBox's H.264 transcode instead. */
@@ -160,10 +164,17 @@ object TeraBoxApi {
      * 1024terabox.com share, while the share's host without its own sign-in gave only the 30 s preview. So the hosts
      * whose cookies hold a sign-in go first (the share's host before the app's sign-in host), each with its own cookies.
      */
+    /**
+     * TB-LOGIN: TeraBox's signed-in web app host. Measured 2026-11-24 with a real account signed in through the Android
+     * web view UA: the same `ndus` gave only the 30 s preview (30 s of 10532 s) from www.terabox.app's share/streaming,
+     * and the full HLS (10532 s) from dm.terabox.app's. So the app host is asked before the sign-in page's host.
+     */
+    internal const val SIGNED_API = "https://dm.terabox.app"
+
     internal fun origins(shareUrl: String, cookies: (String) -> String?): List<String> {
         val own = originFor(shareUrl)
         if (base != DEFAULT_BASE) return listOf(own)
-        val all = listOf(own, DEFAULT_BASE, "https://www.1024tera.com", "https://www.terabox.com", "https://www.1024terabox.com").distinct()
+        val all = listOf(own, SIGNED_API, DEFAULT_BASE, "https://www.1024tera.com", "https://www.terabox.com", "https://www.1024terabox.com").distinct()
         val signed = all.filter { o -> signedIn(runCatching { cookies(o) }.getOrNull()) }
         return signed.ifEmpty { listOf(own) }
     }

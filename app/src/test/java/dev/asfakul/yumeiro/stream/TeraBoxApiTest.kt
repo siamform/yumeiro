@@ -216,4 +216,9 @@ class TeraBoxApiTest {
     @Test fun noSignInAnywhereKeepsTheShareHost() {
         assertEquals(listOf("https://www.1024tera.com"), TeraBoxApi.origins("https://www.1024tera.com/s/1abc") { null })
     }
+
+    @Test fun signedInAppHostIsAskedBeforeTheSignInPageHost() {
+        val cookies = { o: String -> if (o.endsWith("terabox.app")) "ndus=Y" else "browserid=x" }
+        assertEquals(listOf("https://dm.terabox.app", "https://www.terabox.app"), TeraBoxApi.origins("https://1024terabox.com/s/1abc", cookies))
+    }
 }
