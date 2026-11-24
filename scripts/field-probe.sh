@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -122,6 +122,8 @@ PY
       dismiss) tap_text "Close" "All set" "✕" "Not now" "Later" > /dev/null 2>&1 && note "dismissed a popup" || true; sleep 1 ;;
       top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
+      anim*) # anim N: Android animation duration scale (1 = normal, 10 = ten times slower; Compose follows it)
+        a=${s#anim }; adb shell settings put global animator_duration_scale "$a" > /dev/null 2>&1; note "animator_duration_scale=$a" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
       relaunch) # the app is closed (as after a swipe away) and opened again, to see what it shows from its saved state
         adb shell am force-stop "$P"; sleep 2; launch again; sleep 2 ;;
