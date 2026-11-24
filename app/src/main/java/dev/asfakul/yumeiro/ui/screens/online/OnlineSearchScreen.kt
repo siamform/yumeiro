@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -246,19 +247,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                         TextButton(onClick = { SearchHistory.clear(context); history.clear() }) { Text("Clear", color = TextTertiary) }
                     }
                 }
-                items(history, key = { it }) { h ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(44.dp)
-                            .then(Modifier.testTag("online_search_history")),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Default.History, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(12.dp))
-                        TextButton(onClick = { text = h; submitted = h }, modifier = Modifier.weight(1f)) {
-                            Text(h, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                }
+                items(history, key = { it }) { h -> SearchHistoryRow(h) { text = h; submitted = h } }
             }
             else -> {
                 val names = results.keys.sorted()
@@ -305,14 +294,32 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     }
 }
 
+/** One recent search. SEARCH-ML-1: shown whole (every line), at least one row high. */
+@Composable
+internal fun SearchHistoryRow(h: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 8.dp).heightIn(min = 44.dp)
+            .then(Modifier.testTag("online_search_history")),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Default.History, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(12.dp))
+        TextButton(onClick = onClick, modifier = Modifier.weight(1f)) {
+            Text(h, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().testTag("online_search_history_text"))
+        }
+    }
+}
+
 /** Last searches, kept on the device. */
 internal object SearchHistory {
     private const val KEY = "online_search_history"
     private fun prefs(c: Context) = c.getSharedPreferences("online", Context.MODE_PRIVATE)
-    fun load(c: Context): List<String> = prefs(c).getString(KEY, "").orEmpty().split('\n').filter { it.isNotBlank() }
+    // SEARCH-ML-1: kept as a JSON array, so a search with line breaks stays one search (see SearchHistoryCodec).
+    fun load(c: Context): List<String> = dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.decode(prefs(c).getString(KEY, ""))
     fun add(c: Context, q: String) {
-        val list = (listOf(q) + load(c).filterNot { it.equals(q, true) }).take(12)
-        prefs(c).edit().putString(KEY, list.joinToString("\n")).apply()
+        val t = dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.clean(q).ifEmpty { return }
+        val list = dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.push(load(c), t, 12)
+        prefs(c).edit().putString(KEY, dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.encode(list)).apply()
     }
     fun clear(c: Context) = prefs(c).edit().remove(KEY).apply()
 }

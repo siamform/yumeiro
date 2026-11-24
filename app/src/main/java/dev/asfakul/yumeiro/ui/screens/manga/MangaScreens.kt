@@ -217,7 +217,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                         tag = "manga_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (feed == Feed.SEARCH) item("f_search") { FilterPill("Results for \"$submitted\"", true, {}) }
+                        if (feed == Feed.SEARCH) item("f_search") { FilterPill("Results for \"${dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.oneLine(submitted)}\"", true, {}) }
                         item("f_pop") { FilterPill("Popular", feed == Feed.POPULAR && !savedOnly, { query = ""; feed = Feed.POPULAR; savedOnly = false }) }
                         if (provider?.supportsLatest == true) item("f_new") { FilterPill("Latest", feed == Feed.LATEST && !savedOnly, { query = ""; feed = Feed.LATEST; savedOnly = false }) }
                         item("f_saved") { FilterPill("Saved", savedOnly, { query = ""; savedOnly = true }) }

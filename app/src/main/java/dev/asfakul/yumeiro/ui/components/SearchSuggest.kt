@@ -113,15 +113,45 @@ object SearchSuggest {
     }
 }
 
+/**
+ * SEARCH-ML-1 (owner list 24): how a list of searches is kept in one preference string.
+ * It used to be the searches joined by line breaks, so a search with a line break in it came back
+ * as several searches and lost its breaks. Now it is a JSON array (line breaks kept); a value saved
+ * the old way still loads (it can never hold a line break inside one search).
+ */
+object SearchHistoryCodec {
+    /** Same break everywhere (a pasted "\r\n" is one break), outer spaces off, inner text untouched. */
+    fun clean(q: String): String = q.replace("\r\n", "\n").replace('\r', '\n').trim()
+
+    /** For one-line places (a pill): every line of [q], joined with " / ", so no line is cut off. */
+    fun oneLine(q: String): String = clean(q).lines().map { it.trim() }.filter { it.isNotEmpty() }.joinToString(" / ")
+
+    fun encode(list: List<String>): String = org.json.JSONArray().apply { list.forEach { put(it) } }.toString()
+
+    fun decode(raw: String?): List<String> {
+        if (raw.isNullOrBlank()) return emptyList()
+        // encode() always writes [] or ["…; a list saved the old way may start with "[" too (a search
+        // like "[oshi no ko]"), and org.json would read that leniently, so only these two are JSON.
+        if (raw == "[]" || raw.startsWith("[\"")) runCatching {
+            val a = org.json.JSONArray(raw)
+            return (0 until a.length()).mapNotNull { i -> a.opt(i) as? String }.filter { it.isNotBlank() }
+        }
+        return raw.split('\n').filter { it.isNotBlank() } // saved before SEARCH-ML-1
+    }
+
+    /** [q] first, the same search (any case) dropped further down, at most [max]. */
+    fun push(list: List<String>, q: String, max: Int): List<String> =
+        (listOf(q) + list.filterNot { it.equals(q, true) }).take(max)
+}
+
 /** Recent searches per search box ("library", "hues", "youtube", "ytmusic"), kept on the device. */
 object RecentSearches {
     private const val PREFS = "search_recent"
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    fun load(c: Context, scope: String): List<String> = prefs(c).getString(scope, "").orEmpty().split('\n').filter { it.isNotBlank() }
+    fun load(c: Context, scope: String): List<String> = SearchHistoryCodec.decode(prefs(c).getString(scope, ""))
     fun add(c: Context, scope: String, q: String) {
-        val t = q.trim().takeIf { it.length >= 2 } ?: return
-        val list = (listOf(t) + load(c, scope).filterNot { it.equals(t, true) }).take(15)
-        prefs(c).edit().putString(scope, list.joinToString("\n")).apply()
+        val t = SearchHistoryCodec.clean(q).takeIf { it.length >= 2 } ?: return
+        prefs(c).edit().putString(scope, SearchHistoryCodec.encode(SearchHistoryCodec.push(load(c, scope), t, 15))).apply()
     }
     fun clear(c: Context, scope: String) = prefs(c).edit().remove(scope).apply()
     /** Forgets every recent search in every search box. */
@@ -177,7 +207,8 @@ fun SuggestionList(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(highlighted(s.text, query, p.accent), color = p.textPrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // SEARCH-ML-1: a recent search shows whole, line breaks included; other rows stay one line.
+                    Text(highlighted(s.text, query, p.accent), color = p.textPrimary, fontSize = 14.sp, maxLines = if (s.kind == Suggestion.Kind.RECENT) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
                     s.detail?.let { Text(it, color = p.textTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 Box(
