@@ -105,7 +105,12 @@ class YumeiroHubProvider(private val parts: List<MainAPI>) : MainAPI() {
 
     init { sourcePlugin = "yumeiro-builtin:hub" }
 
-    override val mainPage: List<MainPageData> = parts.withIndex().flatMap { (i, p) -> p.mainPage.map { MainPageData(it.name, "$i$SEP${it.data}") } }
+    /**
+     * ANIME-1: the parts' shelves take turns (first shelf of each part, then the second of each, …). A home asks a
+     * source for its first four shelves only (OnlineRepository.ROWS_PER_PROVIDER), so in part order the catalog
+     * and drama shelves filled that batch and Yumeiro Anime was never asked (field probes 45393777649, 45399656311).
+     */
+    override val mainPage: List<MainPageData> = interleave(parts.withIndex().map { (i, p) -> p.mainPage.map { MainPageData(it.name, "$i$SEP${it.data}") } })
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse? {
         val (part, data) = shelf(request.data) ?: return null
@@ -144,6 +149,14 @@ class YumeiroHubProvider(private val parts: List<MainAPI>) : MainAPI() {
 
     companion object {
         private const val SEP = "\u001F"
+
+        /** Round-robin over the lists, keeping each list's own order. */
+        internal fun <T> interleave(lists: List<List<T>>): List<T> {
+            val out = ArrayList<T>(lists.sumOf { it.size })
+            val longest = lists.maxOfOrNull { it.size } ?: 0
+            for (k in 0 until longest) for (l in lists) if (k < l.size) out += l[k]
+            return out
+        }
         private const val SEARCH_MS = 25_000L
 
         /** One result from each part in turn, so a slow or long part doesn't bury the others. */

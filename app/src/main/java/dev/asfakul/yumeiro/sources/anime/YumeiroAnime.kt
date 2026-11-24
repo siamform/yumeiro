@@ -81,10 +81,17 @@ class YumeiroAnimeProvider(
 
     init { sourcePlugin = YumeiroAnime.PLUGIN }
 
-    override val mainPage: List<MainPageData> = CHANNELS.map { MainPageData(it.shelf, it.id) }
+    /** One shelf with every channel's series first (what a home with four shelves per source shows), then one per channel. */
+    override val mainPage: List<MainPageData> = listOf(MainPageData(ALL_SHELF, ALL)) + CHANNELS.map { MainPageData(it.shelf, it.id) }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         if (page > 1) return newHomePageResponse(request.name, emptyList(), false)
+        if (request.data == ALL) {
+            // Each channel's series in turn, newest first per channel; a slow or failing channel doesn't hold the rest.
+            val per = coroutineScope { CHANNELS.map { ch -> async { withTimeoutOrNull(SEARCH_MS) { series(ch) }.orEmpty() } }.awaitAll() }
+            val mixed = dev.asfakul.yumeiro.sources.hub.YumeiroHubProvider.interleave(per).distinctBy { it.list }
+            return newHomePageResponse(request.name, mixed.map { it.toResult() }, false)
+        }
         val ch = CHANNELS.firstOrNull { it.id == request.data } ?: return newHomePageResponse(request.name, emptyList(), false)
         return newHomePageResponse(request.name, series(ch).map { it.toResult() }, false)
     }
@@ -141,7 +148,9 @@ class YumeiroAnimeProvider(
     /** A channel's series: its playlists that look like a show (not clips, trailers, music or talk). Cached. */
     private suspend fun series(ch: AnimeChannel): List<Series> {
         cache[ch.id]?.takeIf { System.currentTimeMillis() - it.first < TTL_MS }?.let { return it.second }
-        val cards = runCatching { playlists(ch.url) }.getOrNull() ?: return cache[ch.id]?.second.orEmpty()
+        val cards = runCatching { playlists(ch.url) }
+            .onFailure { runCatching { android.util.Log.w("YuAnime", "channel ${ch.id}: ${it.javaClass.simpleName}: ${it.message?.take(160)}") } }
+            .getOrNull() ?: return cache[ch.id]?.second.orEmpty()
         val out = cards.mapNotNull { c ->
             val list = playlistOf("anime:pl:" + c.url.substringAfter("list=", "").substringBefore('&')) ?: return@mapNotNull null
             if (!looksLikeSeries(c.title, c.count)) return@mapNotNull null
@@ -155,6 +164,8 @@ class YumeiroAnimeProvider(
     companion object {
         private const val TTL_MS = 6 * 60 * 60 * 1000L
         private const val SEARCH_MS = 20_000L
+        const val ALL = "all"
+        const val ALL_SHELF = "Official anime · full series"
         /** A video shorter than this is a clip, preview or trailer, not an episode. */
         const val MIN_EPISODE_SEC = 8 * 60L
 

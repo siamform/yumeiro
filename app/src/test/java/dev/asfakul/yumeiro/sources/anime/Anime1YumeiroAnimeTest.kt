@@ -100,4 +100,26 @@ class Anime1YumeiroAnimeTest {
         assertTrue(OnlinePlayback.isYouTubePage("https://www.youtube.com/watch?v=aaaaaaaaaa1"))
         assertFalse(OnlinePlayback.isYouTubePage("https://rr1---sn-x.googlevideo.com/videoplayback?id=1"))
     }
+
+    @Test fun firstShelfMixesEveryChannelSoAFourShelfHomeShowsAnime() = runBlocking {
+        assertEquals(YumeiroAnimeProvider.ALL, api.mainPage.first().data)
+        assertEquals(1 + YumeiroAnimeProvider.CHANNELS.size, api.mainPage.size)
+        val home = api.getMainPage(1, MainPageRequest(YumeiroAnimeProvider.ALL_SHELF, YumeiroAnimeProvider.ALL, false))
+        val names = home.items.first().list.map { it.name }
+        assertEquals(listOf("Mobile Suit Gundam SEED DESTINY"), names)
+        // Every channel without a cached answer was asked for its playlists (the cache is shared between tests).
+        assertTrue(asked.count { "/channel/" in it } >= YumeiroAnimeProvider.CHANNELS.size - 1)
+    }
+
+    @Test fun hubShelvesTakeTurnsAcrossParts() {
+        val r = dev.asfakul.yumeiro.sources.hub.YumeiroHubProvider.interleave(listOf(listOf("c1", "c2", "c3"), listOf("d1"), listOf("a1", "a2")))
+        assertEquals(listOf("c1", "d1", "a1", "c2", "a2", "c3"), r)
+        // Hub: the first four shelves now include anime (OnlineRepository asks four per source).
+        val catalog = object : com.lagradost.cloudstream3.MainAPI() {
+            override var name = "Catalog"
+            override val mainPage = (1..6).map { com.lagradost.cloudstream3.MainPageData("Catalog $it", "c$it") }
+        }
+        val hub = dev.asfakul.yumeiro.sources.hub.YumeiroHubProvider(listOf(catalog, api))
+        assertTrue(hub.mainPage.take(4).any { it.name == YumeiroAnimeProvider.ALL_SHELF })
+    }
 }
