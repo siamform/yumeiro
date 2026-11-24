@@ -415,6 +415,10 @@ private fun VideoPlayerModalContent(
     val isNetworkStream = remember(video.id) { StreamMediaFactory.isNetworkUri(video.uri) }
     val originalRequest = remember(video.id) { StreamRepository.requestFor(video.uri) ?: StreamRequest(url = video.uri, title = video.title) }
     var refreshAttempts by remember(video.id) { mutableStateOf(0) }
+    // SEEK-1: the last seek (any control: bar, double tap, keys, chapters) and how often it was reopened.
+    var lastSeekTargetMs by remember(video.id) { mutableStateOf<Long?>(null) }
+    var lastSeekAt by remember(video.id) { mutableLongStateOf(0L) }
+    var seekReopens by remember(video.id) { mutableStateOf(0) }
     /** Header variant being tried after a refusal; learned for the host once playback starts. */
     var ladderStep by remember(video.id) { mutableStateOf<dev.asfakul.yumeiro.online.AccessLadder.Step?>(null) }
     // R15 (ADR-006): the player comes from the process-wide PlaybackSession (one player at a time;
@@ -701,6 +705,20 @@ private fun VideoPlayerModalContent(
         ladderStep = null
         lease.cancel("stable")
         val facts = ErrorFacts.from(error)
+        // SEEK-1: an error caused by a seek reopens the same link at the seek target before any source-level step.
+        val seekStep = dev.asfakul.yumeiro.player.SeekRecovery.decide(
+            errorCode = error.errorCode, networkStream = isNetworkStream, online = dev.asfakul.yumeiro.network.Connectivity.online.value,
+            seekTargetMs = lastSeekTargetMs, msSinceSeek = System.currentTimeMillis() - lastSeekAt,
+            attemptsForThisSeek = seekReopens, durationMs = exoPlayer.duration.takeIf { it > 0L } ?: durationMs,
+        )
+        if (seekStep is dev.asfakul.yumeiro.player.SeekRecovery.Decision.Reopen) {
+            seekReopens = seekStep.attempt
+            android.util.Log.w("VideoPlayer", "SEEK-1 ${error.errorCodeName} (HTTP ${facts.httpStatus}) after a seek → reopen at ${seekStep.positionMs} ms, attempt ${seekStep.attempt}")
+            isBuffering = true
+            val again = StreamRepository.requestFor(video.uri) ?: originalRequest
+            lease.schedule("retry", seekStep.delayMs) { startResolved(again, seekStep.positionMs) }
+            return
+        }
         val current = StreamRepository.requestFor(video.uri) ?: originalRequest
         // Where the viewer actually is (they may have rewound before the resume point); the
         // resume point only stands in while the player hasn't reported a position yet.
@@ -1217,7 +1235,9 @@ private fun VideoPlayerModalContent(
                     ladderStep?.let { dev.asfakul.yumeiro.online.AccessLadder.learn(video.uri, it) }
                     ladderStep = null
                     clearErrorCard()
-                    lease.schedule("stable", PlaybackRecovery.STABLE_RESET_MS) { recovery.onStablePlayback() }
+                    // SEEK-1: the one quick retry and the link refreshes are per bad spell, not per video: a blip an
+                    // hour later used to go straight to the next source.
+                    lease.schedule("stable", PlaybackRecovery.STABLE_RESET_MS) { recovery.onStablePlayback(); onlineQuickRetries = 0; refreshAttempts = 0 }
                     if (exoPlayer.duration > 0) {
                         durationMs = exoPlayer.duration
                     }
@@ -1247,7 +1267,15 @@ private fun VideoPlayerModalContent(
 
             override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
                 // BUG-1 (D3): a seek is saved at once; "seek, then the process dies" kept the old spot.
-                if (reason == Player.DISCONTINUITY_REASON_SEEK) saveResumePoint()
+                if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                    saveResumePoint()
+                    // SEEK-1: a seek to a new spot gets its own recovery count; a reopen at the same spot keeps it.
+                    val now = System.currentTimeMillis()
+                    val same = lastSeekTargetMs?.let { kotlin.math.abs(newPosition.positionMs - it) <= 1_500L } == true &&
+                        now - lastSeekAt <= dev.asfakul.yumeiro.player.SeekRecovery.WINDOW_MS
+                    if (!same) seekReopens = 0
+                    lastSeekTargetMs = newPosition.positionMs; lastSeekAt = now
+                }
             }
 
             override fun onTracksChanged(tracks: Tracks) {
