@@ -75,9 +75,21 @@ class Nav2PageSwapDeviceTest {
         FirstRun.grant()
         val i = inst.targetContext.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         inst.targetContext.startActivity(i)
-        device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 30_000)
-        // A fresh install opens on the welcome guide; one-time prompts may follow.
-        repeat(4) { if (!tapText("Skip", "Skip for now", "Not now", "Later", timeoutMs = 6_000)) return@repeat; SystemClock.sleep(1_500) }
+        device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 60_000)
+        // A fresh install opens on the welcome guide (several pages); one-time prompts may follow. Tap past them
+        // the way a user does until the Home top bar (its Settings button) is there.
+        val end = SystemClock.uptimeMillis() + 120_000
+        while (SystemClock.uptimeMillis() < end && device.findObject(By.desc("Open Settings")) == null) {
+            val o = listOf("Skip", "Skip for now", "Skip tour", "Not now", "Maybe later", "Later", "No thanks", "Allow", "Done", "Get started")
+                .firstNotNullOfOrNull { device.findObject(By.text(it)) }
+            if (o != null) runCatching { o.click() } else device.pressBack().also { SystemClock.sleep(400) }
+            SystemClock.sleep(1_500)
+            if (device.currentPackageName != pkg) inst.targetContext.startActivity(i)
+        }
+        if (device.findObject(By.desc("Open Settings")) == null) {
+            val out = java.io.ByteArrayOutputStream(); runCatching { device.dumpWindowHierarchy(out) }
+            log("no Settings button; screen: " + out.toString().take(3_000))
+        }
     }
 
     private class Swap(val settledMs: Long, val lastLikeOldMs: Long, val frames: Int)
@@ -105,7 +117,7 @@ class Nav2PageSwapDeviceTest {
 
     @Test fun settingsSubPagesReplaceTheOldPageAtOnce() {
         launch()
-        assertTrue("Settings never opened", tapText("Open Settings", "Settings"))
+        assertTrue("Settings never opened", tapText("Open Settings"))
         assertTrue("Settings home never showed", device.wait(Until.hasObject(By.text("Look & feel")), 20_000))
         SystemClock.sleep(1_500)
         val fails = ArrayList<String>()
