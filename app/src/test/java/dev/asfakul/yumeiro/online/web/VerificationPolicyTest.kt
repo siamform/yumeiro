@@ -12,11 +12,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /**
  * VERIFY-1 (ADR-059, owner list 22): one state per site for every security check, so a site asks once,
  * a firewall block stops opening windows, and a check the user closed does not come straight back.
  */
+// Robolectric: BrowserCheck (used by the real-page tests) creates a main-looper Handler when it loads.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
 class VerificationPolicyTest {
     private val t0 = 1_800_000_000_000L
     private val host = "animepahe.pw"
