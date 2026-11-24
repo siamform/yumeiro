@@ -510,13 +510,18 @@ fun PageStreamFinderDialog(
                 if (!chainState.active && quiet >= 6) continue
                 if (chainState.stopped) continue
                 if (progress in 1..29) continue
-                val result = kotlinx.coroutines.suspendCancellableCoroutine<String?> { c ->
-                    wv.evaluateJavascript(script) { r -> if (c.isActive) c.resumeWith(Result.success(r)) }
+                // A page that is navigating away may never answer; the next scan tries again.
+                val result = kotlinx.coroutines.withTimeoutOrNull(4_000L) {
+                    kotlinx.coroutines.suspendCancellableCoroutine<String?> { c ->
+                        wv.evaluateJavascript(script) { r -> if (c.isActive) c.resumeWith(Result.success(r)) }
+                    }
                 }
                 val scan = dev.asfakul.yumeiro.online.web.LinkChain.parse(result)
                 if (scan?.chain != true) quiet++
                 val host = PlatformRules.hostOf(url) ?: url
                 val (next, act) = dev.asfakul.yumeiro.online.web.LinkChainPolicy.next(chainState, scan, url, host, android.os.SystemClock.elapsedRealtime())
+                // Device evidence: host, step and action only (never the address; shortener links carry tokens).
+                if (scan?.chain == true || next.active) android.util.Log.i("YuLinkChain", "$host step=${scan?.step} ${act::class.simpleName} taps=${next.taps}")
                 chainState = next
                 val title = dev.asfakul.yumeiro.online.web.LinkChainPolicy.title(next, scan?.stepText)
                 val hidden = if (next.defused > 0) " · ${next.defused} ad layer${if (next.defused == 1) "" else "s"} hidden" else ""
