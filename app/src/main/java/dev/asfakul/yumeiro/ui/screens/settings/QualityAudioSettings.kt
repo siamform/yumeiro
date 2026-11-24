@@ -104,7 +104,7 @@ fun QualityAndAudioCard() {
     val renderer by VideoPrefs.renderer.collectAsState()
     val anime4k by VideoPrefs.anime4k.collectAsState()
     val tier by VideoPrefs.gpuTier.collectAsState()
-    remember(context) { dev.asfakul.yumeiro.player.Anime4kV2.init(context) }
+    remember(context) { dev.asfakul.yumeiro.player.Anime4kV2.init(context); dev.asfakul.yumeiro.player.Anime4kV2 }
     val a4kEngine by dev.asfakul.yumeiro.player.Anime4kV2.engine.collectAsState()
     val a4kPreset by dev.asfakul.yumeiro.player.Anime4kV2.preset.collectAsState()
     val a4kStyle by dev.asfakul.yumeiro.player.Anime4kV2.style.collectAsState()
