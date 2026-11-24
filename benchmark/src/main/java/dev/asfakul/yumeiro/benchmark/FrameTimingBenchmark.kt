@@ -38,9 +38,11 @@ class FrameTimingBenchmark {
         packageName = TARGET,
         metrics = listOf(FrameTimingMetric()),
         compilationMode = mode,
-        startupMode = StartupMode.COLD,
+        // No startupMode: COLD kills the process after setupBlock (run 45337558852 measured the launcher). A fresh
+        // process per iteration instead: kill here, start, open Settings home, then measure only the sub-pages.
+        startupMode = null,
         iterations = 5,
-        setupBlock = { Journeys.grantPermissions(device); pressHome(); startActivityAndWait(); Journeys.firstFrameSettles(device); Journeys.passWelcome(device); Journeys.openSettings(device) },
+        setupBlock = { Journeys.grantPermissions(device); killProcess(); startActivityAndWait(); Journeys.firstFrameSettles(device); Journeys.passWelcome(device); Journeys.openSettings(device) },
     ) {
         Journeys.settingsPages(device, listOf("Look & feel", "Video quality & playback", "Profiles"))
         Journeys.snapshot(device, "settings_after")
