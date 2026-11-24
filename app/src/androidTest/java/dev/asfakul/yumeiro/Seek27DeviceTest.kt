@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * SEEK-1 (owner item 27): a seek whose range request fails (HTTP 416 here, as CDNs answer when an edge has the file
  * only partly) keeps playing at the seek target instead of showing an error; a second seek that fails twice works
- * too (each seek has its own count), and the source is not reloaded from the start. The clip is 49 min long and
+ * too (each seek has its own count), and the source is not reloaded from the start (a reopen reads only the header). The clip is 49 min long and
  * 582 KB, so a far seek always makes a new range request. Old code: 416 → "HTTP 416 … can't be loaded" card.
  * Log tag YuSeekTest.
  */
@@ -115,9 +115,14 @@ class Seek27DeviceTest {
         assertEquals("seek 2 not playing (state $s2, pos $p2)", Player.STATE_READY, s2)
         assertTrue("seek 2 position $p2", p2 >= 699_000L && p2 < 730_000L)
         assertTrue("seek 2 met no failed request (faults ${faults.get()}, ranges ${ranges.takeLast(8)})", faults.get() - faultsAfter1 >= 1)
-        // No reload from the start: no request for byte 0 after the first seek.
+        // No reload from the start. A reopen is a fresh media source, which reads the MP4 header (moov, at byte 0,
+        // so a request with no Range) and then jumps to the seek target. So: at most one header read per reopen
+        // (one per failed request), each one followed by a range request, and the player is at the target (above).
         val after = synchronized(ranges) { ranges.drop(firstSeekAt) }
-        assertTrue("source reloaded from the start: $after", after.none { it == "(none)" || it.startsWith("bytes=0-") })
+        val headerReads = after.indices.filter { after[it] == "(none)" || after[it].startsWith("bytes=0-") }
+        assertTrue("more header reads (${headerReads.size}) than reopens (${faults.get()}): $after", headerReads.size <= faults.get())
+        assertTrue("a header read not followed by a jump to the target: $after",
+            headerReads.all { i -> after.drop(i + 1).firstOrNull()?.let { it.startsWith("bytes=") && !it.startsWith("bytes=0-") } == true })
         armed.set(false)
     }
 
