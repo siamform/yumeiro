@@ -273,6 +273,15 @@ object ExtensionManager {
      */
     fun providers(): List<MainAPI> = providerMemo.get(providerStamp()) { buildProviders() }
 
+    /**
+     * COUNT-1: the sources that feed Yumix (one extension package can add several, and built-in sources count
+     * too), without 18+ ones when 18+ is off or private. Home's Yumix tile, the Yumix header and the feed all
+     * use this, so the number on Home matches the one in Videos.
+     */
+    fun feedProviders(adultOn: Boolean, adultPrivate: Boolean): List<MainAPI> =
+        if (!_state.value.usable) emptyList()
+        else providers().filterNot { (!adultOn || adultPrivate) && AdultContent.isAdultApi(it.name) }
+
     private val providerMemo = StampMemo<List<MainAPI>>()
 
     private fun buildProviders(): List<MainAPI> {

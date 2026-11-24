@@ -258,7 +258,7 @@ internal data class SourceFilterTexts(
 ) {
     companion object {
         val Extensions = SourceFilterTexts(
-            tag = "online_filter", title = "Show videos from", subtitle = { "$it extensions on · pick one to filter Yumix" },
+            tag = "online_filter", title = "Show videos from", subtitle = { "$it sources on · pick one to filter Yumix" },
             allTitle = "All extensions", allSub = "Everything mixed in one feed", searchHint = "Search extensions",
             noneCalled = "No extension called", failed = "Didn't load. Open it to retry",
             ready = { if (it == 0) "Search only" else "$it titles on its home" },

@@ -839,6 +839,13 @@ fun MTPlayerApp(
                                 onOpenSearch = { navigateSub(Screen.OnlineSearch.route) },
                                 onOpenHueStore = { navigateSub(Screen.Extensions.route) },
                                 huesCount = huesEngine.installed.count { it.enabled },
+                                yumixSources = run {
+                                    val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
+                                    val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
+                                    remember(huesEngine.generation, huesEngine.usable, adultOn, adultPrivate) {
+                                        dev.asfakul.yumeiro.online.ExtensionManager.feedProviders(adultOn, adultPrivate).size
+                                    }
+                                },
                                 onNavigateToLibrary = { navigateTop(Screen.Library.route) },
                                 onNavigateToSettings = { navigateSub(Screen.Settings.route) },
                                 onNavigateToEqualizer = { navigateSub(Screen.Equalizer.route) },

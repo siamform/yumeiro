@@ -195,7 +195,7 @@ fun OnlineHomeScreen(
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
     // 18+ Hues stay out of the feed when 18+ is off or kept private (they are still searchable).
     val providers = remember(engine.generation, engine.usable, adultOn, adultPrivate) {
-        if (engine.usable) ExtensionManager.providers().filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) } else emptyList()
+        ExtensionManager.feedProviders(adultOn, adultPrivate)
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     var showFilter by rememberSaveable { mutableStateOf(false) }
@@ -358,7 +358,7 @@ fun OnlineHomeScreen(
         ) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp).testTag("online_extension_bar"), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} extension${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
+                dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} source${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
                 style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, maxLines = 1,
                 modifier = Modifier.weight(1f).clickable(onClickLabel = "Manage extensions", onClick = onOpenExtensions).padding(vertical = 12.dp),
             )
@@ -596,7 +596,7 @@ fun OnlineHomeScreen(
                             UpcomingBanner(onOpenUpcoming, onSearch = { q -> OnlineSearchPending.query = q; onOpenSearch() })
                         }
                         if (picks.isNotEmpty()) st.item("feed_label") {
-                            PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
+                            PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} sources", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         if (latest.isNotEmpty()) st.item("latest") {
                             PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
@@ -615,7 +615,7 @@ fun OnlineHomeScreen(
                         }
                         if (groupsDone && exploreSnap.isNotEmpty()) {
                             st.item("explore_h") {
-                                dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} extensions", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
+                                dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} sources", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
                             }
                             st.items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
                                 val wide = r.first().second

@@ -175,6 +175,12 @@ data class ResumeVideo(
     val onClick: () -> Unit,
 )
 
+/** COUNT-1: the Yumix tile counts feed sources (the same number the Yumix header shows); -1 falls back to extensions. */
+internal fun yumixTileLabel(extensions: Int, sources: Int): String {
+    val n = if (sources < 0) extensions else sources
+    return if (n > 0) "$n source${if (n == 1) "" else "s"}" else "Add sources"
+}
+
 /** One tile of the Spaces grid. */
 @Immutable
 private data class Feature(
@@ -257,8 +263,10 @@ fun HomeScreen(
     onOpenOnlineTitle: (OnlineItem) -> Unit = {},
     /** Opens one extension row on its own page (paged "See all"). */
     onOpenRow: (OnlineRow) -> Unit = {},
-    /** Number of installed + working Yumix extensions. */
+    /** Number of installed + enabled extension packages (the Extensions tile). */
     huesCount: Int = 0,
+    /** COUNT-1: number of sources feeding Yumix (the Yumix tile); -1 = same as [huesCount]. */
+    yumixSources: Int = -1,
     isPlaying: Boolean = false,
     durationMs: Long = 0L,
     positionMs: () -> Long = { 0L },
@@ -371,9 +379,9 @@ fun HomeScreen(
 
     var customizing by rememberSaveable { mutableStateOf(false) }
 
-    val features = remember(stats.audioCount, stats.videoCount, huesCount, activeDownloads, mangaCount) {
+    val features = remember(stats.audioCount, stats.videoCount, huesCount, yumixSources, activeDownloads, mangaCount) {
         listOf(
-            Feature("quick_card_hues", "Yumix", if (huesCount > 0) "$huesCount sources" else "Add sources", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "彩", SpaceHues.Kobai, onOpenHues),
+            Feature("quick_card_hues", "Yumix", yumixTileLabel(huesCount, yumixSources), dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "彩", SpaceHues.Kobai, onOpenHues),
             Feature("quick_card_youtube", "YouTube", "Videos", Icons.Default.SmartDisplay, "映", SpaceHues.Shu, onOpenYouTube),
             Feature("quick_card_ytmusic", "YT Music", "Songs", Icons.Default.Album, "歌", SpaceHues.Fuji, onOpenYouTubeMusic),
             Feature("quick_card_store", "Extensions", if (huesCount > 0) "$huesCount on" else "Get some", Icons.Default.Extension, "拡", SpaceHues.Yamabuki, onOpenHueStore),
