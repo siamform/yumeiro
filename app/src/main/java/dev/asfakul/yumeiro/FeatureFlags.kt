@@ -136,6 +136,8 @@ object FeatureFlags {
         HUB_CATALOG("hub_catalog", true),
         /** E1-C: Hub titles can play from the Internet Archive (Yumeiro Classics) with no source installed. */
         HUB_ARCHIVE("hub_archive", true),
+        /** FIND-2 (item 26, ADR-066): Yumeiro Catalog titles are found in installed sources by the V2 sweep (remembered source first, waves of 3, true failure reasons). Off = the V1 fan-out, unchanged. */
+        FIND_V2("find_v2", true),
         /** OWN-19: full-screen player shows only the main buttons (3 in the user's order + More); the rest are in More. */
         PLAYER_ESSENTIALS("own19_player_essentials", true),
         /** F-21: language chip + "N sources • ecosystem • repo" on market, installed and "Show videos from" rows. */

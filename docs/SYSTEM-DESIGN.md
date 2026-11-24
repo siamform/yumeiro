@@ -2112,3 +2112,37 @@ Alternatives rejected: a WebView JS runtime (main-thread bound, heavier); writin
 Test: Novel26Test (index, answers, paragraphs, library file, errors); NovelEngineDeviceTest (real QuickJS + harness +
 cheerio + OkHttp against a local LNReader-format repository and site: install, popular, latest, search-all, details,
 parsePage, chapter text, failure then recovery, library persistence, uninstall). Field: LNReader index → Novel Fire.
+
+### ADR-066: Source Finding V2 beside V1 (FIND-2, owner list 26, 2026-11-24)
+Context: a Yumeiro Catalog title (TMDB metadata) plays through the user's installed sources. V1 (E1-B) asks up to 12
+sources at once, each up to 30 s, total 45 s, and says "No playable sources were found" whatever happened. Field probe
+45433872951 showed the cost: every play holds network slots for all sources, and the message does not say why.
+Zangetsu's play-time resolver (lib/core/zmode/playback_resolver.dart at 4aae490) was studied: remembered winner,
+waves of three, the same patience for every source, a reason per source and a true failure sentence.
+Decision: sources/hub/SourceFinder2 (pure planner + sweep) used by YumeiroCatalogProvider.loadLinksV2 behind flag
+FIND_V2 (default on; off = V1 unchanged, still tested by E1CatalogTest). Order: built-in parts (Archive) as their own
+wave, then the remembered source alone with its saved page (no search), then ranked sources in waves of 3. A wave with
+a hit gives the others 3 s to add alternatives, then the sweep ends. Budgets: 20 s per source, 25 s for the remembered
+one, 75 s total. Reasons: found / timed out / blocked / failed / no title match / episode missing / no links. Nothing
+found → SourceFinder2.NotFound (an ExtensionException, so the player shows its message), e.g. "Watch32 took too long
+to answer". A remembered page that stops working is forgotten. Matches persist in prefs yu_find2 (newest 300).
+Not ported: Zangetsu's match store scoring and per-episode unplayable memory (Yumeiro's player already fails over
+between links and sources, OnlineSession/RecoveryRouter).
+Test: Find2Test (waves, reasons, sentences, measured V1 vs V2 on nine sources with real waits: requests 9 → 3, repeat
+play 0 searches; slow source cut after the grace; forgotten page; timeouts reported as slow).
+
+### ADR-067: Anime4K Enhancement V2 beside Classic (A4K-2, owner list 26, 2026-11-24)
+Context: item 26 asks for Anime4K V2 presets (Performance, Balanced, Quality, High quality, Custom) chosen from real
+shader cost, custom controls that really change rendering, and an in-player control. Zangetsu runs bloc97's mpv GLSL
+chains (shader_presets.dart: styles Sharpen / De-blur / Denoise, M and VL networks). Yumeiro plays through Media3,
+whose effect graph takes GL ES programs, not mpv hook files.
+Decision: player/Anime4kV2 = one Media3 GlEffect pass: edge-preserving denoise (luma-weighted neighbours), unsharp
+restore at 1 or 2 texels gated to edges, line darkening, clamp to the local min/max (Anime4K's Clamp_Highlights idea).
+Cost = 5 or 9 texture reads per pixel ([Anime4kV2.taps]); presets rise in strength and cost; Custom = five uniforms.
+Classic (Anime4kEffect + GPU tier) stays the default engine and is unchanged. Choice saved in yu_video_prefs a4k2_*.
+In the player: More → Anime4K (shows the active profile) opens Anime4kSheet; every pick applies live through
+applyEngineLevel (engine level and upscale kept, HeatGuard respected, frame-processing failure still drops the pass).
+Alternatives rejected: an mpv-hook interpreter for the CNN shaders (multi-pass, many textures; GPU risk on low-end
+phones; recorded as a proposed improvement in docs/RESEARCH-26-ZANGETSU.md).
+Test: Anime4kV2Test (Robolectric), Anime4kV2GlDeviceTest (real GL: every preset x style, no halos, denoise reduces
+grain, ms per 720p frame).
