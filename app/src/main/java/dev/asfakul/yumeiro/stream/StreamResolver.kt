@@ -92,7 +92,9 @@ object StreamResolver {
             dev.asfakul.yumeiro.stream.torrent.TorrentStreams.offered(context)
         ) return@withContext torrentEngineOff(torrent.link)
         dev.asfakul.yumeiro.online.telegram.TelegramPublic.enabled = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
-        val r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
+        var r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
+        // ADCHAIN-3 (item 28): a shortener link the resolver could not open: try the plain-HTTP chain walk first.
+        if (r is Resolution.NeedsBrowser || r is Resolution.Failed) AdChainBridge.after(context, request, r, thorough)?.let { r = it }
         // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).
         if (r is Resolution.Handoff && r.platform == "YouTube" && request.group != "YouTube") {
             val id = dev.asfakul.yumeiro.youtube.YouTube.idFrom(r.url)

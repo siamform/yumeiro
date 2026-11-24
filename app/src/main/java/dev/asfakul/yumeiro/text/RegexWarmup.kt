@@ -42,6 +42,8 @@ object RegexWarmup {
     val CLASSES: List<String> = listOf(
         "dev.asfakul.yumeiro.online.TitleDedupe",
         "dev.asfakul.yumeiro.sources.manga.MangaChapterOrder",
+        "dev.asfakul.yumeiro.adchain.AdChainPages",
+        "dev.asfakul.yumeiro.adchain.AdChainDestinations",
         // UI classes first: a screen's first composition is what touches them.
         "com.lagradost.cloudstream3.ui.home.HomeViewModelKt",
         "dev.asfakul.yumeiro.ui.components.ErrorHelp",

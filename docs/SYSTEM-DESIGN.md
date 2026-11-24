@@ -2067,3 +2067,27 @@ Not taken from Hikari: `SslErrorHandler.proceed()` (accepts any certificate).
 Boundary: no automatic CAPTCHA/Turnstile solving, bought or forged tokens, or fingerprint spoofing.
 Consequences: an extension no longer parses a check page as "no results"; the first request after a pass expired
 doesn't stall on the check. Test: Verify2CheckPagesTest.
+
+### ADR-064: AdChain HTTP fast path in front of the page browser (ADCHAIN-3, owner list 28, 2026-11-24)
+Context: the owner asked to integrate the contributor's AdChain module (wanxtaexe-ai/legendary-octo-fishstick,
+`yumeiro-adchain/` + `yumeiro-dropin/`, commit f60d5a2) additively: "Preserve first. Understand second. Integrate third."
+Audit of the contributor code: the HTTP fast path (token wrappers, WP Safelink, AdLinkFly /links/go with session cookies,
+meta/JS redirects, hop limit, challenge detection) is new to Yumeiro; Yumeiro could only walk chains in the visible page
+browser (ADCHAIN-1/2). Defects found: whole bodies read with no cap (a video at the end would download inside the walk);
+an AdLinkFly answer without a link fell through to "plain page" and was returned as the destination; AdLinkFly was posted
+without waiting for the server's own timer; the bridge ran for every NeedsBrowser result, not only shorteners; the
+coordinator reported a default user agent instead of the one used; cookies were keyed by exact host (no domain/path/secure
+rules); no refusal of local-network, user-info or ad targets; a second ad list beside AdFilter; OkHttp 4 body API; regexes
+built per call. Its headless WebView runner and AdChainGateHost duplicate Yumeiro's page browser + link_chain.js walker
++ BrowserCheckHost, add `document.hidden` spoofing in a hidden view, and interpolate page data into injected JS.
+Decision: port the pure parts as dev.asfakul.yumeiro.adchain.{AdChainPages, AdChainDestinations, AdChainHttp} with the
+defects fixed (Content-Type first + 768 KB cap, JSON without `status: success` + url = hand-over, wait = site's counter + 1 s
+capped 20 s, OkHttp Cookie.matches jar, WebView user agent, AdChainDestinations.refusal on every hop, AdFilter + LinkHosts
+reused, regexes hoisted and warmed). stream/AdChainBridge.after is the only hook: StreamResolver.resolve calls it after
+resolveBlocking when the answer is NeedsBrowser/Failed, the link looks like a shortener, and "Resolve links" is on.
+Reached → normal resolver on the destination with the chain's cookies/referer/UA. Needs browser → cookies written to
+CookieManager (domain, path, expiry, secure) and the existing page browser continues from that step. Anything else →
+null, the user gets exactly the previous result. The WebView runner and GateHost were not integrated (duplicates).
+Boundary: never solves a captcha or Turnstile, never makes a token, never shortens a site timer.
+Test: AdChain28Test (MockWebServer chain, refusal JSON, captcha/turnstile, 8 MB video not read, meta/JS/loop, unsafe hops,
+cookie paths, wrappers).
