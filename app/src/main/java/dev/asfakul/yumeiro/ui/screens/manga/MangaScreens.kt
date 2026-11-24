@@ -357,8 +357,9 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
             }
         }
         items(items, key = { it.url }, contentType = { "cover" }) { m -> Cover(m, null) { onOpen(it) } }
-        if (loading) item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
+        // SKELETON-2: cover placeholders in the grid's own shape instead of a spinner.
+        if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(items.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
+            dev.asfakul.yumeiro.ui.components.CoverSkeleton()
         }
         error?.let { e -> item(span = { GridItemSpan(maxLineSpan) }, key = "error") {
             StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { more() }, testTag = "manga_error")
@@ -472,7 +473,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
             } }
             error?.let { e -> item("err") { StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { attempt++ }) } }
             if (chapters == null && error == null) item("loading") {
-                Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
+                dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 6, modifier = Modifier.padding(top = 12.dp))
             }
             sorted?.let { list ->
                 item("ch_head") {

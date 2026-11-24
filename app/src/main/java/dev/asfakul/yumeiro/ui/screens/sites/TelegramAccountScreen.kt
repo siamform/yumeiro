@@ -407,7 +407,7 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
                 if (error != null) TextButton(onClick = { load() }, modifier = Modifier.testTag("tg_chats_retry")) { Text("Try again") }
             }
             if (loading) item("loading") {
-                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
+                dev.asfakul.yumeiro.ui.components.SkeletonList(rows = if (shown.isEmpty()) 7 else 1, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("tg_chats_loading")) // SKELETON-2
             }
         }
     }
@@ -494,8 +494,9 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
             error?.let { e -> item("error", span = { GridItemSpan(maxLineSpan) }) {
                 Text(e, color = p.textSecondary, modifier = Modifier.padding(16.dp).testTag("tg_videos_error"))
             } }
-            if (loading) item("loading", span = { GridItemSpan(maxLineSpan) }) {
-                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
+            // SKELETON-2: video-tile placeholders in the grid's own shape.
+            if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(videos.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
+                dev.asfakul.yumeiro.ui.components.CoverSkeleton(aspect = 16f / 9f)
             } else if (next != 0L) item("more", span = { GridItemSpan(maxLineSpan) }) {
                 TextButton(onClick = { pages = 0; load(next) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("tg_videos_more")) { Text("Older") }
             }

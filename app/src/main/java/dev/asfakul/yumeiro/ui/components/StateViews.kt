@@ -26,6 +26,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -70,6 +71,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -263,24 +268,114 @@ internal const val STACK_ACTION_AFTER = 56
 
 // region Skeletons
 
-/** Animated shimmer used by skeleton placeholders while content loads. */
+/**
+ * SKELETON-2 (owner list 32): the shared skeleton timing. A skeleton fades in only after
+ * [APPEAR_DELAY_MS], so content that is already cached (and arrives within a frame or two) never
+ * flashes a placeholder first; then one sweep per [SWEEP_MS]. With Remove animations / reduced
+ * motion the placeholder is a still block (no sweep, no fade).
+ */
+object Skeletons {
+    const val APPEAR_DELAY_MS = 120L
+    const val FADE_MS = 180
+    const val SWEEP_MS = 1100
+    /** Width of the light band, px. */
+    const val BAND_PX = 600f
+}
+
+/**
+ * Animated shimmer used by skeleton placeholders while content loads. SKELETON-2: the band is placed
+ * in window coordinates, so every block on a page shows one continuous sweep (before, each block ran
+ * its own band); the phase is read only while drawing, so a skeleton page redraws but never
+ * recomposes per frame (it recomposed 60 times a second before, costly on low-RAM phones).
+ */
 fun Modifier.shimmer(shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(8.dp)): Modifier = composed {
     val base = GlassFill
     val highlight = TextPrimary.copy(alpha = 0.10f)
-    val t = rememberInfiniteTransition(label = "shimmer")
-    val x by t.animateFloat(0f, 1f, infiniteRepeatable(tween(1100, easing = LinearEasing), RepeatMode.Restart), label = "shimmer_x")
-    clip(shape).background(
-        Brush.linearGradient(
-            listOf(base, highlight, base),
-            start = Offset(x * 1600f - 600f, 0f), end = Offset(x * 1600f, 300f),
-        ),
-    )
+    val reduced = reducedMotion()
+    val appear = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(reduced) {
+        kotlinx.coroutines.delay(Skeletons.APPEAR_DELAY_MS)
+        if (reduced) appear.snapTo(1f) else appear.animateTo(1f, tween(Skeletons.FADE_MS))
+    }
+    val phase = if (reduced) null else rememberInfiniteTransition(label = "shimmer")
+        .animateFloat(0f, 1f, infiniteRepeatable(tween(Skeletons.SWEEP_MS, easing = LinearEasing), RepeatMode.Restart), label = "shimmer_x")
+    val left = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val screenW = with(androidx.compose.ui.platform.LocalDensity.current) {
+        androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp.toPx()
+    }
+    this
+        .onGloballyPositioned { left.floatValue = it.positionInWindow().x }
+        .graphicsLayer { alpha = appear.value }
+        .clip(shape)
+        .drawBehind {
+            drawRect(base)
+            val t = phase?.value ?: return@drawBehind
+            val x = t * (screenW + Skeletons.BAND_PX) - Skeletons.BAND_PX - left.floatValue
+            drawRect(Brush.linearGradient(listOf(Color.Transparent, highlight, Color.Transparent), start = Offset(x, 0f), end = Offset(x + Skeletons.BAND_PX, Skeletons.BAND_PX / 2f)))
+        }
 }
 
 @Composable
 fun SkeletonBlock(width: Dp?, height: Dp, modifier: Modifier = Modifier, shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(6.dp)) {
     Box((if (width == null) modifier.fillMaxWidth() else modifier.width(width)).height(height).shimmer(shape))
 }
+
+/** SKELETON-2: a cover (poster / manga / novel) with two title lines, for grid cells while a feed loads. */
+@Composable
+fun CoverSkeleton(modifier: Modifier = Modifier, aspect: Float = 0.7f) {
+    Column(modifier.fillMaxWidth().testTag("skeleton_cover")) {
+        Box(Modifier.fillMaxWidth().aspectRatio(aspect).shimmer(RoundedCornerShape(12.dp)))
+        Spacer(Modifier.height(6.dp))
+        SkeletonBlock(null, 11.dp, Modifier.padding(end = 12.dp))
+        Spacer(Modifier.height(4.dp))
+        SkeletonBlock(56.dp, 9.dp)
+    }
+}
+
+/** SKELETON-2: [rows] list-row placeholders (chat lists, chapter lists, search results). */
+@Composable
+fun SkeletonList(rows: Int = 6, modifier: Modifier = Modifier, trailing: Boolean = false) {
+    Column(modifier.fillMaxWidth().testTag("skeleton_list"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        repeat(rows) { SkeletonRow(trailing = trailing) }
+    }
+}
+
+/** SKELETON-2: a titled row of covers (per-source search results, home shelves). */
+@Composable
+fun CoverRowSkeleton(count: Int = 4, coverWidth: Dp = 104.dp, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("skeleton_cover_row")) {
+        SkeletonBlock(140.dp, 14.dp, Modifier.padding(start = 16.dp, bottom = 10.dp))
+        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            repeat(count) { CoverSkeleton(Modifier.width(coverWidth)) }
+        }
+    }
+}
+
+/** SKELETON-2: a title page (cover beside title lines, a description, then a chapter / episode list). */
+@Composable
+fun CoverDetailSkeleton(rows: Int = 6, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth().padding(16.dp).testTag("skeleton_detail"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row {
+            Box(Modifier.width(110.dp).aspectRatio(0.7f).shimmer(RoundedCornerShape(12.dp)))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SkeletonBlock(null, 18.dp)
+                SkeletonBlock(140.dp, 12.dp)
+                SkeletonBlock(100.dp, 12.dp)
+                Spacer(Modifier.height(6.dp))
+                SkeletonBlock(120.dp, 36.dp, shape = RoundedCornerShape(50))
+            }
+        }
+        SkeletonBlock(null, 12.dp)
+        SkeletonBlock(null, 12.dp)
+        SkeletonBlock(220.dp, 12.dp)
+        Spacer(Modifier.height(4.dp))
+        SkeletonList(rows)
+    }
+}
+
+/** How many skeleton cells a grid shows: a first page when empty, one short row when adding more. Pure. */
+fun skeletonCells(hasItems: Boolean): Int = if (hasItems) 3 else 9
 
 /** Placeholder with the shape of a list row (icon + two lines). */
 @Composable

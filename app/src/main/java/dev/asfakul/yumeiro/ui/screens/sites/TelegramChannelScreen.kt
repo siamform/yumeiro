@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -219,7 +218,8 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                 }
             }
             if (loading) item(key = "loading") {
-                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
+                // SKELETON-2: post-shaped placeholders (a page of them first, one while older posts load).
+                dev.asfakul.yumeiro.ui.components.SkeletonList(rows = if (posts.isEmpty()) 5 else 1, modifier = Modifier.padding(vertical = 8.dp).testTag("tg_loading"))
             } else if (before != null && posts.isNotEmpty()) item(key = "older") {
                 TextButton(onClick = { autoOlder = true; autoPages = 0; load(before) }, modifier = Modifier.fillMaxWidth().testTag("tg_older")) { Text("Older posts") }
             }

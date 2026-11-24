@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Public
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -201,9 +200,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
             }
         }
         when {
-            list == null && loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = SpotifyGreen, modifier = Modifier.testTag("upcoming_loading"))
-            }
+            list == null && loading -> dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 6, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("upcoming_loading")) // SKELETON-2
             list == null && failed -> Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Couldn't load the calendar. Check your connection.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.testTag("upcoming_error"))
                 TextButton(onClick = { retry++ }, modifier = Modifier.testTag("upcoming_retry")) { Text("Try again", color = SpotifyGreen) }

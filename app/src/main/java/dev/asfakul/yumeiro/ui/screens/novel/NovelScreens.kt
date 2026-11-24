@@ -139,7 +139,7 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
         SubPageHeader(title = "Novels", onBack = onBack, subtitle = if (state.installed.isEmpty()) "Add a source to start reading" else plugin?.name) {
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("novel_manage_sources")) { Icon(Icons.Default.Extension, "Novel sources", tint = TextPrimary) }
         }
-        if (!ready) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }; return@Column }
+        if (!ready) { Column(Modifier.fillMaxSize().padding(top = 8.dp)) { repeat(3) { dev.asfakul.yumeiro.ui.components.CoverRowSkeleton() } }; return@Column } // SKELETON-2
         if (state.installed.isEmpty()) {
             StateMessage(Icons.AutoMirrored.Filled.MenuBook, "No novel sources yet",
                 "Add an LNReader plugin repository, then install a source. Yumeiro doesn't include any novel source.",
@@ -219,7 +219,10 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
     LazyVerticalGrid(GridCells.Adaptive(108.dp), state = grid, modifier = Modifier.fillMaxSize().testTag("novel_browse_grid"),
         contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         itemsIndexed(items, key = { _, it -> it.path }) { _, it -> NovelCover(it, null) { n -> onOpen(n) } }
-        if (loading) item(span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen, modifier = Modifier.size(28.dp)) } }
+        // SKELETON-2: cover placeholders in the grid's own shape instead of a spinner.
+        if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(items.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
+            dev.asfakul.yumeiro.ui.components.CoverSkeleton()
+        }
         if (error != null && items.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
             TextButton(onClick = { attempt++ }) { Text("Couldn't load more. Try again", color = SpotifyGreen) }
         }
@@ -233,7 +236,7 @@ private fun SearchAllResults(query: String, onOpen: (NovelItem) -> Unit) {
     var groups by remember(query) { mutableStateOf<List<NovelSources.SearchGroup>?>(null) }
     LaunchedEffect(query) { groups = null; groups = NovelSources.searchAll(context, query) }
     val g = groups
-    if (g == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }; return }
+    if (g == null) { Column(Modifier.fillMaxSize().testTag("novel_search_loading")) { repeat(3) { dev.asfakul.yumeiro.ui.components.CoverRowSkeleton() } }; return } // SKELETON-2
     if (g.all { it.items.isEmpty() }) {
         StateMessage(Icons.AutoMirrored.Filled.MenuBook, "No novels found", g.filter { it.error != null }.joinToString("\n") { "${it.plugin.name}: ${it.error}" }.ifBlank { "No source has \"$query\"." }, testTag = "novel_search_empty")
         return
@@ -322,7 +325,7 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
                 }
             }
             val all = available
-            if (all == null && state.repos.isNotEmpty()) item("loading") { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SpotifyGreen) }
+            if (all == null && state.repos.isNotEmpty()) item("loading") { dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 4, trailing = true) } // SKELETON-2
             if (!all.isNullOrEmpty()) {
                 item("avail_h") {
                     Column(Modifier.padding(top = 8.dp)) {
@@ -396,7 +399,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
         }
         if (d == null) {
             if (error != null) StateMessage(Icons.Default.ErrorOutline, "Couldn't open this novel", error, primary = "Try again" to { attempt++ }, testTag = "novel_detail_error")
-            else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
+            else dev.asfakul.yumeiro.ui.components.CoverDetailSkeleton() // SKELETON-2
             return@Column
         }
         val chapters = if (newestFirst) d.chapters.asReversed() else d.chapters
