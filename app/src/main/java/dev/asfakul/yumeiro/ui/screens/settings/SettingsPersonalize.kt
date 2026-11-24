@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -308,7 +309,14 @@ internal fun TorrServerCard() {
         val accepted by dev.asfakul.yumeiro.stream.TorrentSettings.engineAccepted.collectAsState()
         var asking by remember { mutableStateOf(false) }
         SettingsCard {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // B31-ON-1: the whole row toggles (one large touch target, read as one switch by TalkBack).
+            Row(
+                Modifier.fillMaxWidth().toggleable(
+                    value = accepted, role = androidx.compose.ui.semantics.Role.Switch,
+                    onValueChange = { on -> if (on) asking = true else dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(context, false) },
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f)) {
                     Text("Built-in torrent engine", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     Text(
@@ -319,7 +327,7 @@ internal fun TorrServerCard() {
                 }
                 androidx.compose.material3.Switch(
                     checked = accepted,
-                    onCheckedChange = { on -> if (on) asking = true else dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(context, false) },
+                    onCheckedChange = null,
                     colors = dev.asfakul.yumeiro.ui.theme.yumeSwitchColors(),
                     modifier = Modifier.testTag("torrent_engine_switch"),
                 )

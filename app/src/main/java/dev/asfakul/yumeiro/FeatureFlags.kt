@@ -106,9 +106,11 @@ object FeatureFlags {
         TELEGRAM_LOGIN("f02_telegram_login", true),
         /**
          * B-31 (ADR-053): built-in torrent engine (libtorrent): magnets, info-hashes and .torrent links play without
-         * TorrServer. Off until the device tests pass; also hidden when no engine is pinned for the phone's ABI.
+         * TorrServer. Hidden when no engine is pinned for the phone's ABI. B31-ON-1: on since the device tests pass
+         * (runs 45321992083 / 45323267366 / 45325875819: first frame, seek and a long pause on api36 and api33-lowram);
+         * it only offers the Settings switch, which plays nothing until the user accepts the privacy notice.
          */
-        BUILTIN_TORRENT("b31_builtin_torrent", false),
+        BUILTIN_TORRENT("b31_builtin_torrent", true),
         /** F-03 (ADR-042): an expired TeraBox / DiskWala stream is found again on its page and resumes at the same place. */
         CLOUD_CAPTURE_V2("cloud_capture_v2", true),
         /** F-11 (ADR-044): "Translate pages" in the manga reader (on-device OCR + translation). */
