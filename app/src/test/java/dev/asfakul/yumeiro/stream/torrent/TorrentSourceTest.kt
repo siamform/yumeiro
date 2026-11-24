@@ -213,6 +213,30 @@ class TorrentSourceTest {
     }
 
     /**
+     * B31-SEEK7 (lowram run 45316393663, seek 7.5 s): after the seek the whole read-ahead was wanted at once and each
+     * block the player needed next waited 0.6-1.1 s behind it in the peers' queues. Right after a seek only the
+     * timed pieces are wanted; the read-ahead opens once playback reads past the middle of them.
+     */
+    @Test fun afterASeekOnlyTheTimedPiecesAreWantedUntilPlaybackRuns() {
+        val dir = tmp.newFolder()
+        val pl = 128 * 1024
+        val f = TorrentFile(0, "Sintel.mp4", 1000L * pl, 0)
+        java.io.RandomAccessFile(File(dir, f.path), "rw").use { it.setLength(f.size) }
+        val meta = TorrentMeta("d0".repeat(20), "Sintel", pl, 1000, listOf(f))
+        val core = FakeCore(dir, meta)
+        val src = TorrentSource(core, meta, f, readAhead = 24L shl 20, waitMs = 3_000)
+        src.prime(); core.arrive(0); src.read(0, ByteArray(10), 0, 10)
+        assertEquals("first play: read-ahead wanted", 5, core.windows.last()[100].toInt())
+        core.arrive(486); src.read(486L * pl, ByteArray(10), 0, 10) // seek
+        val afterSeek = core.windows.last()
+        assertTrue("timed piece wanted", afterSeek[500] > 0)
+        assertEquals("read-ahead beyond the timed pieces waits", 0, afterSeek[520].toInt())
+        assertEquals("head stays wanted", 2, afterSeek[0].toInt())
+        for (p in 487..495) { core.arrive(p); src.read(p.toLong() * pl, ByteArray(10), 0, 10) }
+        assertEquals("playback runs: read-ahead opens", 5, core.windows.last()[520].toInt())
+    }
+
+    /**
      * B31-RESCUE-1 (runs 45306375960 / 45308014362): the read's block stayed "requested x1 0B" with one silent peer
      * for 5-12 s; libtorrent asks a second peer only when it has no free block to ask for. A stuck read leaves only
      * its piece wanted, then the window and its deadlines come back once the bytes are readable.

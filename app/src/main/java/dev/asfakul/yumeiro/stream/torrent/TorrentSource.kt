@@ -51,6 +51,11 @@ class TorrentSource(
     @Volatile private var held: Held? = null
     /** TOR-CLOSE-1: set by [close]; a read still waiting gives up at once instead of after [waitMs]. */
     @Volatile private var closed = false
+    /**
+     * B31-SEEK7: after a seek only the timed pieces are wanted; the rest of the read-ahead opens at the first
+     * [slide], once playback runs again.
+     */
+    @Volatile private var narrow = false
     private val plan = Any()
     private class Held(val window: List<Int>, val deadlines: List<Pair<Int, Int>>)
 
@@ -150,19 +155,25 @@ class TorrentSource(
         // and read-ahead): until the target piece has its first bytes it is the only piece wanted and the only
         // deadline, so every peer's free request slot goes to it; then [open] lets the window and tail in.
         held = null
+        narrow = seek && targetFirst && window && d.size > timed.size
         if (targetFirst && window && d.size > 1 && !core.have(meta.hash, piece)) {
             core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, listOf(piece), emptyList()))
             core.setDeadlines(meta.hash, d.take(1))
             held = Held(d.map { it.first }, timed.drop(1))
             return
         }
-        if (window) core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, d.map { it.first }, keep))
+        if (window) core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, wanted(d.map { it.first }), keep))
         core.setDeadlines(meta.hash, timed)
     }
 
     /** B31-SEEK6: playback passed the middle of the timed pieces; the next ones in the window get deadlines. */
     private fun slide(piece: Int) {
         if (!TorrentPlan.slideDeadlines(piece, deadlineEnd, windowEnd, urgent)) return
+        // B31-SEEK7: playback runs again after the seek; the whole read-ahead may download now.
+        if (narrow && held == null) {
+            narrow = false
+            core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, (windowStart..windowEnd).toList(), keep))
+        }
         val end = minOf(windowEnd, piece + urgent - 1)
         val next = (deadlineEnd + 1..end).map { it to (it - piece) * 120 }
         deadlineEnd = end
@@ -185,16 +196,24 @@ class TorrentSource(
     private fun restore(piece: Int) = synchronized(plan) {
         // A seek during the wait moved the window; focus() already wrote the new priorities.
         if (held != null || piece !in windowStart..windowEnd) return@synchronized
-        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, (windowStart..windowEnd).toList(), keep))
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, wanted((windowStart..windowEnd).toList()), keep))
         // libtorrent drops the deadline of a piece set to priority 0 (torrent::prioritize_pieces), so they go back on.
         if (deadlineEnd > piece) core.setDeadlines(meta.hash, (piece + 1..deadlineEnd).map { it to (it - piece) * 120 })
     }
+
+    /**
+     * B31-SEEK7 (lowram run 45316393663, seek 7.5 s): once the target had bytes the whole 24 MB read-ahead was
+     * wanted, peers filled their 1 s request queues with it, and each block the player needed next took 0.6-1.1 s
+     * ("any block you request that is not urgent will take away from the bandwidth you get for peers that are
+     * urgent", https://libtorrent.org/streaming.html). Right after a seek only the timed pieces are wanted.
+     */
+    private fun wanted(window: List<Int>): List<Int> = if (narrow) window.filter { it <= deadlineEnd } else window
 
     /** B31-SEEK5: the target piece has bytes; the held window and tail may download now. */
     private fun open() = synchronized(plan) {
         val h = held ?: return@synchronized
         held = null
-        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, h.window, keep))
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, wanted(h.window), keep))
         core.setDeadlines(meta.hash, h.deadlines)
     }
 
