@@ -10,8 +10,14 @@ import dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /** ADCHAIN-2: a pack a page hands over is offered as a file, not as "this video" (field probe 45411197165). */
+// StreamDownloadAsk loads Android classes when it starts, so this runs on Robolectric.
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
 class Adchain2OtherFileTest {
     private fun r(url: String) = StreamRequest(url = url)
 
