@@ -112,6 +112,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.sources.drama.OnShortCatalogKt",
         "dev.asfakul.yumeiro.sources.drama.YumeiroDrama",
         "dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider", // OWN-9 adult words, ids, query cleaning
+        "dev.asfakul.yumeiro.sources.anime.YumeiroAnimeProvider", // ANIME-1 series / adult / title filters
         "dev.asfakul.yumeiro.sources.manga.MangaTlPlan", // F-11 bubble filter (first touch is the reader)
         "dev.asfakul.yumeiro.online.telegram.TelegramPublicKt", // F-02 public post / channel name
         "dev.asfakul.yumeiro.sources.js.JsBridgeKt",

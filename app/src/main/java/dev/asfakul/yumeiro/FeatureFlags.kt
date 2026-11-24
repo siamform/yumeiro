@@ -124,6 +124,8 @@ object FeatureFlags {
 
         /** OWN-9: the official built-in "Yumeiro Classics" source (Internet Archive public domain), on for fresh installs. */
         OFFICIAL_CLASSICS("own9_official_classics", true),
+        /** ANIME-1 (item 20): "Yumeiro Anime", free full episodes from official anime YouTube channels, as a part of the built-in "Yumeiro" source. */
+        OFFICIAL_ANIME("anime1_official_anime", true),
         /** OWN-13: Yumeiro Drama and Yumeiro Classics shown and used as one built-in source, "Yumeiro" (all in one, no install). Off: two separate sources as in OWN-9. */
         YUMEIRO_HUB("own13_yumeiro_hub", true),
         /** OWN-15: after "Who's watching?" the app opens straight away, without the logo a second time. */

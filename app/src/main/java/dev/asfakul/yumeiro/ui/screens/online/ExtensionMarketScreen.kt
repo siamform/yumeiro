@@ -275,8 +275,8 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     }
                     // OWN-13: with the hub on, one "Yumeiro" card (Discover: All, drama, Movies, TV; Installed) instead of two.
                     val hubCard = officialHub() && repoFilter == null &&
-                        ((tab == MarketTab.DISCOVER && category in setOf("All", "Short drama", "Asian drama", "Movies", "TV")) || (tab == MarketTab.INSTALLED && query.isBlank())) &&
-                        (query.isBlank() || "yumeiro all in one official drama short dramabox reelshort shortmax classics movies films documentaries cartoons public domain archive film noir".contains(query.trim(), true))
+                        ((tab == MarketTab.DISCOVER && category in setOf("All", "Short drama", "Asian drama", "Movies", "TV", "Anime")) || (tab == MarketTab.INSTALLED && query.isBlank())) &&
+                        (query.isBlank() || "yumeiro all in one official drama short dramabox reelshort shortmax classics movies films documentaries cartoons public domain archive film noir anime gundam muse ani-one viz retrocrush tezuka".contains(query.trim(), true))
                     if (hubCard) item("builtin_yumeiro") { YumeiroHubCard() }
                     if (!officialHub() && tab == MarketTab.DISCOVER && repoFilter == null && (category == "All" || category == "Short drama" || category == "Asian drama") &&
                         (query.isBlank() || "yumeiro drama short dramabox reelshort shortmax".contains(query.trim(), true))

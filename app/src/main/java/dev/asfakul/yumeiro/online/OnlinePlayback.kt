@@ -28,7 +28,8 @@ object OnlinePlayback {
             // The extension already told us what the link is: play it straight away (a network
             // probe first costs time and can use up one-time tokens). If it turns out wrong, the
             // player re-detects the format after the first container error.
-            formatFromSource = true,
+            // ANIME-1: a YouTube watch page isn't a file: leave it to the resolver's YouTube extractor.
+            formatFromSource = !isYouTubePage(link.url),
             // Like CloudStream: a desktop-browser UA unless the extension asks for another one. Many
             // video hosts answer 401/403 to the player's default UA.
             userAgent = link.headers.entries.firstOrNull { it.key.equals("User-Agent", true) }?.value ?: com.lagradost.cloudstream3.USER_AGENT,
@@ -47,7 +48,11 @@ object OnlinePlayback {
      * Format the extension declared. A plain "video" link is a progressive file (as in CloudStream),
      * unless its URL plainly says it is a manifest; extensions sometimes mislabel those.
      */
+    /** A YouTube video page (watch / youtu.be / shorts), not one of YouTube's own media URLs (googlevideo.com). */
+    internal fun isYouTubePage(url: String): Boolean = dev.asfakul.yumeiro.stream.PlatformRules.isYouTube(url)
+
     internal fun formatOf(link: OnlineLink): StreamFormat {
+        if (isYouTubePage(link.url)) return StreamFormat.AUTO
         if (link.isHls) return StreamFormat.HLS
         if (link.isDash) return StreamFormat.DASH
         val path = link.url.substringBefore('?').substringBefore('#').lowercase(Locale.ROOT)

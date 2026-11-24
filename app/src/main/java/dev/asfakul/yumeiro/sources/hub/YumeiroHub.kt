@@ -42,7 +42,7 @@ object YumeiroHub {
     const val BRIDGE = "yumeiro"
 
     /** The part names a saved title may carry from before OWN-13. */
-    val PART_NAMES = setOf(dev.asfakul.yumeiro.sources.drama.YumeiroDrama.NAME, dev.asfakul.yumeiro.sources.classics.YumeiroClassics.NAME)
+    val PART_NAMES = setOf(dev.asfakul.yumeiro.sources.drama.YumeiroDrama.NAME, dev.asfakul.yumeiro.sources.classics.YumeiroClassics.NAME, dev.asfakul.yumeiro.sources.anime.YumeiroAnime.NAME)
 
     private val _enabled = MutableStateFlow(true)
     /** On when any part is on (the one switch turns all of them on or off). */
@@ -51,12 +51,15 @@ object YumeiroHub {
     @Volatile private var drama: MainAPI? = null
     @Volatile private var classics: MainAPI? = null
     @Volatile private var catalog: MainAPI? = null
+    @Volatile private var anime: MainAPI? = null
 
     fun on(): Boolean = FeatureFlags.isOn(FeatureFlags.Flag.YUMEIRO_HUB)
 
     /** A part publishes itself here instead of as its own source (null = the part is off). */
     @Synchronized fun setDrama(api: MainAPI?) { drama = api; publish() }
     @Synchronized fun setClassics(api: MainAPI?) { classics = api; publish() }
+    /** ANIME-1: official free anime from the rights holders' own YouTube channels. */
+    @Synchronized fun setAnime(api: MainAPI?) { anime = api; publish() }
     /** E1-A: the catalog part (Yumeiro Cloud shelves + play through the user's installed sources). First, so Home opens full. */
     @Synchronized fun setCatalog(api: MainAPI?) { catalog = api; publish() }
 
@@ -64,7 +67,7 @@ object YumeiroHub {
     @Synchronized fun resolvers(): List<MainAPI> = listOfNotNull(classics)
 
     private fun publish() {
-        val parts = listOfNotNull(catalog, drama, classics)
+        val parts = listOfNotNull(catalog, drama, anime, classics)
         _enabled.value = parts.isNotEmpty()
         if (parts.isEmpty()) SourceHub.remove(BRIDGE)
         else SourceHub.publishVideo(BRIDGE, SourceHub.Ecosystem.YUMEIRO, listOf(YumeiroHubProvider(parts)))
@@ -74,6 +77,7 @@ object YumeiroHub {
     fun setEnabled(context: Context, on: Boolean) {
         dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(context, on)
         dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(context, on)
+        dev.asfakul.yumeiro.sources.anime.YumeiroAnime.setEnabled(context, on)
         context.getSharedPreferences(CATALOG_PREFS, Context.MODE_PRIVATE).edit().putBoolean("enabled", on).apply()
         startCatalog(context)
     }

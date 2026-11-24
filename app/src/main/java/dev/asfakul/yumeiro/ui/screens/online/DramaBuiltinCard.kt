@@ -60,8 +60,9 @@ internal fun YumeiroHubCard(modifier: Modifier = Modifier) {
         name = dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME, glyph = "夢", kind = "Official · all in one · no install", on = on, tag = "market_builtin_yumeiro",
         about = "Everything Yumeiro brings by itself in one source: short dramas from DramaBox, ShortMax, NetShort and more, plus classic films, " +
             "film noir, sci-fi, silent films, documentaries, cartoons, old TV and films by country (India, France, Germany, Italy, Japan, Russia and more) " +
-            "that are free to watch. One home, one search, one switch.",
-        note = "Legal sources only: public drama index and the Internet Archive · no account · never bypasses paywalls or DRM · no 18+",
+            "that are free to watch, and free anime episodes from the official channels of Muse Asia, Ani-One Asia, Gundam, VIZ Media, RetroCrush and Tezuka Productions. " +
+            "One home, one search, one switch.",
+        note = "Legal sources only: public drama index, the Internet Archive and official distributor channels · no account · never bypasses paywalls, DRM or region limits · no 18+",
         modifier = modifier,
     ) { dev.asfakul.yumeiro.sources.hub.YumeiroHub.setEnabled(context, !on) }
 }

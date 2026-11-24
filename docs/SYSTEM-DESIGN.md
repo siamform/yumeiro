@@ -1973,3 +1973,19 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
   replaced with REDACTED) plus 3 ordinary/Cloudflare pages and 2 inline ordinary pages. The
   script was also driven step by step in a real Chrome on both live links: srnky reached the
   shortsync gateway in 84 s (4 taps, 1 human Turnstile tick, 3 timers waited); shrinkme also.
+
+### ADR-061: ANIME-1, legal free anime as a part of the built-in "Yumeiro" source
+
+- Context: owner list item 20 (Mega Extension, all in one, no install) still lacked anime. Only legal sources are
+  allowed; no piracy sites, no re-uploads, no region or DRM bypass, no 18+.
+- Decision: a fourth hub part, `YumeiroAnimeProvider` (`sources/anime/YumeiroAnime.kt`, flag `anime1_official_anime`).
+  Shelves are six official rights-holder / licensed-distributor YouTube channels (Muse Asia, Ani-One Asia, GUNDAM
+  CHANNEL INTL, VIZ Media, RetroCrush, Tezuka Productions; ids checked on youtube.com 2026-11-24). A series is one of
+  the channel's playlists (talk, trailer, music, clip and one-video playlists are filtered); its episodes are the
+  playlist's videos of 8 min or more, in order. Episodes play as the YouTube watch link: `OnlinePlayback` hands
+  YouTube pages to the resolver (format AUTO), which uses the app's login-free YouTube extractor (DASH, best quality).
+- Consequences: availability follows YouTube's own region rules (NewPipe is initialised with the device country);
+  a video not licensed for the viewer's country fails with YouTube's message. Channel playlists are cached 6 h;
+  search matches series titles across the six channels. NFR: one channel page request per shelf, at most
+  400 episodes per series to bound memory on low-RAM phones.
+- Tests: `Anime1YumeiroAnimeTest` (7, Robolectric) with the channels' real playlist titles; emulator probe below.

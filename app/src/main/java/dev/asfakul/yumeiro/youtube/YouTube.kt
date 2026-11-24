@@ -323,6 +323,37 @@ object YouTube {
     }
     // endregion
 
+    // region playlists (ANIME-1: official anime channels list their series as playlists)
+    /** One playlist on a channel's Playlists tab. */
+    data class YtPlaylistCard(val url: String, val title: String, val thumbnail: String?, val count: Long, val channel: String)
+
+    /** The first page of [channelUrl]'s Playlists tab (empty when the channel has none or YouTube refuses). */
+    suspend fun channelPlaylists(context: Context, channelUrl: String): List<YtPlaylistCard> = withContext(Dispatchers.IO) {
+        init(context)
+        val info = org.schabi.newpipe.extractor.channel.ChannelInfo.getInfo(service, channelUrl)
+        val tab = info.tabs.firstOrNull { it.contentFilters.firstOrNull() == org.schabi.newpipe.extractor.channel.tabs.ChannelTabs.PLAYLISTS }
+            ?: return@withContext emptyList()
+        val page = org.schabi.newpipe.extractor.channel.tabs.ChannelTabInfo.getInfo(service, tab)
+        page.relatedItems.mapNotNull { it as? org.schabi.newpipe.extractor.playlist.PlaylistInfoItem }.map { p ->
+            YtPlaylistCard(p.url, p.name.orEmpty(), bestImage(p.thumbnails), p.streamCount, p.uploaderName ?: info.name.orEmpty())
+        }
+    }
+
+    /** A playlist's videos in order, up to [max] (pages are followed until then). */
+    suspend fun playlist(context: Context, url: String, max: Int = 400): Pair<String, List<YtItem>> = withContext(Dispatchers.IO) {
+        init(context)
+        val info = org.schabi.newpipe.extractor.playlist.PlaylistInfo.getInfo(service, url)
+        val out = ArrayList<YtItem>(info.relatedItems.mapNotNull { it.toYt(false) })
+        var next = info.nextPage
+        while (out.size < max && next != null && Page.isValid(next)) {
+            val more = org.schabi.newpipe.extractor.playlist.PlaylistInfo.getMoreItems(service, url, next)
+            out += more.items.mapNotNull { it.toYt(false) }
+            next = more.nextPage
+        }
+        info.name.orEmpty() to out.take(max)
+    }
+    // endregion
+
     private fun fresh(at: Long, ttl: Long) = System.currentTimeMillis() - at < ttl
 
     internal fun bestImage(images: List<Image>?): String? =
