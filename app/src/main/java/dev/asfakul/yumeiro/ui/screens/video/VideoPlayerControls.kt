@@ -127,6 +127,7 @@ fun VideoPlayerTopBar(
     /** ROT-1: clockwise turn of the picture (0, 90, 180, 270) and the button that adds 90°. */
     rotationDegrees: Int = 0,
     onRotateClick: () -> Unit = {},
+    onRotateReset: () -> Unit = {},
 ) {
     // OL-7: the buttons get exactly the room they use, at the trailing edge; the title takes the rest.
     val aligned = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_TOPBAR_ALIGN)
@@ -432,6 +433,7 @@ fun VideoPlayerTopBar(
                     onEnhanceClick = onEnhanceClick,
                     rotationDegrees = rotationDegrees,
                     onRotateClick = onRotateClick,
+                    onRotateReset = onRotateReset,
                 )
             }
         }
@@ -461,6 +463,7 @@ private fun VideoPlayerMoreMenu(
     onEnhanceClick: () -> Unit = {},
     rotationDegrees: Int = 0,
     onRotateClick: () -> Unit = {},
+    onRotateReset: () -> Unit = {},
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -518,7 +521,10 @@ private fun VideoPlayerMoreMenu(
                             if (rotationDegrees == 0) null else "${rotationDegrees}°", onRotateClick)
                 }
             }
-            if (overflow.isNotEmpty()) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+            // ROT-1d: a turned picture can be set upright from the menu in every player size (the reset pill
+            // only fits the full-screen player), wherever Settings put the Rotate button.
+            if (rotationDegrees != 0) item("Reset rotation", "video_rotate_reset_menu", Icons.Default.Rotate90DegreesCw, "${rotationDegrees}°", onRotateReset)
+            if (overflow.isNotEmpty() || rotationDegrees != 0) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
             item("Sleep timer", "video_sleep_timer_menu", Icons.Default.Bedtime, sleepLabel, onSleepTimerClick)
             if (enhanceLabel != null) item("Anime4K", "video_anime4k_menu", androidx.compose.material.icons.Icons.Default.AutoFixHigh, enhanceLabel, onEnhanceClick)
         }

@@ -55,7 +55,8 @@ import kotlin.math.abs
  * opens More options and taps Rotate video (or the top-bar button when Settings put it there), then
  * reads the real video surface View: its rotation and its fit scale. It checks the same ExoPlayer
  * keeps playing (no reload: same instance, position moves on, no new first frame). Then the
- * "Reset rotation · 270°" pill turns it upright. Screens go to shots/. Log tag YuRotTest.
+ * "Reset rotation" item in More options turns it upright in the docked player, and in full screen
+ * the "Reset rotation · 90°" pill over the picture does. Screens go to shots/. Log tag YuRotTest.
  */
 @RunWith(AndroidJUnit4::class)
 class RotationPlayerDeviceTest {
@@ -184,18 +185,37 @@ class RotationPlayerDeviceTest {
         tapRotate(); expectTurn(180, "r180")
         tapRotate(); expectTurn(270, "r270")
 
-        // Reset pill, shown with the controls while the picture is turned.
+        // Docked player: "Reset rotation · 270°" in More options sets it upright.
+        controlsUp()
+        rule.onNodeWithTag("video_more_btn", true).performClick()
+        rule.waitUntil(5_000) { has("video_rotate_reset_menu") }
+        shot("reset_menu")
+        rule.onNodeWithTag("video_rotate_reset_menu", true).performClick()
+        rule.waitUntil(5_000) { abs(surface().rotation) < 0.5f }
+        var s = surface()
+        log("CASE reset(menu) rotation=${s.rotation} scale=${s.scale}")
+        assertEquals("menu reset turns it upright", 0f, s.rotation, 0.5f)
+        assertEquals("menu reset restores 100 %", 1f, s.scale, 0.02f)
+        shot("reset")
+
+        // Full-screen player: turn once more, then the reset pill over the picture.
+        val dockedBox = s.boxW to s.boxH
+        controlsUp()
+        rule.onNodeWithTag("video_fullscreen_btn", true).performClick()
+        rule.waitUntil(15_000) { runCatching { surface().let { it.boxW * it.boxH > dockedBox.first * dockedBox.second * 1.5 } }.getOrDefault(false) }
+        Thread.sleep(1_000)
+        log("CASE fullscreen box ${surface().boxW}x${surface().boxH} (docked ${dockedBox.first}x${dockedBox.second})")
+        tapRotate(); expectTurn(90, "fs_r90")
         controlsUp()
         rule.waitUntil(5_000) { has("video_rotate_reset") }
-        shot("reset_pill")
+        shot("fs_reset_pill")
         rule.onNodeWithTag("video_rotate_reset", true).performClick()
         rule.waitUntil(5_000) { abs(surface().rotation) < 0.5f }
-        val s = surface()
-        log("CASE reset rotation=${s.rotation} scale=${s.scale}")
-        assertEquals("reset turns it upright", 0f, s.rotation, 0.5f)
-        assertEquals("reset restores 100 %", 1f, s.scale, 0.02f)
-        rule.waitUntil(5_000) { !has("video_rotate_reset") }
-        shot("reset")
+        s = surface()
+        log("CASE reset(pill) rotation=${s.rotation} scale=${s.scale} box=${s.boxW}x${s.boxH}")
+        assertEquals("pill reset turns it upright", 0f, s.rotation, 0.5f)
+        assertEquals("pill reset restores 100 %", 1f, s.scale, 0.02f)
+        shot("fs_reset")
 
         // No reload: same player, still playing, position moved on.
         Thread.sleep(1_500)

@@ -2151,6 +2151,7 @@ private fun VideoPlayerModalContent(
                     onEnhanceClick = { chrome.showEnhanceSheet = true },
                     rotationDegrees = chrome.rotation,
                     onRotateClick = { rotateVideo(dev.asfakul.yumeiro.player.VideoRotation.next(chrome.rotation)) },
+                    onRotateReset = { rotateVideo(0) },
                 )
 
                 // Round 13: Settings → Player → Player info overlay ("Stats for nerds").
