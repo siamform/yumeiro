@@ -121,7 +121,7 @@ exports.default = new YuTest();
         server.close()
     }
 
-    @Test fun lnreaderPluginRunsEndToEnd() = runBlocking {
+    @Test fun lnreaderPluginRunsEndToEnd(): Unit = runBlocking {
         val added = NovelSources.addRepo(ctx, base() + "plugins.min.json")
         log("NOVEL addRepo=$added")
         assertEquals(1, added.getOrThrow())

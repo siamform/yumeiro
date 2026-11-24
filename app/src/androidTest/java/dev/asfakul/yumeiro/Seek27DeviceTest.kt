@@ -95,22 +95,29 @@ class Seek27DeviceTest {
         rule.waitUntil(60_000) { PlaybackDiagnostics.state.value.firstFrame }
 
         // Seek 1: forward, the first range request answers 416.
+        val firstSeekAt = ranges.size
         armed.set(true); faultsLeft.set(1)
         onMain { player().seekTo(1_500_000L) }
         val (s1, p1) = waitPlayingNear(1_500_000L, 25_000L)
+        assertEquals("seek 1 met the failed request", 1, faults.get())
         Log.w("YuSeekTest", "SEEK_RESULT seek1 state=$s1 pos=$p1 faults=${faults.get()} ranges=${ranges.takeLast(6)}")
         assertEquals("seek 1 not playing (state $s1, pos $p1)", Player.STATE_READY, s1)
         assertTrue("seek 1 position $p1", p1 >= 1_499_000L)
 
-        // Seek 2: backward, fails twice in a row (one seek's full allowance), still recovers.
+        // Seek 2: backward, the next two range requests far into the file fail (one seek's full allowance).
+        // The player may need only one of them (the reopen can start at a byte the fault rule doesn't match,
+        // or be served from what is already loaded), so the seek must meet at least one failure and recover.
+        val faultsAfter1 = faults.get()
         faultsLeft.set(2)
         onMain { player().seekTo(700_000L) }
         val (s2, p2) = waitPlayingNear(700_000L, 30_000L)
         Log.w("YuSeekTest", "SEEK_RESULT seek2 state=$s2 pos=$p2 faults=${faults.get()} ranges=${ranges.takeLast(6)}")
         assertEquals("seek 2 not playing (state $s2, pos $p2)", Player.STATE_READY, s2)
         assertTrue("seek 2 position $p2", p2 >= 699_000L && p2 < 730_000L)
-        assertEquals(3, faults.get())
+        assertTrue("seek 2 met no failed request (faults ${faults.get()}, ranges ${ranges.takeLast(8)})", faults.get() - faultsAfter1 >= 1)
         // No reload from the start: no request for byte 0 after the first seek.
+        val after = synchronized(ranges) { ranges.drop(firstSeekAt) }
+        assertTrue("source reloaded from the start: $after", after.none { it == "(none)" || it.startsWith("bytes=0-") })
         armed.set(false)
     }
 
