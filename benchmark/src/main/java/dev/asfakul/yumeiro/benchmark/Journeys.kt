@@ -103,6 +103,52 @@ internal object Journeys {
         snapshot(device, "after_scroll")
     }
 
+    /** One-time prompts that can cover Home a few seconds after start (the device tests' list). */
+    private val PAST = listOf("Skip for now", "Skip tour", "Not now", "Maybe later", "Later", "Remind me later",
+        "No thanks", "Close", "All set", "Got it", "Done")
+
+    /** NAV-3: Settings sub-pages, top to bottom; each is opened once and closed with Back. */
+    val SETTINGS_PAGES = listOf("Profiles", "Your statistics", "Look & feel", "Navigation bar", "Video player",
+        "Video quality & playback", "Subtitles & intros", "Music & sound", "Downloads", "Library & storage",
+        "Sources", "Source status", "Telegram", "Websites", "Tracking", "Watch together", "Notifications",
+        "Background & battery")
+
+    /** Opens Settings home from Home (gear, description "Open Settings"), closing a late prompt first. */
+    fun openSettings(device: UiDevice): Boolean {
+        repeat(20) {
+            if (device.hasObject(By.text("Look & feel"))) return true
+            device.findObject(By.desc("Open Settings"))?.let { g ->
+                runCatching { g.click() }
+                if (device.wait(Until.hasObject(By.text("Look & feel")), 6_000) == true) return true
+            }
+            PAST.firstNotNullOfOrNull { device.findObject(By.text(it)) }?.let { runCatching { it.click() } }
+            device.waitForIdle(1_000)
+        }
+        return false
+    }
+
+    /**
+     * NAV-3 (NAV-2 device runs 45334391970 / 45335793667): open every Settings sub-page and go back. The
+     * profile held 2 Settings rules of 47 942, so in release each page's first open ran uncompiled code
+     * while the old page stayed on screen. The page list scrolls; a label not on screen is scrolled to.
+     */
+    fun settingsPages(device: UiDevice, pages: List<String> = SETTINGS_PAGES) {
+        if (!openSettings(device)) { snapshot(device, "settings_not_opened"); return }
+        val w = device.displayWidth; val h = device.displayHeight
+        for (label in pages) {
+            var row = device.findObject(By.text(label))
+            var tries = 0
+            while (row == null && tries++ < 8) { device.swipe(w / 2, h * 3 / 4, w / 2, h * 2 / 5, 12); device.waitForIdle(600); row = device.findObject(By.text(label)) }
+            if (row == null) continue
+            runCatching { row.click() }
+            device.wait(Until.gone(By.text("Make Yumeiro yours")), 3_000)
+            device.waitForIdle(1_500)
+            device.pressBack()
+            device.wait(Until.hasObject(By.text("Make Yumeiro yours")), 3_000)
+            device.waitForIdle(800)
+        }
+    }
+
     /** Screenshot + window dump into the additional output dir the workflow uploads (what the journey saw). */
     fun snapshot(device: UiDevice, name: String) = runCatching {
         val dir = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("additionalTestOutputDir")
