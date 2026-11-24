@@ -1941,3 +1941,35 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
   and challenge pages saved on 2026-11-24 in `test/resources/pages`), `ExtensionCheckWindowsTest`
   (real AnimePahe texts from the probe), `scripts/verify1_kind_js_check.js` (runs the page-kind
   script on the saved pages in jsdom: block → block, challenge → challenge).
+
+### ADR-060: Link-chain helper in Yumeiro's browser (ADCHAIN-1, owner list 23)
+
+- Status: accepted, 2026-11-24. Flag `adchain1_walk` (on).
+- Context: shrinkme.click/alwf74z and srnky.com/0T1EnbeuLf were walked by hand in a real browser
+  (2026-11-24). Both are multi-page chains: shortener page (Cloudflare Turnstile) → several
+  "blog" pages on another domain, each with its own server-checked countdown (5–15 s) and a
+  "Click to verify / Continue / Generate Link / Get Link" button, sometimes far down the page →
+  back to the shortener → final countdown → destination (both end on shortsync.epdexx.com, which
+  itself answers "Broken Link · Invalid reference": the target site's own fault). The timers are
+  enforced by the server (a form token is checked), so skipping them fails. Removing the ad
+  layers makes srnky show an "Adblocker detected" wall and Turnstile stop loading.
+- Decision: `assets/js/link_chain.js` runs in the page every 1–1.5 s while the page is open in
+  Yumeiro's browser. It first counts structure signals of these script families (form ids,
+  `app_vars`, `#link-view`, `/links/go`, timers, "step N of M"); fewer than 2 → an ordinary page,
+  the script returns at once and touches nothing. On a chain page it defuses (pointer-events off,
+  invisible, not removed) full-screen ad layers and ad iframes, finds the captcha widget, the
+  running countdown and the next button (final > next > start; in-page jump links rank below any
+  real button and are scrolled into view), and checks the button is not covered. `LinkChainPolicy`
+  (Kotlin) decides: wait while a timer runs, ask the user when a captcha is shown (a banner points
+  to it; Yumeiro never solves or fakes it), tap the button with a real touch event (some scripts
+  ignore synthetic clicks) after 1 s settle and at least 1.2 s between taps, at most 14 taps and 3
+  on the same button, give up after 3 min without progress, and stop when a non-chain page stays
+  for 2 scans (destination). A banner says what is happening, with Stop. Popups stay blocked by
+  the browser's existing window.open rule.
+- Not done, on purpose: no captcha solving, no timer skipping, no token forging, no removal of
+  page nodes (breaks the sites), nothing on ordinary pages.
+- Tests: `LinkChainPolicyTest` (8, Robolectric), `scripts/adchain1_link_chain_check.js` in CI on
+  9 real saved pages (`test/resources/pages/chain-*.html`, hidden form values and tokens
+  replaced with REDACTED) plus 3 ordinary/Cloudflare pages and 2 inline ordinary pages. The
+  script was also driven step by step in a real Chrome on both live links: srnky reached the
+  shortsync gateway in 84 s (4 taps, 1 human Turnstile tick, 3 timers waited); shrinkme also.

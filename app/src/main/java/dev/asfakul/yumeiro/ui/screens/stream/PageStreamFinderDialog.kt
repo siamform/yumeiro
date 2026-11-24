@@ -490,6 +490,60 @@ fun PageStreamFinderDialog(
     var barNote by remember { mutableStateOf<BarNote?>(null) }
     androidx.compose.runtime.LaunchedEffect(barNote) { if (barNote != null) { kotlinx.coroutines.delay(5_000); barNote = null } }
     fun history(view: WebView?) { view?.let { canBack = it.canGoBack(); canForward = it.canGoForward() } }
+
+    // ADCHAIN-1 (owner list 23, ADR-060): a link-shortener chain walks to the real link by itself.
+    var chainState by remember(pageUrl) { mutableStateOf(dev.asfakul.yumeiro.online.web.LinkChainPolicy.State()) }
+    var chainBanner by remember(pageUrl) { mutableStateOf<ChainBanner?>(null) }
+    if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.ADCHAIN_1)) {
+        androidx.compose.runtime.LaunchedEffect(pageUrl) {
+            val script = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { dev.asfakul.yumeiro.online.web.LinkChain.script(appContext) }.getOrNull()
+            } ?: return@LaunchedEffect
+            var lastUrl = ""
+            var quiet = 0
+            while (true) {
+                kotlinx.coroutines.delay(if (chainState.active) 1_000L else 1_500L)
+                val wv = webViewRef ?: continue
+                val url = currentUrl
+                if (url != lastUrl) { lastUrl = url; quiet = 0 }
+                // An ordinary page is read a few times after it loads, then left alone until the address changes.
+                if (!chainState.active && quiet >= 6) continue
+                if (chainState.stopped) continue
+                if (progress in 1..29) continue
+                val result = kotlinx.coroutines.suspendCancellableCoroutine<String?> { c ->
+                    wv.evaluateJavascript(script) { r -> if (c.isActive) c.resumeWith(Result.success(r)) }
+                }
+                val scan = dev.asfakul.yumeiro.online.web.LinkChain.parse(result)
+                if (scan?.chain != true) quiet++
+                val host = PlatformRules.hostOf(url) ?: url
+                val (next, act) = dev.asfakul.yumeiro.online.web.LinkChainPolicy.next(chainState, scan, url, host, android.os.SystemClock.elapsedRealtime())
+                chainState = next
+                val title = dev.asfakul.yumeiro.online.web.LinkChainPolicy.title(next, scan?.stepText)
+                val hidden = if (next.defused > 0) " · ${next.defused} ad layer${if (next.defused == 1) "" else "s"} hidden" else ""
+                when (act) {
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Idle -> if (!next.active) chainBanner = null
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Wait -> chainBanner = ChainBanner(title, act.text + hidden, ChainBanner.Kind.WORKING)
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.AskUser -> chainBanner = ChainBanner(title, act.text, ChainBanner.Kind.ASK)
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Tap -> {
+                        chainBanner = ChainBanner(title, "Tapping “${act.label}” for you$hidden", ChainBanner.Kind.WORKING)
+                        dev.asfakul.yumeiro.online.web.LinkChain.tap(wv, act.x, act.y, act.vw, act.vh)
+                    }
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Done -> {
+                        chainBanner = ChainBanner("Link reached", act.host, ChainBanner.Kind.DONE)
+                        kotlinx.coroutines.delay(5_000L)
+                        chainBanner = null
+                        chainState = dev.asfakul.yumeiro.online.web.LinkChainPolicy.State() // another link can be walked
+                        quiet = 6
+                    }
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.GiveUp -> {
+                        chainBanner = ChainBanner(title, act.text, ChainBanner.Kind.STOPPED)
+                        kotlinx.coroutines.delay(10_000L)
+                        chainBanner = null
+                    }
+                }
+            }
+        }
+    }
     /** WEB-BLOCK-1: generic ad-box rules plus the site's own picked elements. */
     fun applyBlock(view: WebView?, url: String?) {
         if (!browser || view == null || url == null) return
@@ -668,6 +722,12 @@ fun PageStreamFinderDialog(
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
                 if (showHint && !autoActive) PageFinderHint(autoNote ?: reason, onHide = { showHint = false })
+                chainBanner?.let { b ->
+                    LinkChainBanner(b, onStop = if (b.kind == ChainBanner.Kind.DONE || chainState.stopped) null else ({
+                        chainState = chainState.copy(stopped = true)
+                        chainBanner = null
+                    }))
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),

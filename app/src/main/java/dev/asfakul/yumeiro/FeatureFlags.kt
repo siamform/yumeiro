@@ -207,6 +207,12 @@ object FeatureFlags {
          */
         VERIFY_CENTER("verify1_center", true),
         /**
+         * ADCHAIN-1 (owner list 23, ADR-060): a link-shortener chain opened in Yumeiro's browser walks to the real
+         * link by itself: ad layers are defused, the site's timers run out, Yumeiro taps the site's own button
+         * with a real touch, and the person ticks the captcha. Off = the page behaves like any other.
+         */
+        ADCHAIN_1("adchain1_walk", true),
+        /**
          * OWN-11: a YouTube video download always offers "Video" or "Audio only" (also with "Ask before download"
          * off, and with only one audio choice). Before, DL-ONE started the best video at once in those cases.
          */

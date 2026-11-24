@@ -11,6 +11,17 @@ The owner's 20-item list with per-item status is **docs/OWNER-LIST-R21.md** (rea
 row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
 
 ### Latest changes (this session)
+- 2026-11-24 R22 SEARCH-ML-1 (owner item 24): search history keeps a multiline search as one entry with its breaks
+  (SearchHistoryCodec, JSON array; old "\n" lists still load), rows grow to fit. Test MultilineSearchHistoryTest.
+  NEXT: CI, then field probe that pastes a multiline query (adb) and shows the history list.
+- 2026-11-24 R22 ADCHAIN-1 (owner item 23, ADR-060): link-chain helper in the page finder (assets/js/link_chain.js,
+  online/web/LinkChain.kt, ui/screens/stream/LinkChainBanner.kt). Real Chrome walk: both example links reach
+  shortsync.epdexx.com (which answers "Broken Link" itself). Fixtures test/resources/pages/chain-*.html (REDACTED
+  tokens); CI step runs scripts/adchain1_link_chain_check.js. NEXT: CI, then field probe `send https://srnky.com/0T1EnbeuLf`
+  with long waits + shots; the Turnstile tick needs `tap Verify you are human` or `xy`.
+- 2026-11-24 R22 VERIFY-1 probe 45373197518 (AnimePahe installed): no "Quick security check" in any UI dump; logcat
+  "refused the request with a firewall block (not a captcha) — not opening the check page"; Security checks row
+  "The site's firewall blocks this network…". CI 45378789204 on 89b24aca: unit tests passed. Duplicate label fixed.
 - 2026-11-24 R22 VERIFY-1 (owner item 22, ADR-059): VerificationCenter (one saved state per site) + ExtensionCheckWindows
   (an extension's own check window is concealed, its page read: firewall block → closed + one note + 30 min hold;
   person needed → shown once; closed by the user → paused 10 min..1 day) + Extensions → Security checks card.

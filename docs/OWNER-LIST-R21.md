@@ -43,7 +43,8 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 20 | Yumeiro Mega Extension (all-in-one) | OWN-13, E1-A/B/D | built earlier as the one built-in "Yumeiro" source (catalog shelves from Yumeiro Cloud/TMDB, Yumeiro Drama, Yumeiro Classics public-domain films, play through installed sources). This row said "not started": that was wrong. Emulator: Yumix shows its Spotlight (probe 45247707490). Open: a legal free-anime part | Only legal sources; no 18+; no copied code |
 | 21 | Updater modal messages | UPD-MSG-1 | **implemented (e7947675), CI pending**: plain stage texts from the real download status, "Update completed!" after install, no host name in messages | Update mechanism unchanged |
 | 22 | Extension security checks and CAPTCHA: one verification manager for all extensions (e.g. AnimePahe "Quick Security Check" popup keeps coming back) | VERIFY-1 | **implemented, CI + emulator probe pending** (2026-11-24): VerificationCenter + ExtensionCheckWindows + Security checks card (ADR-059). Baseline: probe 45345639530 shows the AnimePahe sheet over a Cloudflare block page | No CAPTCHA solving, no fabricated tokens, no defeating access rules |
-| 23 | Ad chains, link shorteners and popups: a dedicated engine in Yumeiro's browser that reaches the real link (e.g. shrinkme.click/alwf74z, srnky.com/0T1EnbeuLf) | ADCHAIN-1 | **queued: starts after items 1-20 and 22** (owner 2026-11-24) | Plan below |
+| 23 | Ad chains, link shorteners and popups: a dedicated engine in Yumeiro's browser that reaches the real link (e.g. shrinkme.click/alwf74z, srnky.com/0T1EnbeuLf) | ADCHAIN-1 | **implemented, CI + emulator pending** (2026-11-24): link_chain.js + LinkChainPolicy + banner (ADR-060); both chains reached the destination in a real Chrome; the final site shortsync.epdexx.com itself says "Broken Link · Invalid reference" | No captcha solving, timers waited |
+| 24 | Multiline search queries and search history: keep and show the whole query, line breaks included | SEARCH-ML-1 | **implemented, CI + emulator pending** (2026-11-24): JSON-array history (old lists still load), rows grow to fit, recent suggestions show every line | Search boxes stay single line (owner) |
 | web | yumeiro-web: changelog and download text say v2.2.0 | — | done, merged | yumeiro-web PR #8. Re-check www.yumeiro.click/changelog |
 | PR44 | What is inside PR 44 | — | answered | Docs only: the HANDOVER-LIVE rewrite and the REL-2.2-CI ledger row. Its commit 0265a031 is now on r21-major-list, so close PR 44 as superseded when the r21 PR opens |
 
@@ -179,7 +180,7 @@ Build one central verification manager for every extension instead of logic per 
   library it calls creates it. VERIFY-1 must own every extension WebView: detach and destroy it after the check, hide it
   from accessibility, and turn a firewall block into one calm message.
 
-### 23. Ad chains, link verifiers and popups (ADCHAIN-1, queued after 22)
+### 23. Ad chains, link verifiers and popups (ADCHAIN-1, implemented — see ADR-060)
 
 Owner brief (2026-11-24): link shorteners and ad providers put content behind ads, popups, redirects, countdowns and
 repeated Continue / Skip steps (examples shrinkme.click/alwf74z, srnky.com/0T1EnbeuLf). Yumeiro shows no ads and
