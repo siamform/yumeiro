@@ -104,6 +104,10 @@ fun QualityAndAudioCard() {
     val renderer by VideoPrefs.renderer.collectAsState()
     val anime4k by VideoPrefs.anime4k.collectAsState()
     val tier by VideoPrefs.gpuTier.collectAsState()
+    remember(context) { dev.asfakul.yumeiro.player.Anime4kV2.init(context) }
+    val a4kEngine by dev.asfakul.yumeiro.player.Anime4kV2.engine.collectAsState()
+    val a4kPreset by dev.asfakul.yumeiro.player.Anime4kV2.preset.collectAsState()
+    val a4kStyle by dev.asfakul.yumeiro.player.Anime4kV2.style.collectAsState()
     val player by VideoPrefs.defaultPlayer.collectAsState()
     val resume by VideoPrefs.resume.collectAsState()
     GroupLabel("Playback")
@@ -126,9 +130,17 @@ fun QualityAndAudioCard() {
         SettingsToggleRow("Anime4K enhancement", "Sharpens and darkens line art on the GPU. Best on clean 1080p anime sources. Applies to the next video", anime4k, { VideoPrefs.setAnime4k(context, it) }, "qa_anime4k")
         if (anime4k) {
             SettingsDivider()
-            ChoiceRow("Anime4K GPU tier", "qa_gpu_tier", VideoPrefs.GpuTier.entries, tier, { it.label }, { it.detail }) { VideoPrefs.setGpuTier(context, it) }
+            ChoiceRow("Anime4K engine", "qa_a4k2_engine", dev.asfakul.yumeiro.player.Anime4kV2.Engine.entries, a4kEngine, { it.label }, { it.detail }) { dev.asfakul.yumeiro.player.Anime4kV2.setEngine(context, it) }
+            SettingsDivider()
+            if (a4kEngine == dev.asfakul.yumeiro.player.Anime4kV2.Engine.CLASSIC) {
+                ChoiceRow("Anime4K GPU tier", "qa_gpu_tier", VideoPrefs.GpuTier.entries, tier, { it.label }, { it.detail }) { VideoPrefs.setGpuTier(context, it) }
+            } else {
+                ChoiceRow("Anime4K preset", "qa_a4k2_preset", dev.asfakul.yumeiro.player.Anime4kV2.Preset.entries, a4kPreset, { it.label }, { it.detail }) { dev.asfakul.yumeiro.player.Anime4kV2.setPreset(context, it) }
+                SettingsDivider()
+                ChoiceRow("Anime4K style", "qa_a4k2_style", dev.asfakul.yumeiro.player.Anime4kV2.Style.entries, a4kStyle, { it.label }, { it.detail }) { dev.asfakul.yumeiro.player.Anime4kV2.setStyle(context, it) }
+            }
         }
-        Text("Decoder, renderer and Anime4K changes apply to the next video you open.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+        Text("Decoder, renderer and Classic Anime4K changes apply to the next video you open. V2 presets can also be switched live in the player (More → Anime4K).", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
     }
     GroupLabel("Player")
     SettingsCard {

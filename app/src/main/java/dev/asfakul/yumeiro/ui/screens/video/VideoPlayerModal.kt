@@ -439,6 +439,7 @@ private fun VideoPlayerModalContent(
     var altQualities by remember(video.id) { mutableStateOf<List<QualityOption>>(emptyList()) }
     /** Round 2: engine-rendered level in use (null = the source's own picture). */
     var engineHeight by remember(video.id) { mutableStateOf<Int?>(null) }
+    var engineUpscale by remember(video.id) { mutableStateOf(false) }
     val recovery = remember(video.id) {
         PlaybackRecovery(
             alternativeDns = { NetworkSettings.dns.value.usesAlternative },
@@ -457,7 +458,7 @@ private fun VideoPlayerModalContent(
             // Round 13: default speed and default quality from Settings → Quality and audio.
             dev.asfakul.yumeiro.player.VideoPrefs.speed.value.takeIf { it != 1f }?.let { playbackParameters = PlaybackParameters(it) }
             if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) runCatching {
-                dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(this, listOf(dev.asfakul.yumeiro.player.Anime4kEffect(dev.asfakul.yumeiro.player.VideoPrefs.gpuTier.value)))
+                dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(this, listOf(dev.asfakul.yumeiro.player.Anime4kV2.currentEffect()))
             }
             dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height.takeIf { it > 0 }?.let { h ->
                 trackSelectionParameters = trackSelectionParameters.buildUpon().setMaxVideoSize(Int.MAX_VALUE, h).build()
@@ -481,6 +482,12 @@ private fun VideoPlayerModalContent(
     // R17 (G3 proposal): video sleep timer, shared with the next episode (VideoSleepTimer).
     val sleepState by dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.collectAsState()
     val sleepLabel = dev.asfakul.yumeiro.ui.screens.player.rememberSleepRemaining(sleepState, "End of this video")
+    val a4kOn by dev.asfakul.yumeiro.player.VideoPrefs.anime4k.collectAsState()
+    val a4kEngine by dev.asfakul.yumeiro.player.Anime4kV2.engine.collectAsState()
+    val a4kPreset by dev.asfakul.yumeiro.player.Anime4kV2.preset.collectAsState()
+    val a4kStyle by dev.asfakul.yumeiro.player.Anime4kV2.style.collectAsState()
+    val a4kTier by dev.asfakul.yumeiro.player.VideoPrefs.gpuTier.collectAsState()
+    val enhanceLabel = dev.asfakul.yumeiro.player.Anime4kV2.label(a4kEngine, a4kOn, a4kPreset, a4kStyle, a4kTier)
     // F-06: every video starts without boost, and closing the player frees the effect.
     DisposableEffect(exoPlayer, video.id) {
         dev.asfakul.yumeiro.player.VolumeBoost.reset()
@@ -1478,7 +1485,7 @@ private fun VideoPlayerModalContent(
     }
 
     // Auto-hide controls timer (3.5 seconds)
-    val isAnyDialogOpen = chrome.showSleepSheet || chrome.showQualityDialog || chrome.showSpeedDialog || chrome.showAspectRatioDialog || chrome.showAudioTrackDialog || chrome.showSubtitleDialog || chrome.showSubtitleStyleDialog || chrome.showVideoInfoDialog || playerError != null
+    val isAnyDialogOpen = chrome.showSleepSheet || chrome.showEnhanceSheet || chrome.showQualityDialog || chrome.showSpeedDialog || chrome.showAspectRatioDialog || chrome.showAudioTrackDialog || chrome.showSubtitleDialog || chrome.showSubtitleStyleDialog || chrome.showVideoInfoDialog || playerError != null
     // Remote / keyboard (TV, Fire TV, Bluetooth keyboards): every key press keeps the controls up
     // a little longer, so walking along the buttons never races the auto-hide.
     val tvLayout = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
@@ -2103,6 +2110,8 @@ private fun VideoPlayerModalContent(
                     compact = docked,
                     sleepLabel = sleepLabel,
                     onSleepTimerClick = { chrome.showSleepSheet = true },
+                    enhanceLabel = enhanceLabel,
+                    onEnhanceClick = { chrome.showEnhanceSheet = true },
                 )
 
                 // Round 13: Settings → Player → Player info overlay ("Stats for nerds").
@@ -2277,6 +2286,7 @@ private fun VideoPlayerModalContent(
                     if (alt.engineHeight != null || (engineHeight != null && alt.note == "Original from the source")) {
                         applyEngineLevel(exoPlayer, alt.engineHeight, alt.upscale)
                         engineHeight = alt.engineHeight
+                        engineUpscale = alt.upscale
                         showToast("Quality: ${alt.label}")
                         return@QualityDialog
                     }
@@ -2314,6 +2324,16 @@ private fun VideoPlayerModalContent(
         }
 
         // Dialogs & Modals
+        if (chrome.showEnhanceSheet) {
+            Anime4kSheet(
+                onChanged = { on ->
+                    // Live: the same path the engine levels use (keeps Presentation, respects HeatGuard).
+                    if (on && !dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) showToast("Anime4K waits until the phone cools down")
+                    applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale)
+                },
+                onDismiss = { chrome.showEnhanceSheet = false },
+            )
+        }
         if (chrome.showSleepSheet) {
             val t = dev.asfakul.yumeiro.player.VideoSleepTimer.timer
             dev.asfakul.yumeiro.ui.screens.player.SleepTimerSheet(
@@ -2554,7 +2574,7 @@ internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, heigh
     val prefs = dev.asfakul.yumeiro.player.VideoPrefs
     val fx = buildList<androidx.media3.common.Effect> {
         if (height != null) add(androidx.media3.effect.Presentation.createForHeight(height))
-        if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kEffect(prefs.gpuTier.value))
+        if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kV2.currentEffect())
     }
     runCatching {
         // R15 (device run 43622442191: second level switch → picture froze, then ERROR_CODE_TIMEOUT on
@@ -2583,6 +2603,7 @@ internal class PlayerChromeState {
     var showOnlineSubtitleDialog by mutableStateOf(false)
     var showQualityDialog by mutableStateOf(false)
     var showSleepSheet by mutableStateOf(false)
+    var showEnhanceSheet by mutableStateOf(false)
     var isScrubHUDVisible by mutableStateOf(false)
     var scrubTargetTimeMs by mutableLongStateOf(0L)
     var scrubDeltaMs by mutableLongStateOf(0L)

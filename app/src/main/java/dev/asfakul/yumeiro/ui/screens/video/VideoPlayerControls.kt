@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Audiotrack
@@ -119,6 +120,9 @@ fun VideoPlayerTopBar(
     /** R17: time left on the video sleep timer ("12:30", "End of this video"), or null when off. */
     sleepLabel: String? = null,
     onSleepTimerClick: () -> Unit = {},
+    /** A4K-2: the active Anime4K profile ("Off", "Balanced · Sharpen", ...) and the sheet that switches it. */
+    enhanceLabel: String? = null,
+    onEnhanceClick: () -> Unit = {},
 ) {
     // OL-7: the buttons get exactly the room they use, at the trailing edge; the title takes the rest.
     val aligned = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_TOPBAR_ALIGN)
@@ -405,6 +409,8 @@ fun VideoPlayerTopBar(
                     onInfoClick = onInfoClick,
                     onLockClick = onLockClick,
                     onSleepTimerClick = onSleepTimerClick,
+                    enhanceLabel = enhanceLabel,
+                    onEnhanceClick = onEnhanceClick,
                 )
             }
         }
@@ -430,6 +436,8 @@ private fun VideoPlayerMoreMenu(
     onInfoClick: () -> Unit,
     onLockClick: () -> Unit,
     onSleepTimerClick: () -> Unit,
+    enhanceLabel: String? = null,
+    onEnhanceClick: () -> Unit = {},
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -486,6 +494,7 @@ private fun VideoPlayerMoreMenu(
             }
             if (overflow.isNotEmpty()) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
             item("Sleep timer", "video_sleep_timer_menu", Icons.Default.Bedtime, sleepLabel, onSleepTimerClick)
+            if (enhanceLabel != null) item("Anime4K", "video_anime4k_menu", androidx.compose.material.icons.Icons.Default.AutoFixHigh, enhanceLabel, onEnhanceClick)
         }
     }
 }

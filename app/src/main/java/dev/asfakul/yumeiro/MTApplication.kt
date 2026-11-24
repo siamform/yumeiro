@@ -73,6 +73,7 @@ class MTApplication : Application(), ImageLoaderFactory {
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
         runCatching { dev.asfakul.yumeiro.player.VideoPrefs.init(this) }
+        runCatching { dev.asfakul.yumeiro.player.Anime4kV2.init(this) }
         runCatching { dev.asfakul.yumeiro.stream.TorrentSettings.init(this) }
         // R15: memory / thread breadcrumbs for crash reports, StrictMode in debug builds.
         runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.install(this) }
