@@ -265,3 +265,20 @@ Two owner items carry the number 26; this one is filed as 27 so ledger IDs stay 
 5. Side-effect analysis first; no duplicate navigation system. Validate the listed scenarios (seek forward/back,
    rapid seeks, after buffering, near end, each source type, recovery; random download order, decimals/specials,
    offline navigation, missing neighbour, restart, progress) and report which were really tested.
+
+### Item 28. Integrate the external AdChain subsystem additively — queued 2026-11-24, not started
+Source: https://github.com/wanxtaexe-ai/legendary-octo-fishstick, `yumeiro-adchain/yumeiro-dropin/` (drop-in holds
+AdChainGateHost.kt, YumeiroAdChainBridge.kt, an integration patch, an installer and a README; the other classes
+— AdProviderRecognizer, AdChainHttpFastPath, AdFilterPolicy, AdChainDomScripts, AdChainSessionCoordinator,
+DestinationValidator, AdChainWebViewRunner — live elsewhere in that repo).
+Rules: audit both sides first (signatures, packages, lifecycles, coroutines, overlap with ADCHAIN-1/2, ADR-060/062);
+additive only — StreamResolver, AdFilter/BrowserFilters/PopupPolicy, page browser, SafeWebView, NetworkClient
+(DNS/DoH, proxy, TLS), downloads, player and extensions unchanged; AdChain failure/timeout/unsupported hands back to
+the existing path. HTTP first (redirects, token wrappers, WP Safelink, AdLinkFly /links/go, meta refresh, JS
+redirects, countdown pages), WebView only when needed, human checks shown only when needed and confirmed
+independently (a click is not success; no forged tokens). Corrections to check: UA parity HTTP/WebView, OkHttp ↔
+Chromium cookie sync with attributes, bridge only for shortener/ad-chain failures, bounded redirects/timers, renderer
+crash/cancel safety, URL safety (schemes, private networks, look-alike hosts), no first-party/media over-blocking,
+reuse NetworkClient. UI: AdChainGateHost in BrowserCheckHost style (FullScreenDialogBars, SpotifyGreen,
+TextPrimary/Secondary). Never overwrite same-named files; minimal Gradle changes. Deliver the 9-part report with
+tested vs untested clearly separated.
