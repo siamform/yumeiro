@@ -118,7 +118,7 @@ object SettingsCatalog {
             listOf("export", "import", "restore", "transfer", "phone"), route = "backup",
             settings = listOf("Back up automatically", "Save loaded pages on the phone", "Reset settings", "Erase everything")),
 
-        UPDATES(Group.ABOUT, "App updates", "Check for new versions from GitHub Releases",
+        UPDATES(Group.ABOUT, "App updates", "Check for new versions and see what changed",
             listOf("update", "version", "release", "changelog", "beta")),
         SETUP(Group.ABOUT, "Setup guide", "Explore Yumeiro again, or open the quick-setup checklist",
             listOf("onboarding", "tour", "explore", "welcome", "start", "checklist", "getting started"), route = "setup"),
