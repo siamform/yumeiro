@@ -79,6 +79,7 @@ object BrowserCheck {
     fun init(context: Context) {
         val app = context.applicationContext
         appContext = app
+        runCatching { VerificationCenter.init(app) }
         // R15 (device run 43626650174): starting WebView to read its user agent took 1.6 s of the
         // main thread during app start (with the first screen still composing, the system raised
         // "isn't responding"). The agent only changes when WebView updates, so it is kept on disk
@@ -146,7 +147,17 @@ object BrowserCheck {
         return value
     }
 
-    fun clearanceFor(host: String): Clearance? = cleared[host] ?: cleared.entries.firstOrNull { host.endsWith("." + it.key) }?.value
+    fun clearanceFor(host: String): Clearance? {
+        (cleared[host] ?: cleared.entries.firstOrNull { host.endsWith("." + it.key) }?.value)?.let { return it }
+        // ADR-059: after a restart, a site passed earlier is reused from the browser's cookie store
+        // (the check is not run again). Off the main thread only: the cookie store may wait on WebView.
+        if (onMainThread() || !centerOn()) return null
+        if (VerificationCenter.site(host)?.state != VerificationCenter.State.CLEAR) return null
+        val c = webCookies("https://$host/").takeIf { hasClearance(it) } ?: return null
+        return Clearance(c, userAgent()).also { cleared[host] = it }
+    }
+
+    private fun centerOn() = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.VERIFY_CENTER)
 
     fun forget(host: String) { cleared.remove(host) }
 
@@ -248,6 +259,12 @@ object BrowserCheck {
         return lock.withLock {
             // Another request solved it while we waited.
             cleared[host]?.takeIf { it !== before }?.let { return@withLock it }
+            // ADR-059: a site whose firewall refuses this network fails at once (also after a restart):
+            // no WebView is opened for a check that cannot be passed.
+            if (centerOn() && VerificationCenter.isBlocked(host)) {
+                Log.i(TAG, "$host blocks this network (verification center) — not opening a WebView")
+                return@withLock null
+            }
             webCookies(url).takeIf { hasClearance(it) && before == null }?.let { c ->
                 return@withLock Clearance(c, userAgent()).also { cleared[host] = it }
             }
@@ -261,11 +278,12 @@ object BrowserCheck {
                 return@withLock null
             }
             Log.i(TAG, "Checking $host in a WebView")
-            headless(page)?.let { return@withLock it.also { cleared[host] = it } }
+            headless(page)?.let { return@withLock it.also { cleared[host] = it; VerificationCenter.report(host, VerificationCenter.Outcome.PASSED) } }
             // Round 13: the interactive captcha page is gone. It only ever showed a blank screen
             // (Turnstile / hCaptcha refuse to render inside an app WebView), so a check that the
             // silent pass can't clear now just fails this source and playback moves to the next.
             declined[host] = System.currentTimeMillis()
+            if (centerOn()) VerificationCenter.report(host, VerificationCenter.Outcome.FAILED)
             null
         }
     }
@@ -364,6 +382,13 @@ object BrowserCheck {
 
     /** One calm message per host (every 5 min) instead of an endless "verify you're human" page. */
     private fun noteBlocked(host: String, url: String = "https://$host/") {
+        if (centerOn()) {
+            // ADR-059: one note per block period for the site, whichever path (ours or an extension's) met it.
+            val before = VerificationCenter.site(host)
+            val already = before?.state == VerificationCenter.State.BLOCKED && VerificationPolicy.holding(before, System.currentTimeMillis())
+            VerificationCenter.report(host, VerificationCenter.Outcome.BLOCKED)
+            if (already) return
+        }
         val now = System.currentTimeMillis()
         val last = blockedNoticeAt[host] ?: 0L
         if (now - last < 5 * 60_000) return
@@ -416,6 +441,7 @@ object BrowserCheck {
                 declined.remove(host); blockedNoticeAt.remove(host); askAgainNoticeAt.remove(host)
                 val c = webCookies(url)
                 if (c.isNotEmpty()) cleared[host] = Clearance(c, userAgent())
+                if (hasClearance(c) || purpose == Purpose.CHECK) VerificationCenter.report(host, VerificationCenter.Outcome.PASSED)
                 SiteLogins.add(appContext, host)
             }
             onDone?.invoke(ok)

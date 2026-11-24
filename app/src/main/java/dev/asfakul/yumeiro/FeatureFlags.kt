@@ -202,6 +202,11 @@ object FeatureFlags {
         /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */
         EXT_HOLD_WHILE_TYPING("ext_hold_while_typing", true),
         /**
+         * VERIFY-1 (ADR-059): security checks from Yumeiro and from extensions go through one verification
+         * center: one check per site, firewall blocks close at once, a closed check pauses instead of returning.
+         */
+        VERIFY_CENTER("verify1_center", true),
+        /**
          * OWN-11: a YouTube video download always offers "Video" or "Audio only" (also with "Ask before download"
          * off, and with only one audio choice). Before, DL-ONE started the best video at once in those cases.
          */

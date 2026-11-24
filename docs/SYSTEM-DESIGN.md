@@ -1898,3 +1898,46 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
 - Not supported, reported instead of faked: captchas, sub-providers (`providers` in plugin.json),
   a lone `.sky` pasted without a repository, plugin settings UI.
 - Flag `scripts_skystream`, off until SkyStreamProviderDeviceTest passes on device.
+
+### ADR-059: One verification center for every security check (VERIFY-1, owner list 22)
+
+- Status: accepted, 2026-11-24. Flag `verify1_center` (on).
+- Context: field probe 45345639530 (api36, release build, network "full") opened Yumix with
+  the AnimePahe extension installed. Its own "Quick security check · AnimePahe · protected by
+  Cloudflare" sheet covered the whole screen, and the page inside said "Sorry, you have been
+  blocked · You are unable to access animepahe.pw" (UI dump `ui-492773-wait.xml`), then it came
+  back two minutes later. Decompiling the published `AnimePahe.cs3` (the source is not public)
+  showed why: `isChallengePage` treats `<title>attention required` (Cloudflare's firewall
+  block page, which no person can pass) as a challenge, the dialog is throttled only for 60 s in
+  memory, and every catalog request re-runs it. Yumeiro's own `BrowserCheck` already knew the
+  host was blocked, but extension windows, the headless solver and the "Verify" page each kept
+  their own state, so nothing stopped the loop and nothing told the user why.
+- Decision: `VerificationCenter` keeps one state per site — clear, needs you, paused, blocked,
+  failed — with when it may ask again, saved in its own small prefs file and loaded off the
+  main thread. All three paths report to it. An extension window that looks like a check
+  (`ExtensionCheckWindows.looksLikeCheck`: a web page, no text field, check wording) is concealed
+  at once; a script reads the page kind every second: a firewall block closes the window, marks
+  the site blocked for 30 min and shows one quiet note that says what to do (other network or
+  VPN off); a widget for a person (Turnstile, hCaptcha, reCAPTCHA) is shown at once; a running
+  "Just a moment" check is shown after 6 s if it did not pass by itself; an ordinary page is
+  shown after 20 s if the extension did not close it. When the window goes away, a new
+  `cf_clearance` cookie means passed; a revealed window closed without it means the user said
+  no, which pauses the site 10 min, then 30 min, 2 h, 6 h and a day. While a site is paused or
+  blocked, a new window for it is closed at once and duplicates are never shown. Extensions →
+  Security checks lists every site with its state in words and an icon (not colour alone),
+  Check now (opens the site's own page in Yumeiro's browser, so the user passes the real check)
+  and Forget.
+- Not done, on purpose: the reference repos were read. web-re-toolkit (Akamai/Kasada headless
+  solvers), FuckCaptcha (a captcha-solver guide) and cloudflare-turnstile-solver (token
+  harvesting) all defeat a site's protection or fabricate tokens, which the owner forbids.
+  cap (a self-hosted proof-of-work captcha) only confirms the approach: the site's own check runs
+  in a real WebView with the real user. Hikari's `ExtensionVerifyGuard` blocks popups by class
+  name and keeps blocked hosts in memory for 30 min; Yumeiro keeps the state across restarts,
+  tells the user, and does not hide a check that a person can pass.
+- NFRs: no main-thread I/O (load on `yu-verify-load`, cookie reads on `yu-ext-checks`); a
+  repeated "blocked" answer within a minute is not saved again; at most 40 sites, entries older
+  than 30 days dropped; a clock moved back releases holds.
+- Tests: `VerificationPolicyTest` (state machine, pauses, persistence, real Cloudflare block
+  and challenge pages saved on 2026-11-24 in `test/resources/pages`), `ExtensionCheckWindowsTest`
+  (real AnimePahe texts from the probe), `scripts/verify1_kind_js_check.js` (runs the page-kind
+  script on the saved pages in jsdom: block → block, challenge → challenge).

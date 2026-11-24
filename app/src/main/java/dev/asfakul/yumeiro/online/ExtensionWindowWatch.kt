@@ -86,6 +86,21 @@ object ExtensionWindowWatch {
     private fun judge(root: View, lp: WindowManager.LayoutParams, ext: Pair<String, String>) {
         val (key, name) = ext
         val snap = ExtensionPopups.snapshot(root)
+        if (ExtensionPopups.mode.value != ExtensionPopups.Mode.SHOW && ExtensionCheckWindows.handles(snap)) {
+            // ADR-059: an extension's own security check goes through the verification center.
+            val typing = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.EXT_HOLD_WHILE_TYPING) && appTyping(root)
+            val player = ExtensionPopups.playerOnScreen
+            Log.i(TAG, "window from $name: security check texts=${snap.texts.take(3)}")
+            ExtensionCheckWindows.take(
+                root, lp, key, name,
+                conceal = { v, p -> conceal(v, p) },
+                reveal = { v -> reveal(v, name) },
+                holdReason = if (typing || player) {
+                    { ExtensionPopups.hold(key, name, snap, root, deferredCard = player && !typing, functional = true); Unit }
+                } else null,
+            )
+            return
+        }
         val kind = ExtensionPopups.classify(snap)
         val action = ExtensionPopups.decide(
             kind, ExtensionPopups.mode.value, ExtensionPopups.playerOnScreen,
@@ -115,7 +130,7 @@ object ExtensionWindowWatch {
         imeUp || (r.hasWindowFocus() && r.findFocus()?.onCheckIsTextEditor() == true)
     }
 
-    private fun conceal(root: View, lp: WindowManager.LayoutParams) {
+    private fun conceal(root: View, lp: WindowManager.LayoutParams): Boolean {
         val saved = WindowManager.LayoutParams().apply { copyFrom(lp) }
         val hidden = WindowManager.LayoutParams().apply {
             copyFrom(lp)
@@ -125,7 +140,7 @@ object ExtensionWindowWatch {
             dimAmount = 0f
         }
         val ok = runCatching { windowManager?.updateViewLayout(root, hidden) }.onFailure { Log.w(TAG, "could not conceal: $it") }.isSuccess
-        if (!ok) return
+        if (!ok) return false
         // The view itself is left alone: Dialog.isShowing() reads the decor's visibility, and the
         // extension must keep seeing its dialog as open. Screen readers skip it while concealed.
         root.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
@@ -134,6 +149,7 @@ object ExtensionWindowWatch {
             override fun onViewAttachedToWindow(v: View) = Unit
             override fun onViewDetachedFromWindow(v: View) { concealed.remove(v); ExtensionPopups.forget(v) } // the extension closed it
         })
+        return true
     }
 
     /** Shows a concealed window as the extension built it (the user asked for it). */

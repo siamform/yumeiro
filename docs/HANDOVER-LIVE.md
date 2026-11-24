@@ -11,6 +11,14 @@ The owner's 20-item list with per-item status is **docs/OWNER-LIST-R21.md** (rea
 row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
 
 ### Latest changes (this session)
+- 2026-11-24 R22 VERIFY-1 (owner item 22, ADR-059): VerificationCenter (one saved state per site) + ExtensionCheckWindows
+  (an extension's own check window is concealed, its page read: firewall block → closed + one note + 30 min hold;
+  person needed → shown once; closed by the user → paused 10 min..1 day) + Extensions → Security checks card.
+  Root cause from the decompiled AnimePahe.cs3 (see ADR-059). Tests: VerificationPolicyTest, ExtensionCheckWindowsTest,
+  scripts/verify1_kind_js_check.js (needs `npm i jsdom@24`). NEXT: CI on the VERIFY-1 commit, then field probe with
+  AnimePahe installed (recipe of 45345639530) — expect no "Quick security check" in UI dumps and a Security checks row
+  "animepahe.pw · blocked". Then item 23 ADCHAIN-1. No PR before 22 is verified (owner rule).
+- 2026-11-24 R22 UPD-MSG-1 (e7947675, owner item 21): updater messages; CI pending.
 - TB-PREVIEW-2 (6e010fce, 488889a3): TeraBox ties a sign-in to the site it was made on. Measured in a real browser
   with the owner's test account (credentials only in the ignored secrets/yumeiro.env.local; never in probe steps):
   signed in on terabox.app, `share/streaming` M3U8_AUTO_480 = full HLS, 1057 segments, 10532 s; anonymous = 30 s

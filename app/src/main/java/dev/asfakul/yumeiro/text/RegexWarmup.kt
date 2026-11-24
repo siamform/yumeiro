@@ -102,6 +102,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.TeraBoxApi", // B-29 jsToken pattern
         "dev.asfakul.yumeiro.stream.DiskWalaApi", // B-30 share id pattern
         "dev.asfakul.yumeiro.online.ExtensionPopups", // ADR-014 classifier words (first touch is a window check on main)
+        "dev.asfakul.yumeiro.online.ExtensionCheckWindows", // ADR-059 check-window words (first touch is a window check on main)
         "dev.asfakul.yumeiro.scrobble.ScrobbleRulesKt",
         "dev.asfakul.yumeiro.scrobble.TrackNames",
         "dev.asfakul.yumeiro.sources.UniversalAdd",
