@@ -31,7 +31,10 @@ row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
   with evidence. Device runs 45303433155, 45305007621, 45306375960, 45308014362, 45309673778. Result on head: low-RAM
   seek works now (was: never); first frame mostly 3-8 s; seek 1.6-5 s in most runs, but single blocks still stall
   5-10 s ("requested x1 0B"), which libtorrent re-asks only after its average piece time. Flag stays off.
-  Open: TOR-IDLE-1 (torrent paused after 2 min idle is not resumed on the next read).
+  B31-RESCUE-1 (d1f42262): a read stuck 1.2 s leaves only its piece wanted, so idle peers ask for the stuck block
+  too (libtorrent end-game rule; idea studied from librqbit piece stealing, no code taken). Run 45316393663: first
+  frame 2.6-8.1 s on all six, seek 2.5 / 2.9 / 3.1 / 4.1 / 4.7 s and 7.5 s (lowram shard 1), all resumed. Best so far.
+  TOR-IDLE-1 (af30094f): idle pause keeps the source and the next read resumes; unit tested, device check pending.
 
 ### Pending runs (check each one first)
 - None open. Last green CI: 45263833897 on 1a3803ff. Commits after it (TOR-3, PROBE-XY, docs) need one more CI:
@@ -42,9 +45,8 @@ row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
 
 ### Next steps, in order
 1. Fresh CI on the head; fix anything red.
-2. Torrent seek (B31-STALL-1 row): the remaining stall is one block held by one silent peer; libtorrent sends a second
-   request only after average piece time + deviation/2. Try an app-side second request or keeping that average low,
-   then re-run `-f test=dev.asfakul.yumeiro.B31FrameDeviceTest -f shards='[1,2,3]'` (3 samples per phone; the full
+2. Torrent seek (B31-RESCUE-1 row): 5 of 6 seeks within 5 s; the lowram miss was a chain of 0.6-1.1 s piece waits
+   after the rescue. Next idea: on a seek, time the next 2-3 pieces at once with the target. Re-run `-f test=dev.asfakul.yumeiro.B31FrameDeviceTest -f shards='[1,2,3]'` (3 samples per phone; the full
    class name is required). The owner case always fails on the emulator (10-bit HEVC), so judge the Sintel lines.
 3. Open PR r21-major-list → main only with owner approval (footer required); bump version + CHANGELOG.
 4. Open items: 19b DiskWala (blocked, owner decision), Skip intro emulator check (needs an anime extension), 20 legal
