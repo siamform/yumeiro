@@ -47,6 +47,8 @@ class TorrentSource(
     @Volatile private var tailAsked: List<Int> = emptyList()
     /** B31-SEEK5: the window (and tail) held back until the target piece has its first bytes; null = open. */
     @Volatile private var held: Held? = null
+    /** TOR-CLOSE-1: set by [close]; a read still waiting gives up at once instead of after [waitMs]. */
+    @Volatile private var closed = false
     private val plan = Any()
     private class Held(val window: List<Int>, val deadlines: List<Pair<Int, Int>>)
 
@@ -80,6 +82,7 @@ class TorrentSource(
             var nextTrace = started
             synchronized(core.signal) {
                 while (!core.have(meta.hash, piece)) {
+                    if (closed) throw IOException("Torrent stream closed")
                     TorrentTrace.sink?.let { sink ->
                         val now = System.currentTimeMillis()
                         if (now >= nextTrace) { nextTrace = now + 1_000; sink(waitLine(piece, inPiece, now - started)) }
@@ -183,5 +186,13 @@ class TorrentSource(
         const val TAIL_DEADLINE_MS = 400
     }
 
-    fun close() { synchronized(guard) { runCatching { raf?.close() }; raf = null } }
+    /**
+     * TOR-CLOSE-1 (run 45268091524: a read of the previous torrent, paused when the next one opened, kept waiting
+     * 20 s and more on a local server thread): wakes every waiting read so it fails now.
+     */
+    fun close() {
+        closed = true
+        synchronized(core.signal) { core.signal.notifyAll() }
+        synchronized(guard) { runCatching { raf?.close() }; raf = null }
+    }
 }

@@ -239,6 +239,16 @@ class TorrentSourceTest {
         assertEquals(((0..24) + tail).sorted(), core.dropped.distinct().sorted())
     }
 
+    /** TOR-CLOSE-1 (run 45268091524): a read waiting on a paused torrent must end when its source is closed. */
+    @Test fun closeEndsAWaitingRead() {
+        val (_, src, _) = setup()
+        val t = Thread { Thread.sleep(200); src.close() }.apply { start() }
+        val start = System.currentTimeMillis()
+        try { src.read(0, ByteArray(10), 0, 10); fail() } catch (e: IOException) { assertTrue(e.message!!, e.message!!.contains("closed")) }
+        t.join()
+        assertTrue("waited ${System.currentTimeMillis() - start} ms", System.currentTimeMillis() - start < 1_500)
+    }
+
     @Test fun timeoutAndErrorBecomeIOException() {
         val (core, src, _) = setup()
         val start = System.currentTimeMillis()
