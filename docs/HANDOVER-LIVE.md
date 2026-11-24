@@ -6,9 +6,24 @@ AND verified. Mandatory focus now: feed loading, extension loading, load speed, 
 Owner 2026-11-22: every doc by past agents must be read. Done: docs/DOCS-READ-DIGEST.md (read it; D-1..D-13).
 
 ## Last updated
-2026-11-24 R21 (Asia/Dhaka, early morning). Branch **r21-major-list** is pushed; **no PR is open yet**; main = v2.2.0.
-The owner's 20-item list with per-item status is **docs/OWNER-LIST-R21.md** (read it next). Every change has a ledger
-row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
+2026-11-24 R22 (Asia/Dhaka, evening). Branch **r21-major-list** pushed; **no PR yet** (owner: none until item 22 is
+verified, and the owner approves). main = v2.2.0. Per-item status: **docs/OWNER-LIST-R21.md** (items 1-28; specs of
+25-28 also in the private repo siamform/yumeiro-docs, list/ITEMS-25-28-OWNER-SPECS.md). Ledger rows "(R21)"/"(R22)"
+in docs/BUGS-AND-FIXES-2.0.0.md.
+
+### Now (read first)
+- TB-LOGIN (c28878a7, item 19a): sealed probe 45417577195 showed the TeraBox sign-in WORKS in the page browser (ndus
+  set on .terabox.app, page dm.terabox.app/wap) but Yumeiro then sent the user back to the sign-in page. Cause, measured
+  with the same account and the Android web view UA in headless Chromium: www.terabox.app share/streaming gives the
+  30 s preview even when signed in; dm.terabox.app gives the full 10532 s HLS. Fix: TeraBoxApi.SIGNED_API asked first;
+  signed-in users are never looped back to sign-in (SIGNED_PREVIEW_REASON). Sealed re-probe 45423589183 (fed by
+  /tmp/tbfeed.sh: watches the field-probe status and sends secrets e/w). NEXT: decrypt, read logcat YuTeraBox + shots.
+- ADCHAIN-2 test fix: Adchain2OtherFileTest needs Robolectric (CI 45416827172 failed 2 tests). CI 45423820417.
+- Open probes: 45421421959 (anime search → Gundam SEED DESTINY → Play), 45422681170 (install MovieBox, Pin, relaunch).
+- Remaining: 8A-D Telegram sealed probe (owner sends the code), 19b Diskwala (@sky577bot Mini App), 10 pins,
+  15 device route, 21 "Update completed!", 13 label re-verify, 23 srnky last step needs a human tick (Turnstile is
+  never solved by Yumeiro), then 25-28, then final deliverables (web changelog, 15+ mockups zip, README, PR, release).
+- Probe dumps of sealed runs contain the typed password: always redact before printing; never commit them.
 
 ### Latest changes (this session)
 - 2026-11-24 R22 SEARCH-ML-1 (owner item 24): search history keeps a multiline search as one entry with its breaks
