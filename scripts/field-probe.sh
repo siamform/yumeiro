@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N | quick X Y | rec NAME SECS | seal | tgphone | tgcode [MIN] | tgpass [MIN]),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N | quick X Y | rec NAME SECS | seal | tgphone | tgcode [MIN] | tgpass [MIN] | secret K [MIN] (sealed only)),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -166,6 +166,10 @@ PY
       tgcode*|tgpass*) # tgcode [MIN] / tgpass [MIN]: wait for the code / 2-step password the agent sends, then type it
         k=c; w="Code sent"; [ "${s%% *}" = tgpass ] && { k=p; w="Two-step verification"; }; m=30; case "$s" in *" "*) m=${s#* } ;; esac
         sleep 3; if ! on_screen "$w"; then note "no [$w] screen, $k skipped"; signal success "no $k asked"; continue; fi
+        signal pending "waiting for $k"; v=$(secret_in "$k" "$m") && { adb shell input text "$(printf '%q' "$v")"; note "typed $k (hidden)"; signal success "got $k"; } || { note "no $k in $m min"; signal failure "no $k"; } ;;
+      secret\ *) # secret K [MIN]: sealed runs only; wait for a value of kind K the agent sends (probe-send-secret.sh K), type it
+        k=${s#secret }; m=30; case "$k" in *" "*) m=${k#* }; k=${k%% *} ;; esac
+        if [ "${SEALED:-0}" != 1 ]; then note "secret step refused: run is not sealed"; continue; fi
         signal pending "waiting for $k"; v=$(secret_in "$k" "$m") && { adb shell input text "$(printf '%q' "$v")"; note "typed $k (hidden)"; signal success "got $k"; } || { note "no $k in $m min"; signal failure "no $k"; } ;;
       quick*) # quick X Y: tap a point with no UI read after it (for recordings of what the tap starts)
         q=${s#quick }; adb shell input tap $q; note "quick tap $q" ;;

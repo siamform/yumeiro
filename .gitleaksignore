@@ -1,3 +1,8 @@
 # False positives (generic-api-key on notification channel ids in a test); replaced by enum refs in a later commit.
 a4874980ffcbd9f7b38513aa3939549c0e01b7f8:app/src/androidTest/java/dev/asfakul/yumeiro/NotifySettingsEffectDeviceTest.kt:generic-api-key:87
 a4874980ffcbd9f7b38513aa3939549c0e01b7f8:app/src/androidTest/java/dev/asfakul/yumeiro/NotifySettingsEffectDeviceTest.kt:generic-api-key:88
+# ADCHAIN-1 fixtures: generic-api-key on the shortener pages' public captcha site keys (meant to be public in page HTML, not secrets); redacted in the next commit.
+c387041220ca49889e9b19cbb452518538095500:app/src/test/resources/pages/chain-shrinkme-1-start.html:generic-api-key:79
+c387041220ca49889e9b19cbb452518538095500:app/src/test/resources/pages/chain-shrinkme-2-captcha.html:generic-api-key:79
+c387041220ca49889e9b19cbb452518538095500:app/src/test/resources/pages/chain-shrinkme-7-final-timer.html:generic-api-key:74
+c387041220ca49889e9b19cbb452518538095500:app/src/test/resources/pages/chain-srnky-1-captcha.html:generic-api-key:431

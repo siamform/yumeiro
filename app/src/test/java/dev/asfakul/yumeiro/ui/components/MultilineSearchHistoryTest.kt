@@ -134,7 +134,7 @@ class MultilineSearchHistoryTest {
         val single = history[0].fetchSemanticsNode().size.height
         val multi = history[1].fetchSemanticsNode().size.height
         assertTrue("multiline row ($multi px) must be taller than a one-line row ($single px)", multi > single)
-        val texts = rule.onAllNodes(hasTestTag("online_search_history_text"))
+        val texts = rule.onAllNodes(hasTestTag("online_search_history_text"), useUnmergedTree = true)
         assertEquals(1, lines(texts[0]))
         assertTrue(lines(texts[1]) >= 3)
         // The typeahead's recent row: every line, nothing cut.
