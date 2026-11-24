@@ -338,7 +338,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
             ) {
                 aboutRows.forEach { (label, value) ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).semantics(mergeDescendants = true) {}) {
-                        Text(label, color = TextTertiary, fontSize = 12.sp, modifier = Modifier.width(118.dp))
+                        Text(label, color = TextTertiary, fontSize = 12.sp, modifier = Modifier.width(118.dp).padding(end = 10.dp)) // a gap even when a label fills its column
                         Text(value, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     }
                 }
