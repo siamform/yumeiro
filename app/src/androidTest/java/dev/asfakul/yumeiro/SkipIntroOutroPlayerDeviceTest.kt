@@ -177,8 +177,11 @@ class SkipIntroOutroPlayerDeviceTest {
         rule.onNodeWithTag(tag, true).performClick()
         rule.waitUntil(10_000) { position() >= seg.endMs - 1_000 || PlaybackDiagnostics.state.value.state == "ENDED" }
         val after = position()
-        log("CASE $label tapped at $before -> $after (segment ${seg.startMs}-${seg.endMs})")
+        // The button the user tapped goes away once the player is past the segment (the UI follows the player).
+        val gone = runCatching { rule.waitUntil(5_000) { !has(tag) }; true }.getOrDefault(false)
+        log("CASE $label tapped at $before -> $after (segment ${seg.startMs}-${seg.endMs}) buttonGone=$gone")
         shot("${label}_after")
+        assertTrue("$label: the Skip button stayed on screen after skipping", gone)
         assertTrue("$label: player at $after did not move past ${seg.endMs}", after >= seg.endMs - 1_000 || PlaybackDiagnostics.state.value.state == "ENDED")
     }
 
