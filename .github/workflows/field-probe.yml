@@ -143,11 +143,12 @@ jobs:
         if: ${{ steps.cfg.outputs.seal != '1' && contains(steps.cfg.outputs.steps, '10.0.2.2') }}
         run: |
           CLIP="$RUNNER_TEMP/clip.mp4"
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null; } || true
           if command -v ffmpeg >/dev/null; then
             ffmpeg -loglevel error -f lavfi -i testsrc2=duration=60:size=640x360:rate=25 -f lavfi -i sine=frequency=440:duration=60 \
               -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -movflags +faststart "$CLIP"
           else
-            curl -fsSL -o "$CLIP" https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4
+            curl -fsSL -o "$CLIP" https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4
           fi
           ls -l "$CLIP"
           nohup python3 scripts/probe-fixtures/serve.py 8765 "$CLIP" > "$RUNNER_TEMP/fixtures.log" 2>&1 &
