@@ -80,7 +80,7 @@ internal fun SecurityChecksCard() {
                 val line = VerificationPolicy.describe(s, now)
                 Row(
                     Modifier.fillMaxWidth().padding(top = 10.dp).testTag("security_check_${s.host}")
-                        .semantics(mergeDescendants = false) { contentDescription = "${s.label}, ${s.host}. $line" },
+                        .semantics(mergeDescendants = false) { contentDescription = (if (s.label == s.host) s.host else "${s.label}, ${s.host}") + ". $line" },
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
