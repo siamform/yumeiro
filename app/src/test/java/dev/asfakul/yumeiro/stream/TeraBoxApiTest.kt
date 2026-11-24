@@ -221,4 +221,12 @@ class TeraBoxApiTest {
         val cookies = { o: String -> if (o.endsWith("terabox.app")) "ndus=Y" else "browserid=x" }
         assertEquals(listOf("https://dm.terabox.app", "https://www.terabox.app"), TeraBoxApi.origins("https://1024terabox.com/s/1abc", cookies))
     }
+
+    // TB-LOGIN (probe 45423589183): the second share played under its code "1qkXq…" instead of the file name.
+    @Test fun aShareCodeTitleBecomesTheFileName() {
+        val share = "https://1024terabox.com/s/1qkXqTvPA9GYY7sUY6dOGeA"
+        assertEquals("Film.mkv", TeraBoxApi.titleFor("1qkXqTvPA9GYY7sUY6dOGeA", share, "Film.mkv"))
+        assertEquals("Film.mkv", TeraBoxApi.titleFor(" ", share, "Film.mkv"))
+        assertEquals("My title", TeraBoxApi.titleFor("My title", share, "Film.mkv"))
+    }
 }

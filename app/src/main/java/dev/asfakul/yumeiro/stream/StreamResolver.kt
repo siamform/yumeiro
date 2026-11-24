@@ -203,7 +203,8 @@ object StreamResolver {
             is TeraBoxApi.Result.Ok -> Resolution.Playable(
                 request.copy(
                     url = r.streamUrl,
-                    title = request.title.ifBlank { r.fileName },
+                    // TB-LOGIN: a shared link's "title" is often just the share code; the file name is the real one.
+                    title = TeraBoxApi.titleFor(request.title, route.pageUrl, r.fileName),
                     format = if (r.hls) StreamFormat.HLS else StreamFormat.PROGRESSIVE,
                     userAgent = r.userAgent,
                     referer = "https://www.terabox.app/",

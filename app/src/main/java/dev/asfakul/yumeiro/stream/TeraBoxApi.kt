@@ -96,6 +96,13 @@ object TeraBoxApi {
         "Do TeraBox's check on this page, then go back and play the link again."
 
     /** `1qkXq…` from `…/s/1qkXq…` or `…?surl=qkXq…` (surl drops the leading "1"). */
+    /** TB-LOGIN: the file name, unless the caller gave a real title (a shared link's title is often just its code). */
+    fun titleFor(given: String, shareUrl: String, fileName: String): String {
+        val code = shortUrl(shareUrl)
+        val t = given.trim()
+        return if (t.isEmpty() || (code != null && (t == code || t == code.removePrefix("1")))) fileName else given
+    }
+
     fun shortUrl(url: String): String? {
         val u = url.trim().toHttpUrlOrNull() ?: return null
         val segs = u.pathSegments
