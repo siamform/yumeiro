@@ -20,4 +20,13 @@ class TorrentPeersGuardTest {
         val src = File(root, "dev/asfakul/yumeiro/stream/torrent/LtCore.kt").readText()
         assertTrue("close_redundant_connections must be off", src.contains("bool_types.close_redundant_connections, false)"))
     }
+
+    /** B31-STALL-1 (run 45308014362): a needed block stuck 12 s with one silent peer; the caps were 10 s. */
+    @Test fun stuckBlocksAreAskedAgainWithinTheSeekBudget() {
+        assertTrue("cap $STALL_CAP_S s", STALL_CAP_S in 2..4) // libtorrent never goes under 2 s
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.isDirectory }
+        val src = File(root, "dev/asfakul/yumeiro/stream/torrent/LtCore.kt").readText()
+        assertTrue(src.contains("int_types.request_timeout, STALL_CAP_S)"))
+        assertTrue(src.contains("int_types.piece_timeout, STALL_CAP_S)"))
+    }
 }

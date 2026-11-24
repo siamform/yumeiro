@@ -34,6 +34,9 @@ import java.util.concurrent.ConcurrentHashMap
  * (libtorrent's defaults) so magnets without trackers still find peers; torrents are not auto-managed, so
  * libtorrent's queue never pauses the one that is playing.
  */
+/** B31-STALL-1: longest a silent peer may hold a requested block before libtorrent asks another peer (seconds). */
+internal const val STALL_CAP_S = 3
+
 internal class LtCore(lowEnd: Boolean) : TorrentCore {
     override val signal = Object()
     private val sm = SessionManager(false)
@@ -87,8 +90,13 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
         int(org.libtorrent4j.swig.settings_pack.int_types.connection_speed, if (lowEnd) 60 else 150)
         int(org.libtorrent4j.swig.settings_pack.int_types.torrent_connect_boost, if (lowEnd) 40 else 80)
         int(org.libtorrent4j.swig.settings_pack.int_types.peer_connect_timeout, 7)
-        int(org.libtorrent4j.swig.settings_pack.int_types.request_timeout, 10)
-        int(org.libtorrent4j.swig.settings_pack.int_types.piece_timeout, 10)
+        // B31-STALL-1 (three-shard run 45308014362, trace B31-STALL-T): the block a read needed sat at "requested x1 0B"
+        // with one silent peer for 12.1 s (first frame 17 s) and 5-10 s after seeks, and was asked again only when
+        // these caps (10 s) ran out. libtorrent adapts request_timeout per peer (mean + 4 deviations, never under
+        // 2 s, https://github.com/arvidn/libtorrent/blob/RC_2_0/src/peer_connection.cpp); the cap only bounds a peer
+        // that went quiet. 3 s fits the 5 s seek budget; a snubbed peer keeps one request and is not dropped.
+        int(org.libtorrent4j.swig.settings_pack.int_types.request_timeout, STALL_CAP_S)
+        int(org.libtorrent4j.swig.settings_pack.int_types.piece_timeout, STALL_CAP_S)
         bool(org.libtorrent4j.swig.settings_pack.bool_types.announce_to_all_trackers, true)
         bool(org.libtorrent4j.swig.settings_pack.bool_types.announce_to_all_tiers, true)
         bool(org.libtorrent4j.swig.settings_pack.bool_types.strict_end_game_mode, false)
