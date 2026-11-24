@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -358,6 +359,22 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
                     Text(if (m.username.isNotBlank()) "@${m.username} · signed in" else "Signed in", color = p.textSecondary, fontSize = 12.sp, maxLines = 1)
                 }
             }
+        }
+        // DW-BOT-1: the one switch behind the consent card (TgMiniApp.CONSENT_TEXT points here).
+        val ctx = LocalContext.current
+        var miniOk by remember { mutableStateOf(dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.consented(ctx)) }
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).heightIn(min = 48.dp)
+                .toggleable(value = miniOk, role = androidx.compose.ui.semantics.Role.Switch) {
+                    miniOk = it; dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.setConsented(ctx, it)
+                }.testTag("tg_miniapp_switch"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Bot mini apps", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text("DiskWala links open through a Telegram downloader bot (third party) with this account", color = p.textSecondary, fontSize = 12.sp)
+            }
+            androidx.compose.material3.Switch(checked = miniOk, onCheckedChange = null)
         }
         OutlinedTextField(
             value = filter, onValueChange = { filter = it }, singleLine = true,

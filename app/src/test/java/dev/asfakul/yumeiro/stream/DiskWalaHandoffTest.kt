@@ -24,7 +24,7 @@ class DiskWalaHandoffTest {
     private val server = MockWebServer()
     private val link = "https://www.diskwala.com/app/6afdd044b61fd14efb3a5afd"
 
-    @After fun tearDown() { DiskWalaApi.base = "https://udapi.diskwala.com/api/v1"; runCatching { server.close() } }
+    @After fun tearDown() { DiskWalaApi.base = "https://udapi.diskwala.com/api/v1"; StreamResolver.telegramSignedIn = { false }; runCatching { server.close() } }
 
     private fun serve(body: String?) {
         server.dispatcher = object : Dispatcher() {
@@ -50,6 +50,20 @@ class DiskWalaHandoffTest {
         assertEquals("the DiskWala app", r.platform)
         assertEquals(link, r.url)
         assertTrue(r.reason, r.reason.startsWith("Movie.2026.mkv (1.0 GB)."))
+        assertTrue(r.reason, r.reason.contains("sign in to Telegram"))
+    }
+
+    @Test fun signedInShareOpensThroughTheTelegramBotMiniApp() {
+        serve("""{"fileInfo":{"_id":"6afdd044b61fd14efb3a5afd","extension":"mkv","name":"Movie.2026.mkv","size":1108658512,"type":"video/x-matroska"}}""")
+        StreamResolver.telegramSignedIn = { true }
+        val r = StreamResolver.resolveBlocking(StreamRequest(link), "ua", OkHttpClient())
+        assertTrue("got $r", r is Resolution.NeedsBrowser)
+        r as Resolution.NeedsBrowser
+        assertEquals("https://t.me/flezennbot?startapp=6afdd044b61fd14efb3a5afd", r.pageUrl)
+        assertTrue(r.auto)
+        assertEquals("Movie.2026.mkv", r.base.title)
+        assertEquals(link, r.base.pageUrl)
+        assertTrue(r.reason, r.reason.startsWith("Movie.2026.mkv (1.0 GB). Opening it through a Telegram downloader bot"))
     }
 
     @Test fun unknownShareSaysSo() {

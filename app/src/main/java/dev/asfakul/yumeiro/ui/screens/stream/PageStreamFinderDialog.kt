@@ -67,6 +67,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.net.URI
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 internal const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
@@ -84,6 +85,21 @@ private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, mod
             androidx.compose.animation.AnimatedContent(step, label = "autoStep") { Text("$it…", color = TextSecondary, fontSize = 13.sp) }
             androidx.compose.material3.TextButton(onClick = onShowPage, modifier = Modifier.testTag("page_finder_show_page")) {
                 Text("Show the page", color = SpotifyGreen)
+            }
+        }
+    }
+}
+
+/** DW-BOT-1: asked once before a Telegram bot's mini app opens with the user's account. */
+@Composable
+private fun MiniAppConsentCard(bot: String, onAllow: () -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.background(DarkSurface).testTag("page_finder_miniapp_consent"), contentAlignment = Alignment.Center) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(28.dp)) {
+            Text("Open @$bot with your Telegram account?", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Text(dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.CONSENT_TEXT, color = TextSecondary, fontSize = 13.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.TextButton(onClick = onCancel, modifier = Modifier.testTag("page_finder_miniapp_cancel")) { Text("Not now", color = TextSecondary) }
+                androidx.compose.material3.Button(onClick = onAllow, modifier = Modifier.testTag("page_finder_miniapp_allow")) { Text("Open") }
             }
         }
     }
@@ -574,6 +590,32 @@ fun PageStreamFinderDialog(
         }
     }
 
+    // DW-BOT-1: a Telegram bot's mini app (t.me/<bot>?startapp=…) opens through the signed-in account, as in Telegram.
+    var miniAsk by remember(pageUrl) { mutableStateOf<dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Link?>(null) }
+    fun openMini(link: dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Link) {
+        if (!dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.consented(appContext)) { autoActive = false; miniAsk = link; return }
+        autoStep = "Opening @${link.bot} on Telegram"
+        scope.launch {
+            val s = runCatching { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.session(appContext) }.getOrNull()
+            val st = s?.let { kotlinx.coroutines.withTimeoutOrNull(20_000L) { it.state.first { x -> x != dev.asfakul.yumeiro.online.telegram.td.TgAuthState.Starting } } }
+            if (s == null || st != dev.asfakul.yumeiro.online.telegram.td.TgAuthState.Ready) {
+                autoActive = false
+                autoNote = "Sign in to Telegram (Websites > Telegram) to open @${link.bot} here."
+                return@launch
+            }
+            when (val r = dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.open(s, link)) {
+                is dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Opened.Url -> {
+                    android.util.Log.w("YuMiniApp", "opened @${link.bot} mini app") // device evidence; never the address (it carries the signed launch data)
+                    webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, r.url, emptyMap()) }
+                }
+                is dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Opened.Error -> {
+                    android.util.Log.w("YuMiniApp", "@${link.bot}: ${r.message}")
+                    autoActive = false; autoNote = r.message
+                }
+            }
+        }
+    }
+
     if (auto) {
         // Give up waiting after a while: the page is shown with an honest note instead of a spinner forever.
         androidx.compose.runtime.LaunchedEffect(pageUrl) {
@@ -695,6 +737,8 @@ fun PageStreamFinderDialog(
                                 dev.asfakul.yumeiro.online.web.WebDownloads.attach(this) { currentUrl }
                                 webViewClient = object : SafeWebViewClient(onGone = { onDismiss() }) {
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                        // DW-BOT-1: a hop to another bot's mini app (the DiskWala bot sends its links on) opens it here.
+                                        if (request?.isForMainFrame == true) dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.parse(request.url.toString())?.let { openMini(it); return true }
                                         val scheme = request?.url?.scheme?.lowercase()
                                         return scheme != "http" && scheme != "https" // block intent:, market:, file: …
                                     }
@@ -735,11 +779,24 @@ fun PageStreamFinderDialog(
                                     base?.headers?.let { putAll(it) }
                                 }
                                 // OL-1: a kept tab that gave its page back on low memory reopens where it was.
-                                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, if (keep != null) currentUrl else pageUrl, headers)
+                                val mini = if (keep == null) dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.parse(pageUrl) else null
+                                if (mini != null) main.post { openMini(mini) }
+                                else dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, if (keep != null) currentUrl else pageUrl, headers)
                             }
                             page
                         },
                     )
+                    miniAsk?.let { link ->
+                        MiniAppConsentCard(
+                            bot = link.bot,
+                            onAllow = {
+                                dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.setConsented(appContext, true)
+                                miniAsk = null; autoActive = auto; openMini(link)
+                            },
+                            onCancel = onDismiss,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     if (autoActive) AutoFindCard(
                         host = PlatformRules.hostOf(pageUrl) ?: "the page",
                         step = autoStep,

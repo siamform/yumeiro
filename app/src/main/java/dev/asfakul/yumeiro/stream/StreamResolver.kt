@@ -131,12 +131,32 @@ object StreamResolver {
 
     const val TELEGRAM_GROUP = "Telegram"
 
-    /** B-30: a DiskWala share is checked, then handed to the DiskWala app (its website never plays). */
-    internal fun resolveDiskWala(route: LinkHosts.Browser, client: OkHttpClient): Resolution {
+    /**
+     * DW-BOT-1: true when a Telegram account is signed in on this profile (set by MTApplication; no TDLib start).
+     * DiskWala shares then open through a Telegram downloader bot's mini app in the page finder.
+     */
+    @Volatile var telegramSignedIn: () -> Boolean = { false }
+
+    /**
+     * B-30 / DW-BOT-1: a DiskWala share is checked first (name, size). With a Telegram account signed in, it opens
+     * through the downloader bot's mini app inside Yumeiro (TgMiniApp; the page finder plays what it gives). Without
+     * one it is handed to the DiskWala app, and the reason says how to play it here instead.
+     */
+    internal fun resolveDiskWala(route: LinkHosts.Browser, client: OkHttpClient, request: StreamRequest = StreamRequest(route.pageUrl)): Resolution {
         val id = DiskWalaApi.shareId(route.pageUrl) ?: return Resolution.Failed("DiskWala link can't play", "This DiskWala link has no file in it. Copy the full share link.")
         val info = DiskWalaApi.info(client, id)
             ?: return Resolution.Failed("DiskWala file not found", "DiskWala doesn't know this file; it may have been removed.")
-        return Resolution.Handoff(route.pageUrl, "the DiskWala app", "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)}). ${DiskWalaApi.APP_ONLY}")
+        val file = "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)})."
+        if (telegramSignedIn()) {
+            val bot = dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.diskWalaLink(id)
+            return Resolution.NeedsBrowser(
+                "https://t.me/${bot.bot}?startapp=${bot.start}",
+                "$file ${DiskWalaApi.VIA_BOT}",
+                request.copy(title = request.title.ifBlank { info.name }, pageUrl = request.pageUrl ?: route.pageUrl),
+                auto = true,
+            )
+        }
+        return Resolution.Handoff(route.pageUrl, "the DiskWala app", "$file ${DiskWalaApi.APP_ONLY} ${DiskWalaApi.SIGN_IN_HINT}")
     }
 
     /**
@@ -209,7 +229,7 @@ object StreamResolver {
             }
             is LinkHosts.Browser -> {
                 if (route.host == "TeraBox") return resolveTeraBox(request, route, client)
-                if (route.host == "DiskWala") return resolveDiskWala(route, client)
+                if (route.host == "DiskWala") return resolveDiskWala(route, client, request)
                 return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
             }
             is LinkHosts.Torrent -> {

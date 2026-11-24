@@ -65,6 +65,10 @@ class MTApplication : Application(), ImageLoaderFactory {
             }.getOrDefault(false)
         }
         dev.asfakul.yumeiro.stream.TeraBoxApi.cookieSource = { url -> runCatching { android.webkit.CookieManager.getInstance().getCookie(url) }.getOrNull() }
+        // DW-BOT-1: DiskWala shares open through a Telegram downloader bot once an account is signed in (read when a link resolves, off the main thread).
+        dev.asfakul.yumeiro.stream.StreamResolver.telegramSignedIn = {
+            runCatching { dev.asfakul.yumeiro.FeatureFlags.on(this, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_LOGIN) && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.signedInHint(this) }.getOrDefault(false)
+        }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
