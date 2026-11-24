@@ -59,18 +59,6 @@ class Nav2PageSwapDeviceTest {
         return ok.toDouble() / n
     }
 
-    private fun tapText(vararg texts: String, timeoutMs: Long = 20_000): Boolean {
-        val end = SystemClock.uptimeMillis() + timeoutMs
-        while (SystemClock.uptimeMillis() < end) {
-            for (t in texts) {
-                val o = device.findObject(By.text(t)) ?: device.findObject(By.desc(t))
-                if (o != null) { runCatching { o.click() }; return true }
-            }
-            SystemClock.sleep(300)
-        }
-        return false
-    }
-
     private fun launch() {
         FirstRun.grant()
         val i = inst.targetContext.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -80,8 +68,7 @@ class Nav2PageSwapDeviceTest {
         // the way a user does until the Home top bar (its Settings button) is there.
         val end = SystemClock.uptimeMillis() + 120_000
         while (SystemClock.uptimeMillis() < end && device.findObject(By.desc("Open Settings")) == null) {
-            val o = listOf("Skip", "Skip for now", "Skip tour", "Not now", "Maybe later", "Later", "No thanks", "Allow", "Done", "Get started")
-                .firstNotNullOfOrNull { device.findObject(By.text(it)) }
+            val o = PAST.firstNotNullOfOrNull { device.findObject(By.text(it)) }
             if (o != null) runCatching { o.click() } else device.pressBack().also { SystemClock.sleep(400) }
             SystemClock.sleep(1_500)
             if (device.currentPackageName != pkg) inst.targetContext.startActivity(i)
@@ -92,14 +79,56 @@ class Nav2PageSwapDeviceTest {
         }
     }
 
-    private class Swap(val settledMs: Long, val lastLikeOldMs: Long, val frames: Int)
+    /** Buttons that close the welcome guide and the one-time prompts (the probe's list). */
+    private val PAST = listOf("Skip", "Skip for now", "Skip tour", "Not now", "Maybe later", "Later", "Remind me later",
+        "No thanks", "Close", "All set", "Got it", "Allow", "Done", "Get started")
+
+    /** Opens Settings home from Home; closes a prompt that pops up over Home first (they come a few seconds late). */
+    private fun openSettings(): Boolean {
+        val end = SystemClock.uptimeMillis() + 90_000
+        while (SystemClock.uptimeMillis() < end) {
+            if (device.hasObject(By.text("Look & feel"))) return true
+            val gear = device.findObject(By.desc("Open Settings"))
+            if (gear != null) {
+                runCatching { gear.click() }
+                if (device.wait(Until.hasObject(By.text("Look & feel")), 6_000) == true) return true
+            }
+            PAST.firstNotNullOfOrNull { device.findObject(By.text(it)) }?.let { runCatching { it.click() } }
+            SystemClock.sleep(1_000)
+        }
+        val out = java.io.ByteArrayOutputStream(); runCatching { device.dumpWindowHierarchy(out) }
+        log("Settings did not open; screen: " + out.toString().take(3_000))
+        return false
+    }
+
+    private class Swap(val settledMs: Long, val lastLikeOldMs: Long, val frames: Int, val maxGapMs: Long)
+
+    /** Longest gap between two app frames (Choreographer, app main thread) while [block] runs. */
+    private fun <T> frameGaps(block: () -> T): Pair<T, Long> {
+        val run = java.util.concurrent.atomic.AtomicBoolean(true)
+        val max = java.util.concurrent.atomic.AtomicLong(0)
+        val last = java.util.concurrent.atomic.AtomicLong(0)
+        val cb = object : android.view.Choreographer.FrameCallback {
+            override fun doFrame(nanos: Long) {
+                val prev = last.getAndSet(nanos)
+                if (prev != 0L) max.accumulateAndGet((nanos - prev) / 1_000_000) { a, b -> maxOf(a, b) }
+                if (run.get()) android.view.Choreographer.getInstance().postFrameCallback(this)
+            }
+        }
+        inst.runOnMainSync { android.view.Choreographer.getInstance().postFrameCallback(cb) }
+        val r = block()
+        run.set(false)
+        return r to max.get()
+    }
 
     /** Takes frames for 2.5 s after [action] and compares them with [old] and the page settled at 3 s. */
     private fun measure(name: String, old: Bitmap, action: () -> Unit): Swap {
         val frames = ArrayList<Pair<Long, Bitmap>>()
         val t0 = SystemClock.uptimeMillis()
-        action()
-        while (SystemClock.uptimeMillis() - t0 < 2_500) shot()?.let { frames += (SystemClock.uptimeMillis() - t0) to it }
+        val (_, gap) = frameGaps {
+            action()
+            while (SystemClock.uptimeMillis() - t0 < 2_500) shot()?.let { frames += (SystemClock.uptimeMillis() - t0) to it }
+        }
         SystemClock.sleep((3_000 - (SystemClock.uptimeMillis() - t0)).coerceAtLeast(0))
         val fin = shot()!!
         save("${name}_old", old); save("${name}_final", fin)
@@ -111,30 +140,30 @@ class Nav2PageSwapDeviceTest {
             if (settled < 0 && toNew >= 0.985) settled = t
             if (i % 3 == 0 || t in 300..1_300) save("${name}_${t}ms", b)
         }
-        log("$name: ${frames.size} frames, settled at $settled ms, last frame like the old page at $lastOld ms, old~new ${"%.3f".format(same(old, fin))}")
-        return Swap(settled, lastOld, frames.size)
+        log("$name: ${frames.size} frames, settled at $settled ms, last frame like the old page at $lastOld ms, longest app frame gap $gap ms, old~new ${"%.3f".format(same(old, fin))}")
+        return Swap(settled, lastOld, frames.size, gap)
     }
 
     @Test fun settingsSubPagesReplaceTheOldPageAtOnce() {
         launch()
-        assertTrue("Settings never opened", tapText("Open Settings"))
-        assertTrue("Settings home never showed", device.wait(Until.hasObject(By.text("Look & feel")), 20_000))
-        SystemClock.sleep(1_500)
+        assertTrue("Settings never opened", openSettings())
+        // A just-booted emulator is still busy with Play services' boot work; let it settle like a phone in use.
+        SystemClock.sleep(20_000)
         val fails = ArrayList<String>()
-        for ((label, title) in listOf("Look & feel" to "Look & feel", "Video quality & playback" to "Video quality & playback", "Profiles" to "Profiles")) {
+        for (round in 1..2) for (label in listOf("Look & feel", "Video quality & playback", "Profiles")) {
             device.wait(Until.hasObject(By.text(label)), 10_000)
-            SystemClock.sleep(800)
+            SystemClock.sleep(1_000)
             val home = shot()!!
-            val key = label.filter { it.isLetter() }.lowercase()
+            val key = "r${round}_" + label.filter { it.isLetter() }.lowercase()
             val open = measure("open_$key", home) { device.findObject(By.text(label))?.click() }
-            if (open.settledMs !in 0..1_200) fails += "$label: new page settled at ${open.settledMs} ms"
-            if (open.lastLikeOldMs > 1_000) fails += "$label: Settings home still showing at ${open.lastLikeOldMs} ms"
+            if (open.settledMs !in 0..1_200) fails += "$label (round $round): new page settled at ${open.settledMs} ms (app frame gap ${open.maxGapMs} ms)"
+            if (open.lastLikeOldMs > 1_000) fails += "$label (round $round): Settings home still showing at ${open.lastLikeOldMs} ms"
             val page = shot()!!
             val back = measure("back_$key", page) { device.pressBack() }
-            if (back.settledMs !in 0..1_200) fails += "$label Back: home settled at ${back.settledMs} ms"
-            if (back.lastLikeOldMs > 1_000) fails += "$label Back: the closing page still showing at ${back.lastLikeOldMs} ms"
+            if (back.settledMs !in 0..1_200) fails += "$label Back (round $round): home settled at ${back.settledMs} ms (app frame gap ${back.maxGapMs} ms)"
+            if (back.lastLikeOldMs > 1_000) fails += "$label Back (round $round): the closing page still showing at ${back.lastLikeOldMs} ms"
             assertTrue("Back from $label did not reach Settings home", device.wait(Until.hasObject(By.text("Look & feel")), 10_000))
-            log("$title: open settled ${open.settledMs} ms (${open.frames} frames), back settled ${back.settledMs} ms (${back.frames} frames)")
+            log("round $round $label: open settled ${open.settledMs} ms (${open.frames} frames, app gap ${open.maxGapMs} ms), back settled ${back.settledMs} ms (${back.frames} frames, app gap ${back.maxGapMs} ms)")
         }
         assertTrue(fails.joinToString("; "), fails.isEmpty())
     }
