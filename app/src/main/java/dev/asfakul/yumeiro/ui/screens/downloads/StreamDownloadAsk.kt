@@ -36,6 +36,22 @@ object StreamDownloadAsk {
         else -> "Original file"
     }
 
+    private val OTHER_EXT = setOf(
+        "zip", "rar", "7z", "tar", "gz", "apk", "xapk", "exe", "msi", "dmg", "iso", "pdf", "epub", "cbz", "cbr",
+        "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "jpg", "jpeg", "png", "gif", "webp", "srt", "ass", "vtt",
+    )
+
+    /**
+     * ADCHAIN-2: the file is plainly not a video or audio (a pack, an app, a document, a picture or a subtitle),
+     * judged by the extension of its file name [title] or of the link. Field probe 45411197165: a .zip a page
+     * handed over opened as "Download this video? · Video file". Pure.
+     */
+    fun isOtherFile(req: StreamRequest, title: String): Boolean {
+        if (req.resolvedFormat() == StreamFormat.HLS || req.resolvedFormat() == StreamFormat.DASH) return false
+        fun ext(name: String) = name.trim().substringAfterLast('.', "").lowercase()
+        return ext(title) in OTHER_EXT || ext(req.url.substringBefore('#').substringBefore('?').substringAfterLast('/')) in OTHER_EXT
+    }
+
     /** Asks, then queues [req]. [onRefused] gets the reason a stream can't be saved or queued. */
     fun ask(context: Context, req: StreamRequest, sourceUrl: String = req.url, onRefused: (String) -> Unit = { AppMessages.show(context, it) }) {
         StreamDownload.refusal(req)?.let { onRefused(it); return }
@@ -86,17 +102,19 @@ object StreamDownloadAsk {
             is StreamDownload.Outcome.Refused -> o.message
             is StreamDownload.Outcome.Queued -> null
         }
+        val title = StreamDownload.titleFor(req, sourceUrl)
+        val other = isOtherFile(req, title)
         DownloadPrompt.ask(context, DownloadPrompt.Request(
             type = DownloadPrompt.Type.LINK,
-            title = StreamDownload.titleFor(req, sourceUrl),
-            what = "this video", count = 1,
+            title = title,
+            what = if (other) "this file" else "this video", count = 1,
             folder = DownloadGroups.LOOSE,
             quality = qualityText(req),
             defaultKeep = DownloadSettings.keepByDefault.value,
             offer = offer,
             // OWN-18: size for the picked quality, subtitles and format.
             facts = listOfNotNull(
-                when (req.resolvedFormat()) { StreamFormat.HLS -> "HLS stream"; StreamFormat.DASH -> "DASH stream"; else -> "Video file" },
+                when (req.resolvedFormat()) { StreamFormat.HLS -> "HLS stream"; StreamFormat.DASH -> "DASH stream"; else -> if (other) "File" else "Video file" },
                 named.size.takeIf { it > 0 }?.let { "$it subtitle ${if (it == 1) "file" else "files"}" },
             ),
             sizeFor = { h ->
