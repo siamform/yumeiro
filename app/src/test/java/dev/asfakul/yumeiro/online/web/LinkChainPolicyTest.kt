@@ -66,7 +66,8 @@ class LinkChainPolicyTest {
         // The destination: no chain signals on a new host, twice.
         val dest = "https://shortsync.epdexx.com/gateway?t=x"
         assertTrue(step(dest, Scan(chain = false)) is Action.Wait)
-        assertEquals(Action.Done("shortsync.epdexx.com"), step(dest, Scan(chain = false)))
+        // ADCHAIN-2: Done also carries the page the chain ended on, so media / file hosts can open in Yumeiro.
+        assertEquals(Action.Done("shortsync.epdexx.com", dest), step(dest, Scan(chain = false)))
         assertEquals(4, st.taps)
         assertEquals("shortsync.epdexx.com", st.destination)
     }
