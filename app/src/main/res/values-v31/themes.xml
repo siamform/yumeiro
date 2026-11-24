@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SPLASH-2 (Android 12+): the system splash shows Yumeiro's moon on the page colour, and the
+         in-app splash (SplashScreen.kt) draws the same moon at the same place, so the hand-over is seamless. -->
+    <style name="Theme.MyApplication" parent="Base.Yumeiro">
+        <item name="android:windowBackground">@color/launch_bg</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_bg</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launch_moon</item>
+    </style>
+    <style name="Theme.Yumeiro.Launch.Light" parent="Theme.MyApplication">
+        <item name="android:windowBackground">@color/launch_bg_light</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_bg_light</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launch_moon</item>
+    </style>
+    <style name="Theme.Yumeiro.Launch.Dark" parent="Theme.MyApplication">
+        <item name="android:windowBackground">@color/launch_bg_dark</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_bg_dark</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launch_moon</item>
+    </style>
+    <style name="Theme.Yumeiro.Launch.Black" parent="Theme.MyApplication">
+        <item name="android:windowBackground">@color/launch_bg_black</item>
+        <item name="android:windowSplashScreenBackground">@color/launch_bg_black</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launch_moon</item>
+    </style>
+</resources>

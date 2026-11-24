@@ -7,4 +7,9 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- SPLASH-2: the window colour before the first frame (matches Palettes.Light / Palettes.Dark background). -->
+    <color name="launch_bg">#FFF6F5F2</color>
+    <color name="launch_bg_light">#FFF6F5F2</color>
+    <color name="launch_bg_dark">#FF0E0E11</color>
+    <color name="launch_bg_black">#FF000000</color>
 </resources>
