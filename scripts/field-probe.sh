@@ -47,6 +47,12 @@ print(f"PROBE t={sys.argv[3]} UI[{sys.argv[2]}] n={len(texts)} :: " + " | ".join
 PY
 }
 
+on_screen() { # on_screen TEXT: true when TEXT is in the current UI (nothing is logged)
+  adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || return 1
+  adb pull /sdcard/ui.xml "$OUT/os.xml" > /dev/null 2>&1 || return 1
+  grep -qF -- "$1" "$OUT/os.xml"
+}
+
 tap_text() { # tap the first node whose text or content-desc equals (or, with ~ prefix, contains) an argument
   adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || return 1
   adb pull /sdcard/ui.xml "$OUT/tap.xml" > /dev/null 2>&1 || return 1
@@ -146,7 +152,8 @@ PY
       seal) note "sealed run" ;;
       tgphone) adb shell input text "$TG_TEST_PHONE"; note "typed the test phone (hidden)" ;;
       tgcode*|tgpass*) # tgcode [MIN] / tgpass [MIN]: wait for the code / 2-step password the agent sends, then type it
-        k=c; [ "${s%% *}" = tgpass ] && k=p; m=30; case "$s" in *" "*) m=${s#* } ;; esac
+        k=c; w="Code sent"; [ "${s%% *}" = tgpass ] && { k=p; w="Two-step verification"; }; m=30; case "$s" in *" "*) m=${s#* } ;; esac
+        sleep 3; if ! on_screen "$w"; then note "no [$w] screen, $k skipped"; signal success "no $k asked"; continue; fi
         signal pending "waiting for $k"; v=$(secret_in "$k" "$m") && { adb shell input text "$(printf '%q' "$v")"; note "typed $k (hidden)"; signal success "got $k"; } || { note "no $k in $m min"; signal failure "no $k"; } ;;
       quick*) # quick X Y: tap a point with no UI read after it (for recordings of what the tap starts)
         q=${s#quick }; adb shell input tap $q; note "quick tap $q" ;;
