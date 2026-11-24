@@ -2091,3 +2091,24 @@ null, the user gets exactly the previous result. The WebView runner and GateHost
 Boundary: never solves a captcha or Turnstile, never makes a token, never shortens a site timer.
 Test: AdChain28Test (MockWebServer chain, refusal JSON, captcha/turnstile, 8 MB video not read, meta/JS/loop, unsafe hops,
 cookie paths, wrappers).
+
+### ADR-065: Novels through LNReader plugins (NOVEL-1, owner list 26, 2026-11-24)
+Context: item 26 asks for the best ideas of Zangetsu and CloudStream to be studied and integrated. Zangetsu (v1.x, Flutter,
+GPL-3) reads web novels by running LNReader's own plugins (373 sources in the LNReader v3 index) in a JS runtime with a
+CommonJS harness and a bundled cheerio. Yumeiro had manga (Mihon/Mangayomi) and video but no novels.
+Decision: reuse Zangetsu's harness and cheerio bundle (assets/js/lnreader_*.js, credited in NOTICE) on the QuickJS engine
+Yumeiro already ships (quickjs-kt, as for Mangayomi JS). One change to the harness: requests go through a synchronous
+`__ktFetch` binding to OkHttp (OnlineRuntime.extensionClient: Yumeiro's DNS fallback, proxy and the VERIFY-1/2 check
+passes), not Zangetsu's outbox polling. sources/novel: NovelEngine (one QuickJS per plugin, 96 MB / 2 MB stack, 60 s
+per call, 8 MB body cap, WebView user agent unless the plugin sets one, readable errors), NovelSources (repositories,
+install/update/remove, popular/latest/search/searchAll with a per-source deadline, details, parsePage, chapter HTML; at
+most 4 engines open), NovelLibrary (saved, chapter + position, history; filesDir/novel/library.json via SafeJsonFile),
+NovelText (Jsoup: ads/scripts dropped, <br><br> = paragraph, headings kept), NovelParse (plugin JSON → models; newest-first
+chapter lists put in reading order only when the numbers say so). UI ui/screens/novel: Novels, Novel sources, a novel's
+page, the reader (size, Previous/Next, position kept, translation through the manga ML Kit engine). Entry points:
+Home "Novels" card and the "Novels" navigation-bar shortcut. Nothing is bundled: the user adds a repository (the LNReader
+index is offered as a one-tap suggestion, never added silently). Profiles: ProfileScope NOVEL_REPOS / NOVEL_PLUGINS.
+Alternatives rejected: a WebView JS runtime (main-thread bound, heavier); writing our own sources (unmaintainable).
+Test: Novel26Test (index, answers, paragraphs, library file, errors); NovelEngineDeviceTest (real QuickJS + harness +
+cheerio + OkHttp against a local LNReader-format repository and site: install, popular, latest, search-all, details,
+parsePage, chapter text, failure then recovery, library persistence, uninstall). Field: LNReader index → Novel Fire.

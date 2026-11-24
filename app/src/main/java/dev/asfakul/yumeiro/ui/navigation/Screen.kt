@@ -83,6 +83,19 @@ sealed class Screen(val route: String) {
             "manga/read?p=" + android.net.Uri.encode(provider) + "&u=" + android.net.Uri.encode(url) + "&t=" + android.net.Uri.encode(title) +
                 "&c=" + android.net.Uri.encode(chapter) + "&n=" + android.net.Uri.encode(name)
     }
+    /** NOVEL-1 (item 26): web novels from LNReader plugins. */
+    data object Novels : Screen("novels")
+    data object NovelSources : Screen("novels/sources")
+    data object NovelTitle : Screen("novels/title?p={p}&u={u}&t={t}&i={i}") {
+        fun route(plugin: String, path: String, name: String, cover: String? = null): String =
+            "novels/title?p=" + android.net.Uri.encode(plugin) + "&u=" + android.net.Uri.encode(path) + "&t=" + android.net.Uri.encode(name) +
+                "&i=" + android.net.Uri.encode(cover.orEmpty())
+    }
+    data object NovelReader : Screen("novels/read?p={p}&u={u}&t={t}&c={c}") {
+        fun route(plugin: String, path: String, name: String, chapter: String): String =
+            "novels/read?p=" + android.net.Uri.encode(plugin) + "&u=" + android.net.Uri.encode(path) + "&t=" + android.net.Uri.encode(name) +
+                "&c=" + android.net.Uri.encode(chapter)
+    }
     data object Privacy : Screen("settings/privacy")
     data object Tracking : Screen("settings/tracking")
     data object YouTubeAccount : Screen("settings/youtube")

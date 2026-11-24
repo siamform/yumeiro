@@ -25,6 +25,13 @@ Third-party code included in this repository:
     License text: docs/licenses/Apache-2.0.txt
   - Mangayomi JavaScript runtime shims (app/src/main/assets/js/mangayomi_runtime.js) — Apache-2.0 —
     https://github.com/kodjodevf/mangayomi — Copyright Moustapha Kodjo Amadou. Adapted by siamform (2026).
+  - LNReader novel plugin harness (app/src/main/assets/js/lnreader_harness.js) — GPL-3.0 — from Zangetsu,
+    https://github.com/Spyou/Zangetsu (commit 4aae490). Changed by siamform (2026): requests go through Kotlin.
+  - Bundled JavaScript in app/src/main/assets/js/lnreader_cheerio.js (built by Zangetsu): cheerio (MIT),
+    htmlparser2 / domhandler / domutils / entities (BSD-2-Clause), dayjs (MIT), @noble/ciphers (MIT).
+    LNReader plugins themselves are downloaded by the user from repositories they add (not included).
+  - AdChain link-shortener walk (app/src/main/java/dev/asfakul/yumeiro/adchain/) — adapted by siamform (2026)
+    from the contribution at https://github.com/wanxtaexe-ai/legendary-octo-fishstick (yumeiro-adchain).
   - Kitsu public OAuth client id, as published in Aniyomi's Kitsu tracker — Apache-2.0.
   - Libraries used at runtime (not vendored): quickjs-kt (Apache-2.0, https://github.com/dokar3/quickjs-kt),
     smbj (Apache-2.0, https://github.com/hierynomus/smbj), NanoHTTPD (BSD-3-Clause),

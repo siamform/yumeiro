@@ -99,6 +99,19 @@ object MangaTranslate {
     fun ready(c: Context, s: Settings): Boolean =
         s.from == MangaTlPlan.AUTO || s.from == s.dst || runCatching { engine(c).ready(s.from, s.dst) }.getOrDefault(false)
 
+    /**
+     * NOVEL-1: plain-text translation for the novel reader, through the same engine and language packs as manga
+     * pages (no second translation system). [from] must be a concrete code (not Auto). Blocking work off the main thread.
+     */
+    suspend fun texts(c: Context, texts: List<String>, from: String, dst: String, wifiOnly: Boolean): List<String> = withContext(Dispatchers.IO) {
+        if (from == dst || texts.isEmpty()) return@withContext texts
+        lock.withLock {
+            val e = engine(c)
+            if (!e.ready(from, dst)) e.prepare(from, dst, wifiOnly)
+            e.translate(texts, from, dst)
+        }
+    }
+
     /** TL-2: language packs on this phone (codes; English is built in), and removing one. Blocking. */
     suspend fun packs(c: Context): List<String> = withContext(Dispatchers.IO) { runCatching { engine(c).packs() }.getOrDefault(emptyList()) }
     suspend fun deletePack(c: Context, code: String): Boolean = withContext(Dispatchers.IO) {

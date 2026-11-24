@@ -405,6 +405,7 @@ fun HomeScreen(
             if (newer && stats) Feature("quick_card_stats", "Your stats", "Streaks · totals", Icons.Default.Insights, "績", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.STATS) }) else null,
             if (newer) Feature("quick_card_upcoming", "Airing soon", "New episodes", Icons.Default.CalendarMonth, "暦", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.UPCOMING) }) else null,
             if (newer) Feature("quick_card_reading", "Reading", "Manga you read", Icons.Default.AutoStories, "頁", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.READING) }) else null,
+            Feature("quick_card_novels", "Novels", "Web novels", Icons.Default.AutoStories, "文", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.NOVELS) }),
             if (newer) Feature("quick_card_inbox", "Inbox", "News · messages", Icons.Default.Inbox, "便", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.INBOX) }) else null,
             Feature("quick_card_search", "Search", "All sources", Icons.Default.Search, "探", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SEARCH) }),
             Feature("quick_card_mylist", "My List", "Saved titles", Icons.Default.Bookmarks, "栞", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.MY_LIST) }),
@@ -990,7 +991,7 @@ private fun FeatureTile(f: Feature, modifier: Modifier) {
 }
 
 /** Round 8: the extra Spaces shortcuts (mapped to pages / Settings categories by the host). */
-enum class HomeShortcut { TELEGRAM, PROFILES, STATS, UPCOMING, READING, INBOX, SEARCH, MY_LIST, HISTORY, MARKET, WEBSITES, MIX, EQUALIZER, SOURCE_HEALTH, TOGETHER, THEME, DNS, NETWORK, TRACKING, PLAYER, NAV_BAR, NOTIFICATIONS, PRIVACY, BACKUP, YOUTUBE_ACCOUNT, SETTINGS }
+enum class HomeShortcut { TELEGRAM, PROFILES, STATS, UPCOMING, READING, NOVELS, INBOX, SEARCH, MY_LIST, HISTORY, MARKET, WEBSITES, MIX, EQUALIZER, SOURCE_HEALTH, TOGETHER, THEME, DNS, NETWORK, TRACKING, PLAYER, NAV_BAR, NOTIFICATIONS, PRIVACY, BACKUP, YOUTUBE_ACCOUNT, SETTINGS }
 
 @Composable
 private fun SpacesGroupLabel(kanji: String, title: String, modifier: Modifier = Modifier) {

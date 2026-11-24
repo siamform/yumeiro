@@ -636,6 +636,7 @@ fun MTPlayerApp(
         when (if (route.startsWith(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX)) shortcut else null) {
             null -> navigateTop(route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MANGA -> navigateSub(Screen.Manga.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.NOVELS -> navigateSub(Screen.Novels.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.LIVE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.DOWNLOADS -> navigateSub(Screen.Downloads.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS -> navigateSub(Screen.Extensions.route)
@@ -808,6 +809,7 @@ fun MTPlayerApp(
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.STATS -> navigateSub(Screen.Stats.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NOVELS -> navigateSub(Screen.Novels.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.INBOX -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.MY_LIST -> navigateSub(Screen.OnlineLibrary.route)
@@ -1229,6 +1231,37 @@ fun MTPlayerApp(
                                 onBack = popSub,
                                 onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
                                 onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
+                            )
+                        }
+                    }
+                    page(subPad, Screen.Novels.route) {
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.novel.NovelHomeScreen(
+                                onBack = popSub,
+                                onOpenNovel = { navigateSub(Screen.NovelTitle.route(it.pluginId, it.path, it.name, it.cover)) },
+                                onOpenSources = { navigateSub(Screen.NovelSources.route) },
+                            )
+                        }
+                    }
+                    page(subPad, Screen.NovelSources.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.novel.NovelSourcesScreen(onBack = popSub) }
+                    }
+                    page(subPad, Screen.NovelTitle.route, arguments = listOf("p", "u", "t", "i").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
+                        val a = entry.arguments
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.novel.NovelDetailScreen(
+                                pluginId = a?.getString("p").orEmpty(), path = a?.getString("u").orEmpty(), name = a?.getString("t").orEmpty(),
+                                cover = a?.getString("i")?.takeIf { it.isNotBlank() }, onBack = popSub,
+                                onRead = { n, ch -> navigateSub(Screen.NovelReader.route(n.pluginId, n.path, n.name, ch.path)) },
+                            )
+                        }
+                    }
+                    page(subPad, Screen.NovelReader.route, arguments = listOf("p", "u", "t", "c").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
+                        val a = entry.arguments
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.novel.NovelReaderScreen(
+                                pluginId = a?.getString("p").orEmpty(), path = a?.getString("u").orEmpty(), name = a?.getString("t").orEmpty(),
+                                chapterPath = a?.getString("c").orEmpty(), onBack = popSub,
                             )
                         }
                     }
