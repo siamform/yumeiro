@@ -51,6 +51,8 @@ object Profiles {
         val recoveryQuestions: List<String> = emptyList(),
         internal val recoveryHash: String? = null,
         internal val recoverySalt: String? = null,
+        /** PROFILE-PIC-1: version (save time) of the profile's own picture; 0 = the default moon avatar. */
+        val photo: Long = 0L,
     ) {
         val hasPin: Boolean get() = pinHash != null
         val hasRecovery: Boolean get() = recoveryHash != null && recoveryQuestions.size == RECOVERY_QUESTIONS
@@ -113,6 +115,14 @@ object Profiles {
     fun setTone(context: Context, id: String, tone: AccentTone): Boolean {
         if (find(context, id) == null) return false
         replace(context, id) { it.copy(tone = tone) }
+        return true
+    }
+
+    /** PROFILE-PIC-1: records that [id] has a new picture ([version] > 0) or none (0). */
+    @Synchronized
+    fun setPhoto(context: Context, id: String, version: Long): Boolean {
+        if (find(context, id) == null) return false
+        replace(context, id) { it.copy(photo = version.coerceAtLeast(0L)) }
         return true
     }
 
@@ -302,7 +312,8 @@ object Profiles {
         app.getSharedPreferences("yt_history", Context.MODE_PRIVATE).edit().clear().commit()
         app.getSharedPreferences("online_settings", Context.MODE_PRIVATE).edit().putBoolean("adult", false).commit()
         runCatching { dev.asfakul.yumeiro.online.download.PrivateDownloads.removeProfile(context, DEFAULT) }
-        replace(context, DEFAULT) { it.copy(pinHash = null, salt = null, biometric = false) }
+        runCatching { ProfilePhotos.file(context, DEFAULT).delete() }
+        replace(context, DEFAULT) { it.copy(pinHash = null, salt = null, biometric = false, photo = 0L) }
         clearGuard(context, DEFAULT)
         return true
     }
@@ -344,7 +355,7 @@ object Profiles {
     /** Preference files that are kept per profile (removed with the profile). */
     val SCOPED_PREFS = listOf("yt_history", "online_settings", "private_vault", "pinned_extensions", "pinned_playlists", "upcoming")
 
-    private fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")
+    internal fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")
 
     private fun replace(context: Context, id: String, change: (Profile) -> Profile) {
         _all.value = _all.value.map { if (it.id == id) change(it) else it }
@@ -357,7 +368,7 @@ object Profiles {
     }
 
     private fun json(p: Profile) = JSONObject().put("id", p.id).put("name", p.name).put("tone", p.tone.name)
-        .put("bio", p.biometric).apply { if (p.pinHash != null) { put("hash", p.pinHash); put("salt", p.salt) } }
+        .put("bio", p.biometric).apply { if (p.photo > 0L) put("ph", p.photo) }.apply { if (p.pinHash != null) { put("hash", p.pinHash); put("salt", p.salt) } }
         .apply { if (p.recoveryHash != null) { put("rq", JSONArray(p.recoveryQuestions)); put("rh", p.recoveryHash); put("rs", p.recoverySalt) } }
 
     private fun from(o: JSONObject): Profile? {
@@ -367,6 +378,7 @@ object Profiles {
             o.optString("hash").ifBlank { null }, o.optString("salt").ifBlank { null }, o.optBoolean("bio"),
             recoveryQuestions = o.optJSONArray("rq")?.let { a -> (0 until a.length()).map { a.optString(it) } }.orEmpty(),
             recoveryHash = o.optString("rh").ifBlank { null }, recoverySalt = o.optString("rs").ifBlank { null },
+            photo = o.optLong("ph", 0L).coerceAtLeast(0L),
         )
     }
 
