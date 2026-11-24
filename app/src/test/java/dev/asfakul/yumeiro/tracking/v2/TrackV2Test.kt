@@ -99,6 +99,7 @@ class TrackV2Test {
         assertNull(TrackMatch.pick("Demon Lord Retry", null, c))
         assertNotNull(TrackMatch.pick("Demon Slayer [1080p]", null, c))
         assertEquals("one piece", TrackMatch.normalize("  One-Piece!! "))
+        assertEquals(1.0, TrackMatch.similarity("Pokémon", "Pokemon"), 0.0)
     }
 
     @Test fun readingPlanNeverLowersAndCompletes() {

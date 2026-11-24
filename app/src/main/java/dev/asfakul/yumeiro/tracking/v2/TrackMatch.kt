@@ -22,16 +22,8 @@ object TrackMatch {
     data class Candidate(val aniListId: Int, val malId: Int?, val titles: List<String>, val year: Int?, val format: String?, val total: Int?)
     data class Match(val aniListId: Int?, val malId: Int?, val total: Int?, val score: Double)
 
-    /** Lower case letters and digits only, words split by single spaces. Pure. */
-    fun normalize(s: String): String {
-        val b = StringBuilder(s.length)
-        var space = false
-        for (ch in s.lowercase()) {
-            if (ch.isLetterOrDigit()) { b.append(ch); space = false }
-            else if (!space && b.isNotEmpty()) { b.append(' '); space = true }
-        }
-        return b.toString().trim()
-    }
+    /** Accents dropped, lower case, letters and digits split by single spaces (the search ranker's rule). */
+    fun normalize(s: String): String = dev.asfakul.yumeiro.online.SearchRanker.normalize(s)
 
     /** Extensions add "(Dub)", "[1080p]", "Season 2 (Sub)": cut bracketed tails. Pure. */
     fun clean(title: String): String {
