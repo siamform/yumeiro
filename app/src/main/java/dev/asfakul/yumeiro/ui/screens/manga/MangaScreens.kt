@@ -397,8 +397,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
         if (provider == null) {
             error = "This source isn't installed any more"
             // F-13: chapters saved on the phone still open without the source.
-            chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.list(context) }
-                .filter { it.providerId == providerId && it.mangaUrl == url }.map { MangaChapter(it.chapterUrl, it.chapterName) }.takeIf { it.isNotEmpty() }
+            // MANGA-ORDER-1: in chapter order, not download order.
+            chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.chapters(context, providerId, url) }.takeIf { it.isNotEmpty() }
             return@LaunchedEffect
         }
         error = null
@@ -409,9 +409,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (e: Exception) {
             // F-13: no connection (or the source broke): the chapters saved on this phone stay readable.
-            val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.list(context) }
-                .filter { it.providerId == providerId && it.mangaUrl == url }
-            if (saved.isNotEmpty()) chapters = saved.map { MangaChapter(it.chapterUrl, it.chapterName) }
+            val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.chapters(context, providerId, url) }
+            if (saved.isNotEmpty()) chapters = saved
             error = OnlineErrors.friendly(e)
         }
     }
@@ -577,9 +576,16 @@ private suspend fun loadPage(provider: MangaProvider, page: MangaPageRef, lowRam
 fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, chapterUrl: String, chapterName: String, onBack: () -> Unit) {
     var cur by rememberSaveable { mutableStateOf(chapterUrl to chapterName) }
     var chapters by remember { mutableStateOf<List<MangaChapter>>(emptyList()) }
+    val readerContext = LocalContext.current
     LaunchedEffect(providerId, mangaUrl) {
-        val p = SourceHub.manga(providerId) ?: return@LaunchedEffect
-        chapters = try { p.chapters(mangaUrl) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
+        // MANGA-ORDER-1: no connection, a broken source or a removed one: Previous / Next move through the chapters
+        // saved on the phone (in chapter order), with no network request for chapters that aren't there.
+        // The saved list comes first (from disk, at once), so the buttons work while the source is still timing out.
+        chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.chapters(readerContext, providerId, mangaUrl) }
+        val online = SourceHub.manga(providerId)?.let { p ->
+            try { p.chapters(mangaUrl) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+        }
+        if (!online.isNullOrEmpty()) chapters = online
     }
     val (prev, next) = remember(chapters, cur.first) { dev.asfakul.yumeiro.sources.manga.MangaChapterNav.neighbours(chapters, cur.first) }
     androidx.compose.runtime.key(cur.first) {
@@ -660,16 +666,17 @@ private fun MangaReaderChapter(
                     LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
                         itemsIndexed(list, key = { i, _ -> i }) { _, p -> PageImage(provider!!, p, fillWidth = true, tl = tlUse) }
                         if (next != null) item(key = "next_chapter") { NextChapterCard(next) { onGo(next) } }
+                        else if (provider?.ecosystem == "offline") item(key = "saved_end") { SavedEndCard() }
                     }
                 }
             }
             else -> {
                 // F-18: one extra page after the last one offers the next chapter.
-                val extra = if (next != null) 1 else 0
+                val extra = if (next != null || provider?.ecosystem == "offline") 1 else 0
                 val pager = rememberPagerState(initialPage = start.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size + extra }
                 LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { current = it.coerceAtMost(list.size - 1) } }
                 HorizontalPager(pager, modifier = Modifier.fillMaxSize(), reverseLayout = false, beyondViewportPageCount = 1) { i ->
-                    if (i >= list.size) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { next?.let { n -> NextChapterCard(n) { onGo(n) } } }
+                    if (i >= list.size) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { next?.let { n -> NextChapterCard(n) { onGo(n) } } ?: SavedEndCard() }
                     else ZoomBox(onTap = { chrome = !chrome }) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PageImage(provider!!, list[i], fillWidth = false, tl = tlUse) } }
                 }
             }
@@ -708,6 +715,20 @@ private fun MangaReaderChapter(
         }
         if (tlSheet) TranslateSheet(tl, MangaTlPlan.fromProvider(provider?.lang), onChange = { tl = it; MangaTranslate.save(context, it) }, onDismiss = { tlSheet = false })
         androidx.activity.compose.BackHandler(onBack = onBack)
+    }
+}
+
+/** MANGA-ORDER-1: the last saved chapter, read offline: say why there is no next one instead of a silent dead end. */
+@Composable
+private fun SavedEndCard() {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp)).padding(20.dp).testTag("reader_saved_end"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("End of your saved chapters", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        Text("Connect to the internet or save the next chapter to keep reading.", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
     }
 }
 
