@@ -86,6 +86,8 @@ class MTApplication : Application(), ImageLoaderFactory {
             runCatching { dev.asfakul.yumeiro.text.RegexWarmup.run() }
             // E4: measured extension speeds (prefs read, so here and not on main).
             runCatching { dev.asfakul.yumeiro.online.ExtensionSpeed.init(app) }
+            // ADCHAIN-2: the page browser's ad-filter / short-link switches (prefs read, so here and not on main).
+            runCatching { dev.asfakul.yumeiro.online.web.BrowserFilters.start(app) }
             // R16 (ST-7): build the source-menu icons (Material vectors, the Yumix logo) here, not in
             // the first composition on main. Icon getters cache what they build; a race only builds twice.
             runCatching {

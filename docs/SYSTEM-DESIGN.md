@@ -1989,3 +1989,66 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
   search matches series titles across the six channels. NFR: one channel page request per shelf, at most
   400 episodes per series to bound memory on low-RAM phones.
 - Tests: `Anime1YumeiroAnimeTest` (7, Robolectric) with the channels' real playlist titles; emulator probe below.
+
+### ADR-062: ADCHAIN-2, chained-ad resolver improvements and the filter switches (owner list 23)
+
+- Context: owner list item 23, second round: keep ADCHAIN-1 (ADR-060) and improve it: real destination
+  instead of an intermediate page, cookie / session care, direct media (MP4, M3U8, Pixeldrain, Gofile) to the
+  player, pop-up / pop-under / ad-redirect blocking, attachment downloads, an ON/OFF option, recovery.
+- Audit of what existed (2026-11-24, code read before editing):
+  - Working: `AdFilter` (static ad-host list + VAST / pre-roll paths) blocks sub-requests in the page browser
+    with an empty answer; `AdShield.DOCUMENT_START_JS` (every page) turns `window.open` into a no-op and removes
+    empty full-screen click-catchers; `setSupportMultipleWindows(true)` with no `onCreateWindow` dropped every
+    target=_blank; `link_chain.js` + `LinkChainPolicy` walk AdLinkFly / themezon chains (timer wait, real-touch
+    tap, captcha left to the person, Stop); `WebDownloads` turns a WebView download into the download popup;
+    `LinkHosts` maps Pixeldrain / Drive / Dropbox / OneDrive share pages to file addresses; `PageStreamCapture`
+    catches media requests and page players; cookies are one store (`CookieManager`, accepted incl. third party).
+  - Incomplete: no user switch (only the remote flag); a top-level jump of the page to an ad host was allowed
+    (only non-http schemes were stopped); a normal target=_blank link the person tapped did nothing; the walk's
+    "destination" was the first non-chain host, so an ad page that took the page over counted as the
+    destination; the destination's address was not used (media at the end stayed in the WebView); a video
+    served as an attachment went to the download popup, not the player; recovery after "stopped" was Stop only;
+    the walker's device log used Log.i, which release builds strip.
+- Research (mechanisms, not copied code): AdLinkFly's last step POSTs its own `form#go-link` to `/links/go`
+  with `X-Requested-With: XMLHttpRequest` and receives `{"status":"success","url":"<destination>"}`
+  ([adlinkfly_bypasser](https://github.com/Fyphost/adlinkfly_bypasser),
+  [shortlink-bypass](https://github.com/stav3ng3r/shortlink-bypass)); userscripts and FastForward use
+  per-site rules plus a generic "network-capture" of destination-shaped JSON
+  ([shortlink-skipper rules](https://github.com/LucianoSkx/shortlink-skipper),
+  [FastForward functions](https://github.com/FastForwardTeam/FastForward/wiki/Functions)). Yumeiro keeps
+  its own walk (the site's timers and captchas stay) and adds only the read-only network listening.
+- Decision:
+  - `link_chain.js` listens (read-only) to the page's own XHR / fetch answers on chain pages only; a
+    `/links/go`-style JSON `url` (http/https only) or a filled final "Get Link" href is reported as `dest`.
+    Yumeiro never sends that request itself, never skips a timer and never answers a captcha.
+  - `LinkChainPolicy` keeps the revealed link; with the filter on, a page on an ad host during a walk is
+    never the destination: Yumeiro opens the revealed link, or goes Back, at most 3 times, then stops with
+    Back / Browser buttons. `Done` carries the destination's address.
+  - `ChainDestination` (pure): direct video / audio / HLS / DASH and documented file hosts (Pixeldrain etc.)
+    play in Yumeiro's player with the page's cookies, user agent and referer; Gofile / MediaFire / KrakenFiles
+    pages stay, their player is started and its stream caught (Gofile hands files only to its own page and
+    its API needs a site token, so no hard-coded token); any other page stays open.
+  - `PopupPolicy` (pure): a tapped real link with target=_blank opens in the page, same-site windows open,
+    script windows and ad hosts are held with a "Pop-up blocked · Open" note; on a chain page off-site windows
+    are held. A main-frame jump to an ad host is held (with Open); during a walk with a revealed link it is
+    answered with that link.
+  - Attachments: a video / audio download (MIME, or a media file name with a generic octet-stream type) plays in
+    the player; other files (zip, apk, exe, pdf) open the download popup as before.
+  - Switches (`BrowserFilters`, Websites page, prefs `yu_browser_filters`, read on the startup thread):
+    "Block ads and pop-ups" (AdFilter, AdShield script, pop-up rules, element hiding) and "Open the real link
+    behind short links" (the walker) are separate. The page browser's shield button turns the filter off or on
+    for that page only (WebView-scoped, removes / adds the document-start script and reloads); cookies,
+    storage and sign-ins are never cleared by any switch. Filter off = pop-ups the person tapped for open in
+    the page (a hidden helper view learns a script window's address).
+- Side effects considered: legitimate redirects (only hosts on the ad list are held, same-site always
+  allowed, and every hold has an Open action); required JavaScript (no script is replaced except
+  `window.open`, which the shield already handled, and the shield can now be turned off per page); cookie
+  loops (one store, flushed when a walk ends; no switch clears cookies); stuck pages (3-minute stop, 3
+  recoveries, Back / Browser / Stop); false media (only URL-shape and documented hosts; HTML pages are never
+  sent to the player); unsupported files (download popup); performance (scans stay at 1–1.5 s and stop on
+  ordinary pages after 6; the network listener is installed only on chain pages); extensions and the player
+  are untouched (the capture path is the same).
+- Tests: `Adchain2ResolverTest` (10, Robolectric), `LinkChainPolicyTest` (unchanged, still passes),
+  `scripts/adchain1_link_chain_check.js` (18: the 14 earlier pages + 4 network-answer cases). Emulator probe on
+  local test pages (`scripts/probe-fixtures/serve.py`: timer, ad layer, decoy, pop-ups, /links/go, 3 redirects,
+  direct MP4, attachment MP4 and ZIP, an ordinary page) and on the owner's two live links.

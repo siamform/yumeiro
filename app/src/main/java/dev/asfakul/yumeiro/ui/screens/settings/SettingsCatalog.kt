@@ -92,8 +92,8 @@ object SettingsCatalog {
         // F-02 split: Telegram and Websites are two pages, each with its own entry.
         TELEGRAM(Group.SOURCES, "Telegram", "Public Telegram channels with no login, TeraBox and DiskWala links in posts",
             listOf("telegram", "t.me", "channel", "channels", "terabox", "diskwala"), route = "telegram"),
-        WEBSITES(Group.SOURCES, "Websites", "Sites you saved to play their videos in Yumeiro",
-            listOf("websites", "sites", "browser", "web", "link"), route = "websites"),
+        WEBSITES(Group.SOURCES, "Websites", "Saved video sites, the ad and pop-up filter, and opening the real link behind short links",
+            listOf("websites", "sites", "browser", "web", "link", "ad block", "ads", "pop-up", "popup", "short link", "shortener"), route = "websites"),
         TRACKING(Group.SOURCES, "Tracking", "AniList, MyAnimeList, Kitsu, Trakt, Simkl and Last.fm sign-in",
             listOf("anilist", "mal", "myanimelist", "kitsu", "trakt", "simkl", "sync", "list", "progress", "account", "scrobble"), route = "tracking",
             settings = listOf("Scrobble what I play", "Last.fm")),

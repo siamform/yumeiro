@@ -49,6 +49,41 @@
     if (/your link (will be|is almost) ready|please wait \d+ seconds|get link|generate link|continue to your link/.test(raw)) signals += 1;
     if (/step \d+ (of|\/) \d+/.test(raw)) signals += 1;
     if (signals < 2) return JSON.stringify({ chain: false, step: 'none', signals: signals });
+    // ADCHAIN-2: the destination as the site itself answers it. AdLinkFly-family shorteners (srnky,
+    // shrinkearn, shrinkme's last step) POST their own form to /links/go and get {"status":"success",
+    // "url":"<destination>"} back, then set location to it. Yumeiro only listens to that answer (it never
+    // sends the request, changes it or makes a token), so an ad that hijacks the page afterwards can't
+    // hide the real link. Installed once per document, read-only.
+    if (!state.net) {
+      state.net = true;
+      var take = function (reqUrl, txt) {
+        if (!txt || txt.length > 6000 || txt.charAt(0) !== '{') return;
+        try {
+          var j = JSON.parse(txt), u = j && (j.url || (j.data && j.data.url));
+          if (typeof u !== 'string' || !/^https?:\/\//i.test(u)) return;
+          if (j.status === 'success' || /\/links\/go|\/go\b|get-?link/i.test(reqUrl || '')) state.dest = u;
+        } catch (e2) {}
+      };
+      try {
+        var XO = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function (m, u) {
+          var x = this, ru = String(u || '');
+          x.addEventListener('load', function () { try { if (!x.responseType || x.responseType === 'text') take(ru, x.responseText); } catch (e3) {} });
+          return XO.apply(x, arguments);
+        };
+      } catch (e4) {}
+      try {
+        if (W.fetch) {
+          var FO = W.fetch;
+          W.fetch = function (input) {
+            var ru = String((input && input.url) || input || '');
+            var pr = FO.apply(this, arguments);
+            try { pr.then(function (r) { if (/json|text/i.test((r.headers && r.headers.get('content-type')) || '')) r.clone().text().then(function (t) { take(ru, t); }, function () {}); }, function () {}); } catch (e5) {}
+            return pr;
+          };
+        }
+      } catch (e6) {}
+    }
     var body = (D.body && D.body.innerText || '').slice(0, 20000);
     var low = body.toLowerCase();
     var chain = true;
@@ -144,6 +179,7 @@
     if (st) stepText = st[1] + '/' + st[2];
 
     var out = { chain: true, signals: signals, removed: state.removed, secs: secs, stepText: stepText, vw: W.innerWidth, vh: W.innerHeight };
+    if (state.dest) out.dest = state.dest;
     if (captcha && !captchaDone) {
       // The site wants a person (and its button stays off until then). Yumeiro never ticks it.
       if (captcha.scrollIntoView && !state.captchaScrolled) { state.captchaScrolled = true; captcha.scrollIntoView({ block: 'center' }); }
@@ -175,6 +211,11 @@
       return JSON.stringify(out);
     }
     out.step = 'ready'; out.label = best.t; out.final = best.score >= 30;
+    // The last button is often a plain link the site filled with the destination ("Get Link" → href).
+    if (out.final && !out.dest && best.el.tagName === 'A') {
+      var fh = best.el.href || '';
+      if (/^https?:\/\//i.test(fh) && fh.split('/')[2] !== location.host) out.dest = fh;
+    }
     out.x = cx; out.y = cy;
     return JSON.stringify(out);
   } catch (e) {

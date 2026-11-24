@@ -51,7 +51,13 @@ internal data class ChainBanner(val title: String, val line: String, val kind: K
  * and a Stop button. It sits above the page, never on it, so the site's captcha and buttons stay visible.
  */
 @Composable
-internal fun LinkChainBanner(banner: ChainBanner, onStop: (() -> Unit)?) {
+internal fun LinkChainBanner(
+    banner: ChainBanner,
+    onStop: (() -> Unit)?,
+    /** ADCHAIN-2: recovery when the walk stopped: one page back, or the same page in the phone's browser. */
+    onBack: (() -> Unit)? = null,
+    onOutside: (() -> Unit)? = null,
+) {
     Row(
         Modifier.fillMaxWidth().background(TextPrimary.copy(alpha = 0.08f)).heightIn(min = 52.dp)
             .padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp).testTag("link_chain_banner")
@@ -80,6 +86,12 @@ internal fun LinkChainBanner(banner: ChainBanner, onStop: (() -> Unit)?) {
         }
         if (onStop != null) TextButton(onClick = onStop, modifier = Modifier.testTag("link_chain_stop")) {
             Text("Stop", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+        }
+        if (onBack != null) TextButton(onClick = onBack, modifier = Modifier.testTag("link_chain_back")) {
+            Text("Back", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+        }
+        if (onOutside != null) TextButton(onClick = onOutside, modifier = Modifier.testTag("link_chain_outside")) {
+            Text("Browser", color = SpotifyGreen, fontWeight = FontWeight.Bold)
         }
     }
 }

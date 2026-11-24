@@ -137,6 +137,22 @@ jobs:
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
           mkdir -p probe
 
+      - name: Start test pages (ADCHAIN-2)
+        # Local pages for the link-chain / pop-up / download checks, reached from the emulator at http://10.0.2.2:8765.
+        # Unsealed runs only (a signed-in run never opens them). Test tooling, not part of the app.
+        if: ${{ steps.cfg.outputs.seal != '1' && contains(steps.cfg.outputs.steps, '10.0.2.2') }}
+        run: |
+          CLIP="$RUNNER_TEMP/clip.mp4"
+          if command -v ffmpeg >/dev/null; then
+            ffmpeg -loglevel error -f lavfi -i testsrc2=duration=60:size=640x360:rate=25 -f lavfi -i sine=frequency=440:duration=60 \
+              -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -movflags +faststart "$CLIP"
+          else
+            curl -fsSL -o "$CLIP" https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4
+          fi
+          ls -l "$CLIP"
+          nohup python3 scripts/probe-fixtures/serve.py 8765 "$CLIP" > "$RUNNER_TEMP/fixtures.log" 2>&1 &
+          sleep 1; curl -fsS -o /dev/null -w "fixtures %{http_code}\n" http://127.0.0.1:8765/normal
+
       - name: Probe on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
@@ -167,6 +183,10 @@ jobs:
           pip install --quiet dpkt
           python3 scripts/field_probe_report.py probe/net.pcap probe/timeline.txt > probe/network-report.txt || true
           [ "${{ steps.cfg.outputs.seal }}" = 1 ] || head -200 probe/network-report.txt
+
+      - name: Keep test-page log (ADCHAIN-2)
+        if: ${{ always() && steps.cfg.outputs.seal != '1' }}
+        run: cp "$RUNNER_TEMP/fixtures.log" probe/fixtures.log 2>/dev/null || true
 
       - name: Seal results
         if: ${{ always() && steps.cfg.outputs.seal == '1' }}

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -117,6 +118,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.web.SiteHistory.init(context) }
     val visits by dev.asfakul.yumeiro.online.web.SiteHistory.visits.collectAsState()
     val rememberVisits by dev.asfakul.yumeiro.online.web.SiteHistory.on.collectAsState()
+    // ADCHAIN-2: the page browser's two switches (ad filter; short-link opener).
+    val filterAds by dev.asfakul.yumeiro.online.web.BrowserFilters.filterAds.collectAsState()
+    val resolveLinks by dev.asfakul.yumeiro.online.web.BrowserFilters.resolveLinks.collectAsState()
 
     /** Reads the new site's own name and icon in the background (the row shows the guess until then). */
     fun readMeta(url: String) {
@@ -453,6 +457,20 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     androidx.compose.material3.Switch(rememberVisits, { dev.asfakul.yumeiro.online.web.SiteHistory.setOn(context, it) }, modifier = Modifier.testTag("recent_switch"))
                 }
             }
+            if (!telegramPage) item("browser_switches") {
+                Column {
+                    BrowserSwitchRow(
+                        title = "Block ads and pop-ups",
+                        line = "Ad sites never load, pop-ups and pop-unders stay closed. The shield button on a page turns it off there only",
+                        on = filterAds, tag = "filter_ads_switch",
+                    ) { dev.asfakul.yumeiro.online.web.BrowserFilters.setFilterAds(context, it) }
+                    BrowserSwitchRow(
+                        title = "Open the real link behind short links",
+                        line = "Waits out the timers and taps Continue on link-shortener pages; a check that needs you is left to you",
+                        on = resolveLinks, tag = "resolve_links_switch",
+                    ) { dev.asfakul.yumeiro.online.web.BrowserFilters.setResolveLinks(context, it) }
+                }
+            }
             // The step-by-step guide lives behind the "?" in the header (not in the list) so the
             // saved sites stay the focus of the page.
             item("help_hint") {
@@ -558,5 +576,24 @@ private fun RecentRow(v: dev.asfakul.yumeiro.online.web.SiteHistory.Visit, onOpe
         }
         IconButton(onClick = onSave, modifier = Modifier.testTag("recent_save")) { Icon(Icons.Default.Add, "Save ${v.name}", tint = p.accent) }
         IconButton(onClick = onForget, modifier = Modifier.testTag("recent_forget")) { Icon(Icons.Default.Close, "Remove ${v.name} from recent", tint = p.textSecondary) }
+    }
+}
+
+/** ADCHAIN-2: one switch row; the whole row toggles (48 dp+ target), the switch shows the state. */
+@Composable
+private fun BrowserSwitchRow(title: String, line: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+    val p = LocalMtPalette.current
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .then(Modifier.toggleable(value = on, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange))
+            .heightIn(min = 56.dp).padding(horizontal = 4.dp, vertical = 4.dp).testTag(tag + "_row"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, color = p.textPrimary, fontSize = 14.sp)
+            Text(line, color = p.textTertiary, fontSize = 12.sp, lineHeight = 16.sp)
+        }
+        Spacer(Modifier.width(8.dp))
+        androidx.compose.material3.Switch(on, null, modifier = Modifier.testTag(tag))
     }
 }

@@ -43,4 +43,39 @@ for (const [file, inline, wantChain, wantStep, wantLabel] of cases) {
   console.log((ok ? 'ok   ' : 'FAIL ') + (file || 'inline') + ' -> ' + JSON.stringify({ chain: out.chain, step: out.step, label: out.label, secs: out.secs, error: out.error }));
   if (!ok) bad++;
 }
-process.exit(bad ? 1 : 0);
+// ADCHAIN-2: the destination is read from the site's own /links/go answer (XHR and fetch), never made up.
+function destCase(name, reqUrl, body, want, viaFetch) {
+  const html = '<html><body><form id="go-link" action="/links/go" method="post"><input name="_token" value="t"></form><p>Please wait 5 seconds</p></body></html>';
+  const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://srnky.com/abc' });
+  const W = dom.window;
+  Object.defineProperty(W.HTMLElement.prototype, 'innerText', { get() { return this.textContent; } });
+  W.Element.prototype.getBoundingClientRect = () => ({ left: 0, top: 0, width: 0, height: 0 });
+  W.Element.prototype.scrollIntoView = function () {};
+  // A stand-in XHR / fetch that answers like the site's server (no network).
+  W.eval(`(function(){
+    function X(){ this.l=[]; this.responseType=''; }
+    X.prototype.open=function(m,u){ this.u=u; };
+    X.prototype.addEventListener=function(t,f){ if(t==='load') this.l.push(f); };
+    X.prototype.send=function(){ var x=this; x.responseText=window.__body; x.l.forEach(function(f){ f(); }); };
+    window.XMLHttpRequest=X;
+    window.fetch=function(u){ return Promise.resolve({ headers:{ get:function(){ return 'application/json'; } }, clone:function(){ return { text:function(){ return Promise.resolve(window.__body); } }; } }); };
+  })()`);
+  W.__body = body;
+  W.eval(js); // installs the listener
+  if (viaFetch) W.eval(`fetch(${JSON.stringify(reqUrl)})`);
+  else W.eval(`var x=new XMLHttpRequest(); x.open('POST', ${JSON.stringify(reqUrl)}); x.send('a=1');`);
+  return new Promise((res) => setTimeout(() => {
+    const out = JSON.parse(W.eval(js));
+    const ok = (out.dest || null) === want;
+    console.log((ok ? 'ok   ' : 'FAIL ') + name + ' -> dest=' + out.dest);
+    if (!ok) bad++;
+    res();
+  }, 20));
+}
+(async () => {
+  await destCase('links/go xhr', '/links/go', '{"status":"success","message":"","url":"https://pixeldrain.com/u/abc123"}', 'https://pixeldrain.com/u/abc123');
+  await destCase('links/go fetch', '/links/go', '{"status":"success","url":"https://gofile.io/d/AbC12"}', 'https://gofile.io/d/AbC12', true);
+  await destCase('other json ignored', '/api/stats', '{"views":3,"url":"https://ads.example/x"}', null);
+  await destCase('non-web url ignored', '/links/go', '{"status":"success","url":"javascript:alert(1)"}', null);
+  process.exit(bad ? 1 : 0);
+})();

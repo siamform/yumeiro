@@ -49,6 +49,8 @@ object LinkChain {
         val secs: Int? = null,
         val stepText: String? = null,
         val defused: Int = 0,
+        /** ADCHAIN-2: the destination the site itself answered (its /links/go JSON or the filled Get Link href). */
+        val dest: String? = null,
     )
 
     /** Parses what `evaluateJavascript` returned (a JSON string holding the scan's JSON). */
@@ -81,6 +83,7 @@ object LinkChain {
             secs = if (o.has("secs") && !o.isNull("secs")) o.optInt("secs") else null,
             stepText = o.optString("stepText").takeIf { it.isNotBlank() && o.has("stepText") && !o.isNull("stepText") },
             defused = o.optInt("removed", 0),
+            dest = o.optString("dest").takeIf { o.has("dest") && (it.startsWith("http://", true) || it.startsWith("https://", true)) },
         )
     }.getOrNull()
 
@@ -137,6 +140,10 @@ object LinkChainPolicy {
         val destScans: Int = 0,
         val destination: String? = null,
         val defused: Int = 0,
+        /** ADCHAIN-2: the real link as the site revealed it (kept across ad pages that hijack the page). */
+        val revealed: String? = null,
+        /** ADCHAIN-2: times Yumeiro left an ad page that took over (bounded, so a loop can't trap the page). */
+        val recoveries: Int = 0,
     ) {
         /** "Step 2" (or the site's own "2/3"). */
         val stepNumber: Int get() = pages.size.coerceAtLeast(1)
@@ -148,19 +155,39 @@ object LinkChainPolicy {
         data class Wait(val text: String) : Action
         data class AskUser(val text: String) : Action
         data class Tap(val x: Double, val y: Double, val vw: Double, val vh: Double, val label: String) : Action
-        data class Done(val host: String) : Action
+        /** [url]: the destination's address when Yumeiro knows it (revealed by the site or the page now open). */
+        data class Done(val host: String, val url: String? = null) : Action
+        /** ADCHAIN-2: an ad page took over after the site revealed the real link: open [url] instead. */
+        data class Open(val url: String, val text: String) : Action
+        /** ADCHAIN-2: an ad page took over before the real link was known: go back one page. */
+        data class Back(val text: String) : Action
         data class GiveUp(val text: String) : Action
     }
 
-    fun next(st: State, scan: LinkChain.Scan?, url: String, host: String, now: Long): Pair<State, Action> {
+    /** Ad pages that took over the chain Yumeiro leaves at most this often (then the person decides). */
+    const val MAX_RECOVERIES = 3
+
+    /**
+     * [adPage] = the page now open is on an ad host ([AdFilter]'s list): with the filter on that is an ad
+     * that took over, never the destination.
+     */
+    fun next(st: State, scan: LinkChain.Scan?, url: String, host: String, now: Long, adPage: Boolean = false): Pair<State, Action> {
         if (st.stopped || st.destination != null) return st to Action.Idle
         if (scan == null) return st to (if (st.active) Action.Wait("Reading the page") else Action.Idle)
         if (!scan.chain) {
             if (!st.active) return st to Action.Idle
             // Still on a chain host (the next step is loading) or an ad page in between.
             if (host in st.chainHosts) return st.copy(destScans = 0) to Action.Wait("Opening the next step")
+            val revealed = st.revealed
+            if (adPage) {
+                if (st.recoveries >= MAX_RECOVERIES) return st.copy(stopped = true) to Action.GiveUp("An ad page keeps taking over. Use Back, or turn the filter off for this page.")
+                val s = st.copy(recoveries = st.recoveries + 1, destScans = 0)
+                return if (revealed != null) s to Action.Open(revealed, "An ad took over; opening the real link")
+                else s to Action.Back("An ad took over; going back")
+            }
             val n = st.destScans + 1
-            return if (n >= DEST_SCANS) st.copy(destScans = n, destination = host) to Action.Done(host)
+            val destUrl = if (revealed != null && ChainDestination.sameSite(revealed, url)) revealed else url
+            return if (n >= DEST_SCANS) st.copy(destScans = n, destination = host) to Action.Done(host, destUrl)
             else st.copy(destScans = n) to Action.Wait("Opening the link")
         }
         val page = url.substringBefore('#').substringBefore('?')
@@ -170,6 +197,7 @@ object LinkChainPolicy {
             pages = if (st.pages.lastOrNull() == page) st.pages else st.pages + page,
             destScans = 0,
             defused = maxOf(st.defused, scan.defused),
+            revealed = scan.dest ?: st.revealed,
         )
         val pKey = "$page|${scan.step}|${scan.label}|${scan.secs}"
         // A captcha waits for the person, however long they take; only a page that stops moving is "stuck".
