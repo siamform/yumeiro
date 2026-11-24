@@ -214,3 +214,38 @@ makes no money from them.
   route is off by default.
 - Until the owner decides: Yumeiro keeps the honest message (file name + size from temp_info). Remove the hand-off to
   the DiskWala app only when the replacement exists, so the link doesn't become a dead end.
+
+## Queued by the owner on 2026-11-24 (after the current list)
+
+Order: finish 1-24 first. These two are research-first; no implementation before the plan is written and reviewed.
+
+### Bug/Feature 26 (owner queue no. 24). Zangetsu research and Yumeiro V2 integration — queued, not started
+Reference: https://github.com/Spyou/Zangetsu (sequence Hikaei → Zangetsu). Study the real source, don't copy.
+1. Novels (new): novel extensions through the existing extension system; browse/search; details and chapters;
+   dedicated reader; translation reusing the manga translation path (no second translation system); progress,
+   last chapter and position; loading/empty/error states.
+2. Source Finding V2 next to V1 (V1 stays): research Zangetsu's scheduling, parallelism, caching, ranking,
+   dedupe, timeouts, cancellation, UI feedback; measure V1 vs V2, don't assume; one failing source never blocks.
+3. Tracking V2 next to V1: anime/series, manga, novels; automatic progress, resume, matching, dedupe, conflicts.
+   Never break existing tracking data; plan migrations first.
+4. README and GitHub overview: concise Yumeiro-native presentation (intro, identity, short features, screenshots,
+   install/download, navigation). No badge walls, emoji, repeated text.
+5. Anime4K V2: presets based on real shaders (e.g. Performance/Balanced/Quality/Custom), only controls that reach
+   the pipeline, compatible extra effects, mandatory in-player control (toggle, quick presets, custom, active
+   profile shown, persisted), GPU/device fallbacks; current Anime4K stays.
+Method per feature: read code, trace paths, deps, UI, perf, limits, compare with Yumeiro, plan. Every change lists
+existing/proposed behaviour, files, deps, compatibility, side effects, failures, migration.
+Phases A research → B Yumeiro audit → C comparison → D plan (reviewed) → E implementation.
+Report (14 parts) marks each finding: verified implementation / observed behaviour / inference / proposal.
+
+### Item 25. Repository humanization, anti-slop and docs separation — queued, not started
+1. Look for installed skills (Anti-Slop, Code Quality, Repository Cleanup, Motomation Design); read them fully; if
+   absent, say so and run a conservative audit. Never claim a skill that wasn't found.
+2. Whole-repo audit: needless wrappers, duplicates, generic comments, dead code, unused deps, inconsistent naming,
+   duplicated config. Simplify with a reason per change; keep every feature, extension compatibility, playback,
+   downloads, Anime4K, YouTube, IPTV, DNS, settings, updater. No cosmetic rewrites, no history manipulation.
+3. Docs to a private repo `yumeiro-docs`: inventory, keep history where reasonable, index, update links; main repo
+   keeps README, install, contributing, license/legal, security/support. Check Pages/releases/artifacts don't
+   publish private docs. If a private repo can't be created, stop and ask; never a public substitute. No secrets.
+4. Dependencies one by one; no major upgrades without reason.
+5. Validate (format, lint, tests, builds, links, diffs), report only checks that ran. Stages A-E with final report.
