@@ -128,7 +128,7 @@ object TorrentStreams {
     internal fun touch(c: TorrentCore, hash: String, root: File) {
         synchronized(this) {
             // TOR-IDLE-1: a read after the idle pause (e.g. the player was paused over 2 min) resumes the torrent.
-            if (idlePaused.remove(hash)) { if (hash in active) c.resume(hash) }
+            if (idlePaused.remove(hash)) { if (hash in active) { c.resume(hash); TorrentTrace.sink?.invoke("idle resume") } }
             else if (idleJobs[hash]?.isActive == true && System.nanoTime() - (lastTouch[hash] ?: 0L) < 5_000_000_000L) return
             lastTouch[hash] = System.nanoTime()
             idleJobs.remove(hash)?.cancel()
@@ -146,6 +146,7 @@ object TorrentStreams {
         c.pause(hash)
         idleJobs.remove(hash)?.cancel()
         idlePaused += hash
+        TorrentTrace.sink?.invoke("idle pause")
     }
     private val lastTouch = HashMap<String, Long>()
 
