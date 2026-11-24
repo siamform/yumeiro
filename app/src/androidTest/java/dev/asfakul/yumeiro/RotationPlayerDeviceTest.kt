@@ -80,6 +80,9 @@ class RotationPlayerDeviceTest {
     }
 
     @Before fun setUp() {
+        // Android's one-time "Viewing full screen" notice covers the top of the full-screen player and takes the
+        // first tap there (the reset pill); a person dismisses it once, so the test marks it as seen.
+        FirstRun.shell("settings put secure immersive_mode_confirmations confirmed")
         // The long Skip clip, so the video is still playing through every step.
         val clip = inst.context.assets.open("yumeiro_skip_1510.mp4").use { it.readBytes() }
         server = MockWebServer()
