@@ -177,6 +177,13 @@ PY
       quick*) # quick X Y: tap a point with no UI read after it (for recordings of what the tap starts)
         q=${s#quick }; adb shell input tap $q; note "quick tap $q" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
+      night*) # night yes|no: system dark theme on / off (SPLASH-2 light and dark cold starts)
+        v=${s#night }; adb shell cmd uimode night "$v" > /dev/null 2>&1; sleep 2; note "night mode $v: $(adb shell cmd uimode night | tr -d '\r')" ;;
+      pic) # put one picture in the gallery (a screenshot of the screen now), for photo-picker probes (PROFILE-PIC-1)
+        adb shell mkdir -p /sdcard/Pictures; adb shell screencap -p /sdcard/Pictures/yumeiro-probe.png
+        adb shell content call --uri content://media --method scan_volume --arg external_primary > /dev/null 2>&1 || true
+        adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Pictures/yumeiro-probe.png > /dev/null 2>&1 || true
+        sleep 2; note "picture added to the gallery" ;;
       relaunch) # the app is closed (as after a swipe away) and opened again, to see what it shows from its saved state
         adb shell am force-stop "$P"; sleep 2; launch again; sleep 2 ;;
       shot*) dump "${s#shot }" ;;
