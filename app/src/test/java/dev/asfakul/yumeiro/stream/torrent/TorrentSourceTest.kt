@@ -37,6 +37,9 @@ class FakeCore(private val dir: File, private val meta: TorrentMeta) : TorrentCo
     val windows: MutableList<ByteArray> = Collections.synchronizedList(ArrayList())
     val events: MutableList<String> = Collections.synchronizedList(ArrayList())
     override fun streamWindow(hash: String, priorities: ByteArray) { windows += priorities; events += "window" }
+    val blocks: MutableMap<Int, java.util.BitSet> = java.util.concurrent.ConcurrentHashMap()
+    override fun finishedBlocks(hash: String, piece: Int): java.util.BitSet? = blocks[piece]
+    fun blocksIn(p: Int, vararg b: Int) { blocks[p] = java.util.BitSet().apply { b.forEach { set(it) } }; synchronized(signal) { signal.notifyAll() } }
 }
 
 class TorrentSourceTest {
@@ -182,6 +185,58 @@ class TorrentSourceTest {
         assertTrue("only the seek target wanted: ${w2.toList()}", (0 until 20).filter { it != 10 }.all { w2[it].toInt() == 0 })
         assertEquals(listOf(10 to 0), duringDeadlines)
         assertEquals(6, core.windows.last()[11].toInt()) // window open after the bytes came
+    }
+
+    /**
+     * B31-SEEK6 (lowram run 45268091524, no playback 30 s after the seek): the seek target had 6 of 8 blocks but not
+     * the one the read needed, so the held window never opened, nothing else was wanted and the peers left.
+     */
+    @Test fun heldWindowOpensOnAnyBlockOfTheTarget() {
+        val dir = tmp.newFolder()
+        val mb = 1 shl 20
+        val f = TorrentFile(0, "Movie.mp4", 20L * mb, 0)
+        java.io.RandomAccessFile(File(dir, f.path), "rw").use { it.setLength(f.size) }
+        val meta = TorrentMeta("cd".repeat(20), "Movie", mb, 20, listOf(f))
+        val core = FakeCore(dir, meta)
+        val src = TorrentSource(core, meta, f, readAhead = 4L * mb, waitMs = 3_000)
+        src.prime(); core.arrive(0); src.read(0, ByteArray(10), 0, 10)
+        var opened: ByteArray? = null
+        val t = Thread {
+            Thread.sleep(150); core.blocksIn(10, 0, 1, 2, 3, 4, 5) // block 60 of 64 (the one read) still missing
+            Thread.sleep(300); opened = core.windows.last(); core.arrive(10)
+        }.apply { start() }
+        src.read(10L * mb + 60 * 16 * 1024, ByteArray(10), 0, 10)
+        t.join()
+        assertEquals("window open once the target had blocks: ${opened!!.toList()}", 6, opened!![11].toInt())
+    }
+
+    /**
+     * B31-SEEK6 (api36 run 45268091524, seek 13.6 s): all ~500 pieces of the 64 MB read-ahead had deadlines, so each
+     * was at top priority. Only the next few pieces get deadlines; the rest of the window is wanted without one, and
+     * the deadlines slide on as playback reads past the middle of them.
+     */
+    @Test fun onlyTheNextPiecesHaveDeadlinesAndTheySlide() {
+        val dir = tmp.newFolder()
+        val pl = 128 * 1024
+        val f = TorrentFile(0, "Sintel.mp4", 1000L * pl, 0)
+        java.io.RandomAccessFile(File(dir, f.path), "rw").use { it.setLength(f.size) }
+        val meta = TorrentMeta("ce".repeat(20), "Sintel", pl, 1000, listOf(f))
+        val core = FakeCore(dir, meta)
+        val src = TorrentSource(core, meta, f, readAhead = 64L shl 20, waitMs = 3_000)
+        val urgent = TorrentPlan.urgentPieces(pl)
+        assertEquals(16, urgent)
+        src.prime(); core.arrive(0); src.read(0, ByteArray(10), 0, 10)
+        val timed = core.deadlines.map { it.first }.filter { it < 900 }.distinct()
+        assertEquals("timed pieces: $timed", (0 until urgent).toList(), timed.sorted())
+        assertEquals(5, core.windows.last()[300].toInt()) // still wanted, no deadline
+        core.deadlines.clear()
+        core.arrive(9); src.read(9L * pl, ByteArray(10), 0, 10)
+        assertEquals((16..24).toList(), core.deadlines.map { it.first })
+        assertEquals(16 to 7 * 120, core.deadlines.first())
+        // A seek drops the timed pieces (0..24) and the tail asked at open (B31-SEEK4), not the 500-piece window.
+        val tail = TorrentPlan.headTail(f, pl).filter { it > 500 }
+        core.dropped.clear(); core.arrive(500); src.read(500L * pl, ByteArray(10), 0, 10)
+        assertEquals(((0..24) + tail).sorted(), core.dropped.distinct().sorted())
     }
 
     @Test fun timeoutAndErrorBecomeIOException() {
