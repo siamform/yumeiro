@@ -161,6 +161,8 @@ object BrowserCheck {
 
     fun forget(host: String) { cleared.remove(host) }
 
+    internal fun rememberForTest(host: String, c: Clearance) { cleared[host] = c }
+
     /** What a refused response is. */
     enum class Verdict {
         /** Real content (or an ordinary error): pass it through. */
@@ -523,6 +525,21 @@ object BrowserCheck {
      * still refuses goes to the player's normal recovery (other headers → next source).
      */
     object MediaInterceptor : okhttp3.Interceptor by CheckInterceptor(interactive = false)
+
+    /**
+     * VERIFY-2 (Zangetsu CfClearance.Interceptor): a pass works only with the user agent that earned it. As a network
+     * interceptor this runs on every hop, redirects included, so a redirect into a passed site carries that site's
+     * pass and agent too. Memory only (no cookie-store or disk read on the hop).
+     */
+    object HopInterceptor : okhttp3.Interceptor {
+        override fun intercept(chain: okhttp3.Interceptor.Chain): Response {
+            val request = chain.request()
+            val host = request.url.host
+            val c = cleared[host] ?: cleared.entries.firstOrNull { host.endsWith("." + it.key) }?.value
+                ?: return chain.proceed(request)
+            return chain.proceed(withClearance(request, c))
+        }
+    }
 
     private class CheckInterceptor(private val interactive: Boolean) : okhttp3.Interceptor {
         override fun intercept(chain: okhttp3.Interceptor.Chain): Response {
