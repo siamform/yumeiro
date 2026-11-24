@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N | quick X Y | rec NAME SECS),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N | quick X Y | rec NAME SECS | seal | tgphone | tgcode [MIN] | tgpass [MIN]),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -14,14 +14,32 @@ mkdir -p "$OUT"
 T0=$(date +%s%3N)
 echo "PROBE epoch_ms=$T0" > "$OUT/timeline.txt"
 ms() { echo $(( $(date +%s%3N) - T0 )); }
-note() { echo "PROBE t=$(ms) $*" | tee -a "$OUT/timeline.txt"; }
+# SEALED=1 (a scenario that starts with "seal"): nothing from the device reaches the public job log; the timeline,
+# shots and logcat are encrypted before upload (workflow "Seal results"). Used for signed-in accounts.
+tl() { if [ "${SEALED:-0}" = 1 ]; then cat >> "$OUT/timeline.txt"; else tee -a "$OUT/timeline.txt"; fi; }
+# Public, content-free progress marks for the agent (a commit status), e.g. "waiting for the code".
+signal() { [ -n "${GH_TOKEN:-}" ] && [ -n "${GITHUB_SHA:-}" ] && gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+  -f state="$1" -f context="field-probe/$GITHUB_RUN_ID" -f description="$2" > /dev/null 2>&1; echo "PROBE signal $1 $2"; }
+# A secret the agent sends during the run: a later dispatch of this workflow with steps "code <blob>", where blob is
+# base64 of openssl aes-256-cbc -pbkdf2 -iter 200000 with PROBE_SEAL_KEY over "<kind>:<value>" (kind c = code, p = password).
+secret_in() { # $1 kind, $2 minutes; prints the value
+  local end=$(( $(date +%s) + $2 * 60 )) since; since=$(date -u -d "@$(( T0 / 1000 ))" +%Y-%m-%dT%H:%M:%SZ)
+  while [ "$(date +%s)" -lt "$end" ]; do
+    for b in $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/field-probe.yml/runs?event=workflow_dispatch&per_page=20" \
+        --jq ".workflow_runs[] | select(.created_at > \"$since\") | .display_title" 2>/dev/null | sed -n 's/^code //p'); do
+      v=$(printf '%s' "$b" | base64 -d 2>/dev/null | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:PROBE_SEAL_KEY 2>/dev/null)
+      case "$v" in "$1:"*) printf '%s' "${v#*:}"; return 0 ;; esac
+    done; sleep 10
+  done; return 1
+}
+note() { echo "PROBE t=$(ms) $*" | tl; }
 
 dump() { # $1 label: UI texts + screenshot
   local n; n=$(printf '%06d' "$(ms)")
   adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || true
   adb pull /sdcard/ui.xml "$OUT/ui-$n-$1.xml" > /dev/null 2>&1 || true
   adb exec-out screencap -p > "$OUT/shot-$n-$1.png" 2>/dev/null || true
-  python3 - "$OUT/ui-$n-$1.xml" "$1" "$(ms)" <<'PY' 2>/dev/null | tee -a "$OUT/timeline.txt" || true
+  python3 - "$OUT/ui-$n-$1.xml" "$1" "$(ms)" <<'PY' 2>/dev/null | tl || true
 import sys, re
 t = open(sys.argv[1], encoding="utf-8", errors="replace").read()
 texts = [x for x in re.findall(r'(?:text|content-desc)="([^"]+)"', t) if x.strip()]
@@ -125,6 +143,11 @@ PY
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
       anim*) # anim N: Android animation duration scale (1 = normal, 10 = ten times slower; Compose follows it)
         a=${s#anim }; adb shell settings put global animator_duration_scale "$a" > /dev/null 2>&1; note "animator_duration_scale=$a" ;;
+      seal) note "sealed run" ;;
+      tgphone) adb shell input text "$TG_TEST_PHONE"; note "typed the test phone (hidden)" ;;
+      tgcode*|tgpass*) # tgcode [MIN] / tgpass [MIN]: wait for the code / 2-step password the agent sends, then type it
+        k=c; [ "${s%% *}" = tgpass ] && k=p; m=30; case "$s" in *" "*) m=${s#* } ;; esac
+        signal pending "waiting for $k"; v=$(secret_in "$k" "$m") && { adb shell input text "$(printf '%q' "$v")"; note "typed $k (hidden)"; signal success "got $k"; } || { note "no $k in $m min"; signal failure "no $k"; } ;;
       quick*) # quick X Y: tap a point with no UI read after it (for recordings of what the tap starts)
         q=${s#quick }; adb shell input tap $q; note "quick tap $q" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
@@ -179,7 +202,7 @@ fi
 
 note "install new"
 adb install -r "$NEW_APK" > "$OUT/install-new.txt" 2>&1; cat "$OUT/install-new.txt"
-adb shell dumpsys package "$P" | grep -E "versionName|versionCode|firstInstallTime|lastUpdateTime" | tee -a "$OUT/timeline.txt"
+adb shell dumpsys package "$P" | grep -E "versionName|versionCode|firstInstallTime|lastUpdateTime" | tl
 launch new
 sleep 2; dump "start"
 run_steps
@@ -187,7 +210,7 @@ dump "end"
 
 adb shell dumpsys meminfo "$P" > "$OUT/meminfo.txt" 2>&1 || true
 adb shell dumpsys gfxinfo "$P" > "$OUT/gfxinfo.txt" 2>&1 || true
-adb shell pidof "$P" | tee -a "$OUT/timeline.txt"
+adb shell pidof "$P" | tl
 kill $LOGCAT 2>/dev/null || true
-grep -E "FATAL EXCEPTION|ANR in $P" "$OUT/logcat.txt" | head -20 | tee -a "$OUT/timeline.txt" || true
+grep -E "FATAL EXCEPTION|ANR in $P" "$OUT/logcat.txt" | head -20 | tl || true
 note "done"
