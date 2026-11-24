@@ -944,6 +944,9 @@ fun PageStreamFinderDialog(
                                         // Built-in ad blocking: pre-rolls and pop-unders never load or get offered as "the stream".
                                         if (request != null && dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(view) && dev.asfakul.yumeiro.online.web.AdFilter.isAd(request.url.toString())) return dev.asfakul.yumeiro.online.web.AdFilter.blocked()
                                         request?.let { record(it.url.toString(), it.method ?: "GET", it.requestHeaders.orEmpty()) }
+                                        // TB-LOGIN: device evidence of the sign-in calls (method and path only; never the query, body or cookies).
+                                        request?.url?.takeIf { teraShare != null && it.host.orEmpty().contains("terabox") && (it.path.orEmpty().startsWith("/passport") || it.path.orEmpty().startsWith("/api/check")) }
+                                            ?.let { android.util.Log.w("YuTeraBox", "${request.method} ${it.host}${it.path}") }
                                         return null // the page loads normally; we only observe
                                     }
                                     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
@@ -969,6 +972,15 @@ fun PageStreamFinderDialog(
                                         applyBlock(view, url)
                                         // WEB-RECENT-1: the site goes to "Recently visited" on the Websites page.
                                         if (browser && url != null) dev.asfakul.yumeiro.online.web.SiteHistory.visit(appContext, url, view?.title)
+                                        if (teraShare != null && url.orEmpty().contains("terabox")) {
+                                            // TB-LOGIN: which cookie names the page has (names only), so a lost sign-in shows on the device log.
+                                            val at = android.net.Uri.parse(url).let { "${it.host}${it.path}" }
+                                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                                val jar = teraCookies()
+                                                val names = jar.split(';').map { it.substringBefore('=').trim() }.filter { it.isNotEmpty() }.distinct().sorted()
+                                                android.util.Log.w("YuTeraBox", "page $at signedIn=${dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(jar)} cookies=$names")
+                                            }
+                                        }
                                         resumeTeraBox()
                                     }
                                 }
