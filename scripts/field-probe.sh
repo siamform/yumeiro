@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N | quick X Y | rec NAME SECS | seal | tgphone | tgcode [MIN] | tgpass [MIN] | secret K [MIN] (sealed only)),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N | quick X Y | rec NAME SECS | seal | tgphone | tgcode [MIN] | tgpass [MIN] | secret K [MIN] (sealed only) | key N | paste TEXT | sh CMD),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -156,6 +156,9 @@ PY
         r=$(adb shell "CLASSPATH=/data/local/tmp/clip.dex app_process / Clip '$t'" 2>&1 | tr -d '\r' | tail -1)
         adb shell input keyevent 279; note "pasted [$t] ($r)"; sleep 1; dump "after-paste" ;;
       key\ *) k=${s#key }; adb shell input keyevent "$k"; note "key $k"; sleep 1; dump "after-key" ;;
+      sh\ *) # sh CMD: a shell command on the device (controls, e.g. am start a URL in another browser); not in sealed runs
+        if [ "${SEALED:-0}" = 1 ]; then note "sh refused in a sealed run"; continue; fi
+        c=${s#sh }; o=$(adb shell "$c" 2>&1 | head -c 400); note "sh [$c] -> $o"; sleep 1 ;;
       dismiss) tap_text "Close" "All set" "✕" "Not now" "Later" > /dev/null 2>&1 && note "dismissed a popup" || true; sleep 1 ;;
       top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
