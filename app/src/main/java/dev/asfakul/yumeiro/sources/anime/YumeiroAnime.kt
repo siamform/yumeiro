@@ -107,12 +107,13 @@ class YumeiroAnimeProvider(
         val title = cleanTitle(card?.title ?: rawTitle).ifBlank { rawTitle }
         if (adult(title)) error("This title isn't available in Yumeiro Anime")
         val eps = full.mapIndexed { i, v ->
-            newEpisode("anime:v:${v.id}") {
+            // fix = false: the id is ours, not a page path (newEpisode would turn it into "https://www.youtube.com/anime:v:…").
+            newEpisode("anime:v:${v.id}", {
                 name = v.title
                 episode = i + 1
                 posterUrl = v.thumbnail
                 runTime = (v.durationSec / 60).toInt().takeIf { it > 0 }
-            }
+            }, false)
         }
         return newTvSeriesLoadResponse(title, url, TvType.Anime, eps) {
             posterUrl = card?.thumbnail ?: full.first().thumbnail
@@ -170,46 +171,50 @@ class YumeiroAnimeProvider(
         private val cache = ConcurrentHashMap<String, Pair<Long, List<Series>>>()
         private val known = ConcurrentHashMap<String, YouTube.YtPlaylistCard>()
 
-        private val RX_LIST = Regex("[A-Za-z0-9_-]{10,64}")
-        private val RX_VIDEO = Regex("[A-Za-z0-9_-]{11}")
-        private val RX_NOT_SERIES = Regex(
-            """\b(chat|podcast|moments?|spotlight|trailers?|teasers?|pv|cm|promo|clips?|shorts|music|mv|songs?|opening|ending|op|ed|highlights?|interviews?|events?|live|stream|asmr|behind|making|gp\d{2,4}|seedgp\d*|recap|preview|news|announcements?)\b""",
-            RegexOption.IGNORE_CASE,
-        )
-        private val RX_ADULT = Regex("""\b(sex|sexy|nude|nudity|erotic|erotica|hentai|ecchi|porn|xxx|18\+)""", RegexOption.IGNORE_CASE)
-        private val RX_CHANNEL_TAG = Regex("""【[^】]*】""")
-        private val RX_WORD = Regex("""[^\p{L}\p{N}]+""")
-        private val RX_SPACE = Regex("""\s+""")
 
         private fun ctx(): Context = YumeiroAnime.app ?: error("Yumeiro Anime isn't started")
 
         /** "anime:pl:<id>" (anywhere in the string, since fixUrl may put a host in front) → playlist id. */
-        fun playlistOf(s: String): String? = s.substringAfter("anime:pl:", "").substringBefore('/').substringBefore('?').takeIf { RX_LIST.matches(it) }
+        fun playlistOf(s: String): String? = s.substringAfter("anime:pl:", "").substringBefore('/').substringBefore('?').takeIf { AnimeRx.RX_LIST.matches(it) }
 
         /** "anime:v:<id>" → YouTube video id. */
-        fun videoOf(s: String): String? = s.substringAfter("anime:v:", "").take(11).takeIf { RX_VIDEO.matches(it) }
+        fun videoOf(s: String): String? = s.substringAfter("anime:v:", "").take(11).takeIf { AnimeRx.RX_VIDEO.matches(it) }
 
         fun looksLikeSeries(title: String, count: Long): Boolean =
-            title.isNotBlank() && (count < 0 || count >= 2) && !RX_NOT_SERIES.containsMatchIn(title) && !adult(title)
+            title.isNotBlank() && (count < 0 || count >= 2) && !AnimeRx.RX_NOT_SERIES.containsMatchIn(title) && !adult(title)
 
-        fun adult(title: String): Boolean = RX_ADULT.containsMatchIn(title)
+        fun adult(title: String): Boolean = AnimeRx.RX_ADULT.containsMatchIn(title)
 
         /** "AOASHI｜青之蘆葦【Ani-One Asia】" → "AOASHI"; channel tags and the second-language half go. */
         fun cleanTitle(t: String): String {
-            val noTag = t.replace(RX_CHANNEL_TAG, " ")
+            val noTag = t.replace(AnimeRx.RX_CHANNEL_TAG, " ")
             val first = noTag.substringBefore('｜').trim()
-            return first.ifBlank { noTag.trim() }.replace(RX_SPACE, " ").trim()
+            return first.ifBlank { noTag.trim() }.replace(AnimeRx.RX_SPACE, " ").trim()
         }
 
         /** Episodes only: clips, trailers and live streams are dropped; order kept. */
         fun fullEpisodes(videos: List<dev.asfakul.yumeiro.youtube.YtItem>): List<dev.asfakul.yumeiro.youtube.YtItem> =
             videos.filter { !it.live && !it.vertical && it.durationSec >= MIN_EPISODE_SEC && !adult(it.title) }.distinctBy { it.id }
 
-        fun words(q: String): List<String> = q.lowercase().split(RX_WORD).filter { it.length >= 2 }.take(8)
+        fun words(q: String): List<String> = q.lowercase().split(AnimeRx.RX_WORD).filter { it.length >= 2 }.take(8)
 
         fun matches(title: String, words: List<String>): Boolean {
             val t = title.lowercase()
             return words.all { it in t }
         }
     }
+}
+
+/** ANIME-1: the patterns, in their own holder so RegexWarmup can initialise it off the main thread. */
+private object AnimeRx {
+    val RX_LIST = Regex("[A-Za-z0-9_-]{10,64}")
+    val RX_VIDEO = Regex("[A-Za-z0-9_-]{11}")
+    val RX_NOT_SERIES = Regex(
+        """\b(chat|podcast|moments?|spotlight|trailers?|teasers?|pv|cm|promo|clips?|shorts|music|mv|songs?|opening|ending|op|ed|highlights?|interviews?|events?|live|stream|asmr|behind|making|gp\d{2,4}|seedgp\d*|recap|preview|news|announcements?)\b""",
+        RegexOption.IGNORE_CASE,
+    )
+    val RX_ADULT = Regex("""\b(sex|sexy|nude|nudity|erotic|erotica|hentai|ecchi|porn|xxx|18\+)""", RegexOption.IGNORE_CASE)
+    val RX_CHANNEL_TAG = Regex("""【[^】]*】""")
+    val RX_WORD = Regex("""[^\p{L}\p{N}]+""")
+    val RX_SPACE = Regex("""\s+""")
 }
