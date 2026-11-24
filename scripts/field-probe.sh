@@ -5,7 +5,7 @@
 # No test harness, no debug build: this is the user's path. Runs inside reactivecircus/android-emulator-runner.
 #
 # Env: NEW_APK (required), OLD_APK (optional: install + first run of the old one first = update scenario),
-#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N),
+#      STEPS (scenario, ';'-separated: skip | tour | wait N | tap TEXT | xy X Y | find TEXT | field [N] | type TEXT | top | dismiss | rec NAME | recpull NAME | back | home | shot NAME | gesturenav | buttonnav | swipeback | edgeback | anim N | quick X Y | rec NAME SECS),
 #      NET (none | edge | umts | lte), OUT (default probe).
 set -u
 P=dev.asfakul.yumeiro
@@ -96,9 +96,10 @@ run_steps() {
         # not below: the page may have opened scrolled down (Settings keeps its place), so look above too
         [ $ok = 1 ] || for i in 1 2 3 4 5 6 7 8 9 10 11 12; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 700 540 1500 300; sleep 1; done
         [ $ok = 1 ] || note "find miss [$t]"; sleep 1; dump "after-find" ;;
-      recpull*) r=${s#recpull }; sleep 5; adb pull "/sdcard/rec-$r.mp4" "$OUT/rec-$r.mp4" > /dev/null 2>&1 && note "pulled rec-$r.mp4" || note "rec miss [$r]" ;;
-      rec*) # rec NAME: record the screen for 5 s from now (runs while the next steps happen)
-        r=${s#rec }; adb shell "screenrecord --time-limit 5 --bit-rate 12000000 /sdcard/rec-$r.mp4" > /dev/null 2>&1 &
+      recpull*) r=${s#recpull }; for i in $(seq 1 40); do adb shell pidof screenrecord > /dev/null 2>&1 || break; sleep 1; done; sleep 1; adb pull "/sdcard/rec-$r.mp4" "$OUT/rec-$r.mp4" > /dev/null 2>&1 && note "pulled rec-$r.mp4" || note "rec miss [$r]" ;;
+      rec*) # rec NAME [SECS]: record the screen for SECS (default 5) s from now (runs while the next steps happen)
+        r=${s#rec }; rs=5; case "$r" in *" "*) rs=${r##* }; r=${r% *} ;; esac
+        adb shell "screenrecord --time-limit $rs --bit-rate 12000000 /sdcard/rec-$r.mp4" > /dev/null 2>&1 &
         sleep 0.6; note "recording [$r]" ;;
       field*) # field [N]: tap the Nth (default 1st) text field on screen; hints are not in the UI dump
         n=${s#field}; n=${n# }; [ -n "$n" ] || n=1
@@ -124,6 +125,8 @@ PY
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
       anim*) # anim N: Android animation duration scale (1 = normal, 10 = ten times slower; Compose follows it)
         a=${s#anim }; adb shell settings put global animator_duration_scale "$a" > /dev/null 2>&1; note "animator_duration_scale=$a" ;;
+      quick*) # quick X Y: tap a point with no UI read after it (for recordings of what the tap starts)
+        q=${s#quick }; adb shell input tap $q; note "quick tap $q" ;;
       home) adb shell input keyevent 3; note "key HOME" ;;
       relaunch) # the app is closed (as after a swipe away) and opened again, to see what it shows from its saved state
         adb shell am force-stop "$P"; sleep 2; launch again; sleep 2 ;;
