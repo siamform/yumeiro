@@ -29,6 +29,8 @@ class TorrentSource(
     private val window: Boolean = true,
     /** B31-SEEK5 kill switch (flag b31_target_first). */
     private val targetFirst: Boolean = true,
+    /** B31-RESCUE-1: how long a read waits before only its piece is wanted (so idle peers ask for its blocks too). */
+    private val rescueMs: Long = RESCUE_MS,
 ) : ByteSource {
     override val length: Long = file.size
     override val mimeType: String = TorrentPlan.mimeFor(file.path)
@@ -80,7 +82,8 @@ class TorrentSource(
             val started = System.currentTimeMillis()
             val deadline = started + waitMs
             var nextTrace = started
-            synchronized(core.signal) {
+            var rescued = false
+            try { synchronized(core.signal) {
                 while (!core.have(meta.hash, piece)) {
                     if (closed) throw IOException("Torrent stream closed")
                     TorrentTrace.sink?.let { sink ->
@@ -96,10 +99,14 @@ class TorrentSource(
                     if (ready > 0) { upTo = position + ready; break }
                     val left = deadline - System.currentTimeMillis()
                     if (left <= 0) throw IOException("No peer sent this part in time")
+                    if (!rescued && window && held == null && System.currentTimeMillis() - started >= rescueMs) {
+                        rescued = true
+                        rescue(piece)
+                    }
                     core.askBlocks(meta.hash)
                     core.signal.wait(minOf(left, BLOCK_POLL_MS))
                 }
-            }
+            } } finally { if (rescued) restore(piece) }
             TorrentTrace.sink?.invoke("piece $piece readable after ${System.currentTimeMillis() - started} ms (have=${core.have(meta.hash, piece)})")
         }
         open()
@@ -163,6 +170,26 @@ class TorrentSource(
         if (h != null) held = Held(h.window, h.deadlines + next) else core.setDeadlines(meta.hash, next)
     }
 
+    /**
+     * B31-RESCUE-1 (runs 45306375960 / 45308014362: the read's block "requested x1 0B" for 5-12 s while other peers
+     * sent other pieces). libtorrent gives an already-asked block to a second peer only when that peer has nothing
+     * else to ask for (strict_end_game_mode is off), and the window always had free blocks. Same idea as piece
+     * stealing in other engines: while the read is stuck, only its piece is wanted, so idle peers ask for the stuck
+     * block too; [restore] brings the window back once the bytes are readable.
+     */
+    private fun rescue(piece: Int) = synchronized(plan) {
+        TorrentTrace.sink?.invoke("rescue piece $piece")
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, listOf(piece), emptyList()))
+    }
+
+    private fun restore(piece: Int) = synchronized(plan) {
+        // A seek during the wait moved the window; focus() already wrote the new priorities.
+        if (held != null || piece !in windowStart..windowEnd) return@synchronized
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, (windowStart..windowEnd).toList(), keep))
+        // libtorrent drops the deadline of a piece set to priority 0 (torrent::prioritize_pieces), so they go back on.
+        if (deadlineEnd > piece) core.setDeadlines(meta.hash, (piece + 1..deadlineEnd).map { it to (it - piece) * 120 })
+    }
+
     /** B31-SEEK5: the target piece has bytes; the held window and tail may download now. */
     private fun open() = synchronized(plan) {
         val h = held ?: return@synchronized
@@ -186,6 +213,8 @@ class TorrentSource(
         /** While a piece is partial, how often a fresh block report is asked for (only while a read waits). */
         const val BLOCK_POLL_MS = 150L
         const val TAIL_DEADLINE_MS = 400
+        /** B31-RESCUE-1: about twice a healthy block time on the device runs (one block 0.3-0.6 s). */
+        const val RESCUE_MS = 1_200L
     }
 
     /**

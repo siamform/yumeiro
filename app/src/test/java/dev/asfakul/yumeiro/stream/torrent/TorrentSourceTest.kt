@@ -213,6 +213,37 @@ class TorrentSourceTest {
     }
 
     /**
+     * B31-RESCUE-1 (runs 45306375960 / 45308014362): the read's block stayed "requested x1 0B" with one silent peer
+     * for 5-12 s; libtorrent asks a second peer only when it has no free block to ask for. A stuck read leaves only
+     * its piece wanted, then the window and its deadlines come back once the bytes are readable.
+     */
+    @Test fun aStuckReadWantsOnlyItsPieceThenTheWindowComesBack() {
+        val dir = tmp.newFolder()
+        val pl = 128 * 1024
+        val f = TorrentFile(0, "Sintel.mp4", 1000L * pl, 0)
+        java.io.RandomAccessFile(File(dir, f.path), "rw").use { it.setLength(f.size) }
+        val meta = TorrentMeta("cf".repeat(20), "Sintel", pl, 1000, listOf(f))
+        val core = FakeCore(dir, meta)
+        val src = TorrentSource(core, meta, f, readAhead = 8L shl 20, waitMs = 5_000, rescueMs = 300)
+        src.prime(); core.arrive(0); src.read(0, ByteArray(10), 0, 10)
+        core.arrive(1); src.read(1L * pl, ByteArray(10), 0, 10)
+        val before = core.windows.size
+        var during: ByteArray? = null
+        val t = Thread {
+            Thread.sleep(700); during = core.windows.last(); core.deadlines.clear(); core.arrive(2)
+        }.apply { start() }
+        src.read(2L * pl, ByteArray(10), 0, 10)
+        t.join()
+        assertTrue("rescue wrote priorities", core.windows.size >= before + 2)
+        val d = during!!
+        assertEquals(7, d[2].toInt())
+        assertEquals("only the stuck piece wanted: ${d.withIndex().filter { it.value > 0 }.map { it.index }}", 1, d.count { it > 0 })
+        val after = core.windows.last()
+        assertTrue("window back", after[3] > 0 && after[40] > 0)
+        assertTrue("deadlines back: ${core.deadlines}", core.deadlines.any { it.first == 3 })
+    }
+
+    /**
      * B31-SEEK6 (api36 run 45268091524, seek 13.6 s): all ~500 pieces of the 64 MB read-ahead had deadlines, so each
      * was at top priority. Only the next few pieces get deadlines; the rest of the window is wanted without one, and
      * the deadlines slide on as playback reads past the middle of them.
