@@ -218,7 +218,7 @@ class UpdateManager private constructor(context: Context) {
             else -> return
         }
         scope.launch {
-            _state.value = UpdateState.Downloading(release, 0, release.asset.sizeBytes, 0, queued = true)
+            _state.value = UpdateState.Downloading(release, 0, release.asset.sizeBytes, 0, queued = true, stage = DownloadStage.PREPARING)
             try {
                 // N3-1: folder listing/deleting and the DownloadManager calls are disk/IPC work: IO thread.
                 val dir = withContext(Dispatchers.IO) { updatesDir()?.also { d -> d.listFiles()?.forEach { it.delete() } } }
@@ -226,7 +226,7 @@ class UpdateManager private constructor(context: Context) {
                 val target = File(dir, safeFileName(release))
                 val resolved = client.resolveDownload(release)
                 if (!TrustedSources.isGitHubDownloadHost(resolved.url)) {
-                    throw IllegalStateException("Update rejected: the download link is not on GitHub.")
+                    throw IllegalStateException("Update stopped: the download link isn't from the official Yumeiro release.")
                 }
                 val request = DownloadManager.Request(Uri.parse(resolved.url))
                     .setTitle("Yumeiro ${release.tagName}")
@@ -282,7 +282,7 @@ class UpdateManager private constructor(context: Context) {
                     DownloadManager.STATUS_SUCCESSFUL -> { onDownloadFinished(release, snap); return@launch }
                     DownloadManager.STATUS_FAILED -> {
                         prefs.clearDownload()
-                        val msg = "Download failed (${reasonText(snap.reason)})."
+                        val msg = UpdateStatusText.downloadFailed(snap.reason)
                         if (silentFlow) {
                             // Silent attempt failed: stay quiet, the next check retries.
                             _state.value = UpdateState.Available(release)
@@ -301,10 +301,11 @@ class UpdateManager private constructor(context: Context) {
                             lastTime = now
                         }
                         val total = if (snap.total > 0) snap.total else release.asset.sizeBytes
+                        val queued = snap.status == DownloadManager.STATUS_PENDING || snap.status == DownloadManager.STATUS_PAUSED
                         _state.value = UpdateState.Downloading(
                             release, snap.downloaded, total, speed,
-                            queued = snap.status == DownloadManager.STATUS_PENDING ||
-                                snap.status == DownloadManager.STATUS_PAUSED,
+                            queued = queued,
+                            stage = UpdateStatusText.stageOf(snap.status, snap.reason, snap.downloaded),
                         )
                     }
                 }
@@ -317,7 +318,9 @@ class UpdateManager private constructor(context: Context) {
         val file = snap.localUri?.let { Uri.parse(it).path }?.let(::File)
             ?: withContext(Dispatchers.IO) { File(updatesDir(), safeFileName(release)) }
         try {
-            ApkInstaller.verify(app, file, release.asset.sha256)
+            val total = if (snap.total > 0) snap.total else release.asset.sizeBytes
+            _state.value = UpdateState.Downloading(release, total, total, 0, stage = DownloadStage.VERIFYING)
+            withContext(Dispatchers.IO) { ApkInstaller.verify(app, file, release.asset.sha256) }
             _state.value = UpdateState.ReadyToInstall(release, file.absolutePath)
             if (silentFlow && ApkInstaller.canInstallPackages(app)) {
                 // No popup and no notification: install as soon as the app is idle.
@@ -368,13 +371,17 @@ class UpdateManager private constructor(context: Context) {
         val s = _state.value as? UpdateState.ReadyToInstall ?: return
         scope.launch {
             _state.value = UpdateState.Installing(s.release)
+            // UPD-MSG-1: remember the version for every install (not only silent ones), so the new version can say
+            // "Update completed" once Android has replaced the app.
+            prefs.pendingUpdatedVersion = s.release.versionName
             try {
                 val file = File(s.apkPath)
                 ApkInstaller.verify(app, file, s.release.asset.sha256)
                 ApkInstaller.install(app, file)
                 UpdateNotifier.cancel(app)
             } catch (t: Throwable) {
-                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "Installation failed."), s.release)
+                prefs.pendingUpdatedVersion = null
+                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "The update couldn't be installed."), s.release)
             }
         }
     }
@@ -401,6 +408,7 @@ class UpdateManager private constructor(context: Context) {
     }
 
     internal fun onInstallCancelled() {
+        prefs.pendingUpdatedVersion = null
         val s = _state.value
         if (s is UpdateState.Installing) scope.launch { restoreDownload() }
     }
@@ -479,14 +487,6 @@ class UpdateManager private constructor(context: Context) {
         }
     }
 
-    private fun reasonText(reason: Int): String = when (reason) {
-        DownloadManager.ERROR_INSUFFICIENT_SPACE -> "not enough storage"
-        DownloadManager.ERROR_HTTP_DATA_ERROR, DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> "server error"
-        DownloadManager.ERROR_TOO_MANY_REDIRECTS -> "too many redirects"
-        DownloadManager.ERROR_CANNOT_RESUME -> "connection lost"
-        DownloadManager.ERROR_DEVICE_NOT_FOUND -> "storage unavailable"
-        else -> "error $reason"
-    }
 
     companion object {
         private const val APK_MIME = "application/vnd.android.package-archive"

@@ -51,9 +51,9 @@ internal class GitHubReleaseClient(
                 t is HttpStatusException && t.code == 404 ->
                     "No published release was found (the repository may be private)."
                 t is HttpStatusException && (t.code == 403 || t.code == 429) ->
-                    "GitHub rate limit reached. Please try again later."
+                    "Too many update checks right now. Please try again in a few minutes."
                 t is UpdateCheckException -> t.message ?: "Update check failed."
-                else -> "Couldn't reach GitHub. Check your internet connection."
+                else -> "Couldn't reach the update service. Check your internet connection and try again."
             }
             throw UpdateCheckException(reason, authError ?: t)
         }
@@ -100,7 +100,7 @@ internal class GitHubReleaseClient(
         }
         try {
             val code = conn.responseCode
-            if (!TrustedSources.isGitHubDownloadHost(conn.url.toString())) throw UpdateCheckException("Checksum file redirected off GitHub.")
+            if (!TrustedSources.isGitHubDownloadHost(conn.url.toString())) throw UpdateCheckException("Update stopped: the checksum didn't come from the official Yumeiro release.")
             if (code != 200) throw HttpStatusException(code)
             val bytes = conn.inputStream.use { it.readAtMost(MAX_SUMS_BYTES + 1) }
             if (bytes.size > MAX_SUMS_BYTES) throw UpdateCheckException("Checksum file too large.")
@@ -146,7 +146,7 @@ internal class GitHubReleaseClient(
                 in 300..399 -> {
                     val location = conn.getHeaderField("Location") ?: return null
                     if (!TrustedSources.isGitHubDownloadHost(location)) {
-                        throw UpdateCheckException("Update rejected: download redirected off GitHub.")
+                        throw UpdateCheckException("Update stopped: the download didn't come from the official Yumeiro release.")
                     }
                     ResolvedDownload(location, needsAuthHeader = false)
                 }
@@ -175,7 +175,7 @@ internal class GitHubReleaseClient(
             val code = conn.responseCode
             if (code != 200) throw HttpStatusException(code)
             val bytes = conn.inputStream.use { it.readAtMost(MAX_API_BYTES + 1) }
-            if (bytes.size > MAX_API_BYTES) throw UpdateCheckException("GitHub response too large.")
+            if (bytes.size > MAX_API_BYTES) throw UpdateCheckException("The update information was too large to read.")
             return bytes.decodeToString()
         } finally {
             conn.disconnect()

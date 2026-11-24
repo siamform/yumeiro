@@ -89,7 +89,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                 Column(Modifier.weight(1f)) {
                     Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Build ${BuildConfig.VERSION_CODE} · ${if (manager.usesAuthenticatedChannel) "Private" else "Public"} GitHub channel",
+                        "Build ${BuildConfig.VERSION_CODE} · ${if (manager.usesAuthenticatedChannel) "Private" else "Official"} release channel",
                         style = MaterialTheme.typography.bodySmall, color = TextSecondary,
                     )
                     // ARM check: the phone's processor, the installed build, and what the next update takes.
@@ -183,7 +183,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Text("Release history", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                    Text("View all versions and changelogs on GitHub", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    Text("View all versions and what changed in each", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                 }
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
             }
@@ -206,16 +206,8 @@ private fun StatusIcon(state: UpdateState) {
     }
 }
 
-private fun statusText(state: UpdateState, lastChecked: Long): String = when (state) {
-    is UpdateState.Checking -> "Checking GitHub releases…"
-    is UpdateState.UpToDate -> "You're on the latest version"
-    is UpdateState.Available -> "v${state.release.versionName} is available — tap to view"
-    is UpdateState.Downloading -> "Downloading v${state.release.versionName} · ${(state.progress * 100).toInt()}%"
-    is UpdateState.ReadyToInstall -> "v${state.release.versionName} is ready — tap to install"
-    is UpdateState.Installing -> "Installing v${state.release.versionName}…"
-    is UpdateState.Failed -> state.message
-    else -> "Last checked: ${formatRelative(lastChecked)}"
-}
+private fun statusText(state: UpdateState, lastChecked: Long): String =
+    dev.asfakul.yumeiro.update.UpdateStatusText.settingsLine(state) ?: "Last checked: ${formatRelative(lastChecked)}"
 
 @Composable
 private fun statusColor(state: UpdateState): Color = when (state) {
