@@ -249,3 +249,19 @@ Report (14 parts) marks each finding: verified implementation / observed behavio
    publish private docs. If a private repo can't be created, stop and ask; never a public substitute. No secrets.
 4. Dependencies one by one; no major upgrades without reason.
 5. Validate (format, lint, tests, builds, links, diffs), report only checks that ran. Stages A-E with final report.
+
+### Item 27 (owner title "Bug/Feature 26 — Player seeking & offline manga"). Queued 2026-11-24, not started
+Two owner items carry the number 26; this one is filed as 27 so ledger IDs stay unique.
+1. Major: seeking forward sometimes shows an error; reloading the source fixes it. Find the real cause (seek and
+   position handling, source lifecycle, HTTP Range/206, HLS/DASH segments, buffering, state sync, stale requests on
+   rapid seeks, source limits). Seeking both ways must work; recover from temporary seek failures without
+   reloading the whole source; stale requests never override a newer seek; unsupported seeking handled gracefully.
+2. Downloaded manga chapters listed in download order: order by chapter metadata (numbers, decimals like 12.5,
+   extras, odd titles), never by timestamp or plain alphabetical; same order online and offline; keep ids/metadata.
+3. Offline Previous/Next chapter buttons: go to the adjacent downloaded chapter in chapter order, no network,
+   clear message when the neighbour isn't downloaded, progress kept, works after restart.
+4. Audit the offline reader: indexing, files, metadata, page order, progress, restore, offline detection,
+   missing/corrupt files, deletion sync.
+5. Side-effect analysis first; no duplicate navigation system. Validate the listed scenarios (seek forward/back,
+   rapid seeks, after buffering, near end, each source type, recovery; random download order, decimals/specials,
+   offline navigation, missing neighbour, restart, progress) and report which were really tested.
