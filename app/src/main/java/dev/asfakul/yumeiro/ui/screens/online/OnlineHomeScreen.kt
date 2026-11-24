@@ -470,12 +470,13 @@ fun OnlineHomeScreen(
                             // DEDUP-1 evidence: how many cards the "All" feed dropped as the same title from another extension.
                             val before = ready.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
                             val after = out.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
-                            if (before > 0 && android.util.Log.isLoggable("YuDedupe", android.util.Log.INFO)) {
+                            // Warning level: release (R8) strips Log.d/i, and isLoggable(INFO) is false by default (probe 45335841840 had no line).
+                            if (before > 0) {
                                 val kept = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<dev.asfakul.yumeiro.online.OnlineItem, Boolean>())
                                 out.forEach { (_, rows) -> rows.forEach { kept.addAll(it.items) } }
                                 val examples = ready.asSequence().flatMap { (_, rows) -> rows.asSequence().flatMap { it.items.asSequence() } }
                                     .filter { it !in kept }.map { it.api + ": " + it.name }.distinct().take(5).joinToString(" | ")
-                                android.util.Log.i("YuDedupe", "all feed: ${ready.size} extensions, $before cards, ${before - after} same-title cards removed" + if (examples.isEmpty()) "" else " (e.g. $examples)")
+                                android.util.Log.w("YuDedupe", "all feed: ${ready.size} extensions, $before cards, ${before - after} same-title cards removed" + if (examples.isEmpty()) "" else " (e.g. $examples)")
                             }
                         }
                     }
