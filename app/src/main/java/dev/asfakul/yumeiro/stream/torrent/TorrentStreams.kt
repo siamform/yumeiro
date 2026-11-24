@@ -35,7 +35,9 @@ object TorrentStreams {
     const val IDLE_MS = 120_000L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     @Volatile private var core: TorrentCore? = null
-    private val active = HashMap<String, TorrentSource>()
+    internal val active = HashMap<String, TorrentSource>()
+    /** TOR-IDLE-1: torrents paused by the idle timer; their source stays open and the next read resumes them. */
+    private val idlePaused = HashSet<String>()
     private val idleJobs = HashMap<String, Job>()
     val server: LocalStreamServer get() = LocalStreamServer.shared
     /** Tests swap the core so no native code runs on the JVM. */
@@ -123,13 +125,27 @@ object TorrentStreams {
         }
     }
 
-    private fun touch(c: TorrentCore, hash: String, root: File) {
+    internal fun touch(c: TorrentCore, hash: String, root: File) {
         synchronized(this) {
-            if (idleJobs[hash]?.isActive == true && System.nanoTime() - (lastTouch[hash] ?: 0L) < 5_000_000_000L) return
+            // TOR-IDLE-1: a read after the idle pause (e.g. the player was paused over 2 min) resumes the torrent.
+            if (idlePaused.remove(hash)) { if (hash in active) c.resume(hash) }
+            else if (idleJobs[hash]?.isActive == true && System.nanoTime() - (lastTouch[hash] ?: 0L) < 5_000_000_000L) return
             lastTouch[hash] = System.nanoTime()
             idleJobs.remove(hash)?.cancel()
-            idleJobs[hash] = scope.launch { delay(IDLE_MS); synchronized(this@TorrentStreams) { pauseNow(c, hash, root) } }
+            idleJobs[hash] = scope.launch { delay(IDLE_MS); idle(c, hash, root) }
         }
+    }
+
+    /**
+     * TOR-IDLE-1: nobody read for [IDLE_MS]. The engine pauses (no background seeding) but the source stays open,
+     * so the same player can read on; before, the source was closed and the next read failed.
+     */
+    internal fun idle(c: TorrentCore, hash: String, root: File) = synchronized(this) {
+        if (hash !in active) return@synchronized
+        c.saveResume(hash, File(root, "$hash.resume"))
+        c.pause(hash)
+        idleJobs.remove(hash)?.cancel()
+        idlePaused += hash
     }
     private val lastTouch = HashMap<String, Long>()
 
@@ -137,6 +153,7 @@ object TorrentStreams {
         c.saveResume(hash, File(root, "$hash.resume"))
         c.pause(hash)
         idleJobs.remove(hash)?.cancel()
+        idlePaused.remove(hash)
         active.remove(hash)?.close()
     }
 
