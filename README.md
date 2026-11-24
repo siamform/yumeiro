@@ -44,6 +44,18 @@ what is not proven yet: [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
 **Known imperfect:** YouTube can block playback with "Sign in to confirm you're not a bot"; Android TV keeps showing
 the notification dialog after every "Don't allow". Full list in the [CHANGELOG](CHANGELOG.md).
 
+## Coming next (in testing, not released yet)
+
+These are on the `r21-major-list` branch and ship only after they pass device tests:
+
+- **Light novels**: LNReader-compatible sources, a reader with themes, translation and saved position.
+- **Source Finding V2**: finds the same title on every installed extension, ranks matches, remembers your pick.
+- **Tracking V2** (opt-in): an offline-safe queue for AniList, MyAnimeList, Kitsu, Trakt and Simkl, careful title
+  matching (no wrong entries), and manga / novel chapter progress.
+- **Anime4K V2**: Fast / Balanced / Quality presets and a live strength control inside the player.
+- **Video rotation** (90 / 180 / 270 and reset, no reload), **profile pictures** from your gallery,
+  a new **splash screen** for light and dark, **loading skeletons** on every feed, and a labelled **bottom bar**.
+
 ## Why Yumeiro?
 
 Most people juggle four apps: a music player, a video player, YouTube, and something for anime or live TV.
@@ -108,6 +120,21 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 - **User guide in Settings** — illustrated diagrams of every tab, gesture and fix.
 - **Every error comes with a suggestion** for what to try next.
 - Smooth 60 fps: progress ticks never recompose the page, no blur on lists, baseline profiles included.
+
+## Platforms and roadmap
+
+| Platform | Status |
+|---|---|
+| Android phones and tablets (9+) | Released |
+| Android TV, Google TV, Fire TV (7+) | Released |
+| Light novels, Tracking V2, Source Finding V2 | In testing (next release) |
+| iOS | Not planned: Yumeiro is native Android (Kotlin + Jetpack Compose) |
+
+## Tech stack
+
+Kotlin, Jetpack Compose (Material 3), Media3 / ExoPlayer, OkHttp (with DNS over HTTPS), WorkManager, Coil, Firebase
+Cloud Messaging for push only (no Analytics), and on-device ML Kit for translation. Extensions run through the CloudStream, Aniyomi, Mihon, LNReader,
+Stremio and JavaScript runtimes Yumeiro ships.
 
 ## Android TV, Google TV and Fire TV
 
@@ -193,8 +220,8 @@ cd yumeiro
 ./gradlew testMobileDebugUnitTest    # unit + UI tests
 ```
 
-Architecture, release pipeline, updater internals and the full feature list are in **[docs/GUIDE.md](docs/GUIDE.md)**
-and **[docs/HANDOVER.md](docs/HANDOVER.md)**.
+Architecture, release pipeline, updater internals and the full feature list are in **[docs/GUIDE.md](docs/GUIDE.md)**,
+**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** and **[docs/SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md)**. What lives in `docs/`: [docs/README.md](docs/README.md).
 
 ## Contributing
 
@@ -233,6 +260,11 @@ it is the single best way to help more people find it. Share it with a friend wh
 **Made in Bangladesh**
 
 </div>
+
+## Acknowledgments
+
+Yumeiro builds on the work of CloudStream, NewPipe, Aniyomi, Mihon, LNReader, Stremio and Media3, and learned from
+Zangetsu and Hikari on novels, tracking and Anime4K presets. Anime4K by bloc97. Thank you.
 
 ## License
 

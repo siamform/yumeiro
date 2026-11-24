@@ -7,7 +7,7 @@ All notable changes to Yumeiro.
 Follows 2.1.0. Update straight from 2.1.0, 2.0.0 or 1.9.0; profiles, history, downloads and settings carry over.
 Every item says how it was checked: (CI) = unit / build tests in GitHub Actions, (emulator) = run on an Android
 emulator with the real app, (not yet on a real phone) where that is still open. Nothing below was checked on a real
-phone yet; docs/HANDOVER-LIVE.md lists the open real-device checks.
+phone yet; docs/UNVERIFIED-QUEUE.md lists the open real-device checks.
 
 ### Fixed
 - Online pages work right after a fresh install or an update. Extension Market, YouTube, Yumix, online music and Live TV

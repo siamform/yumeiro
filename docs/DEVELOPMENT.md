@@ -61,7 +61,7 @@ Size cap and other limits:
   and both TV images.
 - **CI budget:** check Actions first, never duplicate a running equivalent, ≤ ~10 test classes per run, ≤ 2 device
   workflows at once, no stacked large runs, no scheduled workflows. Throwaway fail-before branches are deleted after.
-- **Handover safety:** commit and push after every step; update "Resume here" (docs/R15-STATUS.md) before any long
+- **Handover safety:** commit and push after every step; update the maintainers' handover notes before any long
   wait; a multi-file doc update starts with `DOCS UPDATE IN PROGRESS: <files>` in "Resume here", removed by the push
   that completes it.
 - **Owner tests:** only what needs real hardware, a personal account, a home network or human judgment goes to
@@ -91,11 +91,11 @@ Screenshot tests write PNGs to `app/build/screenshots/`. Look at them after UI c
 
 1. `testMobileDebugUnitTest` green, `assembleRelease` builds.
 2. `version.properties` bumped (or rely on auto-bump) and `fastlane/metadata/android/en-US/changelogs/<code>.txt` added.
-3. `docs/HANDOVER.md` section for the update, README if user-visible.
+3. `CHANGELOG.md` entry for the update (how each change was checked), README if user-visible.
 4. Merge PR → release workflow → check the release page, `https://yumeiro.click/download` and `https://yumeiro.click/get?abi=arm64-v8a`.
 
 ## Next developer: where to start
 
-- Read `docs/HANDOVER.md` (history and root causes), then `docs/ARCHITECTURE.md`.
+- Read `docs/ARCHITECTURE.md`, then the decision records in `docs/SYSTEM-DESIGN.md`.
 - Open issues labelled `good first issue`; the Source status screen is the quickest way to reproduce source bugs.
 - Planned work is in `docs/ROADMAP.md`.

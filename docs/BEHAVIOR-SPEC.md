@@ -8,8 +8,7 @@ not from intent. Each row names the code that implements it. Evidence levels use
 - **Code**: read in the source and traced, not executed.
 - **Device**: needs real hardware or a live service; not verified here.
 
-Companion documents: [EDGE-CASE-AUDIT.md](EDGE-CASE-AUDIT.md) (issues, checklist, conflict matrix,
-verification report) and [TV.md](TV.md).
+Companion document: [TV.md](TV.md).
 
 ---
 

@@ -101,7 +101,7 @@ Back to the [README](../README.md).
 
 ## Developer
 
-New here? Start with **[docs/HANDOVER.md](HANDOVER.md)** — architecture, current stage, root causes of past bugs and the roadmap.
+New here? Start with **[ARCHITECTURE.md](ARCHITECTURE.md)** and **[SYSTEM-DESIGN.md](SYSTEM-DESIGN.md)** (architecture and the decision records), then [ROADMAP.md](ROADMAP.md).
 
 
 | | |
@@ -159,8 +159,7 @@ an extension are contained, so many extensions can be enabled at once.
 
 The player retries the link with browser fetch headers, the site and host as referer, no referer,
 a media-player user agent, a VLC user agent and the host's own web-player headers, then tries the other sources, then re-extracts fresh links, and
-finally opens the source page invisibly and plays exactly what the page plays. Details in
-[docs/HANDOVER.md](HANDOVER.md).
+finally opens the source page invisibly and plays exactly what the page plays (code: `online/AccessLadder.kt`).
 
 ## Requirements
 

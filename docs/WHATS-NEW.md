@@ -63,7 +63,7 @@ Yumeiro 2.1.0 follows 2.0.0. Full notes:
 
 Yumeiro 2.0.0 replaces 1.9.0: [download it from Releases](https://github.com/siamform/yumeiro/releases/latest).
 It has every 1.9.0 feature and fixes the 1.9.0 crash when a video opens. If you installed 1.9.0, update now.
-Full notes: [CHANGELOG.md](../CHANGELOG.md). Per-feature test results: [docs/MASTER-CHECKLIST-FINAL.md](MASTER-CHECKLIST-FINAL.md).
+Full notes: [CHANGELOG.md](../CHANGELOG.md).
 
 | | |
 |---|---|

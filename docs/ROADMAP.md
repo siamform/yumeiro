@@ -5,7 +5,7 @@ organised better than any single-source app. Ordered by impact for launch.
 
 ## R15. Stability and system design (branch `r15-stability`)
 
-Done, with device evidence in `docs/R15-STATUS.md` and `docs/evidence/round3/device-runs.md`:
+Done, with device evidence in `docs/evidence/round3/device-runs.md`:
 no regex on main, bounded memory on 192 MB heaps, one player per process, recovery state
 machines, live feeds as process stores, forced downloads, automatic crash export, pinned
 extensions, carousels that pause under focus, and 00:00 time labels.
@@ -114,7 +114,7 @@ TV layout, Weblate localisation.
 - [ ] Phone test: push on via ntfy, bookmark an airing anime, confirm a wake ~30 min after AniList's airing time.
 - [ ] Watch D1 / Queue usage in the Cloudflare dashboard the first week; tune cron or batch if needed.
 
-## 2.5 Serverless versions of Sozo's best ideas (see INSPIRATION.md)
+## 2.5 Serverless versions of Sozo's best ideas
 
 - [ ] Trailer "Shorts" feed from TMDB `/videos` (TMDB key removed from the build by ADR-013 until this feature is approved and the key is classified), vertical pager, tap to open the title.
 - [ ] Stats, streaks and a yearly recap computed from local watch / listen history (no account, nothing uploaded).

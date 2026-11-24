@@ -15,5 +15,5 @@ same slide as the arrow. yumeiro.click
 Story / X: Yumeiro 2.2.0: online right after install, Live TV that keeps its channels, one Back everywhere and solid
 themes. Made in Bangladesh. yumeiro.click
 
-Note: these screens come from emulator test runs. Real-phone checks are still open (docs/HANDOVER-LIVE.md); post
+Note: these screens come from emulator test runs. Real-phone checks are still open (docs/UNVERIFIED-QUEUE.md); post
 only after the owner approves the release.

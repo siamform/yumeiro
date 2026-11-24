@@ -3,14 +3,14 @@
 These are the only checks left for you (the owner) and for Yumeiro users. Everything else was tested by the agent
 with unit tests, CI and four emulators (Android 13 Pixel 3a with 2 GB RAM, Android 16 Pixel 6, Android TV 7 and
 Android TV 14). Each test here needs real hardware, your own accounts, your home network or a person looking at the
-screen. When you send one back, the agent records it here and in `docs/DONE-LEDGER.md`.
+screen. When you send one back, the maintainers record it here.
 
 The file has two sections: **Yumeiro users checklist** (anyone can run these on their own phone or TV) and **Owner
 (developer) tests** (need the owner's accounts, consoles or adb). The detailed step-by-step scripts (Y, P, T, F) are
 in [`MANUAL-TESTS.md`](MANUAL-TESTS.md).
 
 Which build: the newest **review APK of `r15-stability`** (2.x), release-signed (artifact `yumeiro-review-apk` of the
-latest green `ci.yml` run named in [`HANDOVER-LIVE.md`](HANDOVER-LIVE.md); check its SHA-256 against `SHA256SUMS.txt`).
+latest green `ci.yml` run on the branch under test; check its SHA-256 against `SHA256SUMS.txt`).
 Older tests below that name the 1.9.0 release candidate were written for that build; run them on the newest one.
 Back up 1.8.x first (Settings → Backup & restore → Back up now), then install over it; your data stays. TV: `adb install -r` with the
 TV APK (`yumeiro-tv-1.9.0-…-review.apk`). How to record logs: see "Which build to install" in `MANUAL-TESTS.md`
@@ -147,9 +147,8 @@ Blocked (you couldn't run it; say why).
 
 **For every test (owner and users):** capture a screenshot or short screen recording when something looks
 wrong, plus a note, **plus the app version** (Settings → About) and the phone/TV model and Android version.
-Report with the GitHub issue form "Test report" (Issues → New issue; `.github/ISSUE_TEMPLATE/test-report.yml`) or send results to the owner (developer); recruited users send them to the person who invited them (see
-[USER-TEST-PROGRAM.md](USER-TEST-PROGRAM.md)). The owner forwards them to the agent, who records them here,
-in `docs/DONE-LEDGER.md` and in `docs/UNVERIFIED-QUEUE.md`.
+Report with the GitHub issue form "Test report" (Issues → New issue; `.github/ISSUE_TEMPLATE/test-report.yml`) or send results to the owner (developer); recruited users send them to the person who invited them. The owner forwards them to the
+maintainers, who record them here and in `docs/UNVERIFIED-QUEUE.md`.
 
 The tests are in two tracks: the **Yumeiro users** checklist just below (short, no developer tools), and the
 **owner (developer)** section after it (OMT-1…OMT-61, full detail; some need consoles, logs or decisions).
