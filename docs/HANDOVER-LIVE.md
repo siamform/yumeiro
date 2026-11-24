@@ -45,11 +45,15 @@ row "(R21)" in docs/BUGS-AND-FIXES-2.0.0.md.
 
 ### Next steps, in order
 1. Fresh CI on the head; fix anything red.
-2. Torrent seek (B31-RESCUE-1 row): 5 of 6 seeks within 5 s; the lowram miss was a chain of 0.6-1.1 s piece waits
-   after the rescue. Next idea: on a seek, time the next 2-3 pieces at once with the target. Re-run `-f test=dev.asfakul.yumeiro.B31FrameDeviceTest -f shards='[1,2,3]'` (3 samples per phone; the full
-   class name is required). The owner case always fails on the emulator (10-bit HEVC), so judge the Sintel lines.
-3. Open PR r21-major-list → main only with owner approval (footer required); bump version + CHANGELOG.
-4. Open items: 19b DiskWala (blocked, owner decision), Skip intro emulator check (needs an anime extension), 20 legal
+2. Torrent: B31-SEEK7 (2e44c086) 11 of 11 Sintel seeks within 5 s and first frames within 15 s on api36 and
+   api33-lowram (runs 45321992083, 45323267366); TOR-IDLE-1 emulator verified (45325875819); B31-ON-1 (31c7ca17)
+   flag on by default (still opt-in through the Settings notice). Pending: full in-app path probe 45328880256
+   (share Sintel magnet, turn on, play). The owner hash can't be judged on the emulator (10-bit HEVC).
+3. Owner queue rule (2026-11-24): finish all of items 1-20 first, then item 22 (VERIFY-1, extension security
+   checks / CAPTCHA manager), then item 23 (ADCHAIN-1, ad chains and link shorteners). Plans in
+   docs/OWNER-LIST-R21.md. Do not start 22 or 23 before 1-20 are closed.
+4. Open PR r21-major-list → main only with owner approval (footer required); bump version + CHANGELOG.
+5. Open items: 19b DiskWala (blocked, owner decision), Skip intro emulator check (needs an anime extension), 20 legal
    free-anime part, TeraBox in-app signed-in emulator proof, items still "CI pending" in OWNER-LIST-R21.md.
 
 ### How this agent works (copy this method)

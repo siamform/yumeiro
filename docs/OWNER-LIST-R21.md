@@ -1,6 +1,7 @@
-# Owner list R21: "Yumeiro — Major Bugs, Improvements & New Features" (19 items)
+# Owner list R21: "Yumeiro — Major Bugs, Improvements & New Features" (items 1-20, then 22 and 23)
 
-Owner request on 2026-11-23, in the R21 session. Item 19 (TeraBox / Diskwala) was added later in the same session.
+Owner request on 2026-11-23, in the R21 session. Item 19 (TeraBox / Diskwala) was added later in the same session. Items 22 and 23 were added on 2026-11-24 with
+the rule "first complete all 20, then start these two" (there is no item 21 in the owner's messages).
 The references are v1.5.0 (the most successful release; do not go back to its design) and the competitor Hikari
 (https://github.com/codegeasse1/hikari.git, cloned at /home/user/workspace/ref-hikari; run `git pull` first).
 
@@ -29,7 +30,7 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 9 | Market Discover: dynamic repository/source filter | MKT-FILTER-1 | emulator verified: Filters sheet shows Sort, Category, Language and a Source filter built from the loaded index ("Checked by Yumeiro · 2"), "Show 1446 results" (probe 45252551715) | Filters sheet: Source + Repository from the loaded index |
 | 10 | Yumix "Show videos from": 30 pins, dynamic source filter, search icon, redesign | YF-2 | CI pending | |
 | 11 | Settings > Video Player: customizable player controls | PC-1 | emulator verified (probe 45268021731): Settings › Video player shows the Player controls card (bar count, order / hide per button, Previous and next, Rewind and forward 10 s, Fullscreen). Switching off "Rewind and forward 10 s" (switch read back off) → in the player only Pause is left in the middle; before (probe 45257174845) it showed Rewind 10s / Pause / Forward 10s | |
-| 12 | Torrent: open info-hashes and magnets (e.g. BF2063A5E9A69F14716288FCA7C2D6078BDA7369) | TOR-1, TOR-2 | TOR-1 was NOT working on the emulator (shared hash → "Malformed URL", probe 45253665347). TOR-2 emulator verified (probe 45260133429): the hash resolves and the player offers TorrServer / a torrent app; TOR-3 names the right Settings page and the built-in engine. Built-in engine device test 45268091524: the owner's hash opens in about 2 s (5.87 GB MKV) but the emulator cannot decode 10-bit HEVC; the open film Sintel shows its first frame in 6.4 s (api36) and 5.6 s (api33-lowram), budget 15 s, but seeking to the middle took 13.6 s on api36 and did not resume in 30 s on api33-lowram (budget 5 s). So flag b31_builtin_torrent stays off: torrents play only through the user's TorrServer or a torrent app until the seek is fixed. 2026-11-24: B31-SEEK6, TOR-CLOSE-1, B31-PEERS-1 fixed the low-RAM seek (it never resumed; now 1.6-7.6 s) and kept peers connected; 3-shard runs 45306375960 / 45308014362 / 45309673778 still show single-block stalls of 5-10 s in about 1 of 3 seeks, so the flag stays off (B31-STALL-1) | Root cause: a pasted hash was checked as a magnet, but the bare hash was sent |
+| 12 | Torrent: open info-hashes and magnets (e.g. BF2063A5E9A69F14716288FCA7C2D6078BDA7369) | TOR-1, TOR-2 | TOR-1 was NOT working on the emulator (shared hash → "Malformed URL", probe 45253665347). TOR-2 emulator verified (probe 45260133429): the hash resolves and the player offers TorrServer / a torrent app; TOR-3 names the right Settings page and the built-in engine. Built-in engine device test 45268091524: the owner's hash opens in about 2 s (5.87 GB MKV) but the emulator cannot decode 10-bit HEVC; the open film Sintel shows its first frame in 6.4 s (api36) and 5.6 s (api33-lowram), budget 15 s, but seeking to the middle took 13.6 s on api36 and did not resume in 30 s on api33-lowram (budget 5 s). So flag b31_builtin_torrent stays off: torrents play only through the user's TorrServer or a torrent app until the seek is fixed. 2026-11-24: B31-SEEK6, TOR-CLOSE-1, B31-PEERS-1 fixed the low-RAM seek (it never resumed; now 1.6-7.6 s) and kept peers connected; 3-shard runs 45306375960 / 45308014362 / 45309673778 still show single-block stalls of 5-10 s in about 1 of 3 seeks, so the flag stays off (B31-STALL-1) Built-in engine (no TorrServer needed): B31-SEEK7 + B31-RESCUE-1 + TOR-IDLE-1 emulator verified on Sintel, 11 of 11 seeks within 5 s and first frames within 15 s on api36 and api33-lowram (runs 45321992083, 45323267366), resume after a 140 s pause 3.9 / 4.2 s (45325875819); B31-ON-1 offers it by default (opt-in notice). In-app path probe pending. | Root cause: a pasted hash was checked as a magnet, but the bare hash was sent |
 | 13 | Video details metadata (year, duration, rating + votes, country, language, release date, director, writers, companies, cast, trailers); show only the fields that exist | META-1 | CI pending | Cinemeta + Simkl + Wikidata by IMDb id; fixtures in app/src/test/resources/meta |
 | 14 | Yumix feed: no duplicate titles across extensions | DEDUP-1 | CI pending | online/TitleDedupe.kt |
 | 15 | A selected extension shows its own sections with See All | EXT-SEC-1 | implemented, CI pending | Check first: the Hue page (OnlineHuePage.kt) shows playlist tabs and an endless feed, with no shelves and no See All |
@@ -40,6 +41,8 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 19a | TeraBox plays only a 30 s preview | TB-PREVIEW-1, TB-PREVIEW-2 | Unit-tested; API verified in a real browser with the test account | Signed in, TeraBox gives the full video (10532 s HLS) only on the site where you signed in; the app now asks that site. Anonymous stays 30 s, which Yumeiro never plays. In-app emulator playback with a signed-in account still to be shown |
 | 19b | Diskwala links don't open | — | **blocked: owner decision** | See "DiskWala findings" below |
 | 20 | Yumeiro Mega Extension (all-in-one) | OWN-13, E1-A/B/D | built earlier as the one built-in "Yumeiro" source (catalog shelves from Yumeiro Cloud/TMDB, Yumeiro Drama, Yumeiro Classics public-domain films, play through installed sources). This row said "not started": that was wrong. Emulator: Yumix shows its Spotlight (probe 45247707490). Open: a legal free-anime part | Only legal sources; no 18+; no copied code |
+| 22 | Extension security checks and CAPTCHA: one verification manager for all extensions (e.g. AnimePahe "Quick Security Check" popup keeps coming back) | VERIFY-1 | **queued: starts after items 1-20 are closed** (owner 2026-11-24) | Plan below. No CAPTCHA solving, no fabricated tokens, no defeating access rules |
+| 23 | Ad chains, link shorteners and popups: a dedicated engine in Yumeiro's browser that reaches the real link (e.g. shrinkme.click/alwf74z, srnky.com/0T1EnbeuLf) | ADCHAIN-1 | **queued: starts after items 1-20 and 22** (owner 2026-11-24) | Plan below |
 | web | yumeiro-web: changelog and download text say v2.2.0 | — | done, merged | yumeiro-web PR #8. Re-check www.yumeiro.click/changelog |
 | PR44 | What is inside PR 44 | — | answered | Docs only: the HANDOVER-LIVE rewrite and the REL-2.2-CI ledger row. Its commit 0265a031 is now on r21-major-list, so close PR 44 as superseded when the r21 PR opens |
 
@@ -146,6 +149,45 @@ redirections and video extraction, and fix resolution and playback. Inspect how 
 open-source projects, but don't just copy Hikari. Links must open in Yumeiro's built-in browser and play in Yumeiro's
 built-in player. No redirect to the TeraBox / Diskwala apps or to external browsers for normal playback. Handle
 redirects, video URLs and streaming formats. Preserve the original link and give clear feedback on extraction errors.
+
+### 22. Extension security checks and CAPTCHA (VERIFY-1, queued after 1-20)
+
+Owner brief (2026-11-24): AnimePahe (CloudStream extension) keeps showing a "Quick Security Check"; users reported it.
+Build one central verification manager for every extension instead of logic per extension.
+
+- A. Research how Cloudflare's managed challenge / "Just a moment", Turnstile, JavaScript challenges, CAPTCHAs, bot
+  scores and cookie sessions (cf_clearance and similar) work, and why AnimePahe asks again (cookie scope, user agent
+  or TLS fingerprint mismatch between the WebView that passed and the OkHttp client that reuses the cookie, expiry).
+  References to read (study only, no copied code): github.com/proofofbots/web-re-toolkit, github.com/tiagozip/cap
+  (self-hosted proof-of-work CAPTCHA), github.com/vsmutok/FuckCaptcha, github.com/Lucrehulk/cloudflare-turnstile-solver-2026.
+  The last two are described as solvers: check what they really do, but nothing that solves or fakes a CAPTCHA or
+  Turnstile token goes into Yumeiro.
+- B. Engine: detect a challenge answer (status, headers, page markers) per provider host; keep per-provider state
+  (valid / expired / needs a human / failed) with the cookies and the exact user agent that earned them; reuse while
+  valid; never show the same check twice while a valid session exists; queue requests while one check is open.
+- C. Silent first: a check that passes on its own (JavaScript challenge) runs in a hidden WebView; only a real human
+  check shows a small in-app sheet with the site's own widget; after success the original action continues. No
+  external browser.
+- D. Every extension type (CloudStream, Aniyomi, Stremio, JS) goes through the same interceptor; one provider failing
+  never blocks another.
+- Proof: AnimePahe on the emulator, the check at most once per session lifetime, logged.
+
+### 23. Ad chains, link verifiers and popups (ADCHAIN-1, queued after 22)
+
+Owner brief (2026-11-24): link shorteners and ad providers put content behind ads, popups, redirects, countdowns and
+repeated Continue / Skip steps (examples shrinkme.click/alwf74z, srnky.com/0T1EnbeuLf). Yumeiro shows no ads and
+makes no money from them.
+
+- Research: walk the example chains in a real browser and record every hop (redirects, scripts, timers, forms, what the
+  server checks); study open-source blockers and redirect-skippers (uBlock Origin / EasyList filter rules, AdGuard
+  rules, and link-bypass userscripts) for ideas only.
+- Engine inside Yumeiro's browser: block popups, pop-unders, ad frames and ad redirects with filter lists; recognise
+  known shortener families by their page structure, not only by domain; when the destination is already in the page
+  or its redirects, go there directly; otherwise take the user through the needed steps automatically without the ad
+  pages. Normal sites and logins keep working (allow-list and per-site off switch).
+- Limits: nothing that breaks a site's login, payment or account rules; where a server really enforces a wait, the
+  engine waits quietly instead of faking it.
+- Proof: both example links reach their real target on the emulator, with the hops logged.
 
 ## DiskWala findings (R21, 2026-11-23, measured)
 - The website (diskwala.com/app/<id>) is a "Get the app" page. Its whole JS bundle (main.d3b09a1c.js, 630 KB) calls
