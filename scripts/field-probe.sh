@@ -144,6 +144,18 @@ PY
       send*) # send TEXT: share a link to Yumeiro like another app's Share sheet would (text/plain)
         t=${s#send }; adb shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "'$t'" -p "$P" > /dev/null 2>&1
         note "shared [$t] to the app"; sleep 1 ;;
+      paste*) # paste TEXT: put TEXT on the clipboard ("\n" = line break) and paste it into the focused field, as a
+        # person pasting copied text would (SEARCH-ML-1). The helper dex is built once from scripts/probe-clip.
+        t=${s#paste }
+        if [ ! -f "$OUT/clip.dex" ]; then
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1); PJ=$(ls -d "$ANDROID_HOME"/platforms/android-* | sort -V | tail -1)/android.jar
+          mkdir -p /tmp/clipc && javac -source 8 -target 8 -cp "$PJ" -d /tmp/clipc scripts/probe-clip/Clip.java 2>/dev/null \
+            && "$BT/d8" --output /tmp/clipc /tmp/clipc/Clip.class 2>/dev/null && cp /tmp/clipc/classes.dex "$OUT/clip.dex"
+          adb push "$OUT/clip.dex" /data/local/tmp/clip.dex > /dev/null 2>&1
+        fi
+        r=$(adb shell "CLASSPATH=/data/local/tmp/clip.dex app_process / Clip '$t'" 2>&1 | tr -d '\r' | tail -1)
+        adb shell input keyevent 279; note "pasted [$t] ($r)"; sleep 1; dump "after-paste" ;;
+      key\ *) k=${s#key }; adb shell input keyevent "$k"; note "key $k"; sleep 1; dump "after-key" ;;
       dismiss) tap_text "Close" "All set" "✕" "Not now" "Later" > /dev/null 2>&1 && note "dismissed a popup" || true; sleep 1 ;;
       top) for i in 1 2 3 4; do adb shell input swipe 540 600 540 1600 200; done; sleep 1 ;;
       back) adb shell input keyevent 4; note "key BACK"; sleep 1; dump "after-back" ;;
