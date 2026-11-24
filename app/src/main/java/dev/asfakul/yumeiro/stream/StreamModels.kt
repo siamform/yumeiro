@@ -172,7 +172,20 @@ fun looksLikeM3uPlaylist(url: String): Boolean {
 }
 
 fun guessTitle(url: String): String {
+    magnetName(url)?.let { return it }
     val uri = runCatching { Uri.parse(url) }.getOrNull()
     val last = uri?.lastPathSegment?.substringBeforeLast('.')?.takeIf { it.isNotBlank() && it.lowercase() !in setOf("index", "master", "playlist", "manifest", "stream") }
     return last ?: uri?.host ?: "Network stream"
+}
+
+/**
+ * MAG-TITLE-1: the name a magnet link carries in its `dn` field ("Sintel"), or null. A magnet URI has no path
+ * or host, so [guessTitle] used to fall back to "Network stream" for every shared torrent.
+ */
+internal fun magnetName(url: String): String? {
+    if (!url.trimStart().startsWith("magnet:", ignoreCase = true)) return null
+    val query = url.substringAfter('?', "")
+    val raw = query.split('&').firstOrNull { it.startsWith("dn=", ignoreCase = true) }?.substring(3) ?: return null
+    val name = runCatching { java.net.URLDecoder.decode(raw, "UTF-8") }.getOrDefault(raw).trim()
+    return name.takeIf { it.isNotEmpty() }?.take(200)
 }
