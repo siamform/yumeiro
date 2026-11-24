@@ -92,6 +92,12 @@ internal class LtCore(lowEnd: Boolean) : TorrentCore {
         // held ~3 s of data (default request_queue_time 3), and a seek's requests waited behind it. 1 s keeps peers
         // busy but lets a new time-critical piece reach the front sooner.
         int(org.libtorrent4j.swig.settings_pack.int_types.request_queue_time, 1)
+        // B31-PEERS-1 (lowram run 45303433155: peers 18 -> 0 right after the first frame, then the seek waited 27 s
+        // with 0-3 peers): a stream window wants only a few MB, so it is often all downloaded; libtorrent then calls
+        // the torrent finished, sends upload-only and closes every seed connection (torrent::finished(), gated by
+        // close_redundant_connections, https://github.com/arvidn/libtorrent/blob/RC_2_0/src/torrent.cpp). The next
+        // seek had to find peers again. Off: the seeds stay connected; idle torrents are still paused after IDLE_MS.
+        bool(org.libtorrent4j.swig.settings_pack.bool_types.close_redundant_connections, false)
         sm.start(SessionParams(sp))
     }
 
