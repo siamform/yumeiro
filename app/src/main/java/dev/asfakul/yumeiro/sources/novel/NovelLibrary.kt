@@ -65,8 +65,12 @@ object NovelLibrary {
     }
 
     /** Reading progress: [position] is how far down the chapter (0..1). */
-    fun progress(c: Context, item: NovelItem, chapter: NovelChapter, index: Int, position: Float, now: Long = System.currentTimeMillis()) = update(c, item) {
-        it.copy(chapterPath = chapter.path, chapterName = chapter.name, chapterIndex = index, position = position.coerceIn(0f, 1f), readAt = now)
+    fun progress(c: Context, item: NovelItem, chapter: NovelChapter, index: Int, position: Float, now: Long = System.currentTimeMillis()) {
+        update(c, item) {
+            it.copy(chapterPath = chapter.path, chapterName = chapter.name, chapterIndex = index, position = position.coerceIn(0f, 1f), readAt = now)
+        }
+        // TRACK-2: read to the end goes to the trackers (Tracking V2 only; no-op when off).
+        if (position >= 1f) dev.asfakul.yumeiro.tracking.v2.TrackV2.onNovelChapter(c, item.pluginId, item.path, item.name, chapter.name, chapter.number, index)
     }
 
     fun forget(c: Context, pluginId: String, path: String) = synchronized(lock) {

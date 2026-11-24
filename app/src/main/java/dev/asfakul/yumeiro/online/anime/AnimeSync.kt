@@ -94,6 +94,8 @@ object AnimeSync {
      * tick for the rest of playback.
      */
     fun onProgress(context: Context, detail: OnlineDetail, episode: OnlineEpisode?, index: Int, positionMs: Long, durationMs: Long) {
+        // TRACK-2: with Tracking V2 switched on, V2 owns tracker writes (disk queue, matching, retries).
+        if (dev.asfakul.yumeiro.tracking.v2.TrackV2.onVideo(context, detail, episode, index, positionMs, durationMs)) return
         if (durationMs <= 0 || positionMs < durationMs * 0.85) return
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         val isAnime = AnimeIds.isAnime(detail)

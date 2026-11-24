@@ -113,6 +113,10 @@ object MangaLibrary {
                 readChapters = if (finished && chapter.url !in it.readChapters) (it.readChapters + chapter.url).takeLast(5000) else it.readChapters,
             )
         }
+        // TRACK-2: a chapter read to its last page goes to the trackers (Tracking V2 only; no-op when off).
+        if (finished) dev.asfakul.yumeiro.tracking.v2.TrackV2.onMangaChapter(
+            context, item.providerId, item.url, item.title, chapter.name, chapter.number.toDouble().takeIf { it >= 1.0 }, null,
+        )
     }
 
     fun remove(context: Context, key: String) { load(context); _entries.value = _entries.value.filterNot { it.key == key }; save(context) }
