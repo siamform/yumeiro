@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Rotate90DegreesCw
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.ClosedCaptionDisabled
@@ -123,6 +124,9 @@ fun VideoPlayerTopBar(
     /** A4K-2: the active Anime4K profile ("Off", "Balanced · Sharpen", ...) and the sheet that switches it. */
     enhanceLabel: String? = null,
     onEnhanceClick: () -> Unit = {},
+    /** ROT-1: clockwise turn of the picture (0, 90, 180, 270) and the button that adds 90°. */
+    rotationDegrees: Int = 0,
+    onRotateClick: () -> Unit = {},
 ) {
     // OL-7: the buttons get exactly the room they use, at the trailing edge; the title takes the rest.
     val aligned = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_TOPBAR_ALIGN)
@@ -375,6 +379,21 @@ fun VideoPlayerTopBar(
                             )
                         }
                     }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.ROTATE -> {
+                        IconButton(
+                            onClick = onRotateClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_rotate_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Rotate90DegreesCw,
+                                contentDescription = if (rotationDegrees == 0) "Rotate video" else "Rotate video, now ${rotationDegrees} degrees",
+                                tint = if (rotationDegrees == 0) Color.White else SpotifyGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.LOCK -> {
                         // Lock screen
                         IconButton(
@@ -411,6 +430,8 @@ fun VideoPlayerTopBar(
                     onSleepTimerClick = onSleepTimerClick,
                     enhanceLabel = enhanceLabel,
                     onEnhanceClick = onEnhanceClick,
+                    rotationDegrees = rotationDegrees,
+                    onRotateClick = onRotateClick,
                 )
             }
         }
@@ -438,6 +459,8 @@ private fun VideoPlayerMoreMenu(
     onSleepTimerClick: () -> Unit,
     enhanceLabel: String? = null,
     onEnhanceClick: () -> Unit = {},
+    rotationDegrees: Int = 0,
+    onRotateClick: () -> Unit = {},
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -490,6 +513,9 @@ private fun VideoPlayerMoreMenu(
                         item("Video details", "video_info_btn_menu", androidx.compose.material.icons.Icons.Outlined.Movie, onClick = onInfoClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.LOCK ->
                         item("Lock controls", "video_screen_lock_btn_menu", Icons.Default.LockOpen, onClick = onLockClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.ROTATE ->
+                        item("Rotate video", "video_rotate_btn_menu", Icons.Default.Rotate90DegreesCw,
+                            if (rotationDegrees == 0) null else "${rotationDegrees}°", onRotateClick)
                 }
             }
             if (overflow.isNotEmpty()) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))

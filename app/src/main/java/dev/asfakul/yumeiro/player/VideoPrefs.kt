@@ -57,6 +57,8 @@ object VideoPrefs {
     enum class Control(val label: String) {
         QUALITY("Quality"), AUDIO("Audio track"), SUBTITLES("Subtitles"), SPEED("Speed"),
         ASPECT("Aspect ratio"), PIP("Picture-in-picture"), LOCK("Lock"), INFO("Video info"),
+        // ROT-1: new entries go last, so a saved order keeps its bar and this one starts in More.
+        ROTATE("Rotate video"),
     }
 
     /**

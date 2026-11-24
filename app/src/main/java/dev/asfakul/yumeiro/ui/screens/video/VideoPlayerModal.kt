@@ -479,6 +479,18 @@ private fun VideoPlayerModalContent(
           }
         }
     }
+    // ROT-1: one entry point for the rotate button, the More menu item and the reset pill.
+    fun rotateVideo(to: Int) {
+        val d = dev.asfakul.yumeiro.player.VideoRotation.normalize(to)
+        if (d == chrome.rotation) return
+        chrome.rotation = d
+        chrome.rotationFor = video.id
+        if (usesSurfaceRenderer()) {
+            dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees = d
+            applyEngineLevel(exoPlayer, engineHeight, engineUpscale)
+        }
+        showToast(if (d == 0) "Rotation reset" else "Rotated ${d}°")
+    }
     // R17 (G3 proposal): video sleep timer, shared with the next episode (VideoSleepTimer).
     val sleepState by dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.collectAsState()
     val sleepLabel = dev.asfakul.yumeiro.ui.screens.player.rememberSleepRemaining(sleepState, "End of this video")
@@ -754,6 +766,7 @@ private fun VideoPlayerModalContent(
                 // The GPU enhancement can't run on this video (HDR, protected or a GPU that
                 // refuses the shader): play without it instead of failing.
                 runCatching { dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(exoPlayer, emptyList()) }
+                if (dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees != 0) { dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees = 0; chrome.rotation = 0 }
                 showToast("Anime4K is off for this video (not supported here)")
                 exoPlayer.prepare(); exoPlayer.playWhenReady = true
                 return
@@ -1708,6 +1721,17 @@ private fun VideoPlayerModalContent(
     // gave it invalid register types: ART rejected the class and the 1.9.0 player crashed on open
     // (upgrade check 44700731576). scripts/dex_register_budget.py now holds every method under 224.
     val playerSurface: @Composable () -> Unit = {
+    val surfaceTransform = remember { dev.asfakul.yumeiro.player.VideoRotation.SurfaceTransform() }
+    LaunchedEffect(video.id) {
+        // ROT-1: each video starts upright; drop a GPU turn left from the one before.
+        if (chrome.rotationFor != null && chrome.rotationFor != video.id) {
+            chrome.rotationFor = null
+            val hadGpu = dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees != 0
+            chrome.rotation = 0
+            dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees = 0
+            if (hadGpu) applyEngineLevel(exoPlayer, engineHeight, engineUpscale)
+        }
+    }
     Box(
         modifier = (if (docked) Modifier.fillMaxWidth().aspectRatio(16f / 9f) else Modifier.fillMaxSize())
             .graphicsLayer {
@@ -1732,11 +1756,7 @@ private fun VideoPlayerModalContent(
                 // Inflated so the surface type can be a TextureView (only settable from XML).
                 // Round 13: Settings → Quality and audio → Video renderer (Auto = TextureView on
                 // phones for the floating / docked players, SurfaceView on TV).
-                val surface = when (dev.asfakul.yumeiro.player.VideoPrefs.renderer.value) {
-                    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.SURFACE -> true
-                    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.TEXTURE -> false
-                    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.AUTO -> dev.asfakul.yumeiro.Edition.isTv
-                }
+                val surface = usesSurfaceRenderer()
                 val layout = if (surface) dev.asfakul.yumeiro.R.layout.yumeiro_player_view_surface else dev.asfakul.yumeiro.R.layout.yumeiro_player_view
                 (android.view.LayoutInflater.from(ctx).inflate(layout, null) as PlayerView).apply {
                     player = exoPlayer
@@ -1746,6 +1766,10 @@ private fun VideoPlayerModalContent(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
+                    // ROT-1: the fit scale depends on the laid-out sizes, so re-apply after every layout.
+                    val box = this
+                    videoSurfaceView?.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> surfaceTransform.apply(v, box) }
+                    addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> videoSurfaceView?.let { surfaceTransform.apply(it, box) } }
                 }
             },
             update = { playerView ->
@@ -1753,12 +1777,12 @@ private fun VideoPlayerModalContent(
                 playerView.resizeMode = resizeMode
                 // Zoom only applies to the full player; docked, floating and PiP always show 100 %.
                 val z = if (docked || hideChrome) dev.asfakul.yumeiro.player.VideoZoom.State() else videoZoom
-                playerView.videoSurfaceView?.apply {
-                    // Pan limits use the picture's own size (letterboxed video is smaller than the screen).
-                    val c = if (width > 0 && height > 0) dev.asfakul.yumeiro.player.VideoZoom.clampPan(z, width.toFloat(), height.toFloat()) else z
-                    scaleX = c.scale; scaleY = c.scale
-                    translationX = c.panX; translationY = c.panY
-                }
+                // Pan limits use the picture's own size (letterboxed video is smaller than the screen).
+                // ROT-1: a SurfaceView can't be turned as a view; there the GPU effect turns the frame.
+                surfaceTransform.degrees = if (playerView.videoSurfaceView is android.view.SurfaceView) 0 else chrome.rotation
+                surfaceTransform.zoom = z
+                surfaceTransform.cover = resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                playerView.videoSurfaceView?.let { surfaceTransform.apply(it, playerView) }
                 val controlsUp = isControlsVisible && !isScreenLocked && !hideChrome
                 dev.asfakul.yumeiro.player.SubtitleStyleSettings.applyTo(playerView, subtitleStyle, if (controlsUp) seekBarTopPx else null)
             },
@@ -1954,6 +1978,19 @@ private fun VideoPlayerModalContent(
                         .heightIn(min = 40.dp).padding(horizontal = 16.dp, vertical = 10.dp).testTag("video_zoom_reset"),
                 )
             }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = chrome.rotation != 0 && !videoZoom.zoomed && isControlsVisible && !isScreenLocked,
+                enter = fadeIn(), exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
+            ) {
+                Text(
+                    "Reset rotation · ${dev.asfakul.yumeiro.player.VideoRotation.label(chrome.rotation)}",
+                    color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.6f))
+                        .clickable(role = androidx.compose.ui.semantics.Role.Button) { rotateVideo(0) }
+                        .heightIn(min = 40.dp).padding(horizontal = 16.dp, vertical = 10.dp).testTag("video_rotate_reset"),
+                )
+            }
         }
 
         // Buffering Indicator
@@ -2112,6 +2149,8 @@ private fun VideoPlayerModalContent(
                     onSleepTimerClick = { chrome.showSleepSheet = true },
                     enhanceLabel = enhanceLabel,
                     onEnhanceClick = { chrome.showEnhanceSheet = true },
+                    rotationDegrees = chrome.rotation,
+                    onRotateClick = { rotateVideo(dev.asfakul.yumeiro.player.VideoRotation.next(chrome.rotation)) },
                 )
 
                 // Round 13: Settings → Player → Player info overlay ("Stats for nerds").
@@ -2575,6 +2614,9 @@ internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, heigh
     val fx = buildList<androidx.media3.common.Effect> {
         if (height != null) add(androidx.media3.effect.Presentation.createForHeight(height))
         if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kV2.currentEffect())
+        // ROT-1: SurfaceView renderer only (TextureView turns the view). Media3 turns counter-clockwise.
+        val turn = dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees
+        if (turn != 0) add(androidx.media3.effect.ScaleAndRotateTransformation.Builder().setRotationDegrees((360 - turn).toFloat()).build())
     }
     runCatching {
         // R15 (device run 43622442191: second level switch → picture froze, then ERROR_CODE_TIMEOUT on
@@ -2619,4 +2661,15 @@ internal class PlayerChromeState {
     var zoomHintVisible by mutableStateOf(false)
     var zoomHintJob by mutableStateOf<kotlinx.coroutines.Job?>(null)
     var isLockedUnlockPillVisible by mutableStateOf(false)
+    /** ROT-1: clockwise turn of the picture, 0 / 90 / 180 / 270. */
+    var rotation by mutableIntStateOf(0)
+    /** The video [rotation] was set for; another video starts upright. */
+    var rotationFor: String? = null
+}
+
+/** True when the player draws on a SurfaceView (Settings › Video renderer; Auto = SurfaceView on TV only). */
+internal fun usesSurfaceRenderer(): Boolean = when (dev.asfakul.yumeiro.player.VideoPrefs.renderer.value) {
+    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.SURFACE -> true
+    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.TEXTURE -> false
+    dev.asfakul.yumeiro.player.VideoPrefs.Renderer.AUTO -> dev.asfakul.yumeiro.Edition.isTv
 }
