@@ -114,9 +114,9 @@ run_steps() {
       xy\ *) # tap a screen point (e.g. the video surface, which has no text): xy X Y
         read -r px py <<< "${s#xy }"; adb shell input tap "$px" "$py"; note "tapped point $px $py"; sleep 1; dump "after-xy" ;;
       tap*) t=${s#tap }; answer_system; tap_text "$t" "~$t" || note "tap miss [$t]"; sleep 1; dump "after-tap" ;;
-      find*) # scroll the page up (up to 6 swipes) until TEXT is on screen, then tap it
+      find*) # scroll the page up (up to 15 swipes) until TEXT is on screen, then tap it
         t=${s#find }; ok=0
-        for i in 1 2 3 4 5 6 7; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 1500 540 700 300; sleep 1; done
+        for i in $(seq 1 15); do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 1500 540 700 300; sleep 1; done
         # not below: the page may have opened scrolled down (Settings keeps its place), so look above too
         [ $ok = 1 ] || for i in 1 2 3 4 5 6 7 8 9 10 11 12; do tap_text "$t" "~$t" && { ok=1; break; }; adb shell input swipe 540 700 540 1500 300; sleep 1; done
         [ $ok = 1 ] || note "find miss [$t]"; sleep 1; dump "after-find" ;;
