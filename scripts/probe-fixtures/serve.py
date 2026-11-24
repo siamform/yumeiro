@@ -10,6 +10,7 @@
 #   /media/clip.mp4              direct video (Range supported)
 #   /attach                      the same video as Content-Disposition: attachment
 #   /attach.zip                  a non-media attachment (download popup, not the player)
+#   /files                       a page with both attachments as ordinary links (in-page downloads)
 #   /popup                       a normal page with a real target=_blank link, a window.open button, an
 #                                automatic window.open on load and a link to an ad host
 #   /normal                      an ordinary article (nothing may change on it)
@@ -129,6 +130,9 @@ class H(http.server.BaseHTTPRequestHandler):
             return self.send(200, page("Probe ordinary article", "An ordinary page with a Continue link that must never be tapped by Yumeiro.", '<a href="/final">Continue</a>'))
         if p == "/popup":
             return self.send(200, POPUP)
+        if p == "/files":
+            return self.send(200, page("Probe files", "Two download links on an ordinary page.",
+                                       '<p><a href="/attach">Download the episode</a></p><p><a href="/attach.zip">Download the pack</a></p>'))
         if p == "/media/clip.mp4":
             return self.file("video/mp4")
         if p == "/attach":
