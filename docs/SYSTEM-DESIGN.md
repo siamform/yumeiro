@@ -2052,3 +2052,18 @@ api33-lowram and TV api24; test hash first frame and seek times against the bars
   `scripts/adchain1_link_chain_check.js` (18: the 14 earlier pages + 4 network-answer cases). Emulator probe on
   local test pages (`scripts/probe-fixtures/serve.py`: timer, ad layer, decoy, pop-ups, /links/go, 3 redirects,
   direct MP4, attachment MP4 and ZIP, an ordinary page) and on the owner's two live links.
+
+
+### ADR-063: Pass checks ahead and in every form (VERIFY-2, owner list 22, rule replaced 2026-11-24)
+Context: the owner replaced item 22 with a result goal: no repeated security-check interruptions. Hikari's
+net/CloudflareSolver.kt, ExtensionCloudflareInterceptor.kt, CloudflareVerifier.kt and ExtensionVerifyGuard.kt were read
+(2026-11-24): a hidden WebView with the WebView user agent passes the site's own check, one per host, the cookie is
+shared with extension requests, 200-status check pages are recognised by markup, and a host is warmed in the
+background. Yumeiro's BrowserCheck already had the first three except 200 pages; warm-up was missing.
+Decision: BrowserCheck.verdict also classifies small text/html 2xx answers made of check markup (okPageIsCheck,
+32 KB cap) and the non-Cloudflare wsidchk wall; BrowserCheck.warm re-passes a site that passed before and whose pass
+cookie is gone, silently, from OnlineRepository.home and search, at most every 90 s (BrowserCheckPolicy.mayWarm).
+Not taken from Hikari: `SslErrorHandler.proceed()` (accepts any certificate).
+Boundary: no automatic CAPTCHA/Turnstile solving, bought or forged tokens, or fingerprint spoofing.
+Consequences: an extension no longer parses a check page as "no results"; the first request after a pass expired
+doesn't stall on the check. Test: Verify2CheckPagesTest.

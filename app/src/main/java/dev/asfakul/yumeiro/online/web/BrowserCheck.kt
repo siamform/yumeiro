@@ -200,14 +200,38 @@ object BrowserCheck {
             return if (DDG_MARKERS.any { it in text }) Verdict.CHALLENGE else Verdict.NONE
         }
         val cloudflare = "cloudflare" in srv || hasCfRay
-        if (!cloudflare) return Verdict.NONE
+        // VERIFY-2: the DooPlay/AnimeOnline family's own "One moment, please" script page (403 until its script ran).
+        if (!cloudflare) return if ("wsidchk-form" in text) Verdict.CHALLENGE else Verdict.NONE
         if (BLOCK_MARKERS.any { it in text } && CHALLENGE_MARKERS.none { it in text }) return Verdict.BLOCKED
         return if (CHALLENGE_MARKERS.any { it in text }) Verdict.CHALLENGE else Verdict.NONE
     }
 
+    /**
+     * VERIFY-2 (from Hikari's ExtensionCloudflareInterceptor): some sites answer the check page itself with 200
+     * ("Just a moment…", DooPlay's "One moment, please" wsidchk form), which an extension then read as an empty site.
+     * Only a small HTML document made of a check page's own markup counts; real pages are never peeked past 32 KB.
+     * Pure → unit-testable.
+     */
+    fun okPageIsCheck(contentType: String?, body: String): Boolean {
+        if (contentType?.contains("text/html", true) != true) return false
+        if (body.length > OK_CHECK_MAX) return false
+        val t = body.lowercase()
+        return OK_CHECK_MARKERS.any { it in t } || DDG_MARKERS.take(2).any { it in t }
+    }
+
+    private const val OK_CHECK_MAX = 32 * 1024
+    private val OK_CHECK_MARKERS = listOf("cf_chl_opt", "cf-challenge-running", "<title>just a moment", "wsidchk-form", "challenge-error-title")
+
     fun verdict(response: Response): Verdict {
         val mitigated = response.header("cf-mitigated")
         if (mitigated.equals("challenge", true)) return Verdict.CHALLENGE
+        if (response.code in 200..299) {
+            val type = response.header("Content-Type")
+            val len = response.header("Content-Length")?.toLongOrNull()
+            if (type?.contains("text/html", true) != true || (len != null && len > OK_CHECK_MAX)) return Verdict.NONE
+            val body = runCatching { response.peekBody(OK_CHECK_MAX + 1L).string() }.getOrDefault("")
+            return if (okPageIsCheck(type, body)) Verdict.CHALLENGE else Verdict.NONE
+        }
         if (response.code !in setOf(403, 429, 503)) return Verdict.NONE
         val body = runCatching { response.peekBody(96 * 1024).string() }.getOrDefault("")
         return classify(response.code, mitigated, response.header("Server"), response.header("cf-ray") != null, body)
@@ -286,6 +310,27 @@ object BrowserCheck {
             if (centerOn()) VerificationCenter.report(host, VerificationCenter.Outcome.FAILED)
             null
         }
+    }
+
+    private val warmedAt = ConcurrentHashMap<String, Long>()
+
+    /**
+     * VERIFY-2 (Hikari's CloudflareSolver.warm): a site that asked for a check before, whose pass has since run out,
+     * is passed again in the background when its extension is opened, so the home / search requests that follow
+     * don't each meet the check. Silent only (never shows a page); at most once per 90 s per site; blocked or
+     * paused sites are left alone. Call off the main thread.
+     */
+    suspend fun warm(url: String) {
+        val host = runCatching { java.net.URI(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+        if (!centerOn() || onMainThread()) return
+        val site = VerificationCenter.site(host) ?: return
+        if (site.passes <= 0 || !VerificationCenter.mayAsk(host)) return
+        if (cleared[host] != null || hasClearance(webCookies("https://$host/"))) return
+        val now = System.currentTimeMillis()
+        if (!BrowserCheckPolicy.mayWarm(warmedAt[host], now)) return
+        warmedAt[host] = now
+        Log.i(TAG, "warming $host (its pass ran out)")
+        solve("https://$host/", interactive = false)
     }
 
     /**
@@ -519,4 +564,9 @@ object BrowserCheckPolicy {
     const val FAILED_RETRY_MS = 60_000L
 
     fun recentlyFailed(failedAt: Long?, now: Long): Boolean = failedAt != null && now - failedAt in 0 until FAILED_RETRY_MS
+
+    /** VERIFY-2: a background warm-up for a site runs at most this often. */
+    const val WARM_COOLDOWN_MS = 90_000L
+
+    fun mayWarm(lastAt: Long?, now: Long): Boolean = lastAt == null || now - lastAt !in 0 until WARM_COOLDOWN_MS
 }

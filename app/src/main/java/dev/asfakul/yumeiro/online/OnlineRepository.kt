@@ -240,6 +240,8 @@ object OnlineRepository {
         if (!force) cachedHomeNow(api)?.let { return@withContext it }
         val diskKey = diskKey(api, "home")
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
+        // VERIFY-2: a site whose check pass ran out is passed again in the background while the home loads.
+        warmCheck(api)
         // E4: every live fetch is timed; failures count towards quarantine (ExtensionSpeed).
         // A fetch cancelled by a newer one (Retry, leaving the screen) is not the extension's fault.
         val started = System.currentTimeMillis()
@@ -466,8 +468,17 @@ object OnlineRepository {
             }
     }
 
+    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /** VERIFY-2: see BrowserCheck.warm. Never waits; never shows a page. */
+    private fun warmCheck(api: MainAPI) {
+        val url = runCatching { api.mainUrl }.getOrNull()?.takeIf { it.startsWith("http") } ?: return
+        warmScope.launch { runCatching { dev.asfakul.yumeiro.online.web.BrowserCheck.warm(url) } }
+    }
+
     /** Live search of [api]; the caller already checked [cachedSearch] (FE-S1: the second disk read on a miss is gone). */
     private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
+        warmCheck(api)
         val key = "${api.name}|${q.lowercase()}"
         val dk = diskKey(api, "search", q.lowercase())
         val results = try {

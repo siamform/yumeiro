@@ -39,7 +39,7 @@ Labels: CI verified / emulator verified / real-device verified / implemented but
 | 17 | README cleanup | DOC-README-1 | done (docs) | README went from 545 to 245 lines, plus docs/WHATS-NEW.md, SCREENSHOTS.md, COMPARISON.md and FAQ.md |
 | 18 | Fix Skip Intro and add Skip Outro (AniSkip / IntroDB) | SKIP-1, SKIP-2 | implemented, unit tested on real API answers; emulator check pending | IntroDB needs the source to give an IMDb id |
 | 19a | TeraBox plays only a 30 s preview | TB-PREVIEW-1, TB-PREVIEW-2 | Unit-tested; API verified in a real browser with the test account | Signed in, TeraBox gives the full video (10532 s HLS) only on the site where you signed in; the app now asks that site. Anonymous stays 30 s, which Yumeiro never plays. In-app emulator playback with a signed-in account still to be shown |
-| 19b | Diskwala links don't open | — | **blocked: owner decision** | See "DiskWala findings" below |
+| 19b | Diskwala links don't open | — | **closed by owner 2026-11-24 ("don't waste time on Diskwala")**: Yumeiro shows the file name and size and says it opens only in DiskWala's app | See "DiskWala findings" below |
 | 20 | Yumeiro Mega Extension (all-in-one) | OWN-13, E1-A/B/D | built earlier as the one built-in "Yumeiro" source (catalog shelves from Yumeiro Cloud/TMDB, Yumeiro Drama, Yumeiro Classics public-domain films, play through installed sources). This row said "not started": that was wrong. Emulator: Yumix shows its Spotlight (probe 45247707490). Open: a legal free-anime part | Only legal sources; no 18+; no copied code |
 | 21 | Updater modal messages | UPD-MSG-1 | **implemented (e7947675), CI pending**: plain stage texts from the real download status, "Update completed!" after install, no host name in messages | Update mechanism unchanged |
 | 22 | Extension security checks and CAPTCHA: one verification manager for all extensions (e.g. AnimePahe "Quick Security Check" popup keeps coming back) | VERIFY-1 | **implemented, CI + emulator probe pending** (2026-11-24): VerificationCenter + ExtensionCheckWindows + Security checks card (ADR-059). Baseline: probe 45345639530 shows the AnimePahe sheet over a Cloudflare block page | No CAPTCHA solving, no fabricated tokens, no defeating access rules |
@@ -152,27 +152,30 @@ open-source projects, but don't just copy Hikari. Links must open in Yumeiro's b
 built-in player. No redirect to the TeraBox / Diskwala apps or to external browsers for normal playback. Handle
 redirects, video URLs and streaming formats. Preserve the original link and give clear feedback on extraction errors.
 
-### 22. Extension security checks and CAPTCHA (VERIFY-1, queued after 1-20)
+### 22. No repeated security checks (VERIFY-1, VERIFY-2). Owner rule replaced 2026-11-24
 
-Owner brief (2026-11-24): AnimePahe (CloudStream extension) keeps showing a "Quick Security Check"; users reported it.
-Build one central verification manager for every extension instead of logic per extension.
+Goal (owner, 2026-11-24, replaces the earlier item 22 text): users must not keep stopping for "Quick security
+check", "Just a moment" or CAPTCHA pages while using extensions, streaming or the browser. Measure the result; showing
+a modal again and again is not a solution. Study and reuse Hikari, Zangetsu and CloudStream (same ecosystem).
 
-- A. Research how Cloudflare's managed challenge / "Just a moment", Turnstile, JavaScript challenges, CAPTCHAs, bot
-  scores and cookie sessions (cf_clearance and similar) work, and why AnimePahe asks again (cookie scope, user agent
-  or TLS fingerprint mismatch between the WebView that passed and the OkHttp client that reuses the cookie, expiry).
-  References to read (study only, no copied code): github.com/proofofbots/web-re-toolkit, github.com/tiagozip/cap
-  (self-hosted proof-of-work CAPTCHA), github.com/vsmutok/FuckCaptcha, github.com/Lucrehulk/cloudflare-turnstile-solver-2026.
-  The last two are described as solvers: check what they really do, but nothing that solves or fakes a CAPTCHA or
-  Turnstile token goes into Yumeiro.
-- B. Engine: detect a challenge answer (status, headers, page markers) per provider host; keep per-provider state
-  (valid / expired / needs a human / failed) with the cookies and the exact user agent that earned them; reuse while
-  valid; never show the same check twice while a valid session exists; queue requests while one check is open.
-- C. Silent first: a check that passes on its own (JavaScript challenge) runs in a hidden WebView; only a real human
-  check shows a small in-app sheet with the site's own widget; after success the original action continues. No
-  external browser.
-- D. Every extension type (CloudStream, Aniyomi, Stremio, JS) goes through the same interceptor; one provider failing
-  never blocks another.
-- Proof: AnimePahe on the emulator, the check at most once per session lifetime, logged.
+What Yumeiro does (one engine, BrowserCheck + VerificationCenter, for every extension type and the player):
+- A real browser passes the site's own check silently: a hidden WebView with the app's WebView user agent runs the
+  page until the site sets its pass cookie (cf_clearance, __ddg*). One check per site at a time; other requests wait
+  and reuse it (CloudStream CloudflareKiller, Hikari CloudflareSolver).
+- The pass is reused everywhere (extension requests, the player, the page browser) with the same user agent, and
+  after a restart from the cookie store, until the site itself asks again.
+- Check pages are recognised in every form: 403/503 with Cloudflare markup, `cf-mitigated: challenge`, DDoS-Guard,
+  the DooPlay "One moment, please" wsidchk page, and check pages served as 200 (VERIFY-2, from Hikari).
+- A site whose pass ran out is passed again in the background when its extension opens (VERIFY-2 warm, Hikari's
+  CloudflareSolver.warm), at most every 90 s, silently.
+- A firewall block ("you have been blocked", 1020) is not a check: one note, no page, held 30 min (VERIFY-1).
+- An extension's own check windows are concealed and read (ExtensionCheckWindows, like Hikari's ExtensionVerifyGuard).
+- A site that insists on an interactive checkbox shows its own widget once; the pass is then kept as above.
+
+Limits (agent's boundary, explained to the owner 2026-11-24): no CAPTCHA/Turnstile auto-solvers, no bought or forged
+tokens, no fingerprint spoofing to pass as a human. Everything above uses a real browser running the site's own page.
+- Proof: emulator session with extensions (AnimePahe, a Cloudflare site, the shrinkme chain): count check pages
+  shown before and after; logcat BrowserCheck lines.
 - Finding 2026-11-24 (field probe 45335841840, api36, AnimePahe + MovieBoxProvider + Watch32 installed): on Yumix the
   window tree holds a 1x1-pixel app window with a WebView showing Cloudflare's "Sorry, you have been blocked · You are
   unable to access animepahe.pw". It is not drawn, but it stays attached (TalkBack can read it, and it keeps a renderer
