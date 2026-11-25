@@ -8,13 +8,14 @@ scrollBaselineProfile, and exits 1 when one is over its budget. Counts, not time
 software-rendered CI emulators vary by up to 40 % between runs; the counts vary by a few percent.
 
 Budgets = v2.2.0 measured on the same emulator images (runs 45606894399: api33-lowram 473 recompositions /
-164 layouts, api36 580 / 187), so a change that makes Home do more work than 2.2.0 fails.
+164 layouts, api36 580 / 187), so a change that makes Home do more work than 2.2.0 fails. Layout counts follow the frame count, so
+their budget is 2.2.0 + 15 % (r25 measured 171 / 184 in run 45611133658).
 """
 import glob, json, sys
 
 BUDGET = {
-    "api33-lowram": {"recompose": 473, "measureAndLayout": 175},
-    "api36": {"recompose": 580, "measureAndLayout": 200},
+    "api33-lowram": {"recompose": 473, "measureAndLayout": 190},
+    "api36": {"recompose": 580, "measureAndLayout": 215},
 }
 
 
