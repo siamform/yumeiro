@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "startup = StartupBenchmark, jank = FrameTimingBenchmark (ST-7), jank-trace = jank with composable names in the traces (PERF-A1, numbers not comparable), profile = BaselineProfileGenerator (api36 only), restore = ProcessDeathRestoreTest (G1 H8)"
+        description: "startup = StartupBenchmark, jank = FrameTimingBenchmark (ST-7), jank-scroll = only the Home scroll without compilation (A1 old/new comparisons), jank-trace = jank with composable names in the traces (PERF-A1, numbers not comparable), profile = BaselineProfileGenerator (api36 only), restore = ProcessDeathRestoreTest (G1 H8)"
         type: choice
-        options: [startup, jank, jank-trace, profile, restore]
+        options: [startup, jank, jank-scroll, jank-trace, profile, restore]
         default: startup
   # The file exists only on r15-stability, and GitHub dispatches only workflows on the default
   # branch. Device check (which is on the default branch) calls this with bench=startup|profile.
@@ -51,7 +51,7 @@ jobs:
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
-          CLASS: ${{ inputs.what == 'profile' && 'dev.asfakul.yumeiro.benchmark.BaselineProfileGenerator' || (inputs.what == 'jank-trace' && 'dev.asfakul.yumeiro.benchmark.FrameTimingBenchmark#scrollNoCompilation' || (inputs.what == 'jank' && 'dev.asfakul.yumeiro.benchmark.FrameTimingBenchmark' || (inputs.what == 'restore' && 'dev.asfakul.yumeiro.benchmark.ProcessDeathRestoreTest' || 'dev.asfakul.yumeiro.benchmark.StartupBenchmark'))) }}
+          CLASS: ${{ inputs.what == 'profile' && 'dev.asfakul.yumeiro.benchmark.BaselineProfileGenerator' || ((inputs.what == 'jank-trace' || inputs.what == 'jank-scroll') && 'dev.asfakul.yumeiro.benchmark.FrameTimingBenchmark#scrollNoCompilation' || (inputs.what == 'jank' && 'dev.asfakul.yumeiro.benchmark.FrameTimingBenchmark' || (inputs.what == 'restore' && 'dev.asfakul.yumeiro.benchmark.ProcessDeathRestoreTest' || 'dev.asfakul.yumeiro.benchmark.StartupBenchmark'))) }}
         with:
           api-level: ${{ matrix.device.api }}
           target: google_apis
@@ -60,7 +60,7 @@ jobs:
           ram-size: ${{ matrix.device.ram }}
           heap-size: ${{ matrix.device.heap }}
           # ST-7: frame timing needs real scroll/fling animations; startup and profile keep them off.
-          disable-animations: ${{ inputs.what != 'jank' && inputs.what != 'jank-trace' }}
+          disable-animations: ${{ inputs.what != 'jank' && inputs.what != 'jank-trace' && inputs.what != 'jank-scroll' }}
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # PERF-A1: the same build flags as the build step (a different set would rebuild the app without them);
           # jank-trace also asks Macrobenchmark to record the app's Perfetto SDK (composable) trace sections.
