@@ -120,7 +120,13 @@ object FeatureFlags {
         /** NBUG-6 (ADR-046): Settings → Network → "Automatic DNS fallback" (the user setting itself is Off by default). */
         DNS_FALLBACK("nbug6_dns_fallback", true),
         /** OWN-7 / OWN-2 (owner list, 2.1.0): a fresh install or an update with no saved DNS choice uses Cloudflare DNS-over-HTTPS (system DNS stays the safety net). Off: System DNS + auto bypass, as in 2.0.0. */
-        CLOUDFLARE_DEFAULT_DNS("own7_cloudflare_default", true),
+        /**
+         * NET-1 (A2, 2.3.1): off. Every request through DNS-over-HTTPS waited for the DoH server first (a second TLS
+         * connection to cloudflare-dns.com on a cold start, and on networks that slow or block it every lookup), and
+         * a network that filters DoH made every source look down. The device's own DNS is the default again; Cloudflare,
+         * Google, Quad9 and custom DNS stay in Settings › Network. A saved choice is always kept.
+         */
+        CLOUDFLARE_DEFAULT_DNS("own7_cloudflare_default", false),
 
         /** OWN-9: the official built-in "Yumeiro Classics" source (Internet Archive public domain), on for fresh installs. */
         OFFICIAL_CLASSICS("own9_official_classics", true),
@@ -235,6 +241,29 @@ object FeatureFlags {
         NAV_GUARD("own1_nav_guard", true),
         /** OWN-8: an episode batch download can save one subtitle language (Settings language or English), not only none or all. */
         BATCH_SUB_LANGUAGE("own8_batch_sub_language", true),
+        /**
+         * SEARCH-CAP-1 (A0, ADR-063): stream-only sources (Nuvio scrapers, Stremio add-ons without a catalog) get a
+         * lookup source in search ("Nuvio", "Stremio streams"): words → titles with TMDB / IMDb ids → their streams.
+         */
+        SEARCH_LOOKUP("a0_search_lookup", true),
+        /** SEARCH-CAP-2 (A0): a Stremio catalog add-on without a search catalog is searched on its own catalog pages, here. */
+        STREMIO_LOCAL_INDEX("a0_stremio_local_index", true),
+        /** SEARCH-CAP-3 (A0): an add-on that needs another id type (TMDB ↔ IMDb) gets it looked up instead of being skipped. */
+        ID_BRIDGE("a0_id_bridge", true),
+        /**
+         * NET-2 (A4): a Cloudflare 429 / error 1015 (rate limit) is not called a firewall block, background requests never
+         * show the firewall note, and a host is only called blocked after its home page is refused too.
+         */
+        ACCURATE_BLOCK_NOTE("a4_accurate_block_note", true),
+        /**
+         * VERIFY-3 (A5): an extension's own security-check window is never put over the screen by itself: it is closed,
+         * and the site is listed under "Needs a quick check" with a Verify button that opens Yumeiro's check page.
+         */
+        QUIET_EXT_CHECKS("a5_quiet_ext_checks", true),
+        /** EXT-SETUP-1 (A3): an extension that shows nothing until set up (Jellyfin, Ultima) says "needs setup" with Set up, not "didn't load". */
+        EXT_NEEDS_SETUP("a3_ext_needs_setup", true),
+        /** PUSH-1 (A6): a push the owner sends is shown at once, not queued behind the 12-minute notification pacer. */
+        PUSH_NOW("a6_push_now", true),
     }
 
     @Volatile private var cache: Map<String, Boolean>? = null

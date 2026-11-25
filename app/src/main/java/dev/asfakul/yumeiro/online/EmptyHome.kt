@@ -40,6 +40,8 @@ object EmptyHome {
             return Diagnosis(Kind.BROWSER_CHECK, "$host asks for a browser check first. Tap Open site, pass the check, then Retry", site)
         if (verdict == BrowserCheck.Verdict.BLOCKED)
             return Diagnosis(Kind.BLOCKED, "$host's firewall blocked this connection. Try another network, or change DNS in Settings › Network", site)
+        if (verdict == BrowserCheck.Verdict.RATE_LIMITED)
+            return Diagnosis(Kind.SITE_ERROR, "$host is getting too many requests right now. Try again in a minute", site)
         val moved = finalUrl?.let(::hostOf)?.takeIf { bare(it) != bare(host) }
         if (moved != null && code in 200..399) {
             val base = finalUrl.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}" + (if (it.port != defaultPort(it.scheme)) ":${it.port}" else "") }

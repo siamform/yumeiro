@@ -63,7 +63,7 @@ object ExtensionCheckWindows {
     private val lastHost = ConcurrentHashMap<String, String>()
 
     enum class Page { BLOCK, HUMAN, CHALLENGE, PAGE, BLANK }
-    enum class Step { WAIT, CLOSE_BLOCKED, REVEAL, KEEP }
+    enum class Step { WAIT, CLOSE_BLOCKED, REVEAL, KEEP, HAND_OFF }
 
     private val CHECK_WORDS = Regex(
         "(security check|verify (you|that you)|are you (a )?human|not a robot|captcha|turnstile|cloudflare|ddos-guard|" +
@@ -85,9 +85,13 @@ object ExtensionCheckWindows {
     }
 
     /** The next step for a concealed check window. Pure → unit-tested. */
-    fun step(page: Page, elapsedMs: Long, mayAsk: Boolean): Step = when {
+    fun step(page: Page, elapsedMs: Long, mayAsk: Boolean, quiet: Boolean = false): Step = when {
         page == Page.BLOCK -> Step.CLOSE_BLOCKED
         !mayAsk -> Step.KEEP // paused or blocked meanwhile: the caller closes it
+        // VERIFY-3 (A5): never shown by itself. A tap-the-box widget goes to Yumeiro's own check at once; a running
+        // check gets [SHOW_ANYWAY_MS] to pass unseen (most do), then goes there too.
+        quiet && page == Page.HUMAN -> Step.HAND_OFF
+        quiet -> if (elapsedMs >= SHOW_ANYWAY_MS) Step.HAND_OFF else Step.WAIT
         page == Page.HUMAN -> Step.REVEAL
         elapsedMs >= REVEAL_AFTER_MS && page != Page.PAGE -> Step.REVEAL
         // An ordinary page normally means the check passed and the extension is about to close its window;
@@ -173,7 +177,14 @@ object ExtensionCheckWindows {
                         if (!root.isAttachedToWindow) return@evaluateJavascript
                         val p = page(r)
                         val h = webHost(root) ?: host
-                        when (step(p, SystemClock.uptimeMillis() - start, h == null || VerificationCenter.mayAsk(h))) {
+                        when (step(p, SystemClock.uptimeMillis() - start, h == null || VerificationCenter.mayAsk(h), quiet())) {
+                            Step.HAND_OFF -> if (!closing) {
+                                closing = true
+                                val url = runCatching { web.url }.getOrNull()?.takeIf { it.startsWith("http") } ?: h?.let { "https://$it/" }
+                                if (h != null) VerificationCenter.report(h, VerificationCenter.Outcome.NEEDS_PERSON, extName)
+                                close(root, "handed to Yumeiro's own check (${p.name.lowercase()})")
+                                if (h != null && url != null) handOff(root.context.applicationContext, extName, h, url)
+                            }
                             Step.CLOSE_BLOCKED -> {
                                 if (h != null) {
                                     val before = VerificationCenter.site(h)
@@ -197,7 +208,11 @@ object ExtensionCheckWindows {
             }
             // A held window the user opened from the card counts as shown from now on.
             if (held && !revealed && !ExtensionWindowWatch.isConcealed(root)) revealed = true
-            if (!revealed && !held && web == null && elapsed >= REVEAL_AFTER_MS) {
+            if (quiet() && !revealed && !held && web == null && elapsed >= SHOW_ANYWAY_MS && !closing) {
+                // VERIFY-3: nothing to read and still open: closed rather than put over the screen.
+                closing = true; close(root, "no page to judge after ${SHOW_ANYWAY_MS / 1000} s")
+            }
+            if (!quiet() && !revealed && !held && web == null && elapsed >= REVEAL_AFTER_MS) {
                 // No page to read: show it as the extension built it rather than hide something we can't judge.
                 revealed = true; reveal(root)
             }
@@ -205,6 +220,33 @@ object ExtensionCheckWindows {
         }
         main.postDelayed(tick, POLL_MS)
     }
+
+    private fun quiet() = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.QUIET_EXT_CHECKS)
+
+    /** Sites whose "needs a quick check" note was shown, and when (one note per site per [HAND_OFF_NOTE_MS]). */
+    private val handOffNoteAt = ConcurrentHashMap<String, Long>()
+    const val HAND_OFF_NOTE_MS = 30 * 60_000L
+
+    /** Whether a hand-off note may be shown for a site now. Pure → unit-tested. */
+    fun mayNoteHandOff(lastAt: Long?, now: Long, onScreen: Boolean): Boolean =
+        onScreen && (lastAt == null || now - lastAt !in 0 until HAND_OFF_NOTE_MS)
+
+    /**
+     * VERIFY-3: one quiet, non-blocking note with a Verify button. Verify opens Yumeiro's own check page for the site
+     * (BrowserCheck.openSite); its pass cookie is shared with the extension through the WebView cookie store, so the
+     * extension's next request goes through. Also listed in Extensions › Security checks.
+     */
+    private fun handOff(ctx: android.content.Context, extName: String, host: String, url: String) {
+        val now = System.currentTimeMillis()
+        if (!mayNoteHandOff(handOffNoteAt[host], now, dev.asfakul.yumeiro.update.AppVisibility.isForeground)) return
+        handOffNoteAt[host] = now
+        dev.asfakul.yumeiro.ui.components.AppMessages.showQuiet(ctx, handOffText(extName, host), "Verify") {
+            dev.asfakul.yumeiro.online.web.BrowserCheck.openSite(url)
+        }
+    }
+
+    /** Pure → unit-tested. */
+    fun handOffText(extName: String, host: String) = "$extName needs a quick check on $host. Tap Verify when you're ready."
 
     /** The site's pass cookie (cf_clearance / DDoS-Guard), or null. Worker thread. */
     private fun clearance(host: String): String? = runCatching { CookieManager.getInstance().getCookie("https://$host/") }.getOrNull()

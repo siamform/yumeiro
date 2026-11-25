@@ -116,4 +116,30 @@ object TitleDedupe {
         shown.forEach { seen.add(it) }
         return candidates.filter { seen.offer(item(it)) }
     }
+
+    /**
+     * PERF-A1: the "All" feed's de-duplicated channels for the latest input, computed off the main thread. [peek] is
+     * the answer for the very same input list (identity), so a screen that comes back draws the finished feed at once.
+     */
+    object Cache {
+        @Volatile private var last: Pair<List<Pair<String, List<OnlineRow>>>, List<Pair<String, List<OnlineRow>>>>? = null
+        @Volatile private var lastLogged = -1
+
+        fun peek(channels: List<Pair<String, List<OnlineRow>>>): List<Pair<String, List<OnlineRow>>>? =
+            last?.takeIf { it.first === channels }?.second
+
+        fun get(channels: List<Pair<String, List<OnlineRow>>>): List<Pair<String, List<OnlineRow>>> {
+            peek(channels)?.let { return it }
+            val out = acrossExtensions(channels)
+            last = channels to out
+            val before = channels.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
+            // DEDUP-1 evidence, once per feed size (release strips Log.d/i, so warning level).
+            if (before > 0 && before != lastLogged) {
+                lastLogged = before
+                val after = out.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
+                android.util.Log.w("YuDedupe", "all feed: ${channels.size} extensions, $before cards, ${before - after} same-title cards removed")
+            }
+            return out
+        }
+    }
 }

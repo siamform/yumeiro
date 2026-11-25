@@ -145,7 +145,10 @@ export function buildMessage(n: Notice, target: { topic: string } | { fid: strin
  * phone that was offline gets one wake, not a pile. Six hours to live, like the UnifiedPush nudge.
  */
 export function buildWake(target: { fid: string }): Record<string, unknown> {
-  return { ...target, data: { y: "1", kind: "wake" }, android: { priority: "high", ttl: "21600s", collapse_key: "yumeiro-wake" } };
+  // PUSH-1 (A6): normal priority. A high-priority message that shows no notification (a wake usually finds nothing new)
+  // teaches FCM to deprioritise this app's high-priority messages, announcements included. Normal still arrives in
+  // Doze's next maintenance window, which is soon enough for "an episode aired".
+  return { ...target, data: { y: "1", kind: "wake" }, android: { priority: "normal", ttl: "21600s", collapse_key: "yumeiro-wake" } };
 }
 
 export type SendOutcome = "ok" | "gone" | "retry" | "fail";

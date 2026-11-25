@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -95,6 +96,8 @@ private sealed interface ProviderHome {
     data class Ready(val rows: List<OnlineRow>) : ProviderHome
     /** [fix]: B-32 diagnosis of an empty home (browser check, moved site, out-of-date extension…). */
     data class Failed(val message: String, val fix: dev.asfakul.yumeiro.online.EmptyHome.Diagnosis? = null) : ProviderHome
+    /** EXT-SETUP-1 (A3): it loaded, but shows nothing until it is set up in its own settings. */
+    data object NeedsSetup : ProviderHome
 }
 
 /**
@@ -106,7 +109,7 @@ private sealed interface ProviderHome {
  */
 /** One line about every extension's section state, for logs and device tests. */
 internal fun yumixDebugSummary(): String = YumixMemory.homes.entries.joinToString(", ") { (k, v) ->
-    k + "=" + when (v) { is ProviderHome.Ready -> "Ready(${v.rows.size} rows, ${v.rows.sumOf { it.items.size }} items)"; is ProviderHome.Failed -> "Failed"; ProviderHome.Loading -> "Loading" }
+    k + "=" + when (v) { is ProviderHome.Ready -> "Ready(${v.rows.size} rows, ${v.rows.sumOf { it.items.size }} items)"; is ProviderHome.Failed -> "Failed"; ProviderHome.Loading -> "Loading"; ProviderHome.NeedsSetup -> "NeedsSetup" }
 }.ifEmpty { "(no sections)" } + " · explore ${YumixMemory.exploreShown.size}"
 
 /** Keys of every title Yumix holds right now (sections and "More to explore"), for device tests. */
@@ -287,6 +290,8 @@ fun OnlineHomeScreen(
                 dev.asfakul.yumeiro.online.EmptyHome.probe(api, dev.asfakul.yumeiro.network.NetworkClient.get()) else null
             if (!isActive) return@async false
             homes[name] = if (rows != null) ProviderHome.Ready(rows)
+                else if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.EXT_NEEDS_SETUP) &&
+                    dev.asfakul.yumeiro.online.ExtensionSetup.needsSetup(api, result.exceptionOrNull())) ProviderHome.NeedsSetup
                 else ProviderHome.Failed(diagnosis?.message ?: result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension", diagnosis)
             // R15: an old saved copy was shown; fetch the live page now and merge it in.
             if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) refreshStale(api)
@@ -400,7 +405,7 @@ fun OnlineHomeScreen(
                 if (!dev.asfakul.yumeiro.online.PinnedExtensions.toggle(context, n))
                     dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "You can pin up to ${dev.asfakul.yumeiro.online.PinnedExtensions.MAX} extensions. Unpin one first", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
             },
-            status = { n -> when (val h = homes[n]) { is ProviderHome.Ready -> SourceStatus.Ready(h.rows.sumOf { it.items.size }); is ProviderHome.Failed -> SourceStatus.Failed; else -> SourceStatus.Loading } },
+            status = { n -> when (val h = homes[n]) { is ProviderHome.Ready -> SourceStatus.Ready(h.rows.sumOf { it.items.size }); is ProviderHome.Failed -> SourceStatus.Failed; ProviderHome.NeedsSetup -> SourceStatus.NeedsSetup; else -> SourceStatus.Loading } },
             onPick = { selected = it; showFilter = false },
             onDismiss = { showFilter = false },
         )
@@ -465,20 +470,11 @@ fun OnlineHomeScreen(
                 val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (sel ?: ""))
                 if (sel == null) {
                     // DEDUP-1 (owner list 14): one card per title across extensions on "All"; an extension's own page is unfiltered.
-                    val feedReady = remember(ready) {
-                        dev.asfakul.yumeiro.online.TitleDedupe.acrossExtensions(ready).also { out ->
-                            // DEDUP-1 evidence: how many cards the "All" feed dropped as the same title from another extension.
-                            val before = ready.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
-                            val after = out.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
-                            // Warning level: release (R8) strips Log.d/i, and isLoggable(INFO) is false by default (probe 45335841840 had no line).
-                            if (before > 0) {
-                                val kept = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<dev.asfakul.yumeiro.online.OnlineItem, Boolean>())
-                                out.forEach { (_, rows) -> rows.forEach { kept.addAll(it.items) } }
-                                val examples = ready.asSequence().flatMap { (_, rows) -> rows.asSequence().flatMap { it.items.asSequence() } }
-                                    .filter { it !in kept }.map { it.api + ": " + it.name }.distinct().take(5).joinToString(" | ")
-                                android.util.Log.w("YuDedupe", "all feed: ${ready.size} extensions, $before cards, ${before - after} same-title cards removed" + if (examples.isEmpty()) "" else " (e.g. $examples)")
-                            }
-                        }
+                    // PERF-A1: de-duplication (4 regex passes per new card) and its evidence log ran in composition, on the
+                    // main thread, again every time one more extension answered. Now on a background thread; the last answer
+                    // is reused at once when the same feed comes back (tab return), so there is no empty frame.
+                    val feedReady by androidx.compose.runtime.produceState(dev.asfakul.yumeiro.online.TitleDedupe.Cache.peek(ready) ?: ready, ready) {
+                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { dev.asfakul.yumeiro.online.TitleDedupe.Cache.get(ready) }
                     }
                     val hero = remember(feedReady) { heroPicks(feedReady.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
                     // Round 10 order: Resume → banners (spotlight + new episodes) → Continue → Fresh
@@ -653,6 +649,13 @@ fun OnlineHomeScreen(
                                 failed.joinToString(" · ") { it.name }.take(160),
                             ) { scope.launch { supervisorScope { failed.forEach { api -> launch { loadOne(api, true) } } } } }
                         }
+                        val unset = providers.filter { homes[it.name] is ProviderHome.NeedsSetup }
+                        if (unset.isNotEmpty()) st.item("feed_needs_setup") {
+                            ProviderSetup(dev.asfakul.yumeiro.online.ExtensionSetup.message(unset.map { it.name })) {
+                                val first = unset.first()
+                                if (!dev.asfakul.yumeiro.online.ExtensionSetup.open(context, first)) onOpenExtensions()
+                            }
+                        }
                         val searchOnly = providers.filter { !runCatching { it.hasMainPage }.getOrDefault(false) }
                         if (searchOnly.isNotEmpty()) st.item("search_only") {
                             SearchOnlyCard(YumixFeed.searchOnlyLabel(searchOnly.map { it.name }), onOpenSearch)
@@ -682,6 +685,7 @@ fun OnlineHomeScreen(
                         loading = h == null || h is ProviderHome.Loading,
                         error = (h as? ProviderHome.Failed)?.message,
                         errorFix = (h as? ProviderHome.Failed)?.fix,
+                        needsSetup = h is ProviderHome.NeedsSetup,
                         listState = listState,
                         strip = { ActiveFilterBar(name, onChange = { showFilter = true }, onClear = { selected = null }) },
                         onSearch = onOpenSearch,
@@ -729,6 +733,18 @@ private fun ProviderProblem(name: String, message: String, onRetry: (() -> Unit)
                 Text(message, color = TextSecondary, fontSize = 12.sp)
             }
             if (onRetry != null) TextButton(onClick = onRetry) { Text("Retry", color = SpotifyGreen) }
+        }
+    }
+}
+
+@Composable
+private fun ProviderSetup(message: String, onSetUp: () -> Unit) {
+    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_setup")) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Settings, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(12.dp))
+            Text(message, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            TextButton(onClick = onSetUp) { Text("Set up", color = SpotifyGreen) }
         }
     }
 }

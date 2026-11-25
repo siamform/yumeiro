@@ -54,6 +54,9 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
 
     init { sourcePlugin = "yumeiro-bridge:stremio:" + addon.id }
 
+    /** SEARCH-CAP-2: true when this add-on has no search catalog, so search runs on its catalog pages here. */
+    val searchesLocally: Boolean get() = addon.catalogs.none { it.searchable }
+
     override val mainPage = addon.catalogs.filter { !it.requiresExtra }
         .map { MainPageData("${it.name} · ${it.type.replaceFirstChar(Char::titlecase)}", "${it.type}/${it.id}") }
 
@@ -72,10 +75,36 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
     override suspend fun search(query: String, page: Int): SearchResponseList {
         if (page > 1) return newSearchResponseList(emptyList(), false)
         val q = "/search=" + URLEncoder.encode(query, "UTF-8").replace("+", "%20")
+        val searchable = addon.catalogs.filter { it.searchable }
+        if (searchable.isEmpty() && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.STREMIO_LOCAL_INDEX)) {
+            return newSearchResponseList(localIndex.search(query) { indexPages() }.map { it.toResult() }, false)
+        }
         val results = coroutineScope {
-            addon.catalogs.filter { it.searchable }.map { c -> async { runCatching { catalog(c.type, c.id, q) }.getOrDefault(emptyList()) } }.awaitAll()
+            searchable.map { c -> async { runCatching { catalog(c.type, c.id, q) }.getOrDefault(emptyList()) } }.awaitAll()
         }.flatten().distinctBy { it.str("id") }
         return newSearchResponseList(results.map { it.toResult() }, false)
+    }
+
+    /**
+     * SEARCH-CAP-2 (A0): an add-on with catalogs but no search catalog. Its browsable catalogs (first
+     * [StremioIndex.PAGES] pages each) are read once, kept for [StremioIndex.TTL_MS], and searched here.
+     */
+    private val localIndex = StremioIndex()
+
+    private suspend fun indexPages(): List<JsonObject> = coroutineScope {
+        addon.catalogs.filter { !it.requiresExtra }.take(StremioIndex.MAX_CATALOGS).map { c ->
+            async {
+                val out = ArrayList<JsonObject>()
+                var skip = 0
+                for (p in 0 until StremioIndex.PAGES) {
+                    val page = withTimeoutOrNull(10_000) { runCatching { catalog(c.type, c.id, if (skip == 0) "" else "/skip=$skip") }.getOrNull() }.orEmpty()
+                    if (page.isEmpty()) break
+                    out += page
+                    skip += page.size
+                }
+                out
+            }
+        }.awaitAll().flatten()
     }
 
     override suspend fun search(query: String): List<SearchResponse> = search(query, 1).items
@@ -89,6 +118,16 @@ class StremioProvider(private val addon: StremioAddons.Addon, displayName: Strin
         val year = meta.str("releaseInfo")?.take(4)?.toIntOrNull() ?: meta.str("year")?.take(4)?.toIntOrNull()
         val tags = meta.strings("genres").ifEmpty { meta.strings("genre") }
         val tv = tvType(type)
+        val r = buildLoad(meta, url, type, id, title, videos, year, tags, tv)
+        // SEARCH-CAP-3 (A0): the ids other add-ons look titles up by (Nuvio: TMDB, stream-only Stremio: IMDb).
+        with(LoadResponse) {
+            StremioIndex.imdbOf(id, meta.str("imdb_id"))?.let { r.addImdbId(it) }
+            (meta["moviedb_id"] as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt()?.takeIf { it > 0 }?.let { r.addTMDbId(it.toString()) }
+        }
+        return r
+    }
+
+    private suspend fun buildLoad(meta: JsonObject, url: String, type: String, id: String, title: String, videos: List<JsonObject>, year: Int?, tags: List<String>, tv: TvType): LoadResponse {
         return if (videos.isEmpty() || type == "movie") {
             newMovieLoadResponse(title, url, tv, "$type/$id") {
                 posterUrl = meta.str("poster"); backgroundPosterUrl = meta.str("background")

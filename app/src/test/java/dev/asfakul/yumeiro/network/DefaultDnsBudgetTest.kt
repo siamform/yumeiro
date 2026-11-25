@@ -37,6 +37,8 @@ class DefaultDnsBudgetTest {
 
     @Before fun setUp() {
         okhttp3.OkHttp.initialize(RuntimeEnvironment.getApplication())
+        // NET-1 (A2): device DNS is now the default; this test covers the optional Cloudflare default (flag on).
+        dev.asfakul.yumeiro.FeatureFlags.set(RuntimeEnvironment.getApplication(), dev.asfakul.yumeiro.FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS, true)
         NetworkSettings.resetForTests(); SmartDns.resetEnginesForTests()
         SmartDns.online = { true }
         val ss = ServerSocket(0, 50, InetAddress.getLoopbackAddress()); closers += ss
@@ -51,6 +53,7 @@ class DefaultDnsBudgetTest {
         SmartDns.system = Dns.SYSTEM; SmartDns.dohEndpoint = { it.dohUrl!! to it.bootstrap }
         SmartDns.resetEnginesForTests(); SmartDns.online = { Connectivity.online.value }
         NetworkSettings.resetForTests()
+        dev.asfakul.yumeiro.FeatureFlags.set(RuntimeEnvironment.getApplication(), dev.asfakul.yumeiro.FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS, dev.asfakul.yumeiro.FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS.default)
     }
 
     private fun timedLookup(): Pair<Long, List<InetAddress>> {

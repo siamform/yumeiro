@@ -131,7 +131,12 @@ object AppNotifier {
      * Adds [item] to the inbox and, unless [inboxOnly], shows it as a system notification.
      * Nothing happens when the user switched this kind off. Returns true when it was new.
      */
-    fun post(c: Context, item: Inbox.Item, notificationId: Int = item.id.hashCode(), inboxOnly: Boolean = false): Boolean {
+    /**
+     * [immediate]: PUSH-1 (A6) for notices the owner sends (FCM): shown now, never held in [NotifyPacer]'s 12-minute queue.
+     * Before, a push that came within 12 min of any other notice waited for an inexact alarm (hours in Doze, or never on
+     * phones that stop alarms of closed apps), so "push doesn't arrive when the app is closed".
+     */
+    fun post(c: Context, item: Inbox.Item, notificationId: Int = item.id.hashCode(), inboxOnly: Boolean = false, immediate: Boolean = false): Boolean {
         NotifySettings.init(c)
         settingFor(item.kind)?.let { if (!NotifySettings.get(c, it)) return false }
         if (!Inbox.add(c, item)) return false
@@ -140,6 +145,7 @@ object AppNotifier {
         val why = block(c, item.kind)
         if (why != Block.NONE) { Log.i(TAG, "inbox only (${why.name}): ${item.id}"); return true }
         // Round 13: paced, so a catch-up run never drops a pile of notifications at once.
+        if (immediate && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PUSH_NOW)) { show(c, item, notificationId); return true }
         NotifyPacer.offer(c, item, notificationId) { i, n -> show(c, i, n) }
         return true
     }

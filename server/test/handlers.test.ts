@@ -291,7 +291,7 @@ test("air-1: a Firebase phone's follows and airing times are stored; an aired ep
   assert.equal(jobs.length, 1, "no Firebase wake was queued (old code: UnifiedPush only)");
   assert.deepEqual((jobs[0].body as any).wake.fids, [A]);
   assert.equal(jobs[0].delaySeconds, 30 * 60);
-  // The queue sends it: data-only, high priority, collapsible, nothing about the show in it.
+  // The queue sends it: data-only, normal priority (PUSH-1), collapsible, nothing about the show in it.
   const real = globalThis.fetch;
   const msgs: any[] = [];
   globalThis.fetch = (async (u: string | URL | Request, init?: RequestInit) => {
@@ -308,7 +308,7 @@ test("air-1: a Firebase phone's follows and airing times are stored; an aired ep
   assert.equal(msgs[0].fid, A);
   assert.deepEqual(msgs[0].data, { y: "1", kind: "wake" });
   assert.equal(msgs[0].notification, undefined);
-  assert.equal(msgs[0].android.priority, "high");
+  assert.equal(msgs[0].android.priority, "normal");
   assert.equal(msgs[0].android.collapse_key, "yumeiro-wake");
 });
 

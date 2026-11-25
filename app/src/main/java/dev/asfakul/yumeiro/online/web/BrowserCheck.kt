@@ -157,6 +157,8 @@ object BrowserCheck {
         return Clearance(c, userAgent()).also { cleared[host] = it }
     }
 
+    private fun accurateNotes() = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.ACCURATE_BLOCK_NOTE)
+
     private fun centerOn() = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.VERIFY_CENTER)
 
     fun forget(host: String) { cleared.remove(host) }
@@ -171,6 +173,11 @@ object BrowserCheck {
         CHALLENGE,
         /** A firewall block ("Sorry, you have been blocked", error 1020, geo block): no captcha can fix it. */
         BLOCKED,
+        /**
+         * NET-2 (A4): Cloudflare's rate limit (HTTP 429, error 1015): the site asked to slow down. Not a block;
+         * nothing is shown, the caller's normal retry / next-source path takes it.
+         */
+        RATE_LIMITED,
     }
 
     private val CHALLENGE_MARKERS = listOf(
@@ -204,6 +211,7 @@ object BrowserCheck {
         val cloudflare = "cloudflare" in srv || hasCfRay
         // VERIFY-2: the DooPlay/AnimeOnline family's own "One moment, please" script page (403 until its script ran).
         if (!cloudflare) return if ("wsidchk-form" in text) Verdict.CHALLENGE else Verdict.NONE
+        if (accurateNotes() && CHALLENGE_MARKERS.none { it in text } && (code == 429 || "error code: 1015" in text)) return Verdict.RATE_LIMITED
         if (BLOCK_MARKERS.any { it in text } && CHALLENGE_MARKERS.none { it in text }) return Verdict.BLOCKED
         return if (CHALLENGE_MARKERS.any { it in text }) Verdict.CHALLENGE else Verdict.NONE
     }
@@ -438,15 +446,46 @@ object BrowserCheck {
         }
         val now = System.currentTimeMillis()
         val last = blockedNoticeAt[host] ?: 0L
-        if (now - last < 5 * 60_000) return
+        val quietFor = if (accurateNotes()) BLOCK_NOTE_QUIET_MS else 5 * 60_000L
+        if (now - last < quietFor) return
         blockedNoticeAt[host] = now
         val ctx = appContext ?: return
-        main.post { runCatching { dev.asfakul.yumeiro.ui.components.AppMessages.error(ctx, blockedMessage(host)) } }
+        if (!accurateNotes()) {
+            main.post { runCatching { dev.asfakul.yumeiro.ui.components.AppMessages.error(ctx, blockedMessage(host)) } }
+            return
+        }
+        // NET-2 (A4): nothing is said while Yumeiro isn't on screen (background feed refresh, workers): the site is
+        // only marked in Security checks. On screen, every block met within [BLOCK_NOTE_GATHER_MS] becomes one note,
+        // so opening Home with many sources never stacks one firewall message per site.
+        if (!dev.asfakul.yumeiro.update.AppVisibility.isForeground) return
+        synchronized(pendingBlocks) {
+            pendingBlocks += host
+            if (pendingBlocks.size > 1) return
+        }
+        main.postDelayed({
+            val hosts = synchronized(pendingBlocks) { pendingBlocks.toList().also { pendingBlocks.clear() } }
+            if (hosts.isNotEmpty() && dev.asfakul.yumeiro.update.AppVisibility.isForeground) {
+                runCatching { dev.asfakul.yumeiro.ui.components.AppMessages.error(ctx, blockedMessage(hosts)) }
+            }
+        }, BLOCK_NOTE_GATHER_MS)
     }
+
+    private val pendingBlocks = LinkedHashSet<String>()
+    const val BLOCK_NOTE_GATHER_MS = 2_000L
+    /** NET-2: a site's firewall note is not repeated for 30 min (the Security checks list keeps showing it). */
+    const val BLOCK_NOTE_QUIET_MS = 30 * 60_000L
 
     /** The firewall notice. Pure → unit-testable. */
     fun blockedMessage(host: String) =
         "$host's firewall refused this source, so Yumeiro skipped it. Turning off a VPN or custom DNS can help."
+
+    /** NET-2: one notice for every site blocked at about the same time. Pure → unit-testable. */
+    fun blockedMessage(hosts: List<String>): String = when (hosts.size) {
+        0 -> ""
+        1 -> blockedMessage(hosts[0])
+        2 -> "The firewalls of ${hosts[0]} and ${hosts[1]} refused Yumeiro, so those sources were skipped. A VPN or blocked network is the usual reason."
+        else -> "The firewalls of ${hosts[0]} and ${hosts.size - 1} other sites refused Yumeiro, so those sources were skipped. A VPN or blocked network is the usual reason. See Settings › Security checks."
+    }
 
     /** Called by the UI when the check page itself turned out to be a firewall block. */
     fun onBlocked(host: String) {
@@ -556,6 +595,10 @@ object BrowserCheck {
                 Verdict.BLOCKED -> {
                     Log.w(TAG, "$host refused the request with a firewall block (not a captcha) — not opening the check page")
                     noteBlocked(host, request.url.toString())
+                    return response
+                }
+                Verdict.RATE_LIMITED -> {
+                    Log.i(TAG, "$host asked to slow down (rate limit) — no note")
                     return response
                 }
                 Verdict.CHALLENGE -> Unit

@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.online
 
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.sync.withLock
+
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.CancellationException
@@ -130,6 +133,39 @@ object StreamAddons {
         val request = requestFor(detail, episode) ?: return main
         val addons = active(context)
         if (addons.isEmpty()) return main
-        return merge(main, addons.map { it.streams(context, request) })
+        if (!dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.ID_BRIDGE)) {
+            return merge(main, addons.map { it.streams(context, request) })
+        }
+        // SEARCH-CAP-3 (A0): Nuvio looks titles up by TMDB id, Stremio by IMDb id. A title that carries only one
+        // of them gets the other looked up once (shared by every add-on) instead of those add-ons being skipped.
+        val bridged = bridgeOnce(request)
+        return merge(main, addons.map { a -> kotlinx.coroutines.flow.flow { emitAll(a.streams(context, bridged())) } })
+    }
+
+    /** [request] with the missing id filled in, looked up at most once however many add-ons ask. */
+    fun bridgeOnce(
+        request: StreamRequest,
+        tmdbFor: suspend (String, Boolean) -> Int? = { i, tv -> dev.asfakul.yumeiro.sources.lookup.StreamLookup.tmdbForImdb(i, tv) },
+        imdbFor: suspend (Int, Boolean) -> String? = { t, tv -> dev.asfakul.yumeiro.sources.lookup.StreamLookup.imdbForTmdb(t, tv) },
+    ): suspend () -> StreamRequest {
+        if (request.tmdbId != null && !request.imdbId.isNullOrBlank()) return { request }
+        val lock = kotlinx.coroutines.sync.Mutex()
+        var done: StreamRequest? = null
+        return {
+            lock.withLock {
+                done ?: run {
+                    val tv = request.mediaType == "tv"
+                    val r = runCatching {
+                        when {
+                            request.tmdbId == null && !request.imdbId.isNullOrBlank() -> request.copy(tmdbId = tmdbFor(request.imdbId, tv))
+                            request.tmdbId != null && request.imdbId.isNullOrBlank() -> request.copy(imdbId = imdbFor(request.tmdbId, tv))
+                            else -> request
+                        }
+                    }.getOrElse { if (it is CancellationException) throw it; Log.w(TAG, "id bridge: ${it.message}"); request }
+                    done = r
+                    r
+                }
+            }
+        }
     }
 }

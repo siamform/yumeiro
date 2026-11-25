@@ -119,6 +119,7 @@ internal fun HuePage(
     openItem: (OnlineItem) -> Unit,
     openInfo: (OnlineItem) -> Unit,
     errorFix: dev.asfakul.yumeiro.online.EmptyHome.Diagnosis? = null,
+    needsSetup: Boolean = false,
     /** B-32 (R19): another repository's copy of this extension, offered when its home parses nothing. */
     otherCopy: dev.asfakul.yumeiro.online.RemoteExtension? = null,
     onTryCopy: (dev.asfakul.yumeiro.online.RemoteExtension) -> Unit = {},
@@ -224,6 +225,13 @@ internal fun HuePage(
         when {
             api != null && !runCatching { api.hasMainPage }.getOrDefault(false) -> item("nomain") { HueNotice("$name is search-only — use search to find titles") }
             rows == null && loading -> item("load") { PosterGridSkeleton(3) }
+            needsSetup && api != null -> item("setup") {
+                // EXT-SETUP-1 (A3): not a failure; its own settings make it work.
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                HueNotice("$name needs setting up before it shows anything (a server, sign-in or sections to show)", "Set up", {
+                    if (!dev.asfakul.yumeiro.online.ExtensionSetup.open(ctx, api)) dev.asfakul.yumeiro.ui.components.AppMessages.error(ctx, "$name's settings couldn't open. Try updating the extension.")
+                }, "Retry", onRetry)
+            }
             error != null -> item("fail") {
                 // B-32: the diagnosis brings its own fix next to Retry.
                 val fix = errorFix

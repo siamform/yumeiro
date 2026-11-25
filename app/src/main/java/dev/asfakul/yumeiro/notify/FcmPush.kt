@@ -269,7 +269,7 @@ object FcmPush {
         val nowS = System.currentTimeMillis() / 1000
         if (!FcmPlan.forThisApp(m, BuildConfig.VERSION_CODE, nowS)) { Log.i(TAG, "not for this version / expired: ${m.id}"); return }
         AppNotifier.post(c, Inbox.Item("fcm-${m.id}", m.kind, m.title, m.body, m.atMs, link = m.link),
-            notificationId = ("fcm-" + m.id).hashCode())
+            notificationId = ("fcm-" + m.id).hashCode(), immediate = true)
     }
 }
 

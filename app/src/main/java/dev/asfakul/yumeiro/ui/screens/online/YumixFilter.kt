@@ -71,6 +71,8 @@ private val RX_MARKS = Regex("\\p{M}+")
 internal sealed interface SourceStatus {
     data object Loading : SourceStatus
     data object Failed : SourceStatus
+    /** EXT-SETUP-1 (A3): loaded, shows nothing until set up in its own settings. */
+    data object NeedsSetup : SourceStatus
     data class Ready(val titles: Int) : SourceStatus
 }
 
@@ -174,6 +176,7 @@ internal fun SourceFilterSheet(
                     val sub = when (val st = status(n)) {
                         SourceStatus.Loading -> "Loading…"
                         SourceStatus.Failed -> t.failed
+                        SourceStatus.NeedsSetup -> "Needs setup"
                         is SourceStatus.Ready -> t.ready(st.titles)
                     }
                     val info = remember(n, details) { details?.invoke(n) }

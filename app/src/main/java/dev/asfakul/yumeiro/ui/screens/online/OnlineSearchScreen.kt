@@ -191,6 +191,8 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         Spacer(Modifier.height(8.dp))
 
         val searching = results.values.count { it is ProviderResult.Searching }
+        // SEARCH-CAP-1 (A0): how each source is searched (its own search, a title lookup, or its catalog here).
+        val ways = remember(providers) { providers.associate { it.name to dev.asfakul.yumeiro.online.SearchAdapters.wayOf(it) } }
         // Ranked by match quality across every Hue (stable while results stream in), unique keys.
         val order = remember(providers) { providers.map { it.name } }
         // FE-S2 (docs/FEED-ENGINE-2.1.md FE-6): the ranking (Unicode normalize + regex per title, every result of every
@@ -265,6 +267,16 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 }
                 val shown = if (filter == null) all else all.filter { it.api == filter }
                 val failed = (results[filter] as? ProviderResult.Failed)?.message
+                val way = filter?.let { ways[it] } ?: dev.asfakul.yumeiro.online.SearchAdapters.Way.NATIVE
+                val summary = if (filter != null) null else dev.asfakul.yumeiro.online.SearchAdapters.summary(
+                    searching = searching,
+                    withResults = results.values.count { it is ProviderResult.Done && it.items.isNotEmpty() },
+                    empty = results.values.count { it is ProviderResult.Done && it.items.isEmpty() },
+                    failed = results.values.count { it is ProviderResult.Failed },
+                )
+                val note = filter?.let { dev.asfakul.yumeiro.online.SearchAdapters.note(way, it) }
+                if (names.size > 1 && summary != null) Text(summary, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 6.dp).testTag("online_search_summary"))
+                if (note != null) Text(note, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("online_search_way"))
                 when {
                     shown.isEmpty() && (rankingBehind || searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
                         Column(Modifier.fillMaxWidth()) {
@@ -273,6 +285,8 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                         }
                     failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,
                         primary = "Retry" to { attempt++ }, testTag = "online_search_failed")
+                    shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”",
+                        dev.asfakul.yumeiro.online.SearchAdapters.emptyReason(way, filter!!, submitted), testTag = "online_search_empty")
                     shown.isEmpty() -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”", "Try another spelling or a shorter title.", testTag = "online_search_empty")
                     else -> {
                         if (searching > 0) Text("Still searching $searching source${if (searching == 1) "" else "s"}…", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 4.dp))

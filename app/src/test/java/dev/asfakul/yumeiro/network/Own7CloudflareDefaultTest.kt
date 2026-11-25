@@ -33,10 +33,12 @@ class Own7CloudflareDefaultTest {
         Thread.getAllStackTraces().keys.filter { it.name == "yu-prefs" && it !== Thread.currentThread() }.forEach { it.join(10_000) }
         app.getSharedPreferences("mt_network", Context.MODE_PRIVATE).edit().clear().commit()
         NetworkSettings.resetForTests()
+        // NET-1 (A2): Cloudflare is no longer the default; these tests cover the opt-in path behind the flag.
+        FeatureFlags.set(app, FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS, true)
     }
 
     @After fun tearDown() {
-        FeatureFlags.set(app, FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS, true)
+        FeatureFlags.set(app, FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS, FeatureFlags.Flag.CLOUDFLARE_DEFAULT_DNS.default)
         app.getSharedPreferences("mt_network", Context.MODE_PRIVATE).edit().clear().commit()
         SmartDns.system = Dns.SYSTEM; SmartDns.alternativeOverride = null
         NetworkSettings.resetForTests()

@@ -25,5 +25,6 @@ object Bridges {
         dev.asfakul.yumeiro.sources.classics.YumeiroClassics.start(app)
         dev.asfakul.yumeiro.sources.anime.YumeiroAnime.start(app) // ANIME-1
         dev.asfakul.yumeiro.sources.hub.YumeiroHub.startCatalog(app) // E1-A
+        dev.asfakul.yumeiro.sources.lookup.StreamLookup.start(app) // SEARCH-CAP-1 (A0)
     }
 }
