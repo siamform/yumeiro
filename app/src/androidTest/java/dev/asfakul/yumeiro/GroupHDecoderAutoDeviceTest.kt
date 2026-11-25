@@ -51,7 +51,16 @@ class GroupHDecoderAutoDeviceTest {
         if (!ok) FirstRun.shot("grouph_decoder_${what.replace(' ', '_')}")
         assertTrue("$what (after ${ms}ms) · playback=${PlaybackDiagnostics.state.value} · ${FirstRun.onScreen(rule)}", ok)
     }
-    private fun tap(tag: String) = FirstRun.tapVisible(rule, tag)
+    /** api36 run 45713632335 (1 of 6 runs): the Videos page was still busy with the fresh media scan of the test clip
+     *  and the compose test clock never went idle within its 60 s (ComposeNotIdleException inside performClick). One
+     *  more try after the scan has settled; a second failure is real and is thrown. */
+    private fun tap(tag: String) {
+        val first = runCatching { FirstRun.tapVisible(rule, tag) }.exceptionOrNull() ?: return
+        if (first !is androidx.compose.ui.test.junit4.android.ComposeNotIdleException) throw first
+        android.util.Log.w("YuGroupH", "tap $tag: compose not idle, one more try")
+        android.os.SystemClock.sleep(3_000)
+        FirstRun.tapVisible(rule, tag)
+    }
     private var clip: Uri? = null
 
     @Before fun setUp() {

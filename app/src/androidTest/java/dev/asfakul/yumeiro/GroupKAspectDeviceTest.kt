@@ -14,6 +14,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -56,7 +57,12 @@ class GroupKAspectDeviceTest {
         assertTrue("$what (after ${ms}ms) · playback=${PlaybackDiagnostics.state.value} · ${FirstRun.onScreen(rule)}", ok)
     }
     private fun pause(ms: Long) { val until = System.currentTimeMillis() + ms; runCatching { rule.waitUntil(ms + 2_000) { System.currentTimeMillis() > until } } }
-    private fun tap(tag: String) = FirstRun.tapVisible(rule, tag)
+    /** The aspect dialog scrolls (a plain verticalScroll Column, so FirstRun's lazy-list scrollToNode can't reach
+     *  its last row on a landscape phone): bring a dialog row on screen the way a finger would, then tap it. */
+    private fun tap(tag: String) {
+        if (tag.startsWith("aspect_")) runCatching { rule.waitUntil(8_000) { has(tag) }; rule.onAllNodesWithTag(tag, true)[0].performScrollTo(); rule.waitForIdle() }
+        FirstRun.tapVisible(rule, tag)
+    }
     private fun back() = FirstRun.shell("input keyevent 4")
     private var clip: Uri? = null
 
