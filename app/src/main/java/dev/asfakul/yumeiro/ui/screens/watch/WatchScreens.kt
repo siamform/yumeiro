@@ -598,11 +598,13 @@ fun YouTubeWatchLayer(playerOpen: Boolean, onPlay: (YtItem) -> Unit, onOpenChann
  * instead of silently missing.
  */
 @Composable
-fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null) {
+fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null, failed: Boolean = false) {
     val snap by dev.asfakul.yumeiro.player.PlaybackDiagnostics.state.collectAsState()
     // The stream's own audio tag wins; else what the source link's name says ("Dub · English").
     val f = remember(snap, sourceAudio) { dev.asfakul.yumeiro.player.PlaybackFacts.of(snap, sourceAudio) }
     Column(modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp).animateContentSize().testTag("watch_playback_facts")) {
+        // META-1b: nothing is playing because no source worked; the facts will never come, so no placeholder.
+        if (f.pending && (failed || snap.error != null)) return@Column
         if (f.pending) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 repeat(3) { SkeletonBlock(width = 64.dp, height = 22.dp) }

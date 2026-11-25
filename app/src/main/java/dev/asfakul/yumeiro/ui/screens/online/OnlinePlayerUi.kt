@@ -535,6 +535,10 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
     val stills = stillsMap[dev.asfakul.yumeiro.online.EpisodeStills.keyOf(d)]
     val hasThumbs = remember(state.episodes, stills) { state.episodes.count { dev.asfakul.yumeiro.online.EpisodeStills.imageFor(d, it, stills) != null } > state.episodes.size / 2 }
     val listState = rememberLazyListState()
+    // META-1b: release date, director, writers, companies, cast and trailers (TitleFacts; cached 7 days per IMDb id).
+    val facts by androidx.compose.runtime.produceState(dev.asfakul.yumeiro.online.meta.TitleFacts.fromDetail(d), d.api, d.url) {
+        value = dev.asfakul.yumeiro.online.meta.TitleFacts.load(context, d)
+    }
 
     val autoSkip by dev.asfakul.yumeiro.online.OnlineSettings.autoSkip.collectAsState()
     // Long series get the numbered episode board; short ones (or ones with stills) keep the list.
@@ -573,7 +577,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
         item(key = "facts") {
             val al = dev.asfakul.yumeiro.online.AudioLanguages
             val srcAudio = state.link?.let { l -> al.filterKey(al.classify(l.name + " " + l.source, state.version)).takeIf { it.isNotEmpty() }?.let { al.keyLabel(it) } }
-            dev.asfakul.yumeiro.ui.screens.watch.PlaybackFactsRow(sourceAudio = srcAudio)
+            dev.asfakul.yumeiro.ui.screens.watch.PlaybackFactsRow(sourceAudio = srcAudio, failed = state.phase == OnlineSession.Phase.FAILED)
         }
         item(key = "actions") {
             dev.asfakul.yumeiro.ui.screens.watch.WatchActionsRow {
@@ -649,6 +653,9 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
         item(key = "plot") {
             dev.asfakul.yumeiro.ui.screens.watch.WatchDescription(d.plot.orEmpty(), header = d.tags.takeIf { it.isNotEmpty() }?.take(8)?.joinToString(" · "))
         }
+        // META-1b: catalog titles and search results open here, not on the title page, so the same About rows, Cast and
+        // Trailers show under the synopsis (each only when it exists).
+        titleFactsItems(context, d, facts, tagPrefix = "online_watch") { title, trailing -> dev.asfakul.yumeiro.ui.screens.watch.WatchSectionLabel(title, trailing) }
 
         if (state.episodes.size > 1) {
             item(key = "ep_header") {

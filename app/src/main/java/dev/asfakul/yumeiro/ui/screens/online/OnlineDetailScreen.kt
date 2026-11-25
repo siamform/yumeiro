@@ -330,70 +330,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
             }
         }
 
-        val aboutRows = dev.asfakul.yumeiro.online.meta.TitleFacts.rows(facts, d.kind)
-        if (aboutRows.isNotEmpty()) item("about") {
-            Column(
-                Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                    .background(TextPrimary.copy(alpha = 0.05f)).padding(horizontal = 14.dp, vertical = 10.dp).testTag("online_detail_about"),
-            ) {
-                aboutRows.forEach { (label, value) ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).semantics(mergeDescendants = true) {}) {
-                        Text(label, color = TextTertiary, fontSize = 12.sp, modifier = Modifier.width(118.dp).padding(end = 10.dp)) // a gap even when a label fills its column
-                        Text(value, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-        if (facts.cast.isNotEmpty()) item("cast") {
-            Column(Modifier.padding(bottom = 8.dp)) {
-                SectionHeader("Cast", "${facts.cast.size}")
-                androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.testTag("online_detail_cast"),
-                ) {
-                    items(facts.cast, key = { it.name }) { c ->
-                        Column(Modifier.width(76.dp).semantics(mergeDescendants = true) {}, horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(Modifier.size(64.dp).clip(CircleShape).background(TextPrimary.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
-                                Text(c.name.firstOrNull { it.isLetter() }?.uppercase() ?: "?", color = TextSecondary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                                c.image?.let { coil.compose.AsyncImage(model = it, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                            }
-                            Text(c.name, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp))
-                            c.role?.let { Text(it, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
-                        }
-                    }
-                }
-            }
-        }
-        if (facts.trailers.isNotEmpty()) item("trailers") {
-            Column(Modifier.padding(bottom = 8.dp)) {
-                SectionHeader(if (facts.trailers.size == 1) "Trailer" else "Trailers")
-                androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.testTag("online_detail_trailers"),
-                ) {
-                    items(facts.trailers, key = { it.url }) { t ->
-                        val yt = dev.asfakul.yumeiro.online.meta.TitleFacts.youTubeId(t.url)
-                        Column(Modifier.width(220.dp)) {
-                            Box(
-                                Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(TextPrimary.copy(alpha = 0.08f))
-                                    .clickable(onClickLabel = "Play ${t.name}") {
-                                        // Trailers play in Yumeiro's own player (YouTube links go through the login-free extractor).
-                                        dev.asfakul.yumeiro.stream.IncomingMedia.open(ctx, dev.asfakul.yumeiro.stream.StreamRequest(url = t.url, title = "${d.name} · ${t.name}"))
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                yt?.let { coil.compose.AsyncImage(model = "https://i.ytimg.com/vi/$it/mqdefault.jpg", contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-                                Box(Modifier.size(44.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.PlayArrow, null, tint = Color.White)
-                                }
-                            }
-                            Text(t.name, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
-                        }
-                    }
-                }
-            }
-        }
+        titleFactsItems(ctx, d, facts, tagPrefix = "online_detail") { title, trailing -> SectionHeader(title, trailing) }
         if (versions.size > 1 || versions.firstOrNull()?.isNotEmpty() == true && versions.size == 1 && d.kind == OnlineKind.ANIME) {
             item("versions") {
                 Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
