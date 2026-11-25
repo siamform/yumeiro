@@ -153,6 +153,9 @@ uniform float uDarken;
 uniform float uDenoise;
 uniform float uReach;
 uniform float uDiagonals;
+uniform float uGateLow;
+uniform float uMargin;
+uniform float uHdr;
 varying vec2 vTexSamplingCoord;
 float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 float near(vec3 a, vec3 c, float sigma) { float d = luma(a) - luma(c); return exp(-(d * d) / (2.0 * sigma * sigma)); }
@@ -160,6 +163,7 @@ void main() {
   vec2 p = vTexSamplingCoord;
   vec2 t = uTexel * uReach;
   vec4 c4 = texture2D(uTexSampler, p);
+  if (uHdr > 0.5) { gl_FragColor = c4; return; }
   vec3 c = c4.rgb;
   vec3 n = texture2D(uTexSampler, p + vec2(0.0, -t.y)).rgb;
   vec3 s = texture2D(uTexSampler, p + vec2(0.0, t.y)).rgb;
@@ -191,17 +195,17 @@ void main() {
     base = mix(c, acc / tot, uDenoise);
   }
   float edge = abs(luma(n) - luma(s)) + abs(luma(e) - luma(w));
-  float gate = smoothstep(0.02, 0.16, edge);
+  float gate = smoothstep(uGateLow, uGateLow + 0.14, edge);
   vec3 o = base + (base - blur) * (uSharpen * 2.0 * gate);
   float line = max(0.0, luma(blur) - luma(base));
   o -= vec3(line * uDarken * gate);
-  o = clamp(o, mn - 0.015, mx + 0.015);
+  o = clamp(o, mn - uMargin, mx + uMargin);
   gl_FragColor = vec4(clamp(o, 0.0, 1.0), c4.a);
 }
 """
 
     @OptIn(UnstableApi::class)
-    private class Program(private val w: Params, useHdr: Boolean) : BaseGlShaderProgram(useHdr, 1) {
+    private class Program(private val w: Params, private val hdr: Boolean) : BaseGlShaderProgram(hdr, 1) {
         private val gl: GlProgram = try {
             GlProgram(VERTEX, FRAGMENT).apply {
                 setBufferAttribute("aFramePosition", GlUtil.getNormalizedCoordinateBounds(), GlUtil.HOMOGENEOUS_COORDINATE_VECTOR_SIZE)
@@ -226,6 +230,12 @@ void main() {
                 gl.setFloatUniform("uDenoise", w.denoise)
                 gl.setFloatUniform("uReach", if (w.wide) 2f else 1f)
                 gl.setFloatUniform("uDiagonals", if (w.diagonals) 1f else 0f)
+                // A4K-3: the filter section's Threshold and Range, read every frame (defaults = the original 0.02 / 0.015).
+                val t = PictureLook.live.tuning
+                gl.setFloatUniform("uGateLow", t.gateLow)
+                gl.setFloatUniform("uMargin", t.clampMargin)
+                // HDR frames are copied through: this pass works on SDR 0..1 values and would clip HDR highlights.
+                gl.setFloatUniform("uHdr", if (hdr) 1f else 0f)
                 gl.bindAttributesAndUniforms()
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
                 GlUtil.checkGlError()

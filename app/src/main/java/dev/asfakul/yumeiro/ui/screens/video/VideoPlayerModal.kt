@@ -458,9 +458,10 @@ private fun VideoPlayerModalContent(
           } else {
             // Round 13: default speed and default quality from Settings → Quality and audio.
             dev.asfakul.yumeiro.player.VideoPrefs.speed.value.takeIf { it != 1f }?.let { playbackParameters = PlaybackParameters(it) }
-            if (dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) runCatching {
-                dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(this, listOf(dev.asfakul.yumeiro.player.Anime4kV2.currentEffect()))
-            }
+            // A4K-3: Anime4K (× iterations) and the picture preset / controls, in the defined order, for this title.
+            dev.asfakul.yumeiro.player.PictureLook.setTitle(dev.asfakul.yumeiro.player.PictureLook.titleKey(video.title))
+            val fx = dev.asfakul.yumeiro.player.PictureChain.effects(dev.asfakul.yumeiro.player.VideoPrefs.anime4k.value, hdr = false)
+            if (fx.isNotEmpty()) runCatching { dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(this, fx) }
             dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height.takeIf { it > 0 }?.let { h ->
                 trackSelectionParameters = trackSelectionParameters.buildUpon().setMaxVideoSize(Int.MAX_VALUE, h).build()
             }
@@ -2373,14 +2374,55 @@ private fun VideoPlayerModalContent(
 
         // Dialogs & Modals
         if (chrome.showEnhanceSheet) {
+            val chain = dev.asfakul.yumeiro.player.PictureChain
+            // A4K-3: with a live graph, keep the grade pass in while the sheet is open so the first drag shows at once.
+            LaunchedEffect(Unit) {
+                if (dev.asfakul.yumeiro.stream.StreamMediaFactory.usedEffects(exoPlayer) && !chain.lastHadGrade)
+                    applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale, previewing = true)
+            }
             Anime4kSheet(
+                titleKey = dev.asfakul.yumeiro.player.PictureLook.titleKey(video.title),
                 onChanged = { on ->
                     // Live: the same path the engine levels use (keeps Presentation, respects HeatGuard).
                     if (on && !dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) showToast("Anime4K waits until the phone cools down")
-                    applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale)
+                    applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale, previewing = true)
                 },
-                onDismiss = { chrome.showEnhanceSheet = false },
+                onPreview = {
+                    if (!chain.lastHadGrade && !dev.asfakul.yumeiro.player.PictureLook.live.grade.neutral)
+                        applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale, previewing = true)
+                    // Paused: redraw the frame so the change is visible without pressing play.
+                    if (!exoPlayer.isPlaying && exoPlayer.playbackState == androidx.media3.common.Player.STATE_READY)
+                        exoPlayer.seekTo(exoPlayer.currentPosition)
+                },
+                onDismiss = {
+                    chrome.showEnhanceSheet = false
+                    // Drop the preview-only pass so a neutral picture costs nothing.
+                    if (chain.lastHadGrade && dev.asfakul.yumeiro.player.PictureLook.live.grade.neutral)
+                        applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale)
+                },
             )
+        }
+        // A4K-3: next episode / another title in the same player → that title's picture settings; HDR track → no effects.
+        LaunchedEffect(video.id) {
+            val key = dev.asfakul.yumeiro.player.PictureLook.titleKey(video.title)
+            if (dev.asfakul.yumeiro.player.PictureLook.title.value != key) {
+                dev.asfakul.yumeiro.player.PictureLook.setTitle(key)
+                applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale)
+            }
+        }
+        DisposableEffect(exoPlayer) {
+            var lastHdr = false
+            val l = object : androidx.media3.common.Player.Listener {
+                override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                    val h = dev.asfakul.yumeiro.player.PictureChain.isHdr(exoPlayer)
+                    if (h != lastHdr) {
+                        lastHdr = h
+                        if (dev.asfakul.yumeiro.stream.StreamMediaFactory.usedEffects(exoPlayer)) applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale)
+                    }
+                }
+            }
+            exoPlayer.addListener(l)
+            onDispose { exoPlayer.removeListener(l) }
         }
         if (chrome.showSleepSheet) {
             val t = dev.asfakul.yumeiro.player.VideoSleepTimer.timer
@@ -2618,11 +2660,12 @@ private fun Modifier.trackWindowTop(onTop: (Int) -> Unit): Modifier =
  * Video is briefly disabled and re-enabled so the renderer rebuilds its pipeline with the effects.
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, height: Int?, upscale: Boolean) {
+internal fun applyEngineLevel(player: androidx.media3.exoplayer.ExoPlayer, height: Int?, upscale: Boolean, previewing: Boolean = false) {
     val prefs = dev.asfakul.yumeiro.player.VideoPrefs
     val fx = buildList<androidx.media3.common.Effect> {
         if (height != null) add(androidx.media3.effect.Presentation.createForHeight(height))
-        if ((upscale || prefs.anime4k.value) && dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) add(dev.asfakul.yumeiro.player.Anime4kV2.currentEffect())
+        // A4K-3: Anime4K × iterations, then the picture grade (nothing on HDR video).
+        addAll(dev.asfakul.yumeiro.player.PictureChain.effects(upscale || prefs.anime4k.value, dev.asfakul.yumeiro.player.PictureChain.isHdr(player), previewing))
         // ROT-1: SurfaceView renderer only (TextureView turns the view). Media3 turns counter-clockwise.
         val turn = dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees
         if (turn != 0) add(androidx.media3.effect.ScaleAndRotateTransformation.Builder().setRotationDegrees((360 - turn).toFloat()).build())

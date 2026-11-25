@@ -191,6 +191,11 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
         buffering = true
         dev.asfakul.yumeiro.stream.StreamRepository.register(req)
         dev.asfakul.yumeiro.stream.StreamMediaFactory.setMedia(l.player, req.url, title = item.title)
+        // A4K-3: Shorts use the main (all videos) picture preset and controls; no Anime4K on short clips.
+        dev.asfakul.yumeiro.player.PictureLook.setTitle(null)
+        val fx = dev.asfakul.yumeiro.player.PictureChain.effects(anime4k = false, hdr = false, withAnime4k = false)
+        if (fx.isNotEmpty() || dev.asfakul.yumeiro.stream.StreamMediaFactory.usedEffects(l.player))
+            runCatching { dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(l.player, fx) }
         l.player.repeatMode = Player.REPEAT_MODE_ONE
         l.player.setPlaybackSpeed(1f)
         l.player.prepare()

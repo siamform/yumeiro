@@ -56,7 +56,14 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun Anime4kSheet(onChanged: (on: Boolean) -> Unit, onDismiss: () -> Unit) {
+fun Anime4kSheet(
+    onChanged: (on: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+    /** A4K-3: the playing title's key (per-title override). */
+    titleKey: String? = null,
+    /** A4K-3: a value was committed; redraw the current frame when paused. */
+    onPreview: () -> Unit = {},
+) {
     val p = LocalMtPalette.current
     val context = LocalContext.current
     val on by VideoPrefs.anime4k.collectAsState()
@@ -73,13 +80,23 @@ fun Anime4kSheet(onChanged: (on: Boolean) -> Unit, onDismiss: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoFixHigh, null, tint = p.accent, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Anime4K", style = MaterialTheme.typography.titleLarge, color = p.textPrimary, modifier = Modifier.weight(1f))
+                Text("Picture and Anime4K", style = MaterialTheme.typography.titleLarge, color = p.textPrimary, modifier = Modifier.weight(1f))
+            }
+            // A4K-3: where changes are saved, presets and picture controls (all work with Anime4K on or off).
+            val picture = rememberPictureDraft(context, titleKey)
+            PictureScope(picture, onRebuild = { onChanged(on) }, onPreview = onPreview)
+            PicturePresets(picture, onPreview = onPreview)
+            PictureControls(picture, onPreview = onPreview)
+            Spacer(Modifier.height(20.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Anime4K", style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Switch(checked = on, onCheckedChange = { VideoPrefs.setAnime4k(context, it); onChanged(it) }, modifier = Modifier.testTag("a4k_switch"))
             }
             Text(
                 "Active: " + Anime4kV2.label(engine, on, preset, style, tier) + (if (on && params != null) " · ${Anime4kV2.taps(params)} samples per pixel" else ""),
                 color = p.textSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag("a4k_active"),
             )
+            if (on) Anime4kFilters(picture, tier, onRebuild = { onChanged(true) }, onPreview = onPreview)
             if (!on) return@Column
             Section("Engine")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -116,7 +133,7 @@ fun Anime4kSheet(onChanged: (on: Boolean) -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun Section(title: String) {
+internal fun Section(title: String) {
     val p = LocalMtPalette.current
     Spacer(Modifier.height(16.dp))
     Text(title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -124,7 +141,7 @@ private fun Section(title: String) {
 }
 
 @Composable
-private fun Pill(label: String, tag: String, selected: Boolean, onClick: () -> Unit) {
+internal fun Pill(label: String, tag: String, selected: Boolean, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     Row(
         Modifier.clip(RoundedCornerShape(50)).background(if (selected) p.accent else p.glass)

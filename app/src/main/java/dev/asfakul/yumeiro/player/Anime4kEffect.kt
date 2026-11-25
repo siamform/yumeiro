@@ -55,12 +55,16 @@ uniform vec2 uTexel;
 uniform float uSharpen;
 uniform float uDarken;
 uniform float uDiagonals;
+uniform float uGateLow;
+uniform float uMargin;
+uniform float uHdr;
 varying vec2 vTexSamplingCoord;
 float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 void main() {
   vec2 p = vTexSamplingCoord;
   vec2 t = uTexel;
   vec4 c = texture2D(uTexSampler, p);
+  if (uHdr > 0.5) { gl_FragColor = c; return; }
   vec3 n = texture2D(uTexSampler, p + vec2(0.0, -t.y)).rgb;
   vec3 s = texture2D(uTexSampler, p + vec2(0.0, t.y)).rgb;
   vec3 e = texture2D(uTexSampler, p + vec2(t.x, 0.0)).rgb;
@@ -78,17 +82,17 @@ void main() {
     mx = max(mx, max(max(a, b), max(d, f)));
   }
   float edge = abs(luma(n) - luma(s)) + abs(luma(e) - luma(w));
-  float gate = smoothstep(0.02, 0.16, edge);
+  float gate = smoothstep(uGateLow, uGateLow + 0.14, edge);
   vec3 o = c.rgb + (c.rgb - blur) * (uSharpen * 2.0 * gate);
   float line = max(0.0, luma(blur) - luma(c.rgb));
   o -= vec3(line * uDarken * gate);
-  o = clamp(o, mn - 0.015, mx + 0.015);
+  o = clamp(o, mn - uMargin, mx + uMargin);
   gl_FragColor = vec4(clamp(o, 0.0, 1.0), c.a);
 }
 """
     }
 
-    private class Program(tier: VideoPrefs.GpuTier, useHdr: Boolean) : BaseGlShaderProgram(useHdr, 1) {
+    private class Program(tier: VideoPrefs.GpuTier, private val hdr: Boolean) : BaseGlShaderProgram(hdr, 1) {
         private val w = weights(tier)
         private val gl: GlProgram = try {
             GlProgram(VERTEX, FRAGMENT).apply {
@@ -112,6 +116,11 @@ void main() {
                 gl.setFloatUniform("uSharpen", w.sharpen)
                 gl.setFloatUniform("uDarken", w.darken)
                 gl.setFloatUniform("uDiagonals", if (w.diagonals) 1f else 0f)
+                // A4K-3: filter section Threshold / Range (defaults = the original 0.02 / 0.015); HDR is copied through.
+                val t = PictureLook.live.tuning
+                gl.setFloatUniform("uGateLow", t.gateLow)
+                gl.setFloatUniform("uMargin", t.clampMargin)
+                gl.setFloatUniform("uHdr", if (hdr) 1f else 0f)
                 gl.bindAttributesAndUniforms()
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
                 GlUtil.checkGlError()
