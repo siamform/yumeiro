@@ -137,6 +137,7 @@ class GroupIUpdateDownloadDeviceTest {
         val seen = LinkedHashSet<String>()
         val bad = LinkedHashSet<String>()
         val bytes = ArrayList<Long>()
+        var firstByteAt = 0L; var lastByteAt = 0L
         var cut = false; var cutDone = false; var cutWorked = false; var sawWaiting = false; var resumedAfter = false
         var end: UpdateState? = null
         val until = System.currentTimeMillis() + 420_000
@@ -146,7 +147,9 @@ class GroupIUpdateDownloadDeviceTest {
             lines.filter { "github" in it.lowercase() || "connecting" in it.lowercase() }.forEach { bad += it }
             if (s is UpdateState.Downloading) {
                 lines.firstOrNull()?.let { if (seen.add(it)) log("title '$it' at ${s.downloadedBytes}/${s.totalBytes} stage=${s.stage}") }
-                if (s.downloadedBytes > 0 && (bytes.isEmpty() || bytes.last() != s.downloadedBytes)) bytes += s.downloadedBytes
+                if (s.downloadedBytes > 0 && (bytes.isEmpty() || bytes.last() != s.downloadedBytes)) {
+                    bytes += s.downloadedBytes; lastByteAt = System.currentTimeMillis(); if (firstByteAt == 0L) firstByteAt = lastByteAt
+                }
                 if (lines.any { it == "Waiting for a connection…" }) { if (!sawWaiting) FirstRun.shot("groupi_update_waiting"); sawWaiting = true }
                 if (sawWaiting && !cut && s.stage.name == "DOWNLOADING" && lines.firstOrNull() == "Downloading update…") resumedAfter = true
                 if (!cut && !cutDone && s.totalBytes > 0 && s.downloadedBytes > s.totalBytes / 5 && s.downloadedBytes < s.totalBytes / 2) {
@@ -178,7 +181,15 @@ class GroupIUpdateDownloadDeviceTest {
         assertTrue("the popup named the hosting service or a connection step: $bad", bad.isEmpty())
         assertTrue("'Downloading update…' was shown: $seen", "Downloading update…" in seen)
         assertTrue("only real step titles: $seen", seen.all { it in STEPS })
-        assertTrue("real progress: the byte count rose several times ($bytes)", bytes.size >= 3 && bytes.zipWithNext().all { (a, b) -> b > a || cutWorked })
+        // TV run 45720434407: 47 MB came down in under 2 s, so only two samples existed (72 KB, then all). Real progress
+        // means: a part-way byte count was shown, counts only go up, and a download that took a while showed several.
+        val total = release.asset.sizeBytes.takeIf { it > 0 } ?: Long.MAX_VALUE
+        val partWay = bytes.count { it in 1 until total }
+        val tookMs = if (firstByteAt > 0) lastByteAt - firstByteAt else 0
+        log("progress samples=${bytes.size} partWay=$partWay tookMs=$tookMs")
+        assertTrue("real progress: a part-way byte count was shown ($bytes)", partWay >= 1)
+        assertTrue("real progress: the byte count only went up ($bytes)", bytes.zipWithNext().all { (a, b) -> b > a || cutWorked })
+        if (tookMs > 4_000) assertTrue("real progress: several updates over $tookMs ms ($bytes)", bytes.size >= 3)
         if (cutWorked) {
             assertTrue("network cut: 'Waiting for a connection…' was shown", sawWaiting)
             assertTrue("network back: the download went on", resumedAfter || end != null && end !is UpdateState.Failed || (end as? UpdateState.Failed)?.message?.contains("different app") == true)
