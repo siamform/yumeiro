@@ -24,7 +24,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.test.platform.app.InstrumentationRegistry
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
@@ -50,13 +50,27 @@ import org.junit.runner.RunWith
 class GroupBMotionDeviceTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    /** Real screen pixels of the node (UiAutomation screenshot: works on API 24 TV too). */
+    private var scaleWas = 1f
+    @org.junit.Before fun on() { scaleWas = AnimScale.read(); AnimScale.set(1f) }
+    @org.junit.After fun off() { AnimScale.set(scaleWas) }
+
+    /**
+     * The node's rendered pixels at the current (test clock) frame. API 26+: compose captureToImage
+     * (PixelCopy of the window). API 24 TV has no window PixelCopy, so the window is drawn into a
+     * bitmap on the UI thread (same render tree, software canvas) and cropped to the node.
+     */
     private fun shot(tag: String): ImageBitmap {
+        if (android.os.Build.VERSION.SDK_INT >= 26) return rule.onNodeWithTag(tag, useUnmergedTree = true).captureToImage()
         val node = rule.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
-        val screen = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
-        val x = node.positionOnScreen.x.toInt(); val y = node.positionOnScreen.y.toInt()
-        val crop = android.graphics.Bitmap.createBitmap(screen, x, y, node.size.width.coerceAtMost(screen.width - x), node.size.height.coerceAtMost(screen.height - y))
-        return crop.asImageBitmap()
+        val r = node.boundsInWindow
+        var out: android.graphics.Bitmap? = null
+        rule.runOnUiThread {
+            val v = rule.activity.window.decorView
+            val full = android.graphics.Bitmap.createBitmap(v.width, v.height, android.graphics.Bitmap.Config.ARGB_8888)
+            v.draw(android.graphics.Canvas(full))
+            out = android.graphics.Bitmap.createBitmap(full, r.left.toInt(), r.top.toInt(), r.width.toInt().coerceAtMost(full.width - r.left.toInt()), r.height.toInt().coerceAtMost(full.height - r.top.toInt()))
+        }
+        return out!!.asImageBitmap()
     }
 
     private fun centreLum(img: ImageBitmap, i: Int, cards: Int): Float {

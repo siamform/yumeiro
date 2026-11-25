@@ -35,6 +35,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GroupBLoaderDeviceTest {
     private val inst get() = InstrumentationRegistry.getInstrumentation()
+    private var scaleWas = 1f
+
+    @org.junit.Before fun on() { scaleWas = AnimScale.read(); AnimScale.set(1f) }
+    @org.junit.After fun off() { AnimScale.set(scaleWas) }
 
     private fun centre(b: Bitmap, sizePx: Int): Bitmap {
         val s = sizePx.coerceAtMost(minOf(b.width, b.height))
@@ -71,7 +75,7 @@ class GroupBLoaderDeviceTest {
     }
 
     @Test fun a_loaderMovesOnScreen() {
-        val scale = android.provider.Settings.Global.getFloat(inst.targetContext.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+        val scale = AnimScale.read()
         val n = run(reduced = false)
         Log.i(TAG, "loader pixels changed over 330 ms: $n (animator scale $scale)")
         assertTrue("brand loader animates on screen: $n", n > 50)
@@ -86,4 +90,16 @@ class GroupBLoaderDeviceTest {
     }
 
     companion object { const val TAG = "YuGroupB" }
+}
+
+/** CI emulators run with animations off (scale 0); Compose honours it, so motion tests switch it on for their run. */
+internal object AnimScale {
+    private fun sh(cmd: String) {
+        val pfd = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(cmd)
+        android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd).use { it.readBytes() }
+    }
+    fun read(): Float = android.provider.Settings.Global.getFloat(
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.contentResolver,
+        android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+    fun set(v: Float) { sh("settings put global animator_duration_scale $v"); Thread.sleep(300) }
 }
