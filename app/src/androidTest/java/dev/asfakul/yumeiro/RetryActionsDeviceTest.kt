@@ -148,6 +148,26 @@ class RetryActionsDeviceTest {
         FirstRun.shell("input tap ${x.toInt()} ${y.toInt()}")
     }
 
+    /**
+     * GROUP D: a failed add inside the add sheet shows its reason and Retry in the sheet (the bottom message sat
+     * under the sheet's window, so a real tap could not reach its Retry: runs 45678492039 a–c, hits=0).
+     */
+    private fun sheetFailThenRetry(case: String, field: String, success: String) {
+        wait("$case: reason with Retry inside the sheet") { has("${field}_error") && has("${field}_retry") }
+        val err = compose.onAllNodesWithTag("${field}_error", false).fetchSemanticsNodes().first()
+            .config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.Text) { emptyList() }.joinToString(" ") { t -> t.text }
+        log("RTY_CASE $case error='$err'")
+        FirstRun.shot("rty_${case}_error")
+        assertTrue("$case: the reason is named ('$err')", err.contains("404") || err.contains("found", true) || err.contains("answered", true))
+        failing.set(false)
+        screenTap("${field}_retry")
+        wait("$case: Retry repeats the call") { hits.get() > 0 }
+        wait("$case: success after Retry") { hasText(success) }
+        wait("$case: sheet closes") { !has("${field}_field") }
+        log("RTY_CASE $case retried hits=${hits.get()} success='$success'")
+        log("RTY_RESULT PASS $case")
+    }
+
     private fun failThenRetry(case: String, success: String) {
         wait("$case: error message with Retry") { has("app_message") && has("app_message_action") }
         val err = messageText()
@@ -166,7 +186,7 @@ class RetryActionsDeviceTest {
         val url = server.url("/repo/index.json").toString()
         show(3)
         addThroughField("hub_js", "repos", "hub_js_add", url)
-        failThenRetry("a", "Repository added · 1 sources")
+        sheetFailThenRetry("a", "hub_js_add", "Repository added · 1 sources")
         wait("a: repo saved") { JsSources.state.value.repos.any { it == url } }
         addedJs = url
     }
@@ -175,7 +195,7 @@ class RetryActionsDeviceTest {
         val url = server.url("/addon/manifest.json").toString()
         show(2)
         addThroughField("hub_stremio", "browse", "hub_stremio_add", url)
-        failThenRetry("b", "ER12 Test added")
+        sheetFailThenRetry("b", "hub_stremio_add", "ER12 Test added")
         wait("b: add-on saved") { StremioAddons.addons.value.any { it.manifestUrl == url } }
         addedStremio = url
     }
@@ -184,7 +204,7 @@ class RetryActionsDeviceTest {
         val url = server.url("/mihon/index.min.json").toString()
         show(1)
         addThroughField("hub_tachiyomi_manga", "repos", "hub_tachiyomi_manga_add", url)
-        failThenRetry("c", "Repository added · 1 extensions")
+        sheetFailThenRetry("c", "hub_tachiyomi_manga_add", "Repository added · 1 extensions")
         val base = dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensions.normalizeRepo(url)
         wait("c: repo saved") { dev.asfakul.yumeiro.sources.tachiyomi.TachiyomiExtensions.state.value.repos.any { it.url == base } }
         addedMihon = base

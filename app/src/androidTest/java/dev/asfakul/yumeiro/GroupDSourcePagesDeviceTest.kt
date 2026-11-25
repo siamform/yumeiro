@@ -52,6 +52,20 @@ class GroupDSourcePagesDeviceTest {
     private fun key(code: Int) { FirstRun.shell("input keyevent $code"); Thread.sleep(600); rule.waitForIdle() }
     private fun back() = key(4)
     private fun focused(tag: String) = rule.onAllNodes(isFocused() and hasTestTag(tag), true).fetchSemanticsNodes().isNotEmpty()
+    private fun focusedTags() = rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().map { n ->
+        n.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { "?" } }
+    /** The overview keeps its scroll position (ScrollMemory) across visits, so bring the row on screen first. */
+    private fun row(p: String) { rule.onNodeWithTag("src_home", true).performScrollToNode(hasTestTag("src_page_$p")); rule.waitForIdle() }
+    /** Focus [tag] like a remote does; the TV emulator can hand first focus to the window after our request. */
+    private fun focus(tag: String): Boolean {
+        repeat(10) {
+            rule.onNodeWithTag(tag, true).requestFocus(); rule.waitForIdle()
+            if (focused(tag)) return true
+            Thread.sleep(200)
+        }
+        Log.i("YuGroupD", "focus $tag failed; focused=${focusedTags()}")
+        return false
+    }
 
     @After fun touch() { runCatching { inst.setInTouchMode(true) } }
 
@@ -80,7 +94,7 @@ class GroupDSourcePagesDeviceTest {
 
     @Test fun b_drillDownAndBackOnePageAtATime() {
         show()
-        waitTag("src_page_aniyomi")
+        waitTag("src_home"); row("aniyomi")
         click("src_page_aniyomi")
         waitTag("src_route_aniyomi")
         waitGone("src_home")
@@ -109,6 +123,7 @@ class GroupDSourcePagesDeviceTest {
         back()
         waitTag("src_home")
         assertEquals(0, left.get())
+        row("stremio")
         click("src_page_stremio")
         waitTag("src_route_stremio")
         click("src_go_browse")
@@ -120,18 +135,17 @@ class GroupDSourcePagesDeviceTest {
     /** Remote: D-pad focus on a row, OK opens it, Back returns with focus on the same row. */
     @Test fun d_remoteKeysAndFocusReturn() {
         show()
-        waitTag("src_page_js")
+        waitTag("src_home"); row("js")
         inst.setInTouchMode(false)
         rule.waitForIdle()
-        rule.onNodeWithTag("src_home", true).performScrollToNode(hasTestTag("src_page_js"))
-        rule.onNodeWithTag("src_page_js", true).requestFocus()
-        rule.waitForIdle()
-        assertTrue("row not focusable", focused("src_page_js"))
+        assertTrue("row not focusable", focus("src_page_js"))
         key(23) // DPAD_CENTER
         waitTag("src_route_js")
         back()
         waitTag("src_home")
-        rule.waitUntil(5_000) { focused("src_page_js") }
+        val back = runCatching { rule.waitUntil(5_000) { focused("src_page_js") }; true }.getOrDefault(false)
+        Log.i("YuGroupD", "GROUPD_D focusBack=$back focused=${focusedTags()}")
+        assertTrue("focus did not return to the opened row", back)
         key(20) // DPAD_DOWN moves on from there
         val moved = !focused("src_page_js") && rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().isNotEmpty()
         Log.i("YuGroupD", "GROUPD_D moved=$moved tv=$tv")

@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -120,14 +124,23 @@ fun AddLinkSheet(
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var text by rememberSaveable(tag) { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    // GROUP D (RetryActionsDeviceTest a–c): the bottom message is drawn under this sheet's window, so a failed
+    // add showed its reason and Retry where no finger or remote could reach them. The sheet shows them itself.
+    var error by remember { mutableStateOf<String?>(null) }
     fun submit() {
         val url = text.trim()
         if (url.isEmpty() || busy) return
         busy = true
+        error = null
         scope.launch {
             val ok = onAdd(url)
             busy = false
             if (ok) { text = ""; onDismiss() }
+            else {
+                val m = AppMessages.current.value?.takeIf { it.kind == AppMessages.Kind.ERROR }
+                error = m?.text ?: "Couldn't add this link."
+                m?.let { AppMessages.dismiss(it.id) }
+            }
         }
     }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = p.surfaceContainerHigh, dragHandle = sheetDragHandle(), modifier = Modifier.testTag(tag)) {
@@ -136,7 +149,7 @@ fun AddLinkSheet(
             hint?.let { Text(it, color = p.textTertiary, fontSize = 12.sp) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                    query = text, onQuery = { text = it.take(800) }, hint = placeholder, tag = tag + "_field",
+                    query = text, onQuery = { text = it.take(800); error = null }, hint = placeholder, tag = tag + "_field",
                     modifier = Modifier.weight(1f), leadingIcon = Icons.Default.Link, keyboardType = KeyboardType.Uri, onDone = { submit() },
                 )
                 IconButton(onClick = { clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { text = it } }, modifier = Modifier.testTag(tag + "_paste")) {
@@ -144,6 +157,14 @@ fun AddLinkSheet(
                 }
             }
             if (busy) LinearProgressIndicator(color = p.accent, modifier = Modifier.fillMaxWidth())
+            error?.let { e ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().testTag(tag + "_error")) {
+                    Icon(Icons.Default.Warning, null, tint = dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { submit() }, enabled = !busy, modifier = Modifier.testTag(tag + "_retry")) { Text("Retry", color = p.accent, fontWeight = FontWeight.Bold) }
+                }
+            }
             Button(
                 onClick = { submit() }, enabled = !busy && text.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent), shape = RoundedCornerShape(24.dp),
