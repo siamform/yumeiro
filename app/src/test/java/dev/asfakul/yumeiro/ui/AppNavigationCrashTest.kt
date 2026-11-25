@@ -311,8 +311,14 @@ class AppNavigationCrashTest {
         // The phone's own videos fill Yumix random only when no online source is on; Yumeiro
         // Drama is on by default from 1.8.0, so turn it off for this check.
         val ctx = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
-        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, false)
-        dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(ctx, false) // OWN-9, on by default too
+        // Every part of the built-in "Yumeiro" source (drama, classics, anime, catalog) goes off with its one switch.
+        // Turning off only drama and classics left the anime and catalog parts on whenever an earlier test in the
+        // same JVM had started them (full suite 2026-11-25: Home showed the channel [Yumeiro], no phone videos).
+        dev.asfakul.yumeiro.sources.hub.YumeiroHub.setEnabled(ctx, false)
+        try { homeShowsVideosAsGridBody() } finally { dev.asfakul.yumeiro.sources.hub.YumeiroHub.setEnabled(ctx, true) }
+    }
+
+    private fun homeShowsVideosAsGridBody() {
         awaitHome()
         rule.mainClock.advanceTimeBy(1_000)
         rule.waitForIdle()
@@ -330,8 +336,6 @@ class AppNavigationCrashTest {
         }
         org.junit.Assert.assertEquals("two videos per row on a phone", 2, cardsInRow)
         snap("home_video_grid")
-        dev.asfakul.yumeiro.sources.drama.YumeiroDrama.setEnabled(ctx, true)
-        dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(ctx, true)
     }
 
     @Test fun swipeAnywhereMovesBetweenTabsAndBackReturnsHome() {
