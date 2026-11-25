@@ -128,9 +128,9 @@ void main() {
   c += vec3(uBright);
   c = (c - 0.5) * uContrast + 0.5;
   // Black point (crush) then shadow lift.
-  c = max(c - vec3(uBlack), 0.0) / max(1.0 - uBlack, 0.001);
-  c = c * (1.0 - uLift) + vec3(uLift);
-  c = pow(max(c, 0.0), vec3(1.0 / max(uGamma, 0.01)));
+  if (uBlack > 0.0001) c = max(c - vec3(uBlack), 0.0) / (1.0 - uBlack);
+  if (uLift > 0.0001) c = c * (1.0 - uLift) + vec3(uLift);
+  if (abs(uGamma - 1.0) > 0.001) c = pow(max(c, 0.0), vec3(1.0 / max(uGamma, 0.01)));
   float y = luma(c);
   vec3 grey = vec3(y);
   float chroma = max(max(c.r, c.g), c.b) - min(min(c.r, c.g), c.b);

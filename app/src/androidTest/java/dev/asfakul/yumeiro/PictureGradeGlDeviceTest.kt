@@ -134,7 +134,12 @@ class PictureGradeGlDeviceTest {
         val sharp = render(grade(PictureLook.Grade(sharpness = 1f)))
         // Sharpening stays inside the neighbourhood range (no halo) and steepens the edge.
         val row = 32
-        assertTrue("sharpen no halo", sharp[row][36][1] <= maxOf(src(36, row)[1], src(37, row)[1], src(35, row)[1]) + 1)
+        // The clamp uses the 4 direct neighbours (up / down too), so the bound is the 3×3 neighbourhood.
+        for (y in 1 until size - 1) for (x in 1 until size - 1) for (c in 0..2) {
+            var lo = 255; var hi = 0
+            for (dy in -1..1) for (dx in -1..1) { val v = src(x + dx, y + dy)[c]; lo = minOf(lo, v); hi = maxOf(hi, v) }
+            assertTrue("sharpen halo at $x,$y c$c: ${sharp[y][x][c]} not in $lo..$hi", sharp[y][x][c] in (lo - 1)..(hi + 1))
+        }
         assertTrue("sharpen steeper edge", (sharp[row][36][1] - sharp[row][35][1]) >= (src(36, row)[1] - src(35, row)[1]))
         val grain = render(grade(PictureLook.Grade(grain = 1f)))
         assertTrue("grain adds texture", maxDiffFromInput(grain) >= 3)
@@ -187,9 +192,13 @@ class PictureGradeGlDeviceTest {
         val colour = look(Look.VIVID)
         val a720 = msPerFrame(colour, 1280, 720); val f720 = msPerFrame(full, 1280, 720)
         val a1080 = msPerFrame(colour, 1920, 1080); val f1080 = msPerFrame(full, 1920, 1080)
-        log("PICTURE_GL_COST colour720=%.2f full720=%.2f colour1080=%.2f full1080=%.2f".format(a720, f720, a1080, f1080))
-        // Software GL on the CI emulator is far slower than any phone GPU; this only catches a pathological shader.
-        assertTrue("grade at 720p under one 30 fps frame ($f720 ms)", f720 < 33.3)
+        // Reference on the same GPU: the Anime4K V2 Performance pass that already ships (5 taps).
+        val ref720 = msPerFrame(Anime4kV2.Effect(Anime4kV2.params(Anime4kV2.Preset.PERFORMANCE, Anime4kV2.Style.SHARPEN)), 1280, 720)
+        log("PICTURE_GL_COST colour720=%.2f full720=%.2f colour1080=%.2f full1080=%.2f anime4kPerf720=%.2f".format(a720, f720, a1080, f1080, ref720))
+        // CI emulators use software GL (tens of ms per 720p frame for any pass), so the budget is relative: colour-only
+        // must cost no more than the shipped Anime4K pass, everything on (sharpen + grain) at most twice it.
+        assertTrue("colour grade $a720 ms vs Anime4K $ref720 ms", a720 <= ref720 * 1.1)
+        assertTrue("full grade $f720 ms vs Anime4K $ref720 ms", f720 <= ref720 * 2.0)
         log("PICTURE_GL_RESULT PASS")
     }
 }
