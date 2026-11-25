@@ -112,6 +112,9 @@ internal fun yumixDebugSummary(): String = YumixMemory.homes.entries.joinToStrin
     k + "=" + when (v) { is ProviderHome.Ready -> "Ready(${v.rows.size} rows, ${v.rows.sumOf { it.items.size }} items)"; is ProviderHome.Failed -> "Failed"; ProviderHome.Loading -> "Loading"; ProviderHome.NeedsSetup -> "NeedsSetup" }
 }.ifEmpty { "(no sections)" } + " · explore ${YumixMemory.exploreShown.size}"
 
+/** H-5: the extensions the mixed feed ("All") uses right now, for device tests. */
+@Volatile internal var yumixMixNow: List<String> = emptyList()
+
 /** Names of the extensions whose section has titles now, for device tests (pick one that really loaded). */
 internal fun yumixReadyNames(): Set<String> = YumixMemory.homes.entries.filter { (_, v) -> v is ProviderHome.Ready && v.rows.any { it.items.isNotEmpty() } }.map { it.key }.toSet()
 
@@ -210,6 +213,7 @@ fun OnlineHomeScreen(
         val keep = dev.asfakul.yumeiro.online.YumixDefaults.inMix(providers.map { it.name }, defaultNames).toHashSet()
         providers.filter { it.name in keep }
     }
+    androidx.compose.runtime.SideEffect { yumixMixNow = mixProviders.map { it.name } }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     // GROUP G2: the top bar hides its magnifier while one extension is picked (the page has its own search box).
     LaunchedEffect(selected) { YumixPick.selected.value = selected }
