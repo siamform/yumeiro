@@ -32,8 +32,30 @@ object ForeignViewGuard {
         // A11Y-EXT-1b (probe 45530059278): AnimePahe's 1 × 1 FrameLayout + WebView goes straight into the window's
         // root (the decor view, beside the content), not into android.R.id.content. Watch both.
         val content = activity.findViewById<ViewGroup>(android.R.id.content)
-        val decor = activity.window?.decorView as? ViewGroup
-        listOfNotNull(decor, content).distinct().forEach { watch(it) }
+        val decor = activity.window?.decorView as? ViewGroup ?: return
+        val groups = listOfNotNull(decor, content).distinct()
+        groups.forEach { watch(it) }
+        // A11Y-EXT-1c (probe 45533712008: still focused after 1b): the add can happen in ways the hierarchy listener
+        // doesn't see, so also look at the window's top-level views after every layout (a handful of views: cheap),
+        // and give back any focus that lands inside a quieted view.
+        val tree = decor.viewTreeObserver
+        tree.addOnGlobalLayoutListener { groups.forEach { g -> for (i in 0 until g.childCount) g.getChildAt(i)?.let { c -> if (!isOwn(c)) check(c, c.width, c.height) } } }
+        tree.addOnGlobalFocusChangeListener { _, now ->
+            if (now != null && insideQuieted(now)) {
+                now.clearFocus()
+                content?.let { c -> (0 until c.childCount).map { c.getChildAt(it) }.firstOrNull { isOwn(it) }?.requestFocus() }
+                Log.w(TAG, "focus moved out of a hidden extension view")
+            }
+        }
+    }
+
+    private fun insideQuieted(v: View): Boolean {
+        var p: View? = v
+        while (p != null) {
+            if (p.getTag(TAG_KEY) == true) return true
+            p = p.parent as? View
+        }
+        return false
     }
 
     private fun watch(group: ViewGroup) {
@@ -52,14 +74,19 @@ object ForeignViewGuard {
     /** Yumeiro's Compose root, and the window's own parts (the decor's content column and bar backgrounds). */
     private fun isOwn(v: View) = v.javaClass.name.startsWith("androidx.compose.ui.") ||
         v.id == android.R.id.content || v.id == android.R.id.statusBarBackground || v.id == android.R.id.navigationBarBackground ||
-        v.javaClass.name.startsWith("com.android.internal.")
+        v.javaClass.name.startsWith("com.android.internal.") || (v is ViewGroup && v.findViewById<View>(android.R.id.content) != null)
 
     private fun check(v: View, w: Int, h: Int) {
-        if (!shouldQuiet(false, w, h) || v.importantForAccessibility == View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS) return
+        if (!shouldQuiet(false, w, h) || v.getTag(TAG_KEY) == true) return
+        v.setTag(TAG_KEY, true)
         v.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         v.isFocusable = false
         if (v is ViewGroup) v.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         v.findFocus()?.clearFocus()
-        Log.i(TAG, "quieted a ${w}x$h ${v.javaClass.simpleName} added by an extension (no screen reader, no focus)")
+        // Warning level: release builds strip Log.i (proguard-rules.pro), which hid this line in probe 45530059278.
+        Log.w(TAG, "quieted a ${w}x$h ${v.javaClass.simpleName} added by an extension (no screen reader, no focus)")
     }
+
+    /** A framework-reserved-free tag key (an app resource id). */
+    private val TAG_KEY = dev.asfakul.yumeiro.R.id.yu_foreign_quiet
 }

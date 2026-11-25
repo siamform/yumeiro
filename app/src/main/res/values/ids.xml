@@ -2,4 +2,5 @@
 <resources>
     <!-- PlayerView tag: last subtitle style applied (skips redundant restyling). -->
     <item name="subtitle_style_tag" type="id" />
+    <item name="yu_foreign_quiet" type="id" />
 </resources>
