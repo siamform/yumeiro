@@ -39,7 +39,15 @@ object AdChainBridge {
         val client = StreamInterceptors.clientFor(request.url, NetworkClient.get(context))
         val walker = AdChainHttp(client, ua)
         val out = walker.walk(request.url)
-        Log.w(TAG, "${AdChainDestinations.hostOf(request.url)}: ${out::class.simpleName} ${(out as? AdChainHttp.Outcome.Reached)?.hops ?: ""}")
+        // ADCHAIN-3c: readable outcome in release builds too (R8 renames the classes: probe 45530077234 logged "e4").
+        // Hosts and reasons only; never the full link, cookies or tokens.
+        val label = when (out) {
+            is AdChainHttp.Outcome.Reached -> "Reached ${AdChainDestinations.hostOf(out.url)} in ${out.hops} hops"
+            is AdChainHttp.Outcome.NeedsBrowser -> "NeedsBrowser at ${AdChainDestinations.hostOf(out.url)}${out.check?.let { " (check $it)" } ?: ""}: ${out.reason.take(120)}"
+            is AdChainHttp.Outcome.NotAChain -> "NotAChain"
+            is AdChainHttp.Outcome.Failed -> "Failed at ${AdChainDestinations.hostOf(out.url)}: ${out.reason.take(120)}"
+        }
+        Log.w(TAG, "${AdChainDestinations.hostOf(request.url)}: $label")
         return when (out) {
             is AdChainHttp.Outcome.Reached -> {
                 val req = request.copy(
