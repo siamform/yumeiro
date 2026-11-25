@@ -186,6 +186,23 @@ private fun EntryGrid(entries: List<NovelLibrary.Entry>, emptyTitle: String, emp
     }
 }
 
+/**
+ * NOVEL-2: the error state of a novel page. A site check gets Yumeiro's sentence and "Open <site>" (Yumeiro's check
+ * page; the person passes it), which loads again once passed; other errors keep their text and "Try again".
+ */
+@Composable
+private fun NovelError(pluginId: String, title: String, error: String, testTag: String, onRetry: () -> Unit,
+                       secondary: Pair<String, () -> Unit>? = null) {
+    val p = NovelSources.plugin(pluginId)
+    if (p != null && dev.asfakul.yumeiro.sources.novel.NovelSiteCheck.isSiteCheck(error)) {
+        StateMessage(Icons.Default.ErrorOutline, title, dev.asfakul.yumeiro.sources.novel.NovelSiteCheck.message(p.name),
+            primary = "Open ${p.name}" to {
+                dev.asfakul.yumeiro.online.web.BrowserCheck.openSite(p.site.trimEnd('/') + "/") { ok -> if (ok) onRetry() }
+            },
+            secondary = "Try again" to onRetry, suggestions = false, testTag = "${testTag}_check")
+    } else StateMessage(Icons.Default.ErrorOutline, title, error, primary = "Try again" to onRetry, secondary = secondary, testTag = testTag)
+}
+
 @Composable
 private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit) {
     val context = LocalContext.current
@@ -206,7 +223,7 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
         loading = false
     }
     if (items.isEmpty() && error != null) {
-        StateMessage(Icons.Default.ErrorOutline, "Couldn't load ${plugin.name}", error, primary = "Try again" to { attempt++ }, testTag = "novel_browse_error")
+        NovelError(plugin.id, "Couldn't load ${plugin.name}", error!!, "novel_browse_error", onRetry = { attempt++ })
         return
     }
     if (items.isEmpty() && !loading && end) { StateMessage(Icons.AutoMirrored.Filled.MenuBook, "Nothing here", "${plugin.name} listed no novels.", testTag = "novel_browse_empty"); return }
@@ -398,7 +415,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
             }
         }
         if (d == null) {
-            if (error != null) StateMessage(Icons.Default.ErrorOutline, "Couldn't open this novel", error, primary = "Try again" to { attempt++ }, testTag = "novel_detail_error")
+            error?.let { e -> NovelError(pluginId, "Couldn't open this novel", e, "novel_detail_error", onRetry = { attempt++ }) }
             else dev.asfakul.yumeiro.ui.components.CoverDetailSkeleton() // SKELETON-2
             return@Column
         }
@@ -548,9 +565,8 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
         tlNote?.let { Text(it, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("novel_tl_note")) }
         val ps = paras
         when {
-            error != null -> StateMessage(Icons.Default.ErrorOutline, "Couldn't load this chapter", error, primary = "Try again" to { attempt++ },
-                secondary = NovelSources.webUrl(context, pluginId, current)?.let { url -> "Open in browser" to { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }; Unit } },
-                testTag = "novel_reader_error")
+            error != null -> NovelError(pluginId, "Couldn't load this chapter", error!!, "novel_reader_error", onRetry = { attempt++ },
+                secondary = NovelSources.webUrl(context, pluginId, current)?.let { url -> "Open in browser" to { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }; Unit } })
             ps == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
             else -> LazyColumn(Modifier.fillMaxSize().testTag("novel_text"), state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 32.dp)) {
                 item("top") { Spacer(Modifier.height(4.dp)) }
