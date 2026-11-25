@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -134,12 +135,17 @@ fun AddLinkSheet(
         if (url.isEmpty() || busy) return
         busy = true
         error = null
+        val before = AppMessages.current.value?.id ?: 0L
         scope.launch {
             val ok = onAdd(url)
             busy = false
             if (ok) { text = ""; onDismiss() }
             else {
-                val m = AppMessages.current.value?.takeIf { it.kind == AppMessages.Kind.ERROR }
+                // Errors from worker threads reach the main thread a moment after onAdd returns (run 45684558240:
+                // the sheet read no message and showed the generic text). Wait briefly for this attempt's error.
+                val m = kotlinx.coroutines.withTimeoutOrNull(1_500) {
+                    AppMessages.current.first { it != null && it.id > before && it.kind == AppMessages.Kind.ERROR }
+                } ?: AppMessages.current.value?.takeIf { it.kind == AppMessages.Kind.ERROR && it.id > before }
                 error = m?.text ?: "Couldn't add this link."
                 m?.let { AppMessages.dismiss(it.id) }
             }
