@@ -102,7 +102,9 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
             if (byCountry) { UpcomingPrefs.setCountry(context, country); UpcomingPrefs.setGenre(context, genre) }
         }
     }
-    val source = if (byCountry && kind == Upcoming.Kind.SERIES) country else null
+    // H-9a (owner item 9): Movies have a country too (Wikidata); "Streaming" is a series-only schedule.
+    val movieCountry = kind == Upcoming.Kind.MOVIES && country != dev.asfakul.yumeiro.online.upcoming.TvmazeSchedule.STREAMING
+    val source = if (byCountry && (kind == Upcoming.Kind.SERIES || movieCountry)) country else null
     val zone = remember { ZoneId.systemDefault() }
     val today = remember { LocalDate.now(zone) }
     var list by remember(kind, source) { mutableStateOf<List<Upcoming.Entry>?>(null) }
@@ -112,12 +114,14 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
     LaunchedEffect(kind, source, retry, kindLoaded) {
         if (!kindLoaded) return@LaunchedEffect
         loading = true; failed = false
-        val cached = withContext(Dispatchers.IO) { if (source != null) TvmazeSchedule.cached(context, source, today) else Upcoming.cached(context, kind, today) }
+        val movies = kind == Upcoming.Kind.MOVIES
+        val cached = withContext(Dispatchers.IO) { when { source == null -> Upcoming.cached(context, kind, today); movies -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.cached(context, source, today); else -> TvmazeSchedule.cached(context, source, today) } }
         if (cached != null) list = cached
-        if (cached == null || retry > 0 || !withContext(Dispatchers.IO) { if (source != null) TvmazeSchedule.isFresh(context, source) else Upcoming.isFresh(context, kind) }) {
+        if (cached == null || retry > 0 || !withContext(Dispatchers.IO) { when { source == null -> Upcoming.isFresh(context, kind); movies -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.isFresh(context, source); else -> TvmazeSchedule.isFresh(context, source) } }) {
             val fresh = withContext(Dispatchers.IO) {
                 val client = dev.asfakul.yumeiro.network.NetworkClient.get(context)
-                runCatching { if (source != null) TvmazeSchedule.refresh(context, client, source, today, zone) else Upcoming.refresh(context, client, kind, today, zone) }.getOrNull()
+                runCatching { when { source == null -> Upcoming.refresh(context, client, kind, today, zone); movies -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.refresh(context, client, source, today); else -> TvmazeSchedule.refresh(context, client, source, today, zone) } }
+                    .onFailure { android.util.Log.i("YuUpcoming", "${kind.name} ${source ?: "all"}: ${it.javaClass.simpleName}") }.getOrNull()
             }
             if (fresh != null) list = fresh else failed = true
         }
@@ -134,7 +138,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
     val days = remember(shown) { shown.groupBy { it.day }.toList() }
     val scheduleCountries = remember(options) {
         UpcomingFilter.scheduleCountries(java.util.Locale.getDefault().country, TvmazeSchedule.COUNTRIES, options.countries, TvmazeSchedule.STREAMING)
-    }
+    }.let { all -> if (kind == Upcoming.Kind.MOVIES) all.filter { it != TvmazeSchedule.STREAMING } else all }
     Column(Modifier.fillMaxSize().testTag("upcoming_screen")) {
         SubPageHeader(title = "Upcoming", subtitle = "Next two weeks · ${kind.label}", onBack = onBack)
         // UP-FILTER-1 (owner list R21, item 16B): search, then three filter buttons (Category, Country, Date) that
@@ -142,7 +146,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
         // the platform's country list for TVmaze schedules; a button shows what is on.
         dev.asfakul.yumeiro.ui.components.YuSearchField(query, { query = it }, "Search ${kind.label.lowercase()} in the next two weeks", "upcoming_search", Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
         val v = UpcomingFilter.valid(choice, options)
-        val scheduleOn = byCountry && kind == Upcoming.Kind.SERIES
+        val scheduleOn = byCountry && (kind == Upcoming.Kind.SERIES || kind == Upcoming.Kind.MOVIES)
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             UpcomingFilterButton(
                 androidx.compose.material.icons.Icons.Default.Category, "Category",
@@ -150,8 +154,8 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
             ) { sheet = "category" }
             UpcomingFilterButton(
                 androidx.compose.material.icons.Icons.Default.Public, "Country",
-                when { scheduleOn && country != null -> UpcomingCountries.label(country!!); v.country != null -> UpcomingCountries.label(v.country); else -> "All" },
-                on = (scheduleOn && country != null) || v.country != null, tag = "upcoming_country_button", modifier = Modifier.weight(1f),
+                when { scheduleOn && source != null -> UpcomingCountries.label(source); v.country != null -> UpcomingCountries.label(v.country); else -> "All" },
+                on = (scheduleOn && source != null) || v.country != null, tag = "upcoming_country_button", modifier = Modifier.weight(1f),
             ) { sheet = "country" }
             UpcomingFilterButton(
                 androidx.compose.material.icons.Icons.Default.DateRange, "Date",
@@ -174,9 +178,9 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     var cq by rememberSaveable { mutableStateOf("") }
                     val more = remember(cq, scheduleCountries) { UpcomingCountries.search(cq, scheduleCountries) }
                     dev.asfakul.yumeiro.ui.components.FilterGroup("Schedule", tag = "upcoming_countries") {
-                        OnlineChip("All countries", country == null, { country = null }, Modifier.testTag("upcoming_country_all"))
+                        OnlineChip("All countries", source == null, { country = null }, Modifier.testTag("upcoming_country_all"))
                         (if (cq.isBlank()) scheduleCountries else more).forEach { c ->
-                            OnlineChip(UpcomingCountries.label(c), c == country, { country = c }, Modifier.testTag("upcoming_country_${c.lowercase()}"))
+                            OnlineChip(UpcomingCountries.label(c), c == source, { country = c }, Modifier.testTag("upcoming_country_${c.lowercase()}"))
                         }
                     }
                     dev.asfakul.yumeiro.ui.components.YuSearchField(cq, { cq = it.take(40) }, "Another country", "upcoming_country_search", Modifier.fillMaxWidth())
@@ -187,7 +191,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     options.countries.forEach { c -> OnlineChip(UpcomingCountries.label(c), c == channel, { channel = c }, Modifier.testTag("upcoming_channel_${c.lowercase()}")) }
                 }
                 if (!scheduleOn && options.countries.size <= 1) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("The ${kind.label.lowercase()} calendar is worldwide. Schedules by country are for series.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_country_none"))
+                    Text("The ${kind.label.lowercase()} calendar is worldwide. Schedules by country are for series and movies.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_country_none"))
                     if (byCountry) OnlineChip("Show series by country", false, { kindName = Upcoming.Kind.SERIES.name }, Modifier.testTag("upcoming_country_to_series"))
                 }
             }
@@ -206,6 +210,22 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 TextButton(onClick = { retry++ }, modifier = Modifier.testTag("upcoming_retry")) { Text("Try again", color = SpotifyGreen) }
             }
             days.isEmpty() && list.orEmpty().isNotEmpty() -> Text(if (query.isNotBlank()) "Nothing matches \"${query.trim()}\"." else "Nothing matches these filters.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_no_match"))
+            // H-9b (owner item 9): India (and other countries) in Series came back empty with no word why: TVmaze
+            // lists almost no Indian TV channels. The page now says so and offers what does have that country.
+            days.isEmpty() && source != null -> Column(Modifier.fillMaxWidth().padding(24.dp).testTag("upcoming_empty_country"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val name = UpcomingCountries.label(source)
+                val movies = kind == Upcoming.Kind.MOVIES
+                Text(
+                    if (movies) "Wikidata lists no films from $name in the next two weeks." else "TVmaze lists no TV episodes for $name in the next two weeks. Many of its shows are on streaming services.",
+                    color = TextSecondary, fontSize = 14.sp,
+                )
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!movies) OnlineChip("Streaming series", false, { country = TvmazeSchedule.STREAMING }, Modifier.testTag("upcoming_empty_streaming"))
+                    if (!movies) OnlineChip("Movies from $name", false, { kindName = Upcoming.Kind.MOVIES.name }, Modifier.testTag("upcoming_empty_movies"))
+                    if (movies) OnlineChip("Series from $name", false, { kindName = Upcoming.Kind.SERIES.name }, Modifier.testTag("upcoming_empty_series"))
+                    OnlineChip("All countries", false, { country = null }, Modifier.testTag("upcoming_empty_all"))
+                }
+            }
             days.isEmpty() -> Text("Nothing listed for the next two weeks.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_empty"))
             // Device 45045030577 (api33-lowram): the offline note was the list's first row, so after a scroll it sat
             // off screen. It stays above the list now.
@@ -220,7 +240,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     items(entries, key = { "e_${it.simklId}_${it.day}_${it.season}" }) { e -> UpcomingRow(e, showTime = sections) { onSearch(e.title) } }
                 }
                 item("credit") {
-                    Text(if (source != null) "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources." else "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.", color = TextTertiary, fontSize = 11.sp,
+                    Text(if (source != null && kind == Upcoming.Kind.MOVIES) "Release data: Wikidata (wikidata.org), CC0. Tap a title to look for it in your sources." else if (source != null) "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources." else "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.", color = TextTertiary, fontSize = 11.sp,
                         modifier = Modifier.padding(16.dp).navigationBarsPadding())
                 }
             }

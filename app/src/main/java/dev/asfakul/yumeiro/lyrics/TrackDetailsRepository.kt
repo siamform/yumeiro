@@ -34,6 +34,9 @@ data class TrackDetails(
     val bitsPerSample: Int? = null,
     val path: String? = null,
     val fileName: String? = null,
+    /** H-8: read from the file itself when the library row has 0 (some providers and fresh files). */
+    val durationMs: Long? = null,
+    val sizeBytes: Long? = null,
 )
 
 /**
@@ -125,7 +128,7 @@ object TrackDetailsRepository {
         // Streamed tracks (YouTube Music) have no local file to inspect.
         if (!uri.startsWith("content:") && !uri.startsWith("file:") && !uri.startsWith("/")) return@withContext TrackDetails(path = null, fileName = null)
         val path = runCatching { resolvePath(app, uri) }.getOrNull()
-        var d = TrackDetails(path = path, fileName = path?.substringAfterLast('/'))
+        var d = TrackDetails(path = path, fileName = path?.substringAfterLast('/'), sizeBytes = runCatching { sizeOf(app, uri, path) }.getOrNull())
         val mmr = runCatching { MediaMetadataRetriever() }.getOrNull() ?: return@withContext d
         try {
             mmr.setDataSource(app, Uri.parse(uri))
@@ -145,6 +148,7 @@ object TrackDetailsRepository {
                     k(MediaMetadataRetriever.METADATA_KEY_SAMPLERATE)?.toIntOrNull()?.takeIf { it > 0 } else null,
                 bitsPerSample = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
                     k(MediaMetadataRetriever.METADATA_KEY_BITS_PER_SAMPLE)?.toIntOrNull()?.takeIf { it > 0 } else null,
+                durationMs = k(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()?.takeIf { it > 0 },
             )
         } catch (t: Throwable) {
             Log.d(TAG, "metadata: ${t.javaClass.simpleName}")
@@ -153,6 +157,16 @@ object TrackDetailsRepository {
             runCatching { mmr.release() }
         }
         d
+    }
+
+    /** H-8: the file's size in bytes: the provider's SIZE column, else the file on disk; null if unknown. */
+    private fun sizeOf(context: Context, uri: String, path: String?): Long? {
+        val u = Uri.parse(uri)
+        if (u.scheme == "content") context.contentResolver.query(u, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { c ->
+            if (c.moveToFirst() && !c.isNull(0)) c.getLong(0).takeIf { it > 0 }?.let { return it }
+        }
+        val f = (path ?: u.path?.takeIf { u.scheme == "file" || uri.startsWith("/") })?.let { java.io.File(it) }
+        return f?.takeIf { it.isFile }?.length()?.takeIf { it > 0 }
     }
 
     @Suppress("DEPRECATION")

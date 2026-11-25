@@ -30,7 +30,10 @@ object VideoPrefs {
     }
 
     enum class Decoder(val label: String, val detail: String) {
-        HARDWARE_PLUS("Hardware+", "Recommended. Phone decoders first, FFmpeg for audio the phone can't play (AC-3, E-AC-3, DTS, TrueHD)"),
+        // H-3 (owner item 3): Auto is the default. It is Hardware+ that also switches to the software decoder on its
+        // own when a video fails to decode (DecoderAuto), so a video Hardware+ can't play still plays.
+        AUTO("Auto", "Recommended. Phone decoders first, FFmpeg for audio the phone can't play, and the software decoder on its own when a video won't decode"),
+        HARDWARE_PLUS("Hardware+", "Phone decoders first, FFmpeg for audio the phone can't play (AC-3, E-AC-3, DTS, TrueHD)"),
         HARDWARE("Hardware", "Only the phone's own decoders"),
         SOFTWARE("Software", "FFmpeg and software decoders first. Slower, but plays files the phone's decoders get wrong"),
     }
@@ -95,7 +98,7 @@ object VideoPrefs {
     private val _quality = MutableStateFlow(Quality.AUTO); val quality: StateFlow<Quality> = _quality.asStateFlow()
     private val _audio = MutableStateFlow(AudioDefault.SUB); val audio: StateFlow<AudioDefault> = _audio.asStateFlow()
     private val _speed = MutableStateFlow(1f); val speed: StateFlow<Float> = _speed.asStateFlow()
-    private val _decoder = MutableStateFlow(Decoder.HARDWARE_PLUS); val decoder: StateFlow<Decoder> = _decoder.asStateFlow()
+    private val _decoder = MutableStateFlow(Decoder.AUTO); val decoder: StateFlow<Decoder> = _decoder.asStateFlow()
     private val _renderer = MutableStateFlow(Renderer.AUTO); val renderer: StateFlow<Renderer> = _renderer.asStateFlow()
     private val _anime4k = MutableStateFlow(false); val anime4k: StateFlow<Boolean> = _anime4k.asStateFlow()
     private val _gpuTier = MutableStateFlow(GpuTier.MID); val gpuTier: StateFlow<GpuTier> = _gpuTier.asStateFlow()
@@ -118,7 +121,7 @@ object VideoPrefs {
         _quality.value = enumOf(p.getString("quality", null), Quality.AUTO)
         _audio.value = enumOf(p.getString("audio", null), AudioDefault.SUB)
         _speed.value = p.getFloat("speed", 1f).takeIf { it in 0.25f..4f } ?: 1f
-        _decoder.value = enumOf(p.getString("decoder", null), Decoder.HARDWARE_PLUS)
+        _decoder.value = enumOf(p.getString("decoder", null), Decoder.AUTO)
         _renderer.value = enumOf(p.getString("renderer", null), Renderer.AUTO)
         _anime4k.value = p.getBoolean("anime4k", false)
         _gpuTier.value = enumOf(p.getString("gpu_tier", null), GpuTier.MID)

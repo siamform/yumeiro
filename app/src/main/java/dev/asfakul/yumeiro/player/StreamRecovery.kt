@@ -76,6 +76,8 @@ class PlaybackRecovery(
     private val dnsLabel: () -> String = { "the alternative DNS" },
     /** G10 ER-13: whether the Software decoder is already chosen (then the tip is not offered). */
     private val softwareDecoder: () -> Boolean = { false },
+    /** H-3: the Auto decoder: switches this video to software decoders once; true if it did (then retry). */
+    private val autoSoftware: () -> Boolean = { false },
 ) {
     private val attempts = mutableMapOf<String, Int>()
     private var lastRefreshAt = Long.MIN_VALUE / 2
@@ -161,6 +163,7 @@ class PlaybackRecovery(
             "Playback error",
             "The player stopped unexpectedly. Retry; if it keeps happening, try another quality or source.$detail",
         )
+        if (autoSoftware()) return RecoveryAction.Retry(300L, 1, 1, AUTO_SOFTWARE)
         return RecoveryAction.Fail(
             "Unsupported video format",
             "This device's hardware decoders could not play this file, or the media stream is corrupted. " +
@@ -194,6 +197,8 @@ class PlaybackRecovery(
 
     companion object {
         const val STABLE_RESET_MS = 30_000L
+        /** H-3: shown while Auto moves a video that failed to decode onto the software decoder. */
+        const val AUTO_SOFTWARE = "Switching to the software decoder"
         /** The setting that helps: Settings › Audio quality & sound › Quality and audio › Video decoder. */
         const val DECODER_TIP = "Set Video decoder to Software in Settings › Video quality & playback, or try another quality or source."
     }

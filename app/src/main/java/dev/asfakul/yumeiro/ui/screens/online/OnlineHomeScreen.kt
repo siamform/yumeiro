@@ -112,6 +112,9 @@ internal fun yumixDebugSummary(): String = YumixMemory.homes.entries.joinToStrin
     k + "=" + when (v) { is ProviderHome.Ready -> "Ready(${v.rows.size} rows, ${v.rows.sumOf { it.items.size }} items)"; is ProviderHome.Failed -> "Failed"; ProviderHome.Loading -> "Loading"; ProviderHome.NeedsSetup -> "NeedsSetup" }
 }.ifEmpty { "(no sections)" } + " · explore ${YumixMemory.exploreShown.size}"
 
+/** Names of the extensions whose section has titles now, for device tests (pick one that really loaded). */
+internal fun yumixReadyNames(): Set<String> = YumixMemory.homes.entries.filter { (_, v) -> v is ProviderHome.Ready && v.rows.any { it.items.isNotEmpty() } }.map { it.key }.toSet()
+
 /** Keys of every title Yumix holds right now (sections and "More to explore"), for device tests. */
 internal fun yumixItemKeys(): Set<String> = HashSet<String>().apply {
     YumixMemory.homes.values.forEach { h -> (h as? ProviderHome.Ready)?.rows?.forEach { r -> r.items.forEach { add(it.key) } } }
@@ -199,6 +202,13 @@ fun OnlineHomeScreen(
     // 18+ Hues stay out of the feed when 18+ is off or kept private (they are still searchable).
     val providers = remember(engine.generation, engine.usable, adultOn, adultPrivate) {
         ExtensionManager.feedProviders(adultOn, adultPrivate)
+    }
+    // H-5 (owner item 5): "All" mixes only the default extensions when some are set.
+    remember { dev.asfakul.yumeiro.online.YumixDefaults.init(context); true }
+    val defaultNames by dev.asfakul.yumeiro.online.YumixDefaults.names.collectAsState()
+    val mixProviders = remember(providers, defaultNames) {
+        val keep = dev.asfakul.yumeiro.online.YumixDefaults.inMix(providers.map { it.name }, defaultNames).toHashSet()
+        providers.filter { it.name in keep }
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     // GROUP G2: the top bar hides its magnifier while one extension is picked (the page has its own search box).
@@ -307,7 +317,8 @@ fun OnlineHomeScreen(
     /** Returns how many extensions answered with titles that were not shown yet. */
     suspend fun loadAll(force: Boolean): Int = supervisorScope {
         // The selected channel (if any) goes first so its page fills before the rest of the mix.
-        val withHome = providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }
+        val keep = dev.asfakul.yumeiro.online.YumixDefaults.inMix(providers.map { it.name }, dev.asfakul.yumeiro.online.YumixDefaults.names.value).toHashSet()
+        val withHome = providers.filter { (it.name in keep || it.name == selected) && runCatching { it.hasMainPage }.getOrDefault(false) }
         // E4: then the fastest measured on this phone; quarantined (failing) extensions wait for the rest.
         val ordered = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER))
             dev.asfakul.yumeiro.online.ExtensionSpeed.order(withHome, { it.name }, selected)
@@ -331,6 +342,8 @@ fun OnlineHomeScreen(
         if (selected != null && providers.none { it.name == selected }) selected = null
         loadAll(false)
     }
+    // H-5: new defaults load the extensions that were not part of the mix before.
+    LaunchedEffect(defaultNames) { if (engine.ready) loadAll(false) }
     // FE-2: picking an extension moves its waiting fetch to the front; one that failed or never started loads now.
     LaunchedEffect(selected) {
         val pick = selected ?: return@LaunchedEffect
@@ -347,7 +360,7 @@ fun OnlineHomeScreen(
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(context) }
     val bookmarks by dev.asfakul.yumeiro.online.OnlineBookmarks.items.collectAsState()
     val channelNames = remember(providers) { providers.map { it.name } }
-    val withHome = remember(providers) { providers.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.map { it.name } }
+    val withHome = remember(mixProviders) { mixProviders.filter { runCatching { it.hasMainPage }.getOrDefault(false) }.map { it.name } }
     // FE-4b: extensions waiting outside the working set are not "loading" (they go live when the feed reaches its end).
     val loadingNames = YumixFeed.stillLoading(withHome) { n -> waitingLive.containsKey(n) || homes[n].let { it != null && it !is ProviderHome.Loading } }
     val openItem: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) }
@@ -411,6 +424,12 @@ fun OnlineHomeScreen(
             status = { n -> when (val h = homes[n]) { is ProviderHome.Ready -> SourceStatus.Ready(h.rows.sumOf { it.items.size }); is ProviderHome.Failed -> SourceStatus.Failed; ProviderHome.NeedsSetup -> SourceStatus.NeedsSetup; else -> SourceStatus.Loading } },
             onPick = { selected = it; showFilter = false },
             onDismiss = { showFilter = false },
+            defaults = defaultNames,
+            onSaveDefaults = { picked ->
+                dev.asfakul.yumeiro.online.YumixDefaults.set(context, picked)
+                android.util.Log.i("YuYumix", "default extensions: ${if (picked.isEmpty()) "every extension" else picked.sorted().joinToString()}")
+                dev.asfakul.yumeiro.ui.components.AppMessages.success(context, if (picked.isEmpty()) "Yumix will mix every extension" else "Yumix will open with ${picked.size} extension${if (picked.size == 1) "" else "s"}")
+            },
         )
 
         // GATE-1-VIDEOS-LOWRAM: the strip above shows in the page's first frame, the feed one frame later
@@ -440,7 +459,7 @@ fun OnlineHomeScreen(
                     // Pull to refresh is the one place the feed starts over (the user asked for it).
                     // R16 G4: only when something actually came back. Offline, the refresh used to
                     // empty every section and "More to explore" and leave nothing to scroll.
-                    val readyNow = { providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } } }
+                    val readyNow = { mixProviders.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } } }
                     when (YumixFeed.afterRefresh(answered, dev.asfakul.yumeiro.network.Connectivity.isOnline(context))) {
                         YumixFeed.AfterRefresh.START_OVER -> { YumixMemory.resetExplore(); YumixMemory.syncExplore(readyNow()) }
                         YumixFeed.AfterRefresh.NOTHING_NEW -> dev.asfakul.yumeiro.ui.components.AppMessages.show(
@@ -457,9 +476,9 @@ fun OnlineHomeScreen(
             ) {
                 // FE-4: the mix is rebuilt per frame (first update at once, then at most every 300 ms), not per row answer.
                 val framed = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE4_FEED_FRAMES) }
-                val readyNow0 = { providers.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } } }
+                val readyNow0 = { mixProviders.mapNotNull { p -> (homes[p.name] as? ProviderHome.Ready)?.let { p.name to it.rows } } }
                 val ready = if (!framed) readyNow0() else {
-                    val r by androidx.compose.runtime.produceState(readyNow0(), providers) {
+                    val r by androidx.compose.runtime.produceState(readyNow0(), mixProviders) {
                         with(dev.asfakul.yumeiro.online.FeedFrames) {
                             androidx.compose.runtime.snapshotFlow { readyNow0() }.atMostEvery().collect { value = it }
                         }
@@ -645,14 +664,14 @@ fun OnlineHomeScreen(
                         if (loadingNames.isNotEmpty()) st.item("feed_loading") {
                             Column { SectionHeader("Loading ${loadingNames.size} more extension${if (loadingNames.size == 1) "" else "s"}…"); PosterGridSkeleton() }
                         }
-                        val failed = providers.filter { homes[it.name] is ProviderHome.Failed }
+                        val failed = mixProviders.filter { homes[it.name] is ProviderHome.Failed }
                         if (failed.isNotEmpty()) st.item("feed_failed") {
                             ProviderProblem(
                                 if (failed.size == 1) failed[0].name else "${failed.size} extensions didn't load",
                                 failed.joinToString(" · ") { it.name }.take(160),
                             ) { scope.launch { supervisorScope { failed.forEach { api -> launch { loadOne(api, true) } } } } }
                         }
-                        val unset = providers.filter { homes[it.name] is ProviderHome.NeedsSetup }
+                        val unset = mixProviders.filter { homes[it.name] is ProviderHome.NeedsSetup }
                         if (unset.isNotEmpty()) st.item("feed_needs_setup") {
                             ProviderSetup(dev.asfakul.yumeiro.online.ExtensionSetup.message(unset.map { it.name })) {
                                 val first = unset.first()

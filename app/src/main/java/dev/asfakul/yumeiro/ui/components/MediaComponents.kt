@@ -1537,6 +1537,11 @@ fun SongDetailsDialog(
     track: AudioTrack,
     onDismiss: () -> Unit
 ) {
+    // H-8: duration and size from the file itself when the library row has 0.
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val details by androidx.compose.runtime.produceState<dev.asfakul.yumeiro.lyrics.TrackDetails?>(null, track.uri) {
+        value = runCatching { dev.asfakul.yumeiro.lyrics.TrackDetailsRepository.loadDetails(ctx, track.uri) }.getOrNull()
+    }
     TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1552,8 +1557,8 @@ fun SongDetailsDialog(
                 DetailItem(label = "Title", value = track.title)
                 DetailItem(label = "Artist", value = track.artist)
                 DetailItem(label = "Album", value = track.album)
-                DetailItem(label = "Duration", value = formatDuration(track.durationMs))
-                DetailItem(label = "File size", value = formatFileSize(track.sizeBytes))
+                DetailItem(label = "Duration", value = dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, details?.durationMs, 0L)?.let(::formatDuration) ?: "Unknown")
+                DetailItem(label = "File size", value = dev.asfakul.yumeiro.player.SongFacts.sizeLabel(dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, details?.sizeBytes), track.uri, ::formatFileSize))
                 DetailItem(label = "Folder", value = track.folderName)
                 if (track.folderPath.isNotBlank()) {
                     DetailItem(label = "Path", value = track.folderPath)

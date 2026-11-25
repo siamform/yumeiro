@@ -86,7 +86,11 @@ object TitleFacts {
     /** Extension facts plus, with an IMDb id, the free sources above. Never throws; off the main thread. */
     suspend fun load(context: Context, d: OnlineDetail): Facts = withContext(Dispatchers.IO) {
         val own = fromDetail(d)
-        val imdb = d.imdbId?.takeIf { IMDB.matches(it) } ?: return@withContext own
+        // H-11 (owner item 11): many extensions give no IMDb id, so the page had no rating, cast or trailers.
+        // The id is then looked up by title and year on Cinemeta's public search (exact title only).
+        val imdb = d.imdbId?.takeIf { IMDB.matches(it) }
+            ?: (if (d.kind == OnlineKind.MOVIE || d.kind == OnlineKind.SERIES || d.kind == OnlineKind.ANIME) findImdb(NetworkClient.get(context), d.name, d.year, d.kind == OnlineKind.MOVIE) else null)
+            ?: return@withContext own
         val cached = dev.asfakul.yumeiro.cache.DataCache.read(CACHE_NS, imdb, CACHE_MS)
             ?.let { runCatching { json.decodeFromString(Facts.serializer(), it) }.getOrNull() }
         val remote = cached ?: fetch(NetworkClient.get(context), imdb, d.kind == OnlineKind.MOVIE).also { f ->
@@ -116,6 +120,59 @@ object TitleFacts {
         // Simkl's IMDb rating comes with its vote count; use the pair together when Simkl has it.
         val rated = if (s.rating != null) c.copy(rating = s.rating, votes = s.votes) else c
         rated.or(s).or(w)
+    }
+
+    private const val ID_NS = "facts_id"
+
+    /** H-11: the IMDb id for [title] ([year]) from Cinemeta search; cached 7 days (also "none", as an empty id). */
+    internal fun findImdb(client: OkHttpClient, title: String, year: Int?, movie: Boolean): String? {
+        val key = "${if (movie) "m" else "s"}|${norm(title)}|${year ?: 0}"
+        dev.asfakul.yumeiro.cache.DataCache.read(ID_NS, key, CACHE_MS)?.let { return it.ifBlank { null } }
+        val body = get(client, "https://v3-cinemeta.strem.io/catalog/${if (movie) "movie" else "series"}/top/search=${java.net.URLEncoder.encode(title.take(80), "UTF-8").replace("+", "%20")}.json")
+            ?: return null // offline or failed: not cached, asked again next time
+        val id = pickImdb(parseSearch(body), title, year)
+        dev.asfakul.yumeiro.cache.DataCache.write(ID_NS, key, id.orEmpty())
+        android.util.Log.i("YuFacts", "imdb lookup '${title.take(40)}' ${year ?: "?"} -> ${id ?: "none"}")
+        return id
+    }
+
+    internal data class Hit(val id: String, val name: String, val year: Int?)
+
+    internal fun parseSearch(body: String): List<Hit> = runCatching {
+        val metas = (json.parseToJsonElement(body) as? kotlinx.serialization.json.JsonObject)?.get("metas") as? kotlinx.serialization.json.JsonArray ?: return emptyList()
+        metas.mapNotNull { el ->
+            val o = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            fun s(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+            val id = (s("imdb_id") ?: s("id"))?.takeIf { IMDB.matches(it) } ?: return@mapNotNull null
+            Hit(id, s("name") ?: return@mapNotNull null, (s("releaseInfo") ?: s("year"))?.take(4)?.toIntOrNull())
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * Pure: the hit with the same title (case, accents and punctuation ignored). With a [year], the hit's year must
+     * be within one of it; without one, the title must match exactly one hit. Otherwise null (a wrong page is worse
+     * than none).
+     */
+    internal fun pickImdb(hits: List<Hit>, title: String, year: Int?): String? {
+        val want = norm(title).ifBlank { return null }
+        val same = hits.filter { norm(it.name) == want }
+        if (year != null) return same.firstOrNull { it.year != null && kotlin.math.abs(it.year - year) <= 1 }?.id
+        return same.singleOrNull()?.id
+    }
+
+    internal fun norm(s: String): String {
+        val n = java.text.Normalizer.normalize(s.lowercase(java.util.Locale.ROOT), java.text.Normalizer.Form.NFD)
+        val b = StringBuilder(n.length)
+        var space = false
+        for (c in n) {
+            when {
+                Character.getType(c) == Character.NON_SPACING_MARK.toInt() -> {}
+                c.isLetterOrDigit() -> { b.append(c); space = false }
+                c == '&' -> { if (!space && b.isNotEmpty()) b.append(' '); b.append("and "); space = true }
+                else -> if (!space && b.isNotEmpty()) { b.append(' '); space = true }
+            }
+        }
+        return b.toString().trim()
     }
 
     private fun get(client: OkHttpClient, url: String): String? = runCatching {

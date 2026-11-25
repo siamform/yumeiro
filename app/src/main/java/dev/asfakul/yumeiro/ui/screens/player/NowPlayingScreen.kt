@@ -293,7 +293,7 @@ fun NowPlayingScreen(
                             onReload = { lyricsReload++ },
                         )
                         PANEL_QUEUE -> QueuePanel(playbackState, onPlayQueueIndex)
-                        PANEL_INFO -> if (track != null) SongInfoPanel(track, playbackState.audioCodec) else EmptyPanel("Nothing is playing")
+                        PANEL_INFO -> if (track != null) SongInfoPanel(track, playbackState.audioCodec, playbackState.durationMs) else EmptyPanel("Nothing is playing")
                         else -> ArtworkPanel(
                             track = track,
                             lyrics = lyricsState.lyrics,
@@ -694,7 +694,7 @@ private fun CodecLine(codec: dev.asfakul.yumeiro.player.AudioCodecInfo) {
 }
 
 @Composable
-private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.AudioCodecInfo? = null) {
+private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.AudioCodecInfo? = null, playerDurationMs: Long = 0L) {
     val context = LocalContext.current
     val details by produceState<TrackDetails?>(null, track.uri) {
         value = runCatching { TrackDetailsRepository.loadDetails(context, track.uri) }.getOrNull() ?: TrackDetails()
@@ -710,7 +710,8 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         d?.year?.let { add("Year" to it) }
         d?.trackNumber?.let { add("Track" to it) }
         d?.discNumber?.let { add("Disc" to it) }
-        add("Duration" to formatDuration(track.durationMs))
+        // H-8: the file's own duration (then the player's) when the library row has none.
+        add("Duration" to (dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, d?.durationMs, playerDurationMs)?.let(::formatDuration) ?: if (d == null) "\u2026" else "Unknown"))
         d?.format?.let { add("Format" to it) }
         // Live from the decoder first (works for online songs too), the file's tags otherwise.
         codec?.codecName?.let { add("Codec" to (if (codec.lossless) "$it (lossless)" else it)) }
@@ -720,7 +721,8 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         (codec?.bitDepthLabel ?: d?.bitsPerSample?.let { "$it-bit" })?.let { add("Bit depth" to it) }
         codec?.channelsLabel?.let { add("Channels" to it) }
         codec?.decoder?.let { add("Decoder" to "${codec.decoderKind} · $it") }
-        if (track.sizeBytes > 0) add("Size" to formatFileSize(track.sizeBytes))
+        // H-8: always shown (it used to vanish when the library row had 0).
+        add("File size" to dev.asfakul.yumeiro.player.SongFacts.sizeLabel(dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, d?.sizeBytes), track.uri, ::formatFileSize).let { if (d == null && it == "Unknown") "\u2026" else it })
         if (track.playCount > 0) add("Plays" to track.playCount.toString())
         add("Folder" to track.folderName)
         d?.path?.let { add("Path" to it) }
@@ -738,7 +740,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
             Text("Song info", style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
         }
         items(rows, key = { it.first }) { (label, value) ->
-            Row(Modifier.fillMaxWidth()) {
+            Row(Modifier.fillMaxWidth().testTag("song_info_${label.lowercase().replace(' ', '_')}")) {
                 Text(label, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, modifier = Modifier.width(104.dp))
                 Text(value.ifBlank { "Unknown" }, style = MaterialTheme.typography.bodyMedium, color = TextPrimary, modifier = Modifier.weight(1f))
             }

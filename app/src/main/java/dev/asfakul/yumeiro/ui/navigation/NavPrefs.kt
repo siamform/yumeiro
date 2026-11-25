@@ -57,6 +57,8 @@ import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.outlined.Link
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,6 +109,8 @@ object NavPrefs {
         UPCOMING("upcoming", "Airing soon", "New episodes of what you follow", nav("upcoming", "Airing", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth), newer = true),
         READING("reading", "Reading", "Manga and books you read", nav("reading", "Reading", Icons.Filled.AutoStories, Icons.Outlined.AutoStories), newer = true),
         TRACKING("tracking", "Tracking", "AniList and MyAnimeList sync", nav("tracking", "Tracking", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges), newer = true),
+        // H-12 (owner item 12): straight to "Play link" (URL, M3U8, MPD, RTSP, magnet), the Network Stream page.
+        NETWORK_STREAM("network_stream", "Network stream", "Play a link: URL, M3U8, DASH, RTSP or magnet", nav("network_stream", "Stream", Icons.Filled.Link, Icons.Outlined.Link)),
         ;
         companion object {
             fun of(id: String?): Shortcut? = entries.firstOrNull { it.id == id }

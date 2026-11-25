@@ -86,11 +86,18 @@ class GroupGDeviceTest {
         val tv = has("tv_nav_rail")
         log("start tv=$tv topbarSearch=${n("topbar_search_action")}")
         if (!tv) assertEquals("all extensions: the top bar keeps its magnifier", 1, n("topbar_search_action"))
+        // TV run 45697947308: the first row (MovieBox) failed to load on CI, so its page had an error card and
+        // nothing to search. The test opens an extension whose section really has titles.
+        val ready = runCatching { rule.waitUntil(180_000) { dev.asfakul.yumeiro.ui.screens.online.yumixReadyNames().isNotEmpty() }; true }.getOrDefault(false)
+        log("ready=$ready ${dev.asfakul.yumeiro.ui.screens.online.yumixDebugSummary()}")
+        assertTrue("an extension loaded titles: ${dev.asfakul.yumeiro.ui.screens.online.yumixDebugSummary()}", ready)
         FirstRun.tapVisible(rule, "online_filter"); waitTag("online_filter_sheet")
         val rows = rowTags()
-        log("sheet rows: $rows")
-        assertTrue("need an extension in the sheet: $rows", rows.isNotEmpty())
-        rule.onAllNodesWithTag(rows.first(), true)[0].performClick(); rule.waitForIdle()
+        val names = dev.asfakul.yumeiro.ui.screens.online.yumixReadyNames()
+        val pick = rows.firstOrNull { it.removePrefix("online_filter_") in names } ?: rows.firstOrNull()
+        log("sheet rows: $rows ready=$names pick=$pick")
+        assertTrue("need an extension in the sheet: $rows", pick != null)
+        rule.onAllNodesWithTag(pick!!, true)[0].performClick(); rule.waitForIdle()
         waitTag("online_channel_header", 60_000)
         waitTag("hue_section_search", 120_000)
         rule.waitForIdle()
@@ -99,7 +106,7 @@ class GroupGDeviceTest {
             "showing" to rule.onAllNodesWithText("Showing", substring = true).fetchSemanticsNodes().size,
             "filter" to n("online_filter_active"), "clear" to n("online_filter_active_clear"),
         )
-        log("RESULT_A ${rows.first()} $found")
+        log("RESULT_A $pick $found")
         FirstRun.shot("groupg_one_extension")
         assertEquals("one header: $found", 1, found["header"])
         assertEquals("one search box: $found", 1, found["box"])

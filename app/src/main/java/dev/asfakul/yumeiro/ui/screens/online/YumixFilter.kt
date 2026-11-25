@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -97,9 +99,13 @@ internal fun SourceFilterSheet(
     /** YF-2 (owner list 10): where each entry comes from (CloudStream, Vega, SkyStream…); null = no source chips. */
     group: ((String) -> String?)? = null,
     pinMax: Int = dev.asfakul.yumeiro.online.PinnedExtensions.MAX,
+    /** H-5 (owner item 5): the extensions "All" uses when Yumeiro opens; null = the option isn't offered here. */
+    defaults: Set<String>? = null,
+    onSaveDefaults: ((Set<String>) -> Unit)? = null,
 ) {
     val p = LocalMtPalette.current
     val t = texts
+    var editingDefaults by rememberSaveable { mutableStateOf(false) }
     fun nameOf(id: String) = label?.invoke(id) ?: id
     // G9-8 (YF-TV-1): on TV the half-height sheet left every row below the second one off-screen,
     // and a remote cannot drag a sheet up. G15-1 (NBUG-10, ADR-031): phones too — a half-height sheet
@@ -125,7 +131,13 @@ internal fun SourceFilterSheet(
                     Text(t.title, color = p.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text(t.subtitle(names.size), color = p.textSecondary, fontSize = 12.sp)
                 }
-                if (names.size >= SEARCH_FROM) IconButton(
+                if (defaults != null && onSaveDefaults != null && !editingDefaults) IconButton(
+                    onClick = { editingDefaults = true; searching = false; query = "" },
+                    modifier = Modifier.size(48.dp).testTag("${t.tag}-defaults"),
+                ) {
+                    Icon(Icons.Default.Tune, "Default extensions", tint = if (defaults.isNotEmpty()) p.accent else p.textSecondary)
+                }
+                if (names.size >= SEARCH_FROM && !editingDefaults) IconButton(
                     onClick = { if (searching) { searching = false; query = "" } else searching = true },
                     modifier = Modifier.size(48.dp).testTag("${t.tag}-search-open"),
                 ) {
@@ -134,6 +146,12 @@ internal fun SourceFilterSheet(
                 if (selected != null) TextButton(onClick = { onPick(null) }, modifier = Modifier.testTag("${t.tag}_clear")) {
                     Text("Clear", color = p.accent, fontWeight = FontWeight.SemiBold)
                 }
+            }
+            if (editingDefaults && defaults != null && onSaveDefaults != null) {
+                DefaultsEditor(names, defaults, pins, t.tag, ::nameOf, onCancel = { editingDefaults = false }) { picked ->
+                    onSaveDefaults(picked); editingDefaults = false
+                }
+                return@Column
             }
             // R15 Phase 5: pinned extensions first (in pin order), then the rest.
             val shown = remember(fromSource, query, pins) {
@@ -161,7 +179,10 @@ internal fun SourceFilterSheet(
             val pinnedShown = remember(shown, pins) { shown.count { it in pins } }
             val sectioned = onTogglePin != null && pinnedShown > 0
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-                if (query.isBlank() && source == null) item("all") { FilterRow(null, t.allTitle, t.allSub, selected == null, tagPrefix = t.tag) { onPick(null) } }
+                if (query.isBlank() && source == null) item("all") {
+                    val mine = defaults?.count { it in names } ?: 0
+                    FilterRow(null, t.allTitle, if (mine > 0) "Your $mine default extension${if (mine == 1) "" else "s"}, mixed in one feed" else t.allSub, selected == null, tagPrefix = t.tag) { onPick(null) }
+                }
                 if (shown.isEmpty()) item("none") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("${t.tag}_empty")) {
                         Text(if (query.isBlank()) "Nothing from this source" else "${t.noneCalled} \"${query.trim()}\"", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -308,6 +329,51 @@ internal fun <T> filterByTitle(items: List<T>, query: String, title: (T) -> Stri
 
 /** Most titles a section search keeps loading pages for before it asks the user to search the source. */
 internal const val SECTION_SEARCH_CAP = 2000
+
+/**
+ * H-5: pick the extensions "All" uses when Yumeiro opens. Check one or more and Save (Save stays off with none
+ * checked); "Use every extension" goes back to all of them.
+ */
+@Composable
+private fun DefaultsEditor(
+    names: List<String>, current: Set<String>, pins: List<String>, tag: String, nameOf: (String) -> String,
+    onCancel: () -> Unit, onSave: (Set<String>) -> Unit,
+) {
+    val p = LocalMtPalette.current
+    val picked = remember(current) { androidx.compose.runtime.mutableStateListOf<String>().apply { addAll(current.filter { it in names }) } }
+    androidx.activity.compose.BackHandler { onCancel() }
+    Column(Modifier.fillMaxWidth().testTag("${tag}_defaults")) {
+        Text(
+            "Yumix opens with these. Pick at least one; you can still pick any extension from this list later.",
+            color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+        )
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
+            items(dev.asfakul.yumeiro.online.PinnedExtensions.pinnedFirst(names, pins), key = { it }) { n ->
+                val on = n in picked
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                        .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox) { if (on) picked.remove(n) else picked.add(n) }
+                        .padding(horizontal = 16.dp).testTag("${tag}_default_$n"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.Checkbox(checked = on, onCheckedChange = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text(nameOf(n), color = p.textPrimary, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { onSave(emptySet()) }, modifier = Modifier.heightIn(min = 48.dp).testTag("${tag}_defaults_all")) {
+                Text("Use every extension", color = p.textSecondary)
+            }
+            Spacer(Modifier.weight(1f))
+            androidx.compose.material3.Button(
+                onClick = { onSave(picked.toSet()) }, enabled = picked.isNotEmpty(),
+                modifier = Modifier.heightIn(min = 48.dp).testTag("${tag}_defaults_save"),
+            ) { Text(if (picked.isEmpty()) "Pick one or more" else "Save ${picked.size}") }
+        }
+    }
+}
 
 @Composable
 private fun FilterRow(

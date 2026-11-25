@@ -30,7 +30,8 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
  *     Dolby licence) always won. On phones FFmpeg now goes first, but only for the surround
  *     codecs it is better at; everything else stays on the platform decoders.
  *
- * Settings → Audio → Quality and audio → Video decoder: Hardware+ (above, recommended),
+ * Settings → Audio → Quality and audio → Video decoder: Auto (recommended: Hardware+ that switches to
+ * software video decoders by itself when a video fails, see [DecoderAuto]), Hardware+ (above),
  * Hardware (platform decoders only) or Software (FFmpeg first for every format it knows,
  * and software video decoders preferred).
  */
@@ -42,7 +43,12 @@ class YumeiroRenderersFactory(context: Context) : DefaultRenderersFactory(contex
 
     init {
         setEnableDecoderFallback(true)
-        val selector = if (mode == dev.asfakul.yumeiro.player.VideoPrefs.Decoder.SOFTWARE) SoftwareFirstSelector else MediaCodecSelector.DEFAULT
+        val selector = when (mode) {
+            dev.asfakul.yumeiro.player.VideoPrefs.Decoder.SOFTWARE -> SoftwareFirstSelector
+            // Read each time a decoder is chosen, so a retry after a decode failure gets software decoders.
+            dev.asfakul.yumeiro.player.VideoPrefs.Decoder.AUTO -> AutoSelector
+            else -> MediaCodecSelector.DEFAULT
+        }
         // G12: debug-only decoder fault injection (DecoderFaults); release builds never wrap.
         val faults = dev.asfakul.yumeiro.BuildConfig.DEBUG && DecoderFaults.mode != DecoderFaults.Mode.NONE
         if (faults) Log.w(TAG, "decoder fault injection: ${DecoderFaults.mode}")
@@ -108,6 +114,15 @@ class YumeiroRenderersFactory(context: Context) : DefaultRenderersFactory(contex
                 androidx.media3.common.C.FORMAT_HANDLED
         } ?: false
         override fun getCapabilities(): androidx.media3.exoplayer.RendererCapabilities = caps
+    }
+
+    /** Auto: the phone's own order until [DecoderAuto] switched this video to software decoders. */
+    private object AutoSelector : MediaCodecSelector {
+        override fun getDecoderInfos(mimeType: String, requiresSecureDecoder: Boolean, requiresTunnelingDecoder: Boolean) =
+            if (DecoderAuto.softwareFirst && !requiresSecureDecoder) {
+                DecoderAuto.used++
+                SoftwareFirstSelector.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder)
+            } else MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder)
     }
 
     /** Software video decoders before hardware ones (Settings → Video decoder → Software). */

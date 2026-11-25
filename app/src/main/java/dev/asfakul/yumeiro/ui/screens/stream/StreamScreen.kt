@@ -343,6 +343,9 @@ fun StreamScreen(
     // ---- Round 8: Live TV hub state -------------------------------------------------------------
     var pane by rememberSaveable { mutableStateOf("hub") }
     androidx.activity.compose.BackHandler(enabled = pane != "hub") { pane = "hub" }
+    // H-12: the "Network stream" nav shortcut lands on "Play link" (one-shot request, read once).
+    val linkAsked by StreamLaunch.link.collectAsState()
+    androidx.compose.runtime.LaunchedEffect(linkAsked) { if (StreamLaunch.take()) { advanced = false; pane = "link" } }
     // NBUG-15 (ADR-028): liveSel = the playlist picked in "Show videos from" (null = all playlists);
     // liveGroup = the category chip (null = all categories).
     var liveSel by rememberSaveable { mutableStateOf<String?>(null) }
@@ -972,4 +975,13 @@ internal fun StreamRow(
             if (onDelete != null) IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, "Remove", tint = TextTertiary) }
         }
     }
+}
+
+/** H-12: a one-shot "open Play link" request from the Network stream nav shortcut. */
+object StreamLaunch {
+    private val _link = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val link: kotlinx.coroutines.flow.StateFlow<Boolean> = _link
+    fun openLink() { _link.value = true }
+    /** True once per request. */
+    fun take(): Boolean = if (_link.value) { _link.value = false; true } else false
 }

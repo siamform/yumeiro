@@ -669,6 +669,10 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TRACKING -> navigateSub(Screen.Tracking.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.NETWORK_STREAM -> {
+                dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch.openLink()
+                openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
+            }
         }
     }
     val tabBottomBar: @Composable () -> Unit = {
