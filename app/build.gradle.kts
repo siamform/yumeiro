@@ -433,6 +433,9 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.tooling)
   // GATE-1-RENDER: composable names in system traces of debug builds (scripts/gate-trace.pbtxt).
   debugImplementation(libs.androidx.compose.runtime.tracing)
+  // PERF-A1: composable names in macrobenchmark traces of the preview build (macrobenchmark.yml what=jank-trace,
+  // -Pyu.composeTrace=true together with -Pyu.profileGen=true for readable names). Never in a release.
+  if (providers.gradleProperty("yu.composeTrace").orNull == "true") add("previewImplementation", libs.androidx.compose.runtime.tracing)
 }
 
 // One NewPipeExtractor on the classpath: CloudStream depends on "com.github.teamnewpipe" (lowercase),
