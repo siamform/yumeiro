@@ -75,7 +75,15 @@ class PlaylistPagesTest {
             PlaylistStore.createLocal(context, "Big", (1..3000).map { StreamRequest("https://c/$it.m3u8", "Channel $it", group = "G${it % 7}") })
         }
         rule.setContent { MTPlayerTheme { PlaylistDetailScreen(p.id, onBack = {}, onOpenMarket = {}) } }
-        settle { has("playlist_channels") && has("channel_search") }
+        // GROUP C: search and groups are icons; the field opens on the magnifier.
+        settle { has("playlist_channels") && has("channel_search_open") }
+        org.junit.Assert.assertFalse(has("channel_search"))
+        rule.onNodeWithTag("channel_group_filter").performClick()
+        settle { has("channel_group_sheet") && has("channel_group_G3") }
+        rule.onNodeWithTag("channel_group_sheet_done").performClick()
+        settle { !has("channel_group_sheet") }
+        rule.onNodeWithTag("channel_search_open").performClick()
+        settle { has("channel_search") }
         rule.onNodeWithTag("channel_search").performTextInput("zzz-nothing")
         settle { has("playlist_no_match") }
         rule.onNodeWithTag("playlist_no_match_primary").performScrollTo().performClick()

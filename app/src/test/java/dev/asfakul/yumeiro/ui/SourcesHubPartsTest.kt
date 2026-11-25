@@ -48,23 +48,19 @@ class SourcesHubPartsTest {
         rule.setContent { MTPlayerTheme { SourcesHubScreen(onBack = {}, initialTab = 3) } }
         rule.waitUntil(10_000) { has("hub_js") }
         listOf("installed", "browse", "repos").forEach { assertTrue("part $it", has("hub_part_$it")) }
-        // Nothing added: it opens on Repositories with the link field in the page (no dialog), not on a mixed list.
-        assertTrue(has("hub_js_add_field"))
-        assertTrue(has("hub_js_add_paste"))
-        assertTrue("Add is off while the field is empty", addDisabled())
-        rule.onNodeWithTag("hub_js_add_field", true).performTextInput("https://example.org/index.json")
-        rule.waitForIdle()
-        assertFalse("Add is on once a link is typed", addDisabled())
+        // Nothing added: it opens on Repositories; GROUP C: + opens the add sheet (field, Paste, Add).
+        assertTrue(has("hub_js_add_plus"))
+        // The sheet itself (field, Paste, Add off while empty) is covered by GroupCIconsTest.
         // Browse with no repository explains why and leads back to Repositories.
         click("hub_part_browse")
-        assertFalse(has("hub_js_add_field"))
+        assertFalse(has("hub_js_add_plus"))
         assertTrue(has("hub_empty"))
         click("hub_empty_action")
-        assertTrue(has("hub_js_add_field"))
+        assertTrue(has("hub_js_add_plus"))
         // Installed holds only installed sources.
         click("hub_part_installed")
         assertTrue(has("hub_empty"))
-        assertFalse(has("hub_js_add_field"))
+        assertFalse(has("hub_js_add_plus"))
     }
 
     @Test fun stremioHasNoRepositoriesPart() {
@@ -72,7 +68,7 @@ class SourcesHubPartsTest {
         rule.waitUntil(10_000) { has("hub_stremio") }
         assertTrue(has("hub_part_installed") && has("hub_part_browse"))
         assertFalse(has("hub_part_repos"))
-        rule.onNodeWithTag("hub_stremio", true).performScrollToNode(hasTestTag("hub_stremio_add_field"))
-        assertTrue(has("hub_stremio_add_field"))
+        rule.onNodeWithTag("hub_stremio", true).performScrollToNode(hasTestTag("hub_stremio_add_plus"))
+        assertTrue(has("hub_stremio_add_plus"))
     }
 }

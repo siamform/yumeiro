@@ -127,6 +127,8 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
     var feed by rememberSaveable { mutableStateOf(Feed.POPULAR) }
     var query by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf("") }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var sourceSheet by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(query) {
         val q = query.trim()
         if (q.isEmpty()) { submitted = ""; return@LaunchedEffect }
@@ -137,6 +139,14 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
 
     Column(Modifier.fillMaxSize().testTag("novel_home")) {
         SubPageHeader(title = "Novels", onBack = onBack, subtitle = if (state.installed.isEmpty()) "Add a source to start reading" else plugin?.name) {
+            // GROUP C: search and the source choice are icons; the box and the sheet open on demand.
+            if (ready && state.installed.isNotEmpty()) {
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                    if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+                }, "novel_search_open", "Search all novel sources")
+                if (state.installed.size > 1 && submitted.isEmpty() && (feed == Feed.POPULAR || feed == Feed.LATEST))
+                    dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { sourceSheet = true }, "novel_source_filter", "Choose source")
+            }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("novel_manage_sources")) { Icon(Icons.Default.Extension, "Novel sources", tint = TextPrimary) }
         }
         if (!ready) { Column(Modifier.fillMaxSize().padding(top = 8.dp)) { repeat(3) { dev.asfakul.yumeiro.ui.components.CoverRowSkeleton() } }; return@Column } // SKELETON-2
@@ -146,10 +156,14 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
                 primary = "Open novel sources" to onOpenSources, testTag = "novel_empty")
             return@Column
         }
-        dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-            query = query, onQuery = { query = it.take(80) }, hint = "Search all novel sources",
-            tag = "novel_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it.take(80) }, "Search all novel sources", "novel_search")
+        if (sourceSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(onDismiss = { sourceSheet = false }, onReset = null, resultCount = null, tag = "novel_source_sheet") {
+            dev.asfakul.yumeiro.ui.components.FilterGroup("Source") {
+                state.installed.forEach { p ->
+                    FilterPill(p.name, p.id == plugin?.id, { selectedId = p.id; prefs(context).edit().putString("source", p.id).apply() }, testTag = "novel_source_${p.id}")
+                }
+            }
+        }
         if (submitted.isNotEmpty()) {
             SearchAllResults(submitted, onOpenNovel)
             return@Column
@@ -159,13 +173,6 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
             item("f_new") { FilterPill("Latest", feed == Feed.LATEST, { feed = Feed.LATEST }, testTag = "novel_feed_latest") }
             item("f_saved") { FilterPill("Saved", feed == Feed.SAVED, { feed = Feed.SAVED }, testTag = "novel_feed_saved") }
             item("f_hist") { FilterPill("Continue", feed == Feed.HISTORY, { feed = Feed.HISTORY }, testTag = "novel_feed_history") }
-        }
-        if (feed == Feed.POPULAR || feed == Feed.LATEST) {
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("novel_source_bar")) {
-                items(state.installed, key = { it.id }) { p ->
-                    FilterPill(p.name, p.id == plugin?.id, { selectedId = p.id; prefs(context).edit().putString("source", p.id).apply() }, testTag = "novel_source_${p.id}")
-                }
-            }
         }
         when (feed) {
             Feed.SAVED -> EntryGrid(library.values.filter { it.saved }.sortedByDescending { maxOf(it.readAt, it.addedAt) }, "Nothing saved yet", "Tap the bookmark on a novel to keep it here.", onOpenNovel)
@@ -296,32 +303,33 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
     var available by remember { mutableStateOf<List<NovelPlugin>?>(null) }
     var filter by rememberSaveable { mutableStateOf("") }
     var lang by rememberSaveable { mutableStateOf<String?>(null) }
+    var addOpen by rememberSaveable { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var langSheet by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.repos) {
         withContext(Dispatchers.IO) { NovelSources.ensureLoaded(context) }
         available = if (NovelSources.state.value.repos.isEmpty()) emptyList() else NovelSources.available(context)
     }
-    fun addRepo(url: String) {
+    suspend fun addRepoNow(url: String): Boolean {
         busy = "repo"; message = null
-        scope.launch {
-            NovelSources.addRepo(context, url).onSuccess { message = "Added: $it sources"; repoField = "" }.onFailure { message = it.message ?: "Couldn't add that link" }
-            busy = null
-        }
+        val r = NovelSources.addRepo(context, url)
+        r.onSuccess { message = "Added: $it sources"; repoField = "" }.onFailure { message = it.message ?: "Couldn't add that link" }
+        busy = null
+        return r.isSuccess
     }
+    fun addRepo(url: String) { scope.launch { addRepoNow(url) } }
     Column(Modifier.fillMaxSize().testTag("novel_sources")) {
-        SubPageHeader(title = "Novel sources", onBack = onBack, subtitle = "${state.installed.size} installed · ${state.repos.size} repositor${if (state.repos.size == 1) "y" else "ies"}")
+        SubPageHeader(title = "Novel sources", onBack = onBack, subtitle = "${state.installed.size} installed · ${state.repos.size} repositor${if (state.repos.size == 1) "y" else "ies"}") {
+            // GROUP C: + opens the add sheet, ? explains the page (no link box or paragraph in the page).
+            dev.asfakul.yumeiro.ui.components.AddIconButton("Add a novel repository", "novel_repo_plus", { addOpen = true })
+            dev.asfakul.yumeiro.ui.components.HelpIconButton("About novel sources",
+                "Novel sources come from an LNReader plugin list (plugins.min.json). Add a list with +, then install the sources you want. Sources are made by others; Yumeiro only runs them.",
+                "novel_sources_help")
+        }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("repo_add") {
+            item("repo_status") {
                 Column {
-                    Text("Repository", color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                    Text("An LNReader plugin list (plugins.min.json). Sources are made by others; Yumeiro only runs them.", color = TextSecondary, fontSize = 12.sp)
-                    Spacer(Modifier.height(6.dp))
-                    dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(query = repoField, onQuery = { repoField = it.trim().take(400) }, hint = "https://…/plugins.min.json", tag = "novel_repo_field", modifier = Modifier.fillMaxWidth())
-                    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { addRepo(repoField) }, enabled = repoField.length > 8 && busy == null, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                            modifier = Modifier.heightIn(min = 44.dp).testTag("novel_repo_add")) { Text("Add") }
-                        if (NovelSources.LNREADER_INDEX !in state.repos) OutlinedButton(onClick = { addRepo(NovelSources.LNREADER_INDEX) }, enabled = busy == null,
-                            modifier = Modifier.heightIn(min = 44.dp).testTag("novel_repo_lnreader")) { Text("Add LNReader's list", color = TextPrimary) }
-                    }
+                    if (state.repos.isEmpty()) Text("No repositories yet. Tap + to add an LNReader plugin list.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("novel_repo_empty"))
                     if (busy == "repo") LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 6.dp), color = SpotifyGreen)
                     message?.let { Text(it, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp).testTag("novel_sources_message")) }
                 }
@@ -346,13 +354,13 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
             if (!all.isNullOrEmpty()) {
                 item("avail_h") {
                     Column(Modifier.padding(top = 8.dp)) {
-                        Text("Available", color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                        dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(query = filter, onQuery = { filter = it.take(40) }, hint = "Find a source", tag = "novel_plugin_filter", modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-                        val langs = all.groupingBy { it.language }.eachCount().entries.sortedByDescending { it.value }.take(12).map { it.key }
-                        LazyRow(contentPadding = PaddingValues(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            item { FilterPill("All", lang == null, { lang = null }) }
-                            items(langs) { l -> FilterPill(l, lang == l, { lang = if (lang == l) null else l }) }
+                        dev.asfakul.yumeiro.ui.components.YuSectionHeader("Available", lang?.let { "Language: $it" }) {
+                            dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || filter.isNotEmpty(), {
+                                if (searchOpen || filter.isNotEmpty()) { searchOpen = false; filter = "" } else searchOpen = true
+                            }, "novel_plugin_search", "Find a source")
+                            dev.asfakul.yumeiro.ui.components.FilterIconButton(if (lang != null) 1 else 0, { langSheet = true }, "novel_lang_filter", "Language")
                         }
+                        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || filter.isNotEmpty(), filter, { filter = it.take(40) }, "Find a source", "novel_plugin_filter", horizontalPadding = 0.dp)
                     }
                 }
                 val shown = all.filter { p -> state.installed.none { it.id == p.id } && (lang == null || p.language == lang) && (filter.isBlank() || p.name.contains(filter, true)) }
@@ -361,6 +369,22 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
                         busy = p.id; scope.launch { NovelSources.install(context, p).onSuccess { message = "${p.name} installed" }.onFailure { message = it.message }; busy = null }
                     }, onRemove = {})
                 }
+            }
+        }
+    }
+    if (addOpen) dev.asfakul.yumeiro.ui.components.AddLinkSheet(
+        "Add a novel repository", "https://…/plugins.min.json", "An LNReader plugin list (plugins.min.json).", "novel_repo",
+        onDismiss = { addOpen = false }, onAdd = { addRepoNow(it) },
+    ) {
+        if (NovelSources.LNREADER_INDEX !in state.repos) OutlinedButton(onClick = { addRepo(NovelSources.LNREADER_INDEX); addOpen = false }, enabled = busy == null,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("novel_repo_lnreader")) { Text("Add LNReader's list", color = TextPrimary) }
+    }
+    val allForLang = available.orEmpty()
+    if (langSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(onDismiss = { langSheet = false }, onReset = { lang = null }, resultCount = null, tag = "novel_lang_sheet") {
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Language") {
+            FilterPill("All", lang == null, { lang = null }, testTag = "novel_lang_all")
+            allForLang.groupingBy { it.language }.eachCount().entries.sortedByDescending { it.value }.map { it.key }.forEach { l ->
+                FilterPill(l, lang == l, { lang = if (lang == l) null else l }, testTag = "novel_lang_$l")
             }
         }
     }

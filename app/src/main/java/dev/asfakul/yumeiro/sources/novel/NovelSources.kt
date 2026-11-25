@@ -73,6 +73,15 @@ object NovelSources {
         loaded = true
     }
 
+    /** Tests only: show these lists without disk or network (UI tests of the sources pages). */
+    @Volatile internal var availableForTest: List<NovelPlugin>? = null
+
+    @androidx.annotation.VisibleForTesting
+    internal fun setForTest(state: State, available: List<NovelPlugin>? = null) = synchronized(lock) {
+        loaded = true; otherRepos = emptyList(); otherInstalled = emptyList()
+        _state.value = state; availableForTest = available
+    }
+
     private fun change(context: Context, f: (State) -> State) = synchronized(lock) {
         ensureLoaded(context)
         _state.value = f(_state.value)
@@ -112,6 +121,7 @@ object NovelSources {
 
     /** Every plugin in the added repositories (a repository that fails is skipped, not fatal). */
     suspend fun available(context: Context): List<NovelPlugin> = withContext(Dispatchers.IO) {
+        availableForTest?.let { return@withContext it }
         ensureLoaded(context)
         coroutineScope {
             _state.value.repos.map { r -> async { runCatching { fetchIndex(context, r) }.onFailure { Log.w(TAG, "index: ${it.message}") }.getOrDefault(emptyList()) } }

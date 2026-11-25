@@ -620,13 +620,18 @@ fun WatchNumberGrid(
 
 /** Search box used by the channel list (Stream watch page). */
 @Composable
-fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag: String, modifier: Modifier = Modifier, fieldModifier: Modifier = Modifier) {
+fun WatchSearchField(
+    query: String, onQuery: (String) -> Unit, hint: String, tag: String, modifier: Modifier = Modifier, fieldModifier: Modifier = Modifier,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.Search,
+    keyboardType: androidx.compose.ui.text.input.KeyboardType = androidx.compose.ui.text.input.KeyboardType.Text,
+    onDone: (() -> Unit)? = null,
+) {
     val p = LocalMtPalette.current
     Row(
         modifier.clip(RoundedCornerShape(12.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Default.Search, null, tint = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+        Icon(leadingIcon, null, tint = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(8.dp))
         Box(Modifier.weight(1f)) {
             if (query.isEmpty()) Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.4f), fontSize = 13.sp, maxLines = 1)
@@ -652,7 +657,9 @@ fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag
                 BasicTextField(
                     state = state, lineLimits = androidx.compose.foundation.text.input.TextFieldLineLimits.SingleLine,
                     textStyle = textStyle, cursorBrush = SolidColor(p.accent),
-                    keyboardOptions = KeyboardOptions(showKeyboardOnFocus = false),
+                    keyboardOptions = KeyboardOptions(showKeyboardOnFocus = false, keyboardType = keyboardType,
+                        imeAction = if (onDone != null) androidx.compose.ui.text.input.ImeAction.Done else androidx.compose.ui.text.input.ImeAction.Default),
+                    onKeyboardAction = if (onDone != null) ({ onDone() }) else null,
                     modifier = Modifier.fillMaxWidth().then(fieldModifier)
                         .onPreviewKeyEvent { e ->
                             val ok = e.key == Key.DirectionCenter || e.key == Key.Enter || e.key == Key.NumPadEnter
@@ -665,6 +672,9 @@ fun WatchSearchField(query: String, onQuery: (String) -> Unit, hint: String, tag
                 BasicTextField(
                     value = query, onValueChange = onQuery, singleLine = true,
                     textStyle = textStyle, cursorBrush = SolidColor(p.accent),
+                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType,
+                        imeAction = if (onDone != null) androidx.compose.ui.text.input.ImeAction.Done else androidx.compose.ui.text.input.ImeAction.Default),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { onDone?.invoke() }),
                     modifier = Modifier.fillMaxWidth().then(fieldModifier).testTag(tag),
                 )
             }

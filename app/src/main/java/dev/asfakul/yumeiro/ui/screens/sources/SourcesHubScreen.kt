@@ -165,6 +165,30 @@ internal fun SectionTitle(text: String, hint: String? = null, action: Pair<Strin
     }
 }
 
+/** GROUP C: "Your repositories" with + (add sheet) and ? (what this tab is) instead of a link box and a paragraph. */
+@Composable
+internal fun RepoHeader(hint: String, tagPrefix: String, addLabel: String, helpTitle: String, helpText: String, onAdd: () -> Unit) {
+    dev.asfakul.yumeiro.ui.components.YuSectionHeader("Your repositories", hint) {
+        dev.asfakul.yumeiro.ui.components.AddIconButton(addLabel, tagPrefix + "_add_plus", onAdd)
+        dev.asfakul.yumeiro.ui.components.HelpIconButton(helpTitle, helpText, tagPrefix + "_help")
+    }
+}
+
+/** GROUP C: a list heading with a search icon (slim field only while open) and a refresh icon. */
+@Composable
+internal fun BrowseHeader(
+    title: String, hint: String, searchOpen: Boolean, query: String,
+    onSearch: (Boolean) -> Unit, onQuery: (String) -> Unit, placeholder: String, onRefresh: () -> Unit,
+) {
+    Column {
+        dev.asfakul.yumeiro.ui.components.YuSectionHeader(title, hint) {
+            dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { onSearch(!(searchOpen || query.isNotEmpty())) }, "hub_filter_open", "Search $title".lowercase().replaceFirstChar { it.uppercase() })
+            IconButton(onClick = onRefresh, modifier = Modifier.testTag("hub_refresh")) { Icon(Icons.Default.Refresh, "Refresh", tint = TextSecondary) }
+        }
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, onQuery, placeholder, "hub_filter", horizontalPadding = 0.dp)
+    }
+}
+
 @Composable
 internal fun UrlDialog(title: String, hint: String, examples: String?, onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
@@ -206,6 +230,9 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
     var busy by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var trustAsk by remember { mutableStateOf<TachiyomiExtensions.Installed?>(null) }
+    var addOpen by rememberSaveable(kind) { mutableStateOf(false) }
+    var searchOpen by rememberSaveable(kind) { mutableStateOf(false) }
+    val kTag = "hub_tachiyomi_${kind.name.lowercase()}"
 
     suspend fun refresh() {
         loading = true
@@ -260,9 +287,8 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
                     if (repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its extensions are listed here.", "Add a repository" to { picked = HubPart.REPOS }) }
                     else {
                         item("available") {
-                            SectionTitle("Available", "${shown.size} in your ${repos.size} repositor${if (repos.size == 1) "y" else "ies"}", "Refresh" to { scope.launch { refresh() } })
-                            OutlinedTextField(query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
-                                placeholder = { Text("Filter by name or language (en, ja…)") }, modifier = Modifier.fillMaxWidth().testTag("hub_filter"))
+                            BrowseHeader("Available", "${shown.size} in your ${repos.size} repositor${if (repos.size == 1) "y" else "ies"}", searchOpen, query,
+                                onSearch = { searchOpen = it; if (!it) query = "" }, onQuery = { query = it }, placeholder = "Name or language (en, ja…)") { scope.launch { refresh() } }
                         }
                         if (shown.isEmpty() && !loading) note("noavail", if (query.isBlank()) "Your repositories list nothing for this app yet. Pull Refresh or add another repository." else "Nothing matches \"$query\".")
                         items(shown.take(400), key = { "a" + it.repo.url + it.entry.pkg }) { a ->
@@ -287,19 +313,15 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
                     }
                 }
                 HubPart.REPOS -> {
-                    item("about") {
-                        Text(
-                            if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
-                            else "Mihon / Tachiyomi manga extensions (lib 1.2–1.5). Their titles appear in the Manga section.",
-                            color = TextSecondary, fontSize = 13.sp,
-                        )
+                    item("repos") {
+                        RepoHeader(
+                            "${repos.size} added", kTag, "Add a ${kind.label} repository", "About ${kind.label} extensions",
+                            (if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
+                            else "Mihon / Tachiyomi manga extensions (lib 1.2–1.5). Their titles appear in the Manga section.") +
+                                "\n\nAdd a repository with +: GitHub repo links, raw links or the index.min.json URL. Only add repositories you trust.",
+                        ) { addOpen = true }
                     }
-                    item("add") {
-                        AddLinkField("Add a ${kind.label} repository", "https://…/index.min.json", "GitHub repo links, raw links or the index.min.json URL. Only add repositories you trust.",
-                            "hub_tachiyomi_${kind.name.lowercase()}_add") { addRepo(it) }
-                    }
-                    item("repos") { SectionTitle("Your repositories", "${repos.size} added") }
-                    if (repos.isEmpty()) note("norepo", "No repositories yet. Paste a link above, or pick one from Discover below.")
+                    if (repos.isEmpty()) note("norepo", "No repositories yet. Tap + to add a link, or pick one from Discover below.")
                     items(repos, key = { "r" + it.url }) { r ->
                         HubCard(r.name.ifBlank { r.url }, r.url) {
                             IconButton(onClick = { scope.launch { TachiyomiExtensions.removeRepo(context, r.url); available = available.filterNot { it.repo.url == r.url } } }) {
@@ -322,6 +344,10 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
             }
         }
     }
+    if (addOpen) dev.asfakul.yumeiro.ui.components.AddLinkSheet(
+        "Add a ${kind.label} repository", "https://…/index.min.json", "GitHub repo links, raw links or the index.min.json URL. Only add repositories you trust.",
+        kTag + "_add", onDismiss = { addOpen = false }, onAdd = { addRepo(it) },
+    )
     trustAsk?.let { e ->
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
@@ -363,6 +389,7 @@ private fun StremioTab() {
     fun addUrl(url: String) { scope.launch { addAddon(url) } }
     // SRC-HUB-1: add-ons have no repositories, so two parts: what you added, and where to get more.
     var picked by rememberSaveable { mutableStateOf<HubPart?>(null) }
+    var addOpen by rememberSaveable { mutableStateOf(false) }
     val part = picked ?: if (addons.isNotEmpty()) HubPart.INSTALLED else HubPart.BROWSE
     Column(Modifier.fillMaxSize()) {
         HubPartRow(part, mapOf(HubPart.INSTALLED to addons.size), parts = listOf(HubPart.INSTALLED, HubPart.BROWSE)) { picked = it }
@@ -378,11 +405,14 @@ private fun StremioTab() {
                     }
                 }
             } else {
-                item("about") {
-                    Text("Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or paste any add-on's manifest link. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
-                        color = TextSecondary, fontSize = 13.sp)
+                item("add") {
+                    dev.asfakul.yumeiro.ui.components.YuSectionHeader("Get add-ons", "Add one by link, or pick from Discover") {
+                        dev.asfakul.yumeiro.ui.components.AddIconButton("Add a Stremio add-on", "hub_stremio_add_plus", { addOpen = true })
+                        dev.asfakul.yumeiro.ui.components.HelpIconButton("About Stremio add-ons",
+                            "Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or add any add-on's manifest link with +. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
+                            "hub_stremio_help")
+                    }
                 }
-                item("add") { AddLinkField("Add a Stremio add-on", "https://…/manifest.json", "stremio:// links work too.", "hub_stremio_add") { addAddon(it) } }
                 if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
                     HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
                         TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text("Add", color = SpotifyGreen) }
@@ -396,6 +426,10 @@ private fun StremioTab() {
             }
         }
     }
+    if (addOpen) dev.asfakul.yumeiro.ui.components.AddLinkSheet(
+        "Add a Stremio add-on", "https://…/manifest.json", "stremio:// links work too.", "hub_stremio_add",
+        onDismiss = { addOpen = false }, onAdd = { addAddon(it) },
+    )
 }
 
 // endregion
@@ -411,6 +445,8 @@ private fun JsTab() {
     var available by remember { mutableStateOf<List<JsSources.Entry>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    var addOpen by rememberSaveable { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     suspend fun refresh() { loading = true; available = runCatching { JsSources.available(context) }.getOrDefault(available); loading = false }
     LaunchedEffect(state.repos.size) { if (state.repos.isNotEmpty()) refresh() }
     suspend fun addRepo(url: String): Boolean {
@@ -448,9 +484,8 @@ private fun JsTab() {
                     if (state.repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its sources are listed here.", "Add a repository" to { picked = HubPart.REPOS }) }
                     else {
                         item("avail") {
-                            SectionTitle("Available", "${shown.size} JavaScript sources", "Refresh" to { scope.launch { refresh() } })
-                            OutlinedTextField(query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
-                                placeholder = { Text("Filter by name or language") }, modifier = Modifier.fillMaxWidth())
+                            BrowseHeader("Available", "${shown.size} JavaScript sources", searchOpen, query,
+                                onSearch = { searchOpen = it; if (!it) query = "" }, onQuery = { query = it }, placeholder = "Name or language") { scope.launch { refresh() } }
                         }
                         if (shown.isEmpty() && !loading) note("noavail", if (query.isBlank()) "Your repositories list no JavaScript sources yet." else "Nothing matches \"$query\".")
                         items(shown.take(400), key = { "a" + it.id }) { e ->
@@ -469,15 +504,12 @@ private fun JsTab() {
                     }
                 }
                 HubPart.REPOS -> {
-                    item("about") {
-                        Text("JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online.",
-                            color = TextSecondary, fontSize = 13.sp)
+                    item("repos") {
+                        RepoHeader("${state.repos.size} added", "hub_js", "Add a JavaScript repository", "About JavaScript sources",
+                            "JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online." +
+                                "\n\nAdd a Mangayomi-format repository with +. Only JavaScript sources are used.") { addOpen = true }
                     }
-                    item("add") {
-                        AddLinkField("Add a JavaScript repository", "https://…/index.json", "Mangayomi-format repositories. Only JavaScript sources are used.", "hub_js_add") { addRepo(it) }
-                    }
-                    item("repos") { SectionTitle("Your repositories", "${state.repos.size} added") }
-                    if (state.repos.isEmpty()) note("norepo", "No repositories yet. Paste a link above, or pick one from Discover below.")
+                    if (state.repos.isEmpty()) note("norepo", "No repositories yet. Tap + to add a link, or pick one from Discover below.")
                     items(state.repos, key = { "r$it" }) { r ->
                         HubCard(r.substringAfter("://").substringBefore("/"), r) {
                             IconButton(onClick = { scope.launch(Dispatchers.IO) { JsSources.removeRepo(context, r) } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
@@ -497,6 +529,10 @@ private fun JsTab() {
             }
         }
     }
+    if (addOpen) dev.asfakul.yumeiro.ui.components.AddLinkSheet(
+        "Add a JavaScript repository", "https://…/index.json", "Mangayomi-format repositories. Only JavaScript sources are used.", "hub_js_add",
+        onDismiss = { addOpen = false }, onAdd = { addRepo(it) },
+    )
 }
 
 // endregion

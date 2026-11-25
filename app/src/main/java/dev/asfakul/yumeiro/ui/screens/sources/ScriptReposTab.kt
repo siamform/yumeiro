@@ -80,12 +80,12 @@ internal fun ScriptReposTab() {
         if (loading) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_scripts"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_scripts"),
             contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("about") {
-                Text("Vega provider repositories run in a sandboxed JavaScript engine: no access to your files, your apps or your home network, " +
-                    "and each call is time-limited. Nuvio and SkyStream repositories are recognised but can't run in this version. " +
-                    "Streams that need DRM keys from a provider are not played.", color = TextSecondary, fontSize = 13.sp)
+            item("repos") {
+                RepoHeader("Vega manifest.json links you trust", "hub_scripts", "Add a script repository", "About script repositories",
+                    "Vega provider repositories run in a sandboxed JavaScript engine: no access to your files, your apps or your home network, " +
+                        "and each call is time-limited. Nuvio and SkyStream repositories are recognised but can't run in this version. " +
+                        "Streams that need DRM keys from a provider are not played.") { add = true }
             }
-            item("repos") { SectionTitle("Your repositories", "Paste a Vega manifest.json link you trust", "Add" to { add = true }) }
             if (state.repos.isEmpty()) item("norepo") {
                 Text("No repositories yet.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
             }

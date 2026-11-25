@@ -56,15 +56,21 @@ private fun MarketFrame(
     val state by SourceMarket.state.collectAsState()
     var expanded by rememberSaveable(tag) { mutableStateOf(startExpanded) }
     var query by rememberSaveable(tag + "_q") { mutableStateOf("") }
+    var searchOpen by rememberSaveable(tag + "_s") { mutableStateOf(false) }
     LaunchedEffect(Unit) { SourceMarket.load(context.applicationContext) }
 
     Column(Modifier.fillMaxWidth().testTag(tag), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(title, hint, (if (expanded) "Hide" else "Show") to { expanded = !expanded })
+        // GROUP C: the catalog search is a magnifier next to Show / Hide; the slim field opens on demand.
+        dev.asfakul.yumeiro.ui.components.YuSectionHeader(title, hint) {
+            if (expanded && state is SourceMarket.State.Ready) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+            }, tag + "_search_open", "Search $title")
+            TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "Hide" else "Show", color = SpotifyGreen) }
+        }
         if (!expanded) return@Column
         when (val s = state) {
             is SourceMarket.State.Ready -> {
-                OutlinedTextField(query, { query = it }, singleLine = true, leadingIcon = { Icon(Icons.Default.Search, null) },
-                    placeholder = { Text("Search by name, language or source") }, modifier = Modifier.fillMaxWidth().testTag(tag + "_search"))
+                dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Name, language or source", tag + "_search", horizontalPadding = 0.dp)
                 controls()
                 content(s.catalog, query, expanded)
                 Text("Listed automatically from GitHub and public catalogs. Yumeiro doesn't check what a repository contains; add the ones you trust.",

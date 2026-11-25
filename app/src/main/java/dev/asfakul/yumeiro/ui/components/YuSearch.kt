@@ -78,11 +78,11 @@ fun SearchIconButton(open: Boolean, onToggle: () -> Unit, tag: String, descripti
 
 /** Filter button with a count of active filters; opens a [FilterSheet]. */
 @Composable
-fun FilterIconButton(active: Int, onClick: () -> Unit, tag: String) {
+fun FilterIconButton(active: Int, onClick: () -> Unit, tag: String, description: String = "Filters") {
     val p = LocalMtPalette.current
     IconButton(onClick = onClick, modifier = Modifier.testTag(tag)) {
         BadgedBox(badge = { if (active > 0) Badge(containerColor = p.accent, contentColor = p.onAccent) { Text("$active") } }) {
-            Icon(Icons.Default.Tune, if (active > 0) "Filters, $active on" else "Filters", tint = if (active > 0) p.accent else p.textPrimary)
+            Icon(Icons.Default.Tune, if (active > 0) "$description, $active on" else description, tint = if (active > 0) p.accent else p.textPrimary)
         }
     }
 }
@@ -99,6 +99,7 @@ fun HeaderSearchField(
     placeholder: String,
     tag: String,
     modifier: Modifier = Modifier,
+    horizontalPadding: androidx.compose.ui.unit.Dp = 16.dp,
 ) {
     val p = LocalMtPalette.current
     val reduced = reducedMotion()
@@ -113,7 +114,7 @@ fun HeaderSearchField(
         LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
         val shape = RoundedCornerShape(22.dp)
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).height(44.dp).clip(shape)
+            Modifier.fillMaxWidth().padding(horizontal = horizontalPadding, vertical = 4.dp).height(44.dp).clip(shape)
                 .background(p.textPrimary.copy(alpha = if (p.isDark) 0.07f else 0.05f))
                 .border(1.dp, p.accent.copy(alpha = 0.45f), shape)
                 .padding(start = 14.dp, end = 4.dp),

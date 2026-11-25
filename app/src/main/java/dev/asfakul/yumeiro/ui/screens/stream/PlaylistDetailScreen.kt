@@ -134,6 +134,8 @@ fun PlaylistDetailScreen(
     var state by remember { mutableStateOf<LoadState>(LoadState.Loading) }
     var refreshing by remember { mutableStateOf(false) }
     var query by rememberSaveable(slug) { mutableStateOf("") }
+    var searchOpen by rememberSaveable(slug) { mutableStateOf(false) }
+    var groupSheet by rememberSaveable(slug) { mutableStateOf(false) }
     var group by rememberSaveable(slug) { mutableStateOf<String?>(null) }
     var menu by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf(false) }
@@ -326,17 +328,20 @@ fun PlaylistDetailScreen(
                         }
                         if (playlist?.enabled != false && channels.isNotEmpty()) {
                             item(key = "filter") {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedTextField(
-                                        query, { query = it }, singleLine = true, colors = streamFieldColors(),
-                                        leadingIcon = { Icon(Icons.Default.Search, null, tint = TextSecondary) },
-                                        trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear search", tint = TextSecondary) } },
-                                        placeholder = { Text("Search ${channels.size} streams") },
-                                        modifier = Modifier.fillMaxWidth().testTag("channel_search"),
-                                    )
-                                    if (groups.size > 1) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        item(key = "all") { Chip("All", group == null) { group = null } }
-                                        items(groups, key = { "g_$it" }) { g -> Chip(g, group == g) { group = if (group == g) null else g } }
+                                // GROUP C: search and the group filter are icons; field and sheet open on demand.
+                                Column {
+                                    dev.asfakul.yumeiro.ui.components.YuSectionHeader("${channels.size} streams", group?.let { "Group: $it" }) {
+                                        dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                                            if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+                                        }, "channel_search_open", "Search streams")
+                                        if (groups.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (group != null) 1 else 0, { groupSheet = true }, "channel_group_filter", "Groups")
+                                    }
+                                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search ${channels.size} streams", "channel_search", horizontalPadding = 0.dp)
+                                }
+                                if (groupSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(onDismiss = { groupSheet = false }, onReset = { group = null }, resultCount = null, tag = "channel_group_sheet") {
+                                    dev.asfakul.yumeiro.ui.components.FilterGroup("Group") {
+                                        dev.asfakul.yumeiro.ui.components.FilterPill("All", group == null, { group = null }, testTag = "channel_group_all")
+                                        groups.forEach { g -> dev.asfakul.yumeiro.ui.components.FilterPill(g, group == g, { group = if (group == g) null else g }, testTag = "channel_group_$g") }
                                     }
                                 }
                             }
