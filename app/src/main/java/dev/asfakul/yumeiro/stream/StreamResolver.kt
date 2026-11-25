@@ -28,7 +28,14 @@ sealed interface Resolution {
      * A web page whose player builds the stream at runtime: open it in the link finder.
      * [auto]: a known file host whose player the finder starts by itself (TeraBox, DiskWala).
      */
-    data class NeedsBrowser(val pageUrl: String, val reason: String, val base: StreamRequest, val auto: Boolean = false) : Resolution
+    data class NeedsBrowser(
+        val pageUrl: String,
+        val reason: String,
+        val base: StreamRequest,
+        val auto: Boolean = false,
+        /** Card title; null = "This is a web page". ADCHAIN-3e: a short link says it is one. */
+        val title: String? = null,
+    ) : Resolution
 
     /** Only the platform's own app may play it (YouTube, DRM subscription services). */
     data class Handoff(val url: String, val platform: String, val reason: String) : Resolution

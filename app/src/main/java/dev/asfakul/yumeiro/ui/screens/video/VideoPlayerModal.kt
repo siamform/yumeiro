@@ -616,7 +616,7 @@ private fun VideoPlayerModalContent(
             is Resolution.NeedsBrowser -> {
                 if (r.auto) pageFinder = r
                 showErrorCard(
-                    "This is a web page",
+                    r.title ?: "This is a web page",
                     r.reason,
                     canRetry = false,
                     action = "Find the video" to { pageFinder = r },
