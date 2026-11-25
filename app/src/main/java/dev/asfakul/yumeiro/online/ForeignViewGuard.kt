@@ -84,7 +84,7 @@ object ForeignViewGuard {
         if (v is ViewGroup) v.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
         v.findFocus()?.clearFocus()
         // Warning level: release builds strip Log.i (proguard-rules.pro), which hid this line in probe 45530059278.
-        Log.w(TAG, "quieted a ${w}x$h ${v.javaClass.simpleName} added by an extension (no screen reader, no focus)")
+        Log.w(TAG, "quieted a ${w}x$h ${v.javaClass.name} added by an extension (no screen reader, no focus)")
     }
 
     /** A framework-reserved-free tag key (an app resource id). */
