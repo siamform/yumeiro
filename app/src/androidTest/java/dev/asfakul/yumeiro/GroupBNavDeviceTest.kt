@@ -108,8 +108,11 @@ class GroupBNavDeviceTest {
     }
 
     @Test fun b_dpadSelectionSlidesTheCapsuleToo() {
+        // A D-pad / keyboard press takes a phone out of touch mode; do the same before focusing.
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         show(reduced = false)
         rule.onNodeWithTag(bottomNavItems[1].testTag).requestFocus()
+        rule.waitForIdle()
         val seen = slideTo(1) { rule.onNodeWithTag(bottomNavItems[1].testTag).performKeyInput { pressKey(Key.DirectionCenter) } }
         val start = tabCentre(0); val end = tabCentre(1)
         val between = seen.filter { it > start + 4f && it < end - 4f }.map { it.toInt() }.distinct()

@@ -23,14 +23,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.asfakul.yumeiro.ui.components.Entrance
 import dev.asfakul.yumeiro.ui.components.LocalReducedMotion
-import dev.asfakul.yumeiro.ui.components.YuLoader
 import dev.asfakul.yumeiro.ui.components.yuEntrance
 import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
 import dev.asfakul.yumeiro.ui.theme.Palettes
@@ -42,7 +42,7 @@ import org.junit.runner.RunWith
 
 /**
  * Group B / B2 + B3 on the device, from real rendered pixels (tag YuGroupB):
- * - B3: the brand loader moves (two frames 300 ms apart differ) and stands still with reduced motion.
+ * (B3, the loader, is in [GroupBLoaderDeviceTest]: infinite animations do not run under a compose test rule.)
  * - B2: a burst of cards rises in staggered (first card further along than the eighth), all end
  *   fully drawn, and showing them again does not replay; on a low-RAM device the cards appear at once.
  */
@@ -50,39 +50,13 @@ import org.junit.runner.RunWith
 class GroupBMotionDeviceTest {
     @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
-    private fun shot(tag: String): ImageBitmap = rule.onNodeWithTag(tag, useUnmergedTree = true).captureToImage()
-
-    private fun diff(a: ImageBitmap, b: ImageBitmap): Int {
-        val pa = a.toPixelMap(); val pb = b.toPixelMap(); var n = 0
-        for (y in 0 until minOf(a.height, b.height)) for (x in 0 until minOf(a.width, b.width)) if (pa[x, y] != pb[x, y]) n++
-        return n
-    }
-
-    private fun loaderMoves(reduced: Boolean): Int {
-        rule.setContent {
-            MTPlayerTheme(Palettes.Dark) { CompositionLocalProvider(LocalReducedMotion provides reduced) { YuLoader() } }
-        }
-        rule.mainClock.autoAdvance = false
-        rule.mainClock.advanceTimeBy(100); rule.waitForIdle()
-        val a = shot("yu_loader")
-        rule.mainClock.advanceTimeBy(300); rule.waitForIdle()
-        val b = shot("yu_loader")
-        rule.mainClock.autoAdvance = true
-        return diff(a, b)
-    }
-
-    @Test fun a_loaderOrbitsAndStandsStillWithReducedMotion() {
-        val moving = loaderMoves(false)
-        Log.i(TAG, "loader pixels changed over 300 ms: $moving")
-        assertTrue("brand loader animates: $moving", moving > 50)
-        Log.i(TAG, "GROUPB_LOADER_A PASS")
-    }
-
-    @Test fun b_loaderStillWithReducedMotion() {
-        val still = loaderMoves(true)
-        Log.i(TAG, "reduced-motion loader pixels changed: $still")
-        assertEquals("reduced motion: loader does not move", 0, still)
-        Log.i(TAG, "GROUPB_LOADER_B PASS")
+    /** Real screen pixels of the node (UiAutomation screenshot: works on API 24 TV too). */
+    private fun shot(tag: String): ImageBitmap {
+        val node = rule.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode()
+        val screen = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
+        val x = node.positionOnScreen.x.toInt(); val y = node.positionOnScreen.y.toInt()
+        val crop = android.graphics.Bitmap.createBitmap(screen, x, y, node.size.width.coerceAtMost(screen.width - x), node.size.height.coerceAtMost(screen.height - y))
+        return crop.asImageBitmap()
     }
 
     private fun centreLum(img: ImageBitmap, i: Int, cards: Int): Float {
@@ -109,6 +83,8 @@ class GroupBMotionDeviceTest {
         }
         rule.mainClock.advanceTimeBy(140); rule.waitForIdle()
         val mid = shot("cards")
+        val scale = android.provider.Settings.Global.getFloat(ctx.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+        Log.i(TAG, "animator scale=$scale")
         val lum = (0 until cards).map { centreLum(mid, it, cards) }
         Log.i(TAG, "lowRam=$lowRam card brightness at 140 ms: ${lum.map { "%.2f".format(it) }}")
         rule.mainClock.advanceTimeBy(1500); rule.waitForIdle()
