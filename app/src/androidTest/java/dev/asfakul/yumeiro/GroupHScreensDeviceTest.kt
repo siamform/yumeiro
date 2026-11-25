@@ -7,7 +7,7 @@ package dev.asfakul.yumeiro
 
 import android.util.Log
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
@@ -35,6 +35,9 @@ import java.io.File
  */
 @RunWith(AndroidJUnit4::class)
 class GroupHScreensDeviceTest {
+    // v2 rule (StandardTestDispatcher): the v1 rule's unconfined dispatcher resumed UpcomingScreen's effect on the
+    // Dispatchers.IO thread after withContext and recomposed there (CalledFromWrongThreadException, then a
+    // SlotTable crash on destroy; TV api24 run 45713636288). That is a test-harness thread, not app behaviour.
     @get:Rule val rule = createComposeRule()
     private val ctx get() = InstrumentationRegistry.getInstrumentation().targetContext
     private fun log(s: String) = Log.i("YuGroupH", s)
