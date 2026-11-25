@@ -27,6 +27,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.Collections
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -66,6 +67,9 @@ class Seek27DeviceTest {
                 return MockResponse.Builder().code(if (range != null) 206 else 200)
                     .addHeader("Content-Type", "video/mp4").addHeader("Accept-Ranges", "bytes")
                     .apply { if (range != null) addHeader("Content-Range", "bytes $start-$end/${clip.size}") }
+                    // SEEK-1e: about 128 KB/s, so the 582 KB clip is never all loaded before the test seeks (run
+                    // 45475835785: seek 1 was served from what was already loaded, no new request, nothing to fail).
+                    .throttleBody(32_768L, 250L, TimeUnit.MILLISECONDS)
                     .body(body).build()
             }
         }
@@ -99,8 +103,8 @@ class Seek27DeviceTest {
         armed.set(true); faultsLeft.set(1)
         onMain { player().seekTo(1_500_000L) }
         val (s1, p1) = waitPlayingNear(1_500_000L, 25_000L)
-        assertEquals("seek 1 met the failed request", 1, faults.get())
         Log.w("YuSeekTest", "SEEK_RESULT seek1 state=$s1 pos=$p1 faults=${faults.get()} ranges=${ranges.takeLast(6)}")
+        assertEquals("seek 1 met the failed request (ranges ${ranges.takeLast(8)})", 1, faults.get())
         assertEquals("seek 1 not playing (state $s1, pos $p1)", Player.STATE_READY, s1)
         assertTrue("seek 1 position $p1", p1 >= 1_499_000L)
 
