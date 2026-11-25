@@ -68,7 +68,8 @@ class PlaybackService : MediaSessionService() {
                 val sources = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
                     dev.asfakul.yumeiro.youtube.YouTubeAudioDataSource.Factory(context.applicationContext)
                 )
-                val player = ExoPlayer.Builder(context.applicationContext).setMediaSourceFactory(sources).build().apply {
+                val player = ExoPlayer.Builder(context.applicationContext, dev.asfakul.yumeiro.player.DynamicRangeCompressor.musicRenderers(context.applicationContext))
+                    .setMediaSourceFactory(sources).build().apply {
                     val audioAttributes = AudioAttributes.Builder()
                         .setUsage(C.USAGE_MEDIA)
                         .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)

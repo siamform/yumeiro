@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.Check
@@ -205,7 +206,10 @@ fun PlaybackSpeedDialog(
 fun AspectRatioDialog(
     currentResizeMode: Int,
     onResizeModeSelect: (Int, String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    // GROUP K: picture size from the dialog (− / + / Reset), so a TV remote can zoom too. Null = no row.
+    zoomScale: Float = 1f,
+    onZoom: ((Int) -> Unit)? = null,
 ) {
     val modes = listOf(
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Fit (Letterbox)", "Maintains original aspect ratio with black bars if necessary"),
@@ -283,6 +287,7 @@ fun AspectRatioDialog(
                         }
                     }
                 }
+                if (onZoom != null) AspectZoomRow(zoomScale, onZoom)
             }
         },
         confirmButton = {
@@ -323,6 +328,7 @@ fun AudioTrackDialog(
             }
         },
         text = {
+          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (audioTracks.isEmpty()) {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer).padding(14.dp),
@@ -395,6 +401,9 @@ fun AudioTrackDialog(
                     }
                 }
             }
+            // H-1: the dynamic range compressor, changed live while the video plays.
+            dev.asfakul.yumeiro.ui.screens.video.DrcPresetRow()
+          }
         },
         confirmButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.testTag("audio_track_done")) { Text("Done", fontWeight = FontWeight.Bold) }
@@ -1158,5 +1167,30 @@ internal fun codecLabel(mime: String?): String {
         m.startsWith("avc") -> "H.264"
         m.startsWith("dolby-vision") -> "Dolby Vision"
         else -> m.uppercase()
+    }
+}
+
+
+/** GROUP K: Zoom − [100 %] + and Reset; the dialog stays open so each press shows its effect. */
+@Composable
+private fun AspectZoomRow(scale: Float, onZoom: (Int) -> Unit) {
+    val atMin = scale <= dev.asfakul.yumeiro.player.VideoZoom.MIN + 0.001f
+    val atMax = scale >= dev.asfakul.yumeiro.player.VideoZoom.MAX - 0.001f
+    Surface(shape = RoundedCornerShape(12.dp), color = DarkSurfaceContainer, modifier = Modifier.fillMaxWidth().testTag("aspect_zoom_row")) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Picture size", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(dev.asfakul.yumeiro.player.VideoZoom.label(scale), style = MaterialTheme.typography.bodySmall, color = TextSecondary,
+                    fontSize = 11.sp, modifier = Modifier.testTag("aspect_zoom_value"))
+            }
+            IconButton(onClick = { onZoom(-1) }, enabled = !atMin, modifier = Modifier.testTag("aspect_zoom_out")) {
+                Icon(Icons.Default.Remove, contentDescription = "Smaller picture", tint = if (atMin) TextSecondary else TextPrimary)
+            }
+            IconButton(onClick = { onZoom(1) }, enabled = !atMax, modifier = Modifier.testTag("aspect_zoom_in")) {
+                Icon(Icons.Default.Add, contentDescription = "Bigger picture", tint = if (atMax) TextSecondary else TextPrimary)
+            }
+            TextButton(onClick = { onZoom(0) }, enabled = !atMin, modifier = Modifier.testTag("aspect_zoom_reset"),
+                colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)) { Text("Reset") }
+        }
     }
 }

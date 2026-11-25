@@ -43,6 +43,15 @@ object VideoZoom {
     /** On release: snap to 100 % when close. */
     fun settle(s: State): State = if (abs(s.scale - MIN) <= SNAP) State() else s
 
+    /** GROUP K: one press of the dialog's − / + (25 % steps on a 25 % grid); 0 = back to 100 %. Pan is kept inside the new size. */
+    const val BUTTON_STEP = 0.25f
+    fun button(s: State, direction: Int, width: Float, height: Float): State {
+        if (direction == 0) return State()
+        val grid = kotlin.math.round(s.scale / BUTTON_STEP) * BUTTON_STEP
+        val next = (if (direction > 0) grid + BUTTON_STEP else grid - BUTTON_STEP).coerceIn(MIN, MAX)
+        return if (next <= MIN + 0.001f) State() else clampPan(s.copy(scale = next), width, height)
+    }
+
     /** "150%" for the on-screen hint. */
     fun label(scale: Float): String = "${(scale * 100f).roundToInt()}%"
 }

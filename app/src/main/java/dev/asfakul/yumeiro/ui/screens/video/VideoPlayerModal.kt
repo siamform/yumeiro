@@ -2473,7 +2473,12 @@ private fun VideoPlayerModalContent(
                     videoZoom = dev.asfakul.yumeiro.player.VideoZoom.State()
                     showToast("Aspect: $label")
                 },
-                onDismiss = { chrome.showAspectRatioDialog = false }
+                onDismiss = { chrome.showAspectRatioDialog = false },
+                zoomScale = videoZoom.scale,
+                onZoom = if (docked) null else ({ dir ->
+                    videoZoom = dev.asfakul.yumeiro.player.VideoZoom.button(videoZoom, dir, playerAreaSize.width.toFloat(), playerAreaSize.height.toFloat())
+                    if (dev.asfakul.yumeiro.BuildConfig.DEBUG) android.util.Log.i("YuAspect", "zoom $dir -> ${videoZoom.scale}")
+                }),
             )
         }
 

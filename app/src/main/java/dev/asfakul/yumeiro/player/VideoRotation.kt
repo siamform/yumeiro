@@ -49,6 +49,7 @@ object VideoRotation {
         var cover: Boolean = false
 
         fun apply(surface: View, box: View) {
+            if (surface is android.view.SurfaceView) { applyLaidOut(surface, box); return }
             val d = normalize(degrees)
             val s = fitScale(d, surface.width.toFloat(), surface.height.toFloat(), box.width.toFloat(), box.height.toFloat(), cover)
             val turned = quarterTurn(d)
@@ -60,6 +61,28 @@ object VideoRotation {
             surface.scaleY = z.scale * s
             surface.translationX = z.panX
             surface.translationY = z.panY
+        }
+
+        /**
+         * GROUP K: a SurfaceView is composited by the system, so view scale is never drawn (pinch zoom
+         * did nothing on the TV renderer). There the zoom is done by layout: the video frame (the
+         * AspectRatioFrameLayout around the surface) is laid out [VideoZoom.State.scale] times the
+         * player box and centred, then panned. The GPU effect already turns the picture there.
+         */
+        private fun applyLaidOut(surface: View, box: View) {
+            val frame = surface.parent as? View ?: return
+            val lp = frame.layoutParams ?: return
+            val z = if (box.width > 0 && box.height > 0) VideoZoom.clampPan(zoom, box.width.toFloat(), box.height.toFloat()) else zoom
+            val w = if (z.zoomed) (box.width * z.scale).toInt() else android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            val h = if (z.zoomed) (box.height * z.scale).toInt() else android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            if (lp.width != w || lp.height != h) {
+                lp.width = w; lp.height = h
+                (lp as? android.widget.FrameLayout.LayoutParams)?.gravity = android.view.Gravity.CENTER
+                frame.layoutParams = lp
+            }
+            frame.translationX = z.panX
+            frame.translationY = z.panY
+            surface.rotation = 0f; surface.scaleX = 1f; surface.scaleY = 1f
         }
     }
 }

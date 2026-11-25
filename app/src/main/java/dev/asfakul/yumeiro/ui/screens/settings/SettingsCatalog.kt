@@ -59,9 +59,9 @@ object SettingsCatalog {
             listOf("bottom bar", "tabs", "taskbar", "nav", "shortcut", "menu", "dock"),
             settings = listOf("Reset to default")),
 
-        PLAYER(Group.VIDEO, "Video player", "Background play, picture-in-picture, volume boost, Back button, info overlay",
-            listOf("video", "pip", "floating", "minimize", "background", "volume", "boost", "louder", "stats for nerds", "controls", "buttons", "customize"),
-            settings = listOf("Background play", "Picture-in-picture", "Volume boost up to 200 %", "Back button while a video plays", "Player info overlay",
+        PLAYER(Group.VIDEO, "Video player", "Background play, picture-in-picture, volume boost, compressor, Back button, info overlay",
+            listOf("video", "pip", "floating", "minimize", "background", "volume", "boost", "louder", "compressor", "drc", "night mode", "dynamic range", "dialogue", "stats for nerds", "controls", "buttons", "customize"),
+            settings = listOf("Background play", "Picture-in-picture", "Volume boost up to 200 %", "Dynamic range compressor", "Back button while a video plays", "Player info overlay",
                 "Player controls", "Buttons on the bar", "Previous and next video", "Rewind and forward 10 s", "Fullscreen button")),
         VIDEO_QUALITY(Group.VIDEO, "Video quality & playback", "Default quality, Sub or Dub, speed, decoder, Anime4K, default player, torrents",
             listOf("video", "resolution", "1080p", "720p", "dub", "sub", "renderer", "external player", "vlc", "mx player", "upscale", "torrent", "magnet", "denoise", "de-blur", "sharpen"),

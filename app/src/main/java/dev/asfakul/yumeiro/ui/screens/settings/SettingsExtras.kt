@@ -256,6 +256,10 @@ fun VideoPlayerSettingsCard() {
                 { PlayerSettings.setVolumeBoost(context, it) }, "toggle_volume_boost")
             SettingsDivider()
         }
+        // H-1: dynamic range compressor, every video player path (also the TV, for decoded sound).
+        dev.asfakul.yumeiro.ui.screens.video.DrcPresetRow(Modifier.padding(top = 6.dp))
+        dev.asfakul.yumeiro.ui.screens.video.DrcCustomSliders()
+        SettingsDivider()
         val back by PlayerSettings.backAction.collectAsState()
         Text("Back button while a video plays", color = TextPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
         Text("You can also swipe down on the video to shrink it", color = TextSecondary, style = MaterialTheme.typography.bodySmall)

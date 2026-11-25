@@ -42,6 +42,7 @@ class YumeiroRenderersFactory(context: Context) : DefaultRenderersFactory(contex
         dev.asfakul.yumeiro.player.AudioQuality.current() == dev.asfakul.yumeiro.player.AudioQuality.Tier.ATMOS
 
     init {
+        dev.asfakul.yumeiro.player.DynamicRangeCompressor.load(context) // H-1: the saved compressor setting
         setEnableDecoderFallback(true)
         val selector = when (mode) {
             dev.asfakul.yumeiro.player.VideoPrefs.Decoder.SOFTWARE -> SoftwareFirstSelector
@@ -56,12 +57,21 @@ class YumeiroRenderersFactory(context: Context) : DefaultRenderersFactory(contex
     }
 
     override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink? {
-        if (passthrough) return super.buildAudioSink(context, enableFloatOutput, enableAudioTrackPlaybackParams)
+        // H-1: the dynamic range compressor sits in every sink (it copies samples through when off).
+        // Encoded passthrough (TV / Atmos) never reaches a PCM processor, so the receiver's own night
+        // mode applies there; decoded PCM on a TV is still compressed.
+        val drc = arrayOf<androidx.media3.common.audio.AudioProcessor>(dev.asfakul.yumeiro.player.DynamicRangeCompressor.Processor())
+        if (passthrough) return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+            .setEnableFloatOutput(enableFloatOutput)
+            .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+            .setAudioProcessors(drc)
+            .build()
         @Suppress("DEPRECATION")
         return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder()
             .setAudioCapabilities(androidx.media3.exoplayer.audio.AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+            .setAudioProcessors(drc)
             .build()
     }
 
