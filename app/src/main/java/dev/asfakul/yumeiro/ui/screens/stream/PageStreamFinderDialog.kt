@@ -85,7 +85,7 @@ internal const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple
 private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier.background(DarkSurface).testTag("page_finder_auto"), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(32.dp)) {
-            androidx.compose.material3.CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(42.dp))
+            dev.asfakul.yumeiro.ui.components.YuLoader(size = 56.dp, label = "Looking for streams")
             Text("Finding the video on $host", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             androidx.compose.animation.AnimatedContent(step, label = "autoStep") { Text("$it…", color = TextSecondary, fontSize = 13.sp) }
             androidx.compose.material3.TextButton(onClick = onShowPage, modifier = Modifier.testTag("page_finder_show_page")) {

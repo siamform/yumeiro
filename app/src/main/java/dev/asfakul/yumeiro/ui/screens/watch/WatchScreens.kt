@@ -189,7 +189,7 @@ fun PlayerBrandBar(
 @Composable
 fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag: String = "watch_status", overline: String? = null) {
     Column(Modifier.align(Alignment.Center).testTag(tag), horizontalAlignment = Alignment.CenterHorizontally) {
-        CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(34.dp))
+        dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp, color = SpotifyGreen)
         Spacer(Modifier.height(10.dp))
         if (overline != null) {
             Text(overline, color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, modifier = Modifier.testTag("watch_status_kind"))

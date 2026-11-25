@@ -141,7 +141,7 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
                             modifier = Modifier.fillMaxWidth().padding(top = 12.dp).testTag("tg_engine_progress"),
                         )
                     }
-                    else -> CircularProgressIndicator(Modifier.size(32.dp).testTag("tg_starting"))
+                    else -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.testTag("tg_starting"), size = 48.dp, label = "Starting Telegram")
                 }
             }
             BackHandler { onBack() }
@@ -170,7 +170,7 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
                             Text("Telegram closed.", color = p.textSecondary)
                             TextButton(onClick = { session = null; attempt++ }, modifier = Modifier.testTag("tg_reopen")) { Text("Open again") }
                         }
-                        else -> CircularProgressIndicator(Modifier.size(32.dp).testTag("tg_starting"))
+                        else -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.testTag("tg_starting"), size = 48.dp, label = "Starting Telegram")
                     }
                 }
                 // Back on the code step returns to the phone step; elsewhere it leaves (sign-in resumes next time).

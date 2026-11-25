@@ -568,7 +568,7 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
         when {
             error != null -> NovelError(pluginId, "Couldn't load this chapter", error!!, "novel_reader_error", onRetry = { attempt++ },
                 secondary = NovelSources.webUrl(context, pluginId, current)?.let { url -> "Open in browser" to { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }; Unit } })
-            ps == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
+            ps == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { dev.asfakul.yumeiro.ui.components.YuLoader() }
             else -> LazyColumn(Modifier.fillMaxSize().testTag("novel_text"), state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 32.dp)) {
                 item("top") { Spacer(Modifier.height(4.dp)) }
                 itemsIndexed(ps, key = { i, _ -> "$current#$i" }) { i, para ->

@@ -167,7 +167,7 @@ fun OnlineSubtitleDialog(
                 }
                 Box(Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 340.dp)) {
                     when {
-                        loading -> CircularProgressIndicator(color = SpotifyGreen, modifier = Modifier.align(Alignment.Center))
+                        loading -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center), size = 48.dp, label = "Looking for subtitles")
                         error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
                         searched && results.isEmpty() -> Text(
                             "No subtitles found. Try a shorter title or another language.",

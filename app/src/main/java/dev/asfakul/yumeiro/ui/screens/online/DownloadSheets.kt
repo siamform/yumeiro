@@ -307,7 +307,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
             val list = choices
             when {
                 error != null -> Text(error.orEmpty(), color = TextTertiary, modifier = Modifier.padding(vertical = 16.dp))
-                list == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
+                list == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp) }
                 else -> {
                     val shown = list.filter { it.audioOnly == audioTab }
                     if (shown.isEmpty()) Text("Nothing in this format.", color = TextTertiary, modifier = Modifier.padding(vertical = 16.dp))

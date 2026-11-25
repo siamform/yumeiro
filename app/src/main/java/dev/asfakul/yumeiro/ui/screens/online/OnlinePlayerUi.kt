@@ -129,7 +129,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
         ) {
             // The floating mini player is too small for the status card: a spinner is enough there.
             if (maxWidth >= 260.dp) CompactResolve(state, onClose = onClosePlayer)
-            else CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.align(Alignment.Center).size(28.dp))
+            else dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center), size = 40.dp, color = SpotifyGreen)
         }
         return
     }
@@ -397,7 +397,7 @@ internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlay
                     Button(onClick = { onRetry?.invoke() ?: OnlineSession.retry(context) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Try again") }
                 }
             } else {
-                CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(36.dp))
+                dev.asfakul.yumeiro.ui.components.YuLoader(size = 52.dp, color = SpotifyGreen)
                 Spacer(Modifier.height(12.dp))
                 Text(
                     if (state.links.isEmpty()) "Finding the best source…" else "Found ${state.links.size} source${if (state.links.size == 1) "" else "s"} — starting…",
@@ -489,7 +489,7 @@ private fun BoxScope.CompactResolve(state: OnlineSession.State, onClose: () -> U
                 Button(onClick = { OnlineSession.retry(context) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Try again") }
             }
         } else {
-            CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+            dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp, color = SpotifyGreen)
             Spacer(Modifier.height(10.dp))
             // Film vs episode: the status says what is being opened.
             Text(

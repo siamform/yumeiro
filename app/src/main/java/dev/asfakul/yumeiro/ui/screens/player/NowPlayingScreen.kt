@@ -533,7 +533,7 @@ private fun LyricsPanel(
         val lyrics = state.lyrics
         when {
             state.loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+                dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp, label = "Loading lyrics")
             }
             lyrics == null -> Column(
                 Modifier.weight(1f).fillMaxWidth().padding(24.dp),

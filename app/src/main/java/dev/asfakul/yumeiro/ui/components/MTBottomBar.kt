@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -83,8 +84,9 @@ val DockJunctionCorner = 6.dp
  * - Every tab has a short label under its icon (one line, ellipsis for long pinned names).
  * - The active tab gets an accent pill behind its solid icon and an accent, bold label; inactive
  *   tabs are outlines in the secondary text colour (≥ 4.5:1 on the bar).
- * - The pill grows in with a short spring (scale + fade, never a width animation); with
- *   reduced motion it simply appears.
+ * - B1 (Group B): one capsule for the bar slides to the new tab with a short spring (draw-phase
+ *   translation, never a width or layout animation) and a light haptic tick confirms the change;
+ *   with reduced motion it jumps.
  * Same items, order, routes, test tags and TalkBack labels as before.
  */
 @Composable
@@ -128,6 +130,36 @@ fun MTBottomBar(
                 .background(barColor, shape)
                 .border(1.dp, border, shape)
         ) {
+            // B1: one accent capsule for the whole bar that slides from tab to tab (draw-phase
+            // translation only, no relayout); with reduced motion it jumps. A light haptic tick
+            // confirms a tab change.
+            val selectedIndex = items.indexOfFirst { it.route == currentRoute }
+            val capsule = remember { androidx.compose.animation.core.Animatable(selectedIndex.coerceAtLeast(0).toFloat()) }
+            val capsuleAlpha by animateFloatAsState(if (selectedIndex >= 0) 1f else 0f, if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(160), label = "navCapsuleAlpha")
+            androidx.compose.runtime.LaunchedEffect(selectedIndex, reduced) {
+                if (selectedIndex < 0) return@LaunchedEffect
+                val target = selectedIndex.toFloat()
+                if (reduced || capsuleAlpha == 0f) capsule.snapTo(target)
+                else capsule.animateTo(target, NavCapsule.spec())
+            }
+            val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 4.dp)) {
+                val count = items.size.coerceAtLeast(1)
+                val tabW = maxWidth / count
+                val capW = NavCapsule.width(tabW)
+                Box(
+                    Modifier
+                        .padding(top = NavCapsule.Top)
+                        .size(capW, NavCapsule.Height)
+                        .graphicsLayer {
+                            translationX = (capsule.value * tabW.toPx()) + (tabW - capW).toPx() / 2f
+                            alpha = capsuleAlpha
+                        }
+                        .clip(CircleShape)
+                        .background(pillColor)
+                        .testTag("nav_capsule")
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -135,11 +167,6 @@ fun MTBottomBar(
                 items.forEach { item ->
                     val isSelected = currentRoute == item.route
                     val tint by animateColorAsState(if (isSelected) activeTint else inactive, label = "navTint")
-                    val pill by animateFloatAsState(
-                        if (isSelected) 1f else 0f,
-                        if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 600f),
-                        label = "navPill",
-                    )
                     // Keyboard / D-pad focus: a ring around the tab (touch never focuses it).
                     val tabSource = remember { MutableInteractionSource() }
                     val tabFocused by tabSource.collectIsFocusedAsState()
@@ -153,24 +180,19 @@ fun MTBottomBar(
                                 indication = androidx.compose.material3.ripple(bounded = true, color = activeTint),
                                 role = Role.Tab,
                                 onClickLabel = item.label,
-                            ) { if (!isSelected) onNavigateToRoute(item.route) }
-                            .padding(vertical = 6.dp)
+                            ) { if (!isSelected) { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.SegmentTick); onNavigateToRoute(item.route) } }
+                            .padding(top = NavCapsule.Top)
                             .then(if (tabFocused) Modifier.border(2.dp, activeTint, RoundedCornerShape(16.dp)) else Modifier)
                             .semantics { selected = isSelected; contentDescription = item.label }
                             .testTag(item.testTag)
                             .tourTarget(item.testTag),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                        verticalArrangement = Arrangement.Top,
                     ) {
                         // Up to seven tabs: the pill narrows with the tab (56 dp at most) so it never touches its neighbour.
-                        Box(Modifier.padding(horizontal = 3.dp).widthIn(max = 56.dp).fillMaxWidth().height(30.dp), contentAlignment = Alignment.Center) {
-                            Box(
-                                Modifier.matchParentSize()
-                                    .graphicsLayer { alpha = pill; scaleX = 0.6f + 0.4f * pill; scaleY = 0.85f + 0.15f * pill }
-                                    .clip(CircleShape)
-                                    .background(pillColor)
-                                    .testTag(if (isSelected) "nav_active_pill" else "nav_pill_off")
-                            )
+                        Box(Modifier.padding(horizontal = 3.dp).widthIn(max = 56.dp).fillMaxWidth().height(NavCapsule.Height), contentAlignment = Alignment.Center) {
+                            // Marker for tests / TalkBack trees; the visible capsule is drawn once for the bar.
+                            Box(Modifier.matchParentSize().testTag(if (isSelected) "nav_active_pill" else "nav_pill_off"))
                             androidx.compose.animation.Crossfade(isSelected, animationSpec = androidx.compose.animation.core.tween(if (reduced) 0 else 160), label = "navGlyph") { sel ->
                                 Icon(
                                     imageVector = if (sel) item.selectedIcon else item.unselectedIcon,
@@ -197,4 +219,18 @@ fun MTBottomBar(
             }
         }
     }
+}
+
+/**
+ * B1 capsule geometry and motion. The capsule sits behind the icon of the selected tab: tabs lay
+ * out from [Top] (icon box [Height], 3 dp gap, 13 dp label → centred in the 68 dp bar).
+ */
+object NavCapsule {
+    val Top = 11.dp
+    val Height = 30.dp
+    private val Max = 56.dp
+    fun width(tab: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.Dp = minOf(Max, tab - 6.dp).coerceAtLeast(0.dp)
+    /** Critically damped-ish spring: one small overshoot, settles in ~300 ms. */
+    fun spec(): androidx.compose.animation.core.AnimationSpec<Float> =
+        androidx.compose.animation.core.spring(dampingRatio = 0.78f, stiffness = 520f)
 }

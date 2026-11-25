@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.ui.components.yuEntrance
+import dev.asfakul.yumeiro.ui.components.yuPressScale
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -218,14 +220,15 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
     var sheet by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     val marks by OnlineBookmarks.marks.collectAsState()
     val mark = if (actions) marks[posterMarkKey(item)] else null
+    val pressSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val press = if (actions) Modifier
         .onPreviewKeyEvent { e ->
             if (e.key == Key.Menu && e.type == KeyEventType.KeyUp) { sheet = true; true } else e.key == Key.Menu
         }
-        .combinedClickable(onClick = onClick, onLongClick = { sheet = true }, onLongClickLabel = "Watch later or Favorite")
-    else Modifier.clickable(onClick = onClick)
+        .combinedClickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick, onLongClick = { sheet = true }, onLongClickLabel = "Watch later or Favorite")
+    else Modifier.clickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick)
     if (sheet) PosterActionsSheet(item) { sheet = false }
-    Column((modifier ?: Modifier.width(w)).clip(RoundedCornerShape(14.dp)).then(press).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {
+    Column((modifier ?: Modifier.width(w)).yuEntrance("poster_" + item.key).yuPressScale(pressSource).clip(RoundedCornerShape(14.dp)).then(press).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))

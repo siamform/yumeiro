@@ -659,7 +659,7 @@ private fun MangaReaderChapter(
             error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 StateMessage(Icons.Default.ErrorOutline, "Couldn't open chapter", error, primary = "Retry" to { attempt++ })
             }
-            list == null -> CircularProgressIndicator(color = SpotifyGreen, modifier = Modifier.align(Alignment.Center))
+            list == null -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center))
             vertical -> {
                 val state = rememberLazyListState(initialFirstVisibleItemIndex = start.coerceIn(0, (list.size - 1).coerceAtLeast(0)))
                 LaunchedEffect(state) { snapshotFlow { state.firstVisibleItemIndex }.collect { current = it } }

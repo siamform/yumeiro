@@ -791,7 +791,7 @@ internal fun PlaylistDownloadButton(p: dev.asfakul.yumeiro.online.download.Playl
         contentAlignment = Alignment.Center,
     ) {
         when {
-            fetching -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 2.5.dp, color = SpotifyGreen)
+            fetching -> dev.asfakul.yumeiro.ui.components.YuLoader(size = 36.dp)
             p.allDone -> Icon(Icons.Default.DownloadDone, null, tint = SpotifyGreen)
             p.active > 0 -> {
                 androidx.compose.material3.CircularProgressIndicator(progress = { p.fraction }, modifier = Modifier.size(34.dp).testTag("ytmusic_download_progress"), strokeWidth = 3.dp, color = SpotifyGreen)
