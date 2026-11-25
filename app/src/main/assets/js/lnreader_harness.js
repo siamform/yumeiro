@@ -256,6 +256,12 @@ globalThis.__callPlugin = function (pluginId, method, argsJson) {
   var fn = plugin[method];
   if (typeof fn !== 'function') return Promise.reject(new Error('unknown method: ' + method));
   var args = JSON.parse(argsJson);
+  // NOVEL-3: LNReader's browse screen passes { showLatestNovels, filters } with filters = the plugin's own
+  // `filters` (each with its default `value`) until the person changes them. Plugins read filters.genres.value
+  // and so on without a guard (AllNovel: "cannot read property 'genres' of undefined"), so fill them in the same way.
+  if (method === 'popularNovels' && args.length > 1 && args[1] && typeof args[1] === 'object' && args[1].filters == null) {
+    args[1].filters = plugin.filters || {};
+  }
   return Promise.resolve(fn.apply(plugin, args)).then(function (r) {
     return JSON.stringify(r === undefined ? null : r);
   });
