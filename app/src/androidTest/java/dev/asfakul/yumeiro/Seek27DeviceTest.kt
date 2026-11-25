@@ -98,7 +98,15 @@ class Seek27DeviceTest {
         onMain { IncomingMedia.open(inst.targetContext, StreamRequest(url = server.url("/v.mp4").toString(), title = "Seek 27")) }
         rule.waitUntil(60_000) { PlaybackDiagnostics.state.value.firstFrame }
 
-        // Seek 1: forward, the first range request answers 416.
+        // SEEK-1f: start near the end first (no fault armed). A forward seek less than 256 KB ahead of where the
+        // MP4 reader is can be served by reading on over the same connection (Media3's reload distance), so it
+        // makes no new request (api36, run 45530372748: ranges [(none)]). From near the end, seek 1 and seek 2
+        // are both backward, and a backward seek outside the buffer always opens a new range request.
+        onMain { player().seekTo(2_880_000L) }
+        val (s0, p0) = waitPlayingNear(2_880_000L, 25_000L)
+        assertEquals("start near the end (state $s0, pos $p0)", Player.STATE_READY, s0)
+
+        // Seek 1: backward, the first range request answers 416.
         val firstSeekAt = ranges.size
         armed.set(true); faultsLeft.set(1)
         onMain { player().seekTo(1_500_000L) }
