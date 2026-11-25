@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.network
 
+import dev.asfakul.yumeiro.sources.js.QuickJsGuard
 import android.content.Context
 import com.dokar.quickjs.QuickJs
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,7 @@ import kotlinx.coroutines.withContext
 class JavaScriptEngine(context: Context) {
     @Suppress("UNCHECKED_CAST")
     suspend fun <T> evaluate(script: String): T = withContext(Dispatchers.IO) {
-        val q = QuickJs.create(Dispatchers.IO.limitedParallelism(1))
+        val q = QuickJsGuard.create(Dispatchers.IO.limitedParallelism(1))
         // SRC-1: helper scripts (decoders, unpackers) have no network bindings; 10 s is plenty.
         q.evaluationTimeoutMillis = HELPER_TIMEOUT_MS
         try {
@@ -28,7 +29,7 @@ class JavaScriptEngine(context: Context) {
                 else -> result.toString()
             } as T
         } finally {
-            q.close()
+            QuickJsGuard.close(q)
         }
     }
 

@@ -33,7 +33,7 @@ class QuickJs private constructor(private val js: com.dokar.quickjs.QuickJs) : C
     /** Runs bytecode from [compile]. */
     fun execute(bytecode: ByteArray): Any? = convert(runBlocking(Dispatchers.Unconfined) { js.evaluate<Any?>(bytecode) })
 
-    override fun close() = js.close()
+    override fun close() = dev.asfakul.yumeiro.sources.js.QuickJsGuard.close(js)
 
     private fun convert(v: Any?): Any? = when (v) {
         null, Unit -> null
@@ -47,7 +47,7 @@ class QuickJs private constructor(private val js: com.dokar.quickjs.QuickJs) : C
     companion object {
         /** A new, isolated JavaScript runtime. Close it when done. */
         @JvmStatic
-        fun create(): QuickJs = QuickJs(com.dokar.quickjs.QuickJs.create(Dispatchers.Unconfined).also {
+        fun create(): QuickJs = QuickJs(dev.asfakul.yumeiro.sources.js.QuickJsGuard.create(Dispatchers.Unconfined).also {
             // SRC-1: an extension's script that loops is stopped instead of hanging its thread forever.
             it.evaluationTimeoutMillis = HELPER_TIMEOUT_MS
         })

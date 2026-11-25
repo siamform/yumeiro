@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.sources.ecosystem
 
+import dev.asfakul.yumeiro.sources.js.QuickJsGuard
 import android.content.Context
 import android.content.pm.PackageManager
 import com.dokar.quickjs.QuickJs
@@ -97,7 +98,7 @@ object ScriptRuntime {
                     val host = ScriptHost(bridge, ScriptHost.KvStore(app, storeName), storeName, deadline)
                     var result: String? = null
                     var failure: String? = null
-                    val q = QuickJs.create(Dispatchers.IO.limitedParallelism(1))
+                    val q = QuickJsGuard.create(Dispatchers.IO.limitedParallelism(1))
                     fun left() = (deadline - System.currentTimeMillis()).coerceIn(1L, EVAL_TIMEOUT_MS)
                     try {
                         q.memoryLimit = (if (constrained(app)) 32L else 48L) * 1024 * 1024
@@ -142,7 +143,7 @@ object ScriptRuntime {
                     } catch (e: QuickJsInterruptedException) {
                         throw ScriptException(STOPPED, e)
                     } finally {
-                        runCatching { q.close() }
+                        runCatching { QuickJsGuard.close(q) }
                     }
                 }
             }

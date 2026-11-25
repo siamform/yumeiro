@@ -77,7 +77,7 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun runtime(): QuickJs {
         js?.let { return it }
-        val q = QuickJs.create(Dispatchers.IO.limitedParallelism(1))
+        val q = QuickJsGuard.create(Dispatchers.IO.limitedParallelism(1))
         q.memoryLimit = 64L * 1024 * 1024
         q.maxStackSize = 2L * 1024 * 1024
         // SRC-1: a script that loops must not hold this source's mutex forever (wall clock per evaluate).
@@ -101,7 +101,7 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
     /** Calls `extention.<expr>` (awaiting promises) and parses its JSON result. */
     suspend fun call(expr: String): JsonElement = mutex.withLock {
         val q = try { runtime() } catch (e: QuickJsInterruptedException) {
-            runCatching { js?.close() }; js = null
+            runCatching { js?.let(QuickJsGuard::close) }; js = null
             throw IllegalStateException(STOPPED, e)
         }
         try {
@@ -125,7 +125,7 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
         (call("getHeaders(${JsonPrimitive(url)})") as? JsonObject)?.mapValues { (_, v) -> (v as? JsonPrimitive)?.contentOrNull.orEmpty() }
     }.getOrNull().orEmpty()
 
-    fun close() { runCatching { js?.close() }; js = null }
+    fun close() { runCatching { js?.let(QuickJsGuard::close) }; js = null }
 
     companion object {
         /** SRC-1: loading the runtime and the source. */

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.sources.novel
 
+import dev.asfakul.yumeiro.sources.js.QuickJsGuard
 import android.content.Context
 import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.QuickJsInterruptedException
@@ -46,7 +47,7 @@ class NovelEngine(
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun runtime(): QuickJs {
         js?.let { return it }
-        val q = QuickJs.create(Dispatchers.IO.limitedParallelism(1))
+        val q = QuickJsGuard.create(Dispatchers.IO.limitedParallelism(1))
         q.memoryLimit = 96L * 1024 * 1024
         q.maxStackSize = 2L * 1024 * 1024
         q.evaluationTimeoutMillis = LOAD_TIMEOUT_MS
@@ -123,7 +124,7 @@ class NovelEngine(
         return out.toString()
     }
 
-    fun close() { runCatching { js?.close() }; js = null }
+    fun close() { runCatching { js?.let(QuickJsGuard::close) }; js = null }
 
     companion object {
         const val LOAD_TIMEOUT_MS = 25_000L
