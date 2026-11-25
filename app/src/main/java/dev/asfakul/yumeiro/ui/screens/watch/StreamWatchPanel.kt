@@ -77,6 +77,25 @@ private val RX_STREAMWATCHPANEL_HOT_2 = Regex("""[^\p{L}\p{N}]+""")
 
 /** Channel list helpers (pure, unit tested). */
 object StreamWatch {
+    /**
+     * UP-NEXT-1: the list a video that is NOT on the open Live TV playlist was opened from (a Telegram channel's
+     * videos, ...). The watch page used to list the last Live TV playlist under "Up next on this list" for every
+     * stream, so a Telegram or Yumix video recommended unrelated TV channels.
+     */
+    data class Queue(val label: String, val items: List<StreamRequest>)
+    private val _queue = MutableStateFlow<Queue?>(null)
+    val queue: StateFlow<Queue?> = _queue.asStateFlow()
+
+    /** The caller opening [items] (one of them now) sets where "Up next" comes from. */
+    fun setQueue(label: String, items: List<StreamRequest>) { _queue.value = Queue(label, items.distinctBy { it.url }) }
+
+    /** Up next for [currentUrl]: the open playlist only if the video is on it, else the list it came from, else none. */
+    fun upNext(playlist: List<StreamRequest>, queue: Queue?, currentUrl: String): List<StreamRequest> = when {
+        playlist.any { it.url == currentUrl } -> playlist
+        queue != null && queue.items.any { it.url == currentUrl } -> queue.items
+        else -> emptyList()
+    }
+
     /** Channels of the open playlist with the current one's group first. */
     fun ordered(channels: List<StreamRequest>, currentUrl: String): List<StreamRequest> {
         val group = channels.firstOrNull { it.url == currentUrl }?.group
@@ -138,6 +157,9 @@ object StreamWatch {
 
     fun play(context: android.content.Context, r: StreamRequest) {
         _mode.value = _mode.value - r.url
+        // UP-NEXT-1: a video from a non-playlist list (Telegram channel ...) opens as it did from its own page, not as
+        // a Live TV channel (no Live recent entry, no channel folder).
+        if (StreamRepository.playlist.value.none { it.url == r.url }) { IncomingMedia.open(context, r); return }
         IncomingMedia.open(context, r, recent = IncomingMedia.Recent.LIVE, folder = r.group)
     }
 
@@ -242,14 +264,17 @@ fun androidx.compose.foundation.layout.BoxScope.StreamPlayerOverlay(controlsVisi
 @Composable
 fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val channels by StreamRepository.playlist.collectAsState()
+    val playlistAll by StreamRepository.playlist.collectAsState()
+    val queue by StreamWatch.queue.collectAsState()
+    // UP-NEXT-1: only the list this video belongs to (Live TV playlist, or the list it was opened from).
+    val channels = remember(playlistAll, queue, currentUrl) { StreamWatch.upNext(playlistAll, queue, currentUrl) }
+    val inPlaylist = playlistAll.any { it.url == currentUrl }
     val playlistName by StreamRepository.playlistName.collectAsState()
     val modes by StreamWatch.mode.collectAsState()
     val base = remember(currentUrl, channels) { channels.firstOrNull { it.url == currentUrl } ?: StreamRepository.requestFor(currentUrl) }
     val groups = remember(channels) { channels.mapNotNull { it.group?.takeIf(String::isNotBlank) }.distinct() }
     var group by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
-    val inPlaylist = channels.any { it.url == currentUrl }
     val list = remember(channels, group, query) { StreamWatch.filter(channels, group, query).take(600) }
     val alternatives = remember(channels, currentUrl) { StreamWatch.alternatives(channels, currentUrl) }
     val p = LocalMtPalette.current
@@ -270,8 +295,8 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
         LazyColumn(Modifier.fillMaxSize().testTag("stream_watch_panel"), state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
             item(key = "controls") {
                 WatchControlBar(
-                    onPrevious = if (inPlaylist && channels.size > 1) ({ StreamWatch.neighbour(channels, currentUrl, -1)?.let { StreamWatch.play(context, it) } }) else null,
-                    onNext = if (inPlaylist && channels.size > 1) ({ StreamWatch.neighbour(channels, currentUrl, 1)?.let { StreamWatch.play(context, it) } }) else null,
+                    onPrevious = if (channels.size > 1) ({ StreamWatch.neighbour(channels, currentUrl, -1)?.let { StreamWatch.play(context, it) } }) else null,
+                    onNext = if (channels.size > 1) ({ StreamWatch.neighbour(channels, currentUrl, 1)?.let { StreamWatch.play(context, it) } }) else null,
                     autoNextLabel = "Auto-zap",
                 )
             }
@@ -279,7 +304,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                 val format = base?.resolvedFormat()?.label
                 WatchTitle(
                     title = title,
-                    overline = listOfNotNull("Live", base?.group).joinToString(" · "),
+                    overline = listOfNotNull("Live".takeIf { inPlaylist }, base?.group).joinToString(" · "),
                     meta = listOfNotNull(format, playlistName?.takeIf { inPlaylist }?.let { "from $it" }).joinToString(" · ").ifBlank { null },
                 )
                 PlaybackFactsRow()
@@ -347,14 +372,14 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                 item(key = "label") {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Channels", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                            Text("Up next on this list", color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(if (inPlaylist) "Channels" else "Videos", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                            Text(if (inPlaylist) "Up next on this list" else "Up next from ${queue?.label.orEmpty()}", color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("${channels.size}", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 item(key = "search") {
-                    WatchSearchField(query, { query = it }, "Find a channel", "stream_watch_search", Modifier.fillMaxWidth().padding(horizontal = 12.dp))
+                    WatchSearchField(query, { query = it }, if (inPlaylist) "Find a channel" else "Find a video", "stream_watch_search", Modifier.fillMaxWidth().padding(horizontal = 12.dp))
                 }
                 if (groups.size > 1) item(key = "groups") {
                     LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)) {
@@ -369,7 +394,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                     val (i, ch) = list[k]
                     ChannelRow(i + 1, ch, playing = ch.url == currentUrl, striped = k % 2 == 1) { StreamWatch.play(context, ch) }
                 }
-            } else {
+            } else if (playlistAll.isEmpty() && queue == null) {
                 item(key = "empty") {
                     Text(
                         "Open an M3U playlist in Videos → Live TV to switch channels from here.",

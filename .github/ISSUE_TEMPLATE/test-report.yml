@@ -1,5 +1,5 @@
 name: Test report (owner or community)
-description: Send back the result of a test from docs/OWNER-MANUAL-TESTS.md (OMT-… or U-…).
+description: Send back the result of a test from the owner test list (OMT-… or U-…).
 title: "[Test] <test ID>: pass / fail"
 labels: ["test-report"]
 body:

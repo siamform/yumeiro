@@ -104,6 +104,23 @@ class TelegramPublicTest {
         assertEquals("https://cdn.example.test/file/9.mp4", page.posts.first { it.id == 9 }.videoUrl)
     }
 
+    /**
+     * TG-PLAY-1: real t.me/s/ markup (captured 2026-11-23). Every playable video carries Telegram's hidden
+     * "not supported in your browser / VIEW IN TELEGRAM" fallback next to its <video src>; the old parser saw that
+     * block and sent every public video to the Telegram app. Only "Media is too big" (no file address) is app-only.
+     */
+    @Test fun realPreviewVideoWithBrowserFallbackIsPlayable() {
+        val page = TelegramPublic.parsePage(fixture("real-2026-11.html"), "telegram")
+        val playable = page.posts.first { it.channel == "telegram" && it.id == 441 }
+        assertEquals("https://cdn1.telesco.pe/file/c01503a63e.mp4?token=TEST", playable.videoUrl)
+        assertTrue(playable.playable)
+        assertEquals("0:06", playable.duration)
+        val tooBig = page.posts.first { it.channel == "durov" }
+        assertNull(tooBig.videoUrl)
+        assertEquals(1, page.withheld)
+        assertTrue(TelegramPublic.pick(page, "telegram", 441) is TelegramPublic.Result.Ok)
+    }
+
     @Test fun channelHeaderIsRead() {
         val page = TelegramPublic.parsePage(fixture("channel.html"), "yutest")
         assertEquals("https://cdn.example.test/avatar.jpg", page.avatarUrl)

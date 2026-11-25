@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SPLASH-2: dark system theme → the Tsuki Night page colour, so a dark phone never flashes light. -->
+    <color name="launch_bg">#FF0E0E11</color>
+</resources>

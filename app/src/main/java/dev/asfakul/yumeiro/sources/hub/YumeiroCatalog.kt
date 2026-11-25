@@ -162,6 +162,8 @@ class YumeiroCatalogProvider(
     /** E1-C (owner 2026-11-23): Yumeiro's own legal resolvers, asked first and with no install: today the
      *  Internet Archive (Yumeiro Classics, public-domain films). Only an exact title + year + type match plays. */
     private val builtins: () -> List<MainAPI> = { YumeiroHub.resolvers() },
+    /** FIND-2: V2 sweep (default) or the V1 fan-out. */
+    private val findV2: () -> Boolean = { FeatureFlags.isOn(FeatureFlags.Flag.FIND_V2) },
 ) : MainAPI() {
     override var name = YumeiroCatalog.NAME
     override var mainUrl = "https://yumeiro.click"
@@ -238,6 +240,9 @@ class YumeiroCatalogProvider(
         val original = o.optString("original").ifBlank { null }
         val year = o.optInt("year").takeIf { it > 0 }
         val own = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.HUB_ARCHIVE)) builtins() else emptyList()
+        if (findV2()) {
+            return loadLinksV2(ref, title, original, year, own, isCasting, subtitleCallback, callback)
+        }
         val apis = own + YumeiroCatalog.Ranking.order(YumeiroCatalog.eligible(sources())).take(MAX_SOURCES)
         if (apis.isEmpty()) return false
         val found = withTimeoutOrNull(TOTAL_MS) {
@@ -254,6 +259,54 @@ class YumeiroCatalogProvider(
             }
         }
         return found == true
+    }
+
+    /** FIND-2: the V2 sweep (see [SourceFinder2]). Throws [SourceFinder2.NotFound] with the true reason when nothing plays. */
+    private suspend fun loadLinksV2(
+        ref: YumeiroCatalog.Ref, title: String, original: String?, year: Int?, own: List<MainAPI>, isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit,
+    ): Boolean {
+        val installed = YumeiroCatalog.eligible(sources())
+        val ranked = YumeiroCatalog.Ranking.order(installed).take(MAX_SOURCES)
+        val key = "${ref.kind}:${ref.id}"
+        val memo = SourceFinder2.recall(key)
+        val remembered = memo?.let { m -> ranked.firstOrNull { it.name == m.first } }
+        val waves = SourceFinder2.waves(own, ranked, remembered)
+        if (waves.isEmpty()) throw SourceFinder2.NotFound(SourceFinder2.detail(emptyList(), 0))
+        val t0 = System.currentTimeMillis()
+        val outcomes = SourceFinder2.sweep(
+            waves, name = { it.name }, isChosen = { it === remembered },
+            ask = { api ->
+                val page = if (api === remembered) memo?.second else null
+                resolveV2(api, ref, title, original, year, api in own, page, isCasting, subtitleCallback, callback)
+            },
+            onFound = { api, page -> if (api !in own && page != null) SourceFinder2.remember(key, api.name, page) },
+        )
+        outcomes.forEach { o -> if (o.reason == SourceFinder2.Reason.FOUND) YumeiroCatalog.Ranking.hit(o.source) else if (o.reason != SourceFinder2.Reason.TIMED_OUT) YumeiroCatalog.Ranking.miss(o.source) }
+        android.util.Log.w("SourceFinder2", "$key ${System.currentTimeMillis() - t0} ms asked=${outcomes.size}/${own.size + ranked.size} " +
+            outcomes.joinToString { "${it.source}=${it.reason}@${it.ms}" })
+        if (outcomes.any { it.reason == SourceFinder2.Reason.FOUND }) return true
+        // The remembered page stopped working: forget it so the next play searches again.
+        if (memo != null) SourceFinder2.forget(key)
+        throw SourceFinder2.NotFound(SourceFinder2.detail(outcomes, ranked.size + own.size))
+    }
+
+    private suspend fun resolveV2(
+        api: MainAPI, ref: YumeiroCatalog.Ref, title: String, original: String?, year: Int?, strict: Boolean, rememberedPage: String?,
+        isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit,
+    ): SourceFinder2.Answer {
+        val pageUrl = rememberedPage ?: run {
+            var hit = api.search(YumeiroCatalog.query(title)).orEmpty().let { YumeiroCatalog.best(it, ref.kind, title, original, year, strict) }
+            if (hit == null && original != null && original != title) {
+                hit = api.search(YumeiroCatalog.query(original)).orEmpty().let { YumeiroCatalog.best(it, ref.kind, title, original, year, strict) }
+            }
+            hit?.url
+        } ?: return SourceFinder2.Answer(SourceFinder2.Reason.NO_TITLE_MATCH)
+        val page = api.load(pageUrl) ?: return SourceFinder2.Answer(SourceFinder2.Reason.NO_TITLE_MATCH)
+        val play = YumeiroCatalog.dataFor(page, ref) ?: return SourceFinder2.Answer(SourceFinder2.Reason.EPISODE_MISSING, pageUrl)
+        var any = false
+        api.loadLinks(play, isCasting, subtitleCallback) { link -> any = true; callback(link) }
+        return SourceFinder2.Answer(if (any) SourceFinder2.Reason.FOUND else SourceFinder2.Reason.NO_LINKS, pageUrl)
     }
 
     private suspend fun resolve(

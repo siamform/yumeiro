@@ -23,6 +23,7 @@ object OnlineRuntime {
     fun extensionClient(context: Context): okhttp3.OkHttpClient = extClient ?: synchronized(this) {
         extClient ?: NetworkClient.get(context.applicationContext).newBuilder()
             .addInterceptor(BrowserCheck.Interceptor)
+            .addNetworkInterceptor(BrowserCheck.HopInterceptor) // VERIFY-2: the pass and its agent on redirect hops too
             .build().also { extClient = it }
     }
 

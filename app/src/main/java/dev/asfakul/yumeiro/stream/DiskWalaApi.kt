@@ -52,5 +52,9 @@ object DiskWalaApi {
         else -> "$bytes bytes"
     }
 
+    /** DW-BOT-1: shown while the downloader bot's mini app gets the file. */
+    const val VIA_BOT = "Opening it through a Telegram downloader bot (a third party) with your Telegram account."
+    const val SIGN_IN_HINT = "To play it in Yumeiro, sign in to Telegram (Websites > Telegram); DiskWala links then open through a Telegram downloader bot."
+
     const val APP_ONLY = "DiskWala only plays its files inside the DiskWala app; its website shows a download page, not the video."
 }

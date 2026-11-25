@@ -1,4 +1,7 @@
 name: Field probe
+# A dispatch with steps "code <blob>" only delivers an encrypted secret to a running sealed probe (scripts/field-probe.sh
+# secret_in): its run title carries the blob, and the probe job is skipped.
+run-name: ${{ startsWith(inputs.steps || '', 'code ') && inputs.steps || 'Field probe' }}
 
 # R19: run the APK a user actually installs (a published release, or this branch's release build) on an
 # emulator with real internet and record the first minutes: every network connection (emulator -tcpdump),
@@ -12,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       new_tag:
-        description: "Published tag to install (empty = build this branch's release APK)"
+        description: "Published tag to install (empty or 'branch' = build this branch's release APK)"
         required: false
         default: "v2.1.0"
       old_tag:
@@ -20,7 +23,7 @@ on:
         required: false
         default: ""
       steps:
-        description: "Scenario: skip | tour | wait N | tap TEXT | back | home | shot NAME, separated by ;"
+        description: "Scenario: skip | tour | wait N | tap TEXT | find TEXT | field [N] | type TEXT | back | home | shot NAME, separated by ;"
         required: false
         default: "skip;wait 60;tap Videos;wait 60;tap Music;wait 60"
       net:
@@ -36,11 +39,18 @@ on:
 permissions:
   contents: read
   actions: read
+  statuses: write  # content-free progress marks of a sealed probe ("waiting for the code")
 
 jobs:
-  probe:
+  code:
+    if: ${{ startsWith(inputs.steps || '', 'code ') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    steps:
+      - run: echo "Encrypted value for a running sealed probe; nothing to do here."
+  probe:
+    if: ${{ !startsWith(inputs.steps || '', 'code ') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
     env:
       NEW_TAG: ${{ inputs.new_tag }}
       OLD_TAG: ${{ inputs.old_tag }}
@@ -53,7 +63,10 @@ jobs:
         id: cfg
         run: |
           if [ "${{ github.event_name }}" = push ] && [ -f .github/field-probe.env ]; then set -a; . .github/field-probe.env; set +a; fi
-          { echo "new_tag=${NEW_TAG}"; echo "old_tag=${OLD_TAG}"; echo "steps=${STEPS:-skip;wait 120}"; echo "net=${NET:-none}"; echo "api=${API:-33}"; echo "prewait=${PREWAIT:-}"; } >> "$GITHUB_OUTPUT"
+          # gh workflow run -f new_tag= sends nothing, so the v2.1.0 default wins; 'branch' is the explicit way to build.
+          [ "${NEW_TAG}" = branch ] && NEW_TAG=""
+          SEAL=0; case "${STEPS:-}" in seal*) SEAL=1 ;; esac  # a scenario that starts with "seal"
+          { echo "seal=${SEAL}"; echo "new_tag=${NEW_TAG}"; echo "old_tag=${OLD_TAG}"; echo "steps=${STEPS:-skip;wait 120}"; echo "net=${NET:-none}"; echo "api=${API:-33}"; echo "prewait=${PREWAIT:-}"; } >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         if: ${{ steps.cfg.outputs.new_tag == '' }}
@@ -124,6 +137,23 @@ jobs:
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
           mkdir -p probe
 
+      - name: Start test pages (ADCHAIN-2)
+        # Local pages for the link-chain / pop-up / download checks, reached from the emulator at http://10.0.2.2:8765.
+        # Unsealed runs only (a signed-in run never opens them). Test tooling, not part of the app.
+        if: ${{ steps.cfg.outputs.seal != '1' && contains(steps.cfg.outputs.steps, '10.0.2.2') }}
+        run: |
+          CLIP="$RUNNER_TEMP/clip.mp4"
+          command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null; } || true
+          if command -v ffmpeg >/dev/null; then
+            ffmpeg -loglevel error -f lavfi -i testsrc2=duration=60:size=640x360:rate=25 -f lavfi -i sine=frequency=440:duration=60 \
+              -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -movflags +faststart "$CLIP"
+          else
+            curl -fsSL -o "$CLIP" https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4
+          fi
+          ls -l "$CLIP"
+          nohup python3 scripts/probe-fixtures/serve.py 8765 "$CLIP" > "$RUNNER_TEMP/fixtures.log" 2>&1 &
+          sleep 1; curl -fsS -o /dev/null -w "fixtures %{http_code}\n" http://127.0.0.1:8765/normal
+
       - name: Probe on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         env:
@@ -133,6 +163,10 @@ jobs:
           NET: ${{ steps.cfg.outputs.net }}
           PREWAIT: ${{ steps.cfg.outputs.prewait }}
           OUT: probe
+          SEALED: ${{ steps.cfg.outputs.seal }}
+          TG_TEST_PHONE: ${{ steps.cfg.outputs.seal == '1' && secrets.TG_TEST_PHONE || '' }}
+          PROBE_SEAL_KEY: ${{ steps.cfg.outputs.seal == '1' && secrets.PROBE_SEAL_KEY || '' }}
+          GH_TOKEN: ${{ github.token }}
         with:
           api-level: ${{ steps.cfg.outputs.api }}
           target: google_apis
@@ -149,11 +183,25 @@ jobs:
         run: |
           pip install --quiet dpkt
           python3 scripts/field_probe_report.py probe/net.pcap probe/timeline.txt > probe/network-report.txt || true
-          cat probe/network-report.txt | head -200
+          [ "${{ steps.cfg.outputs.seal }}" = 1 ] || head -200 probe/network-report.txt
+
+      - name: Keep test-page log (ADCHAIN-2)
+        if: ${{ always() && steps.cfg.outputs.seal != '1' }}
+        run: cp "$RUNNER_TEMP/fixtures.log" probe/fixtures.log 2>/dev/null || true
+
+      - name: Seal results
+        if: ${{ always() && steps.cfg.outputs.seal == '1' }}
+        env:
+          PROBE_SEAL_KEY: ${{ secrets.PROBE_SEAL_KEY }}
+        run: |
+          # Signed-in runs show private chats: only the encrypted bundle leaves the runner.
+          mkdir -p sealed
+          tar czf - probe | openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:PROBE_SEAL_KEY -out sealed/probe.tgz.enc
+          rm -rf probe; ls -l sealed
 
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: field-probe
-          path: probe/
+          path: ${{ steps.cfg.outputs.seal == '1' && 'sealed/' || 'probe/' }}

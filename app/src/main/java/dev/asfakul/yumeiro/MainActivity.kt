@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro
 
+import androidx.compose.ui.graphics.toArgb
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -57,6 +58,8 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         }
         dev.asfakul.yumeiro.online.ExtensionPopups.init(this)
         enableEdgeToEdge()
+        // SPLASH-2: the window is the saved theme's page colour from the first pixel (it was always black).
+        dev.asfakul.yumeiro.ui.theme.LaunchLook.beforeFirstFrame(this)
         StreamRepository.init(this)
         // Messages from extensions use the app's own message bar.
         com.lagradost.cloudstream3.CommonActivity.toastHandler = { text, _ ->
@@ -73,9 +76,17 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         // PR-1: decided before the first frame, so nothing of the app is drawn (or reachable with the
         // remote) behind "Who's watching?" (Plex fixed exactly that bypass on Android TV).
         dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.decide(this)
+        // A11Y-EXT-1: an extension's invisible 1 px WebView stays out of screen readers and remote focus.
+        dev.asfakul.yumeiro.online.ForeignViewGuard.attach(this)
         setContent {
             val palette = rememberMtPalette()
-            LaunchedEffect(palette.isDark) {
+            LaunchedEffect(palette.isDark, palette.background) {
+                // SPLASH-2: a theme change also changes the window colour and the next cold start's splash.
+                dev.asfakul.yumeiro.ui.theme.LaunchLook.apply(
+                    this@MainActivity,
+                    dev.asfakul.yumeiro.ui.theme.LaunchLook.lookFor(palette.isDark, palette.background == androidx.compose.ui.graphics.Color.Black),
+                    palette.background.toArgb(),
+                )
                 val style = if (palette.isDark) SystemBarStyle.dark(Color.TRANSPARENT)
                 else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)

@@ -106,9 +106,11 @@ object FeatureFlags {
         TELEGRAM_LOGIN("f02_telegram_login", true),
         /**
          * B-31 (ADR-053): built-in torrent engine (libtorrent): magnets, info-hashes and .torrent links play without
-         * TorrServer. Off until the device tests pass; also hidden when no engine is pinned for the phone's ABI.
+         * TorrServer. Hidden when no engine is pinned for the phone's ABI. B31-ON-1: on since the device tests pass
+         * (runs 45321992083 / 45323267366 / 45325875819: first frame, seek and a long pause on api36 and api33-lowram);
+         * it only offers the Settings switch, which plays nothing until the user accepts the privacy notice.
          */
-        BUILTIN_TORRENT("b31_builtin_torrent", false),
+        BUILTIN_TORRENT("b31_builtin_torrent", true),
         /** F-03 (ADR-042): an expired TeraBox / DiskWala stream is found again on its page and resumes at the same place. */
         CLOUD_CAPTURE_V2("cloud_capture_v2", true),
         /** F-11 (ADR-044): "Translate pages" in the manga reader (on-device OCR + translation). */
@@ -122,6 +124,8 @@ object FeatureFlags {
 
         /** OWN-9: the official built-in "Yumeiro Classics" source (Internet Archive public domain), on for fresh installs. */
         OFFICIAL_CLASSICS("own9_official_classics", true),
+        /** ANIME-1 (item 20): "Yumeiro Anime", free full episodes from official anime YouTube channels, as a part of the built-in "Yumeiro" source. */
+        OFFICIAL_ANIME("anime1_official_anime", true),
         /** OWN-13: Yumeiro Drama and Yumeiro Classics shown and used as one built-in source, "Yumeiro" (all in one, no install). Off: two separate sources as in OWN-9. */
         YUMEIRO_HUB("own13_yumeiro_hub", true),
         /** OWN-15: after "Who's watching?" the app opens straight away, without the logo a second time. */
@@ -132,6 +136,8 @@ object FeatureFlags {
         HUB_CATALOG("hub_catalog", true),
         /** E1-C: Hub titles can play from the Internet Archive (Yumeiro Classics) with no source installed. */
         HUB_ARCHIVE("hub_archive", true),
+        /** FIND-2 (item 26, ADR-066): Yumeiro Catalog titles are found in installed sources by the V2 sweep (remembered source first, waves of 3, true failure reasons). Off = the V1 fan-out, unchanged. */
+        FIND_V2("find_v2", true),
         /** OWN-19: full-screen player shows only the main buttons (3 in the user's order + More); the rest are in More. */
         PLAYER_ESSENTIALS("own19_player_essentials", true),
         /** F-21: language chip + "N sources • ecosystem • repo" on market, installed and "Show videos from" rows. */
@@ -199,6 +205,17 @@ object FeatureFlags {
         SCRIPT_ERROR_MESSAGE("f05_script_error_message", true),
         /** NBUG10-IME: an extension's own window (e.g. a Cloudflare check) that opens while the user types is held behind a card instead of taking the keyboard. */
         EXT_HOLD_WHILE_TYPING("ext_hold_while_typing", true),
+        /**
+         * VERIFY-1 (ADR-059): security checks from Yumeiro and from extensions go through one verification
+         * center: one check per site, firewall blocks close at once, a closed check pauses instead of returning.
+         */
+        VERIFY_CENTER("verify1_center", true),
+        /**
+         * ADCHAIN-1 (owner list 23, ADR-060): a link-shortener chain opened in Yumeiro's browser walks to the real
+         * link by itself: ad layers are defused, the site's timers run out, Yumeiro taps the site's own button
+         * with a real touch, and the person ticks the captcha. Off = the page behaves like any other.
+         */
+        ADCHAIN_1("adchain1_walk", true),
         /**
          * OWN-11: a YouTube video download always offers "Video" or "Audio only" (also with "Ask before download"
          * off, and with only one audio choice). Before, DL-ONE started the best video at once in those cases.

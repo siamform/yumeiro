@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.stream.PlaylistStore
@@ -34,8 +35,8 @@ import org.junit.runner.RunWith
 
 /**
  * Country filter on a device: a remote M3U (local server) with 3 Bangladesh channels (tvg-country="BD") and
- * 2 India channels (only the iptv-org tvg-id suffix ".in"). Live TV shows the country chips; each chip shows only
- * its channels; Any country shows all. Other playlists are switched off for the test and back on after.
+ * 2 India channels (only the iptv-org tvg-id suffix ".in"). Live TV shows a Country button; its sheet lists BD and IN;
+ * each shows only its channels; Every country shows all; search finds a channel by name (LIVE-1). Other playlists are switched off for the test and back on after.
  * Lines: CTY_CASE ….
  */
 @RunWith(AndroidJUnit4::class)
@@ -78,25 +79,45 @@ class LiveCountryDeviceTest {
 
     private fun pick(tag: String) { compose.onNodeWithTag(tag, true).performClick(); compose.waitForIdle(); Thread.sleep(300); compose.waitForIdle() }
 
+    private fun openSheet() { pick("live_country_button"); compose.waitUntil(5_000) { has("live_country_sheet") } }
+
+    // LIVE-1 (owner list R21, item 1): the country chip row became a Country sheet behind a header button.
     @Test fun countryChipsShowOnlyThatCountry() {
         compose.setContent { MTPlayerTheme { StreamScreen() } }
-        val bar = runCatching { compose.waitUntil(25_000) { has("live_countries") }; true }.getOrDefault(false)
-        val chips = compose.onAllNodes(SemanticsMatcher("country chip") { (it.config.getOrNull(SemanticsProperties.TestTag) ?: "").startsWith("live_country_") }, true)
-            .fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }.sorted()
-        log("CTY_CASE bar=$bar chips=$chips")
-        assertTrue("Country: no country chips for a BD + IN playlist", bar)
-        assertEquals(listOf("live_country_BD", "live_country_IN", "live_country_all"), chips)
+        val button = runCatching { compose.waitUntil(25_000) { has("live_country_button") }; true }.getOrDefault(false)
+        log("CTY_CASE button=$button")
+        assertTrue("Country: no country button for a BD + IN playlist", button)
+        openSheet()
+        val rows = compose.onAllNodes(SemanticsMatcher("country row") { (it.config.getOrNull(SemanticsProperties.TestTag) ?: "").startsWith("live_country_") }, true)
+            .fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.TestTag) }.filter { it != "live_country_sheet" && it != "live_country_button" }.sorted()
+        log("CTY_CASE rows=$rows")
+        FirstRun.shot("cty_sheet")
+        assertEquals(listOf("live_country_BD", "live_country_IN", "live_country_any"), rows)
         pick("live_country_BD")
+        compose.waitUntil(5_000) { !has("live_country_sheet") }
         val bd = shows("YuCty Dhaka") to shows("YuCty Mumbai")
         FirstRun.shot("cty_bd")
-        pick("live_country_IN")
+        openSheet(); pick("live_country_IN")
+        compose.waitUntil(5_000) { !has("live_country_sheet") }
         val inn = shows("YuCty Dhaka") to shows("YuCty Mumbai")
         FirstRun.shot("cty_in")
-        pick("live_country_all")
+        openSheet(); pick("live_country_any")
+        compose.waitUntil(5_000) { !has("live_country_sheet") }
         val all = shows("YuCty Dhaka") to shows("YuCty Mumbai")
         log("CTY_CASE bd=$bd in=$inn all=$all")
         assertEquals("Bangladesh shows only Dhaka channels", true to false, bd)
         assertEquals("India (from the tvg-id suffix) shows only Mumbai channels", false to true, inn)
-        assertEquals("Any country shows both", true to true, all)
+        assertEquals("Every country shows both", true to true, all)
+    }
+
+    @Test fun searchFindsTheChannel() {
+        compose.setContent { MTPlayerTheme { StreamScreen() } }
+        compose.waitUntil(25_000) { has("live_search_button") && shows("YuCty Dhaka") }
+        pick("live_search_button")
+        compose.onNodeWithTag("live_search_field", true).performTextInput("mumbai 2")
+        compose.waitUntil(5_000) { !shows("YuCty Dhaka") }
+        FirstRun.shot("cty_search")
+        log("CTY_CASE search m2=${shows("YuCty Mumbai 2")} m1=${shows("YuCty Mumbai 1")}")
+        assertTrue(shows("YuCty Mumbai 2"))
     }
 }

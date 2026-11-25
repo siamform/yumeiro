@@ -25,6 +25,17 @@ class WatchLogicTest {
 
     private fun ch(url: String, title: String, group: String? = null) = StreamRequest(url = url, title = title, group = group)
 
+    /** UP-NEXT-1: a Telegram (or any non-playlist) video never gets the last Live TV playlist as "Up next". */
+    @Test fun upNextIsOnlyTheListTheVideoBelongsTo() {
+        val tv = listOf(ch("https://tv/1", "Sony"), ch("https://tv/2", "Zee"))
+        val tg = StreamWatch.Queue("@yutest", listOf(ch("https://cdn/6.mp4", "Ep 1"), ch("https://cdn/9.mp4", "Ep 2")))
+        assertTrue(StreamWatch.upNext(tv, null, "https://cdn/6.mp4").isEmpty())
+        assertEquals(listOf("https://cdn/6.mp4", "https://cdn/9.mp4"), StreamWatch.upNext(tv, tg, "https://cdn/6.mp4").map { it.url })
+        assertEquals(tv, StreamWatch.upNext(tv, tg, "https://tv/2"))
+        assertTrue(StreamWatch.upNext(tv, tg, "https://some/other.m3u8").isEmpty())
+        assertEquals("https://cdn/9.mp4", StreamWatch.neighbour(StreamWatch.upNext(tv, tg, "https://cdn/6.mp4"), "https://cdn/6.mp4", 1)?.url)
+    }
+
     @Test fun nameKeyDropsQualityAndBackupTags() {
         assertEquals(StreamWatch.nameKey("Sony HD"), StreamWatch.nameKey("Sony (Backup)"))
         assertEquals(StreamWatch.nameKey("Sony"), StreamWatch.nameKey("SONY 1080p"))

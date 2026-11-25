@@ -26,7 +26,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -117,6 +116,8 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                         title = r.value.title.ifBlank { name }
                         if (q.isEmpty()) {
                             header = r.value
+                            val photo = r.value.avatarUrl.orEmpty()
+                            scope.launch(Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.TelegramAvatars.remember(context, channel, photo) }
                             r.value.posts.maxOfOrNull { it.id }?.let { TelegramSeen.mark(context, channel, it) }
                         }
                     }
@@ -203,17 +204,9 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
             items(posts, key = { it.id }) { post ->
                 TelegramPostRow(post, isNew = post.id in newIds) {
                     if (!post.playable) { appOnly = post; return@TelegramPostRow }
-                    onPlay(
-                        StreamRequest(
-                            url = post.videoUrl!!,
-                            title = post.text.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: "@$channel · ${post.id}",
-                            format = StreamFormat.PROGRESSIVE,
-                            referer = "https://t.me/",
-                            pageUrl = post.link,
-                            logoUrl = post.thumbUrl,
-                            group = StreamResolver.TELEGRAM_GROUP,
-                        ),
-                    )
+                    // UP-NEXT-1: "Up next" on the watch page is this channel's other videos.
+                    dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.setQueue("@$channel", posts.filter { it.playable }.map { tgRequest(it, channel) })
+                    onPlay(tgRequest(post, channel))
                 }
             }
             if (error != null && posts.isEmpty()) item(key = "error") {
@@ -225,13 +218,25 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                 }
             }
             if (loading) item(key = "loading") {
-                Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(28.dp)) }
+                // SKELETON-2: post-shaped placeholders (a page of them first, one while older posts load).
+                dev.asfakul.yumeiro.ui.components.SkeletonList(rows = if (posts.isEmpty()) 5 else 1, modifier = Modifier.padding(vertical = 8.dp).testTag("tg_loading"))
             } else if (before != null && posts.isNotEmpty()) item(key = "older") {
                 TextButton(onClick = { autoOlder = true; autoPages = 0; load(before) }, modifier = Modifier.fillMaxWidth().testTag("tg_older")) { Text("Older posts") }
             }
         }
     }
 }
+
+/** The player request for a playable public post (its file address is temporary; TelegramPlayback renews it). */
+internal fun tgRequest(post: TelegramPublic.VideoPost, channel: String) = StreamRequest(
+    url = post.videoUrl!!,
+    title = post.text.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: "@$channel · ${post.id}",
+    format = StreamFormat.PROGRESSIVE,
+    referer = "https://t.me/",
+    pageUrl = post.link,
+    logoUrl = post.thumbUrl,
+    group = StreamResolver.TELEGRAM_GROUP,
+)
 
 @Composable
 private fun TelegramChannelHeader(page: TelegramPublic.Page) {

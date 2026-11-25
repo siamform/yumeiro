@@ -109,6 +109,9 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
     var language by rememberSaveable { mutableStateOf<String?>(null) }
     var sort by rememberSaveable { mutableStateOf(MarketSort.TOP) }
     var repoFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var originFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var repoQuery by rememberSaveable { mutableStateOf("") }
+    var showRepos by remember { mutableStateOf(false) }
     var showRepoDialog by remember { mutableStateOf(false) }
     // UX-MARKET-1: the extension whose details sheet is open (by key, so a list refresh keeps it).
     var infoKey by rememberSaveable { mutableStateOf<String?>(null) }
@@ -138,21 +141,24 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
             val safe = items.filter { adult || !it.isNsfw }
             val categories = listOf("All") + PICK_CATEGORIES.filter { c -> c == "Short drama" || safe.any { c in it.categories } } + listOf("Other", "18+").filter { c -> safe.any { c in it.categories } }
             val languages = safe.mapNotNull { it.language?.lowercase()?.takeIf { l -> l.isNotBlank() } }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key }
-            MarketDerived(safe, updates, categories, languages)
+            MarketDerived(safe, updates, categories, languages, dev.asfakul.yumeiro.online.MarketFacets.origins(safe))
         }
     }
     val safe = derived.safe
     val updates = derived.updates
     val categories = derived.categories
     val languages = derived.languages
+    val origins = derived.origins
+    // The repositories offered follow the picked source (MKT-FILTER-1).
+    val repoFacets = remember(safe, originFilter) { dev.asfakul.yumeiro.online.MarketFacets.repositories(safe, originFilter) }
     // Typing waits a moment before filtering so each key press stays instant.
-    val visible by androidx.compose.runtime.produceState(emptyList<RemoteExtension>(), safe, query, tab, category, language, sort, repoFilter, installedKeys, updates) {
+    val visible by androidx.compose.runtime.produceState(emptyList<RemoteExtension>(), safe, query, tab, category, language, sort, repoFilter, originFilter, installedKeys, updates) {
         if (query.isNotBlank()) kotlinx.coroutines.delay(120)
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            marketVisible(safe, query, tab, category, language, sort, repoFilter, installedKeys.keys, updates.keys)
+            marketVisible(safe, query, tab, category, language, sort, repoFilter, installedKeys.keys, updates.keys, originFilter)
         }
     }
-    val activeFilters = (if (category != "All") 1 else 0) + (if (language != null) 1 else 0) + (if (sort != MarketSort.TOP) 1 else 0) + (if (repoFilter != null) 1 else 0)
+    val activeFilters = (if (category != "All") 1 else 0) + (if (language != null) 1 else 0) + (if (sort != MarketSort.TOP) 1 else 0) + (if (repoFilter != null) 1 else 0) + (if (originFilter != null) 1 else 0)
     val repos = remember(data) { data?.repos.orEmpty().sortedWith(compareByDescending<ExtensionSources.RepoListing> { it.origin == "user" }.thenByDescending { it.verified }.thenByDescending { it.stars ?: 0 }.thenByDescending { it.count }) }
 
     fun install(remote: RemoteExtension) {
@@ -222,8 +228,9 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                 if (category != "All") item("c") { OnlineChip("$category  ✕", true, { category = "All" }, Modifier.testTag("market_active_category")) }
                 language?.let { l -> item("l") { OnlineChip("${languageName(l)}  ✕", true, { language = null }, Modifier.testTag("market_active_language")) } }
                 if (sort != MarketSort.TOP) item("s") { OnlineChip("${sort.label}  ✕", true, { sort = MarketSort.TOP }) }
+                originFilter?.let { o -> item("o") { OnlineChip("${dev.asfakul.yumeiro.online.MarketFacets.originLabel(o)}  ✕", true, { originFilter = null }, Modifier.testTag("market_active_source")) } }
                 repoFilter?.let { rf ->
-                    val name = repos.firstOrNull { it.url.equals(rf, true) }?.name ?: ExtensionFormats.repoNameFromUrl(rf)
+                    val name = repos.firstOrNull { it.url.equals(rf, true) }?.name ?: repoFacets.firstOrNull { it.key.equals(rf, true) }?.label ?: ExtensionFormats.repoNameFromUrl(rf)
                     item("r") { OnlineChip("$name  ✕", true, { repoFilter = null }, Modifier.testTag("market_repo_filter")) }
                 }
             }
@@ -268,8 +275,8 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     }
                     // OWN-13: with the hub on, one "Yumeiro" card (Discover: All, drama, Movies, TV; Installed) instead of two.
                     val hubCard = officialHub() && repoFilter == null &&
-                        ((tab == MarketTab.DISCOVER && category in setOf("All", "Short drama", "Asian drama", "Movies", "TV")) || (tab == MarketTab.INSTALLED && query.isBlank())) &&
-                        (query.isBlank() || "yumeiro all in one official drama short dramabox reelshort shortmax classics movies films documentaries cartoons public domain archive film noir".contains(query.trim(), true))
+                        ((tab == MarketTab.DISCOVER && category in setOf("All", "Short drama", "Asian drama", "Movies", "TV", "Anime")) || (tab == MarketTab.INSTALLED && query.isBlank())) &&
+                        (query.isBlank() || "yumeiro all in one official drama short dramabox reelshort shortmax classics movies films documentaries cartoons public domain archive film noir anime gundam muse ani-one viz retrocrush tezuka".contains(query.trim(), true))
                     if (hubCard) item("builtin_yumeiro") { YumeiroHubCard() }
                     if (!officialHub() && tab == MarketTab.DISCOVER && repoFilter == null && (category == "All" || category == "Short drama" || category == "Asian drama") &&
                         (query.isBlank() || "yumeiro drama short dramabox reelshort shortmax".contains(query.trim(), true))
@@ -305,7 +312,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
 
     if (showFilters) dev.asfakul.yumeiro.ui.components.FilterSheet(
         onDismiss = { showFilters = false },
-        onReset = if (activeFilters > 0) ({ category = "All"; language = null; sort = MarketSort.TOP; repoFilter = null }) else null,
+        onReset = if (activeFilters > 0) ({ category = "All"; language = null; sort = MarketSort.TOP; repoFilter = null; originFilter = null; repoQuery = "" }) else null,
         resultCount = visible.size, tag = "market_filter_sheet",
     ) {
         dev.asfakul.yumeiro.ui.components.FilterGroup("Sort by") {
@@ -319,10 +326,34 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
             languages.take(if (showLanguages) 60 else 11).forEach { l -> OnlineChip(languageName(l), l == language, { language = l }, Modifier.testTag("market_lang_$l")) }
             if (!showLanguages && languages.size > 11) OnlineChip("+${languages.size - 11} more", false, { showLanguages = true }, Modifier.testTag("market_lang_more"))
         }
-        repoFilter?.let { rf ->
-            val name = repos.firstOrNull { it.url.equals(rf, true) }?.name ?: ExtensionFormats.repoNameFromUrl(rf)
-            dev.asfakul.yumeiro.ui.components.FilterGroup("Repository") { OnlineChip("$name  ✕", true, { repoFilter = null }) }
+        // MKT-FILTER-1 (owner list 9): Source and Repository come from the loaded listing, with counts.
+        if (origins.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterGroup("Source") {
+            OnlineChip("Any", originFilter == null, { originFilter = null }, Modifier.testTag("market_source_any"))
+            origins.forEach { o ->
+                OnlineChip("${o.label} · ${o.count}", o.key == originFilter, {
+                    originFilter = if (o.key == originFilter) null else o.key
+                    // A repository outside the new source would leave an empty list.
+                    if (repoFilter != null && originFilter != null && safe.none { it.origin == originFilter && it.repoUrl.equals(repoFilter, true) }) repoFilter = null
+                }, Modifier.testTag("market_source_${o.key}"))
+            }
         }
+        if (repoFacets.size > 1 || repoFilter != null) dev.asfakul.yumeiro.ui.components.FilterGroup("Repository") {
+            val many = repoFacets.size > REPO_CHIPS
+            val shown = if (repoQuery.isNotBlank()) dev.asfakul.yumeiro.online.MarketFacets.search(repoFacets, repoQuery) else if (showRepos || !many) repoFacets else repoFacets.take(REPO_CHIPS)
+            OnlineChip("Any", repoFilter == null, { repoFilter = null }, Modifier.testTag("market_repo_any"))
+            // The picked repository stays visible even when it is not among the first chips.
+            val picked = repoFilter?.let { rf -> repoFacets.firstOrNull { it.key.equals(rf, true) } }
+            (listOfNotNull(picked) + shown.filter { it != picked }).forEach { f ->
+                OnlineChip("${f.label} · ${f.count}", f.key.equals(repoFilter, true), {
+                    repoFilter = if (f.key.equals(repoFilter, true)) null else safe.firstOrNull { it.repoUrl.equals(f.key, true) }?.repoUrl ?: f.key
+                }, Modifier.testTag("market_repo_${f.label}"))
+            }
+            if (many && !showRepos && repoQuery.isBlank()) OnlineChip("+${repoFacets.size - REPO_CHIPS} more", false, { showRepos = true }, Modifier.testTag("market_repo_more"))
+        }
+        if (repoFacets.size > REPO_CHIPS) dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
+            repoQuery, { repoQuery = it }, "Search ${repoFacets.size} repositories", "market_repo_search",
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
     }
 
     infoKey?.let { k -> visible.firstOrNull { it.key == k } }?.let { ext ->
@@ -479,22 +510,22 @@ private data class MarketDerived(
     val updates: Map<String, RemoteExtension> = emptyMap(),
     val categories: List<String> = listOf("All"),
     val languages: List<String> = emptyList(),
+    val origins: List<dev.asfakul.yumeiro.online.MarketFacets.Facet> = emptyList(),
 )
+
+/** Repository chips shown before "+N more". */
+private const val REPO_CHIPS = 8
 
 /** The market cards for the current tab, filters, search and sort. Pure, runs on a background thread. */
 private fun marketVisible(
     safe: List<RemoteExtension>, query: String, tab: MarketTab, category: String, language: String?, sort: MarketSort,
-    repoFilter: String?, installedKeys: Set<String>, updates: Set<String>,
+    repoFilter: String?, installedKeys: Set<String>, updates: Set<String>, originFilter: String? = null,
 ): List<RemoteExtension> {
     val q = query.trim()
-    return safe.asSequence()
-        .filter {
-            when (tab) {
-                MarketTab.INSTALLED -> it.key in installedKeys
-                // One card per extension unless browsing a single repository or searching.
-                else -> it.primary || repoFilter != null || q.isNotEmpty() || it.key in installedKeys
-            }
-        }
+    val base = safe.asSequence()
+    return (if (tab == MarketTab.INSTALLED) base.filter { it.key in installedKeys }
+        // One card per extension unless browsing a single repository or searching; a picked source shows its own copy.
+        else dev.asfakul.yumeiro.online.MarketFacets.bySource(base, originFilter) { it.primary || repoFilter != null || q.isNotEmpty() || it.key in installedKeys })
         .filter { repoFilter == null || it.repoUrl.equals(repoFilter, true) }
         .filter { category == "All" || category in it.categories }
         .filter { language == null || it.language.equals(language, true) }

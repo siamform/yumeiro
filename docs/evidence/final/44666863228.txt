@@ -1,5 +1,0 @@
-44666863228 tv-api34 YtChannelUiDeviceTest P1 FAIL tests=? skipped=0 sha=1a22844
-44666863228 tv-api34 YtDownloadPipelineDeviceTest P1 PASS tests=2 skipped=0 sha=1a22844
-44666863228 tv-api34 YtQualityDeviceTest P1 SKIPPED tests=1 skipped=1 sha=1a22844
-44666863228 tv-api34 YtQualityOfflineDeviceTest P1 PASS tests=1 skipped=0 sha=1a22844
-44666863228 tv-api34 YumixDeviceTest P1 PASS tests=3 skipped=2 sha=1a22844

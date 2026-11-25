@@ -20,7 +20,7 @@ import java.net.URI
  */
 object SavedSites {
     @Serializable
-    data class Site(val url: String, val name: String, val addedAt: Long = 0, val pinned: Boolean = false) {
+    data class Site(val url: String, val name: String, val addedAt: Long = 0, val pinned: Boolean = false, val iconUrl: String? = null) {
         val host: String get() = hostOf(url) ?: url
     }
 
@@ -178,6 +178,28 @@ object SavedSites {
         _sites.value = (listOf(Site(url, n.take(40), now, old?.pinned == true)) + rest).take(MAX)
         persist(context)
         return null
+    }
+
+    /**
+     * WEB-ADD-1: the name and icon read from the site itself. The name replaces only the guessed default (a
+     * name the user typed or renamed stays). Pure part: [withMeta].
+     */
+    fun withMeta(site: Site, meta: SiteMeta.Meta): Site {
+        val name = meta.name?.trim()?.takeIf { it.isNotEmpty() && site.name == defaultName(site.url).take(40) } ?: site.name
+        return site.copy(name = name.take(40), iconUrl = meta.iconUrl ?: site.iconUrl)
+    }
+
+    fun applyMeta(context: Context, url: String, meta: SiteMeta.Meta) {
+        init(context)
+        _sites.value = _sites.value.map { if (it.url == url) withMeta(it, meta) else it }
+        persist(context)
+    }
+
+    /** The saved site for [input] after [add], or null. */
+    fun find(input: String): Site? {
+        val url = normalize(input) ?: return null
+        val key = keyOf(url)
+        return _sites.value.firstOrNull { keyOf(it.url) == key }
     }
 
     fun rename(context: Context, url: String, name: String) {

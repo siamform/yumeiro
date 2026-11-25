@@ -24,15 +24,17 @@ class SettingsSearchCoverageTest {
         put(Category.APPEARANCE, "Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents")
         // FINAL-47: one subject per page (Profiles, Video player, Video quality, Subtitles, Music, Downloads).
         put(Category.PROFILES, "Add profile", "Show 18+ content", "Keep 18+ activity private")
-        put(Category.PLAYER, "Background play", "Picture-in-picture", "Volume boost up to 200 %", "Player info overlay", "Back button while a video plays")
+        put(Category.PLAYER, "Background play", "Picture-in-picture", "Volume boost up to 200 %", "Player info overlay", "Back button while a video plays",
+            // PC-1: player controls moved here from Video quality.
+            "Previous and next video", "Rewind and forward 10 s", "Fullscreen button")
         put(Category.VIDEO_QUALITY, "Default quality", "Default audio", "Default speed", "Resume playback", "Video decoder", "Video renderer",
-            "Anime4K enhancement", "Default player", "Torrent streaming")
-        put(Category.SUBTITLES, "Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro (anime)", "Skip automatically")
+            "Anime4K enhancement", "Anime4K preset", "Default player", "Torrent streaming")
+        put(Category.SUBTITLES, "Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro", "Skip automatically")
         put(Category.MUSIC, "Audio quality", "Equalizer & sound effects", "Find lyrics online")
         put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page",
             "Hide the Private entry")
         put(Category.LIBRARY, "Rescan this device")
-        put(Category.TRACKING, "Scrobble what I play")
+        put(Category.TRACKING, "Scrobble what I play", "Tracking V2")
         put(Category.NOTIFICATIONS, "Show notifications", "New episodes", "New extensions", "New stream playlists",
             "Yumeiro news", "Service alerts", "Suggestions", "Yumeiro chime", "Instant alerts", "In-app reminders",
             "Send a test notification", "Reliable alerts (UnifiedPush)")

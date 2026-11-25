@@ -49,4 +49,9 @@ interface TorrentCore {
     fun dropDeadlines(hash: String, pieces: List<Int>) {}
     /** B31-SEEK3: one priority (0..7) per piece; pieces at 0 are not downloaded (see TorrentPlan.windowPriorities). */
     fun streamWindow(hash: String, priorities: ByteArray) {}
+    /**
+     * B31-STALL-T (trace only, while [TorrentTrace.sink] is set): state of one block from the last download-queue
+     * report, e.g. "requested x1 0B" (state, peers asked, bytes in); null when unknown or tracing is off.
+     */
+    fun blockNote(hash: String, piece: Int, block: Int): String? = null
 }

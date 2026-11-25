@@ -28,7 +28,14 @@ sealed interface Resolution {
      * A web page whose player builds the stream at runtime: open it in the link finder.
      * [auto]: a known file host whose player the finder starts by itself (TeraBox, DiskWala).
      */
-    data class NeedsBrowser(val pageUrl: String, val reason: String, val base: StreamRequest, val auto: Boolean = false) : Resolution
+    data class NeedsBrowser(
+        val pageUrl: String,
+        val reason: String,
+        val base: StreamRequest,
+        val auto: Boolean = false,
+        /** Card title; null = "This is a web page". ADCHAIN-3e: a short link says it is one. */
+        val title: String? = null,
+    ) : Resolution
 
     /** Only the platform's own app may play it (YouTube, DRM subscription services). */
     data class Handoff(val url: String, val platform: String, val reason: String) : Resolution
@@ -48,6 +55,9 @@ sealed interface Resolution {
 @OptIn(UnstableApi::class)
 object StreamResolver {
     private const val MAX_PAGE_CANDIDATES = 6
+    internal const val CHECK_PAGE_REASON = "This site checks visitors before it shows the page. Open it in the page browser: " +
+        "if the site asks you to tick a box, do it there (Yumeiro doesn't answer these checks for you). A short link then " +
+        "walks on to its real link by itself, and a video on the page is picked up."
     private const val MAX_IFRAME_DEPTH = 1
 
     fun defaultUserAgent(context: Context): String = Util.getUserAgent(context, "Yumeiro")
@@ -83,8 +93,15 @@ object StreamResolver {
                 Sniff(MediaKind.VIDEO, "Torrent", "engine"),
             )
         }
+        // TOR-3: the built-in engine is on this phone but its privacy notice isn't accepted yet, and there is no
+        // TorrServer: say where to turn it on instead of only pointing at TorrServer.
+        if (torrent != null && TorrentSettings.server.value.isBlank() && !TorrentSettings.engineAccepted.value &&
+            dev.asfakul.yumeiro.stream.torrent.TorrentStreams.offered(context)
+        ) return@withContext torrentEngineOff(torrent.link)
         dev.asfakul.yumeiro.online.telegram.TelegramPublic.enabled = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
-        val r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
+        var r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
+        // ADCHAIN-3 (item 28): a shortener link the resolver could not open: try the plain-HTTP chain walk first.
+        if (r is Resolution.NeedsBrowser || r is Resolution.Failed) AdChainBridge.after(context, request, r, thorough)?.let { r = it }
         // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).
         if (r is Resolution.Handoff && r.platform == "YouTube" && request.group != "YouTube") {
             val id = dev.asfakul.yumeiro.youtube.YouTube.idFrom(r.url)
@@ -93,6 +110,16 @@ object StreamResolver {
         }
         r
     }
+
+    /** TOR-3: the built-in torrent engine exists here but is off until the user reads its notice. Pure. */
+    internal fun torrentEngineOff(link: String): Resolution = Resolution.Handoff(
+        link, "a torrent app",
+        TORRENT_ENGINE_OFF,
+    )
+
+    internal const val TORRENT_ENGINE_OFF = "Torrents play in Yumeiro once you turn on the built-in torrent engine in " +
+        "Settings › Video quality & playback › Torrent streaming (it explains first what sharing a torrent means). You can also add a TorrServer address there, " +
+        "or open this link in a torrent app."
 
     /** F-02 (ADR-042): plays the video Telegram's public web preview links for this post. */
     private fun resolveTelegram(request: StreamRequest, route: LinkHosts.TelegramPost, client: OkHttpClient): Resolution {
@@ -116,12 +143,61 @@ object StreamResolver {
 
     const val TELEGRAM_GROUP = "Telegram"
 
-    /** B-30: a DiskWala share is checked, then handed to the DiskWala app (its website never plays). */
-    internal fun resolveDiskWala(route: LinkHosts.Browser, client: OkHttpClient): Resolution {
+    /**
+     * DW-BOT-1: true when a Telegram account is signed in on this profile (set by MTApplication; no TDLib start).
+     * DiskWala shares then open through a Telegram downloader bot's mini app in the page finder.
+     */
+    @Volatile var telegramSignedIn: () -> Boolean = { false }
+
+    /**
+     * B-30 / DW-BOT-1: a DiskWala share is checked first (name, size). With a Telegram account signed in, it opens
+     * through the downloader bot's mini app inside Yumeiro (TgMiniApp; the page finder plays what it gives). Without
+     * one it is handed to the DiskWala app, and the reason says how to play it here instead.
+     */
+    internal fun resolveDiskWala(route: LinkHosts.Browser, client: OkHttpClient, request: StreamRequest = StreamRequest(route.pageUrl)): Resolution {
         val id = DiskWalaApi.shareId(route.pageUrl) ?: return Resolution.Failed("DiskWala link can't play", "This DiskWala link has no file in it. Copy the full share link.")
         val info = DiskWalaApi.info(client, id)
             ?: return Resolution.Failed("DiskWala file not found", "DiskWala doesn't know this file; it may have been removed.")
-        return Resolution.Handoff(route.pageUrl, "the DiskWala app", "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)}). ${DiskWalaApi.APP_ONLY}")
+        val file = "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)})."
+        if (telegramSignedIn()) {
+            val bot = dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.diskWalaLink(id)
+            return Resolution.NeedsBrowser(
+                "https://t.me/${bot.bot}?startapp=${bot.start}",
+                "$file ${DiskWalaApi.VIA_BOT}",
+                request.copy(title = request.title.ifBlank { info.name }, pageUrl = request.pageUrl ?: route.pageUrl),
+                auto = true,
+            )
+        }
+        return Resolution.Handoff(route.pageUrl, "the DiskWala app", "$file ${DiskWalaApi.APP_ONLY} ${DiskWalaApi.SIGN_IN_HINT}")
+    }
+
+    /**
+     * TB-PREVIEW-1 (owner list 19): checks a stream caught on a TeraBox page before it plays. TeraBox's own web player
+     * gets the 30-second preview when nobody is signed in; that capture used to play as is. A preview is never played:
+     * the original share (the page it came from) is resolved through [TeraBoxApi] instead, which gives the full file
+     * to a signed-in user, or asks for a sign-in. Any other capture passes unchanged.
+     */
+    fun checkCapture(
+        request: StreamRequest,
+        client: OkHttpClient,
+        sharePage: String? = null,
+        fetch: (StreamRequest) -> String? = { req -> playlistText(client, req) },
+    ): Resolution {
+        if (!TeraBoxApi.isWebStream(request.url)) return Resolution.Playable(request, null)
+        val body = runCatching { fetch(request) }.getOrNull()
+        if (body != null && !TeraBoxApi.isPreviewCapture(body)) return Resolution.Playable(request, Sniff(MediaKind.HLS, "TeraBox", "page"))
+        val share = TeraBoxApi.shareIn(sharePage, request.pageUrl)
+            ?: return Resolution.NeedsBrowser(TERABOX_SIGN_IN, TeraBoxApi.SIGN_IN_REASON, request, auto = false)
+        val shareRequest = request.copy(url = share, format = StreamFormat.AUTO, pageUrl = share)
+        return resolveTeraBox(shareRequest, LinkHosts.Browser(share, "TeraBox", TeraBoxApi.SIGN_IN_REASON, auto = false), client)
+    }
+
+    private fun playlistText(client: OkHttpClient, request: StreamRequest): String? {
+        val b = okhttp3.Request.Builder().url(request.url)
+        request.userAgent?.let { b.header("User-Agent", it) }
+        request.referer?.let { b.header("Referer", it) }
+        request.cookie?.let { b.header("Cookie", it) }
+        return client.newCall(b.build()).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
     }
 
     /** TeraBox's sign-in page; the cookie it leaves in the web view is what [TeraBoxApi] reuses. */
@@ -136,7 +212,8 @@ object StreamResolver {
             is TeraBoxApi.Result.Ok -> Resolution.Playable(
                 request.copy(
                     url = r.streamUrl,
-                    title = request.title.ifBlank { r.fileName },
+                    // TB-LOGIN: a shared link's "title" is often just the share code; the file name is the real one.
+                    title = TeraBoxApi.titleFor(request.title, route.pageUrl, r.fileName),
                     format = if (r.hls) StreamFormat.HLS else StreamFormat.PROGRESSIVE,
                     userAgent = r.userAgent,
                     referer = "https://www.terabox.app/",
@@ -165,14 +242,14 @@ object StreamResolver {
             }
             is LinkHosts.Browser -> {
                 if (route.host == "TeraBox") return resolveTeraBox(request, route, client)
-                if (route.host == "DiskWala") return resolveDiskWala(route, client)
+                if (route.host == "DiskWala") return resolveDiskWala(route, client, request)
                 return Resolution.NeedsBrowser(route.pageUrl, route.reason, request, auto = route.auto)
             }
             is LinkHosts.Torrent -> {
                 val server = TorrentSettings.server.value
                 if (server.isBlank()) return Resolution.Handoff(
                     route.link, "a torrent app",
-                    "Yumeiro streams torrents through TorrServer. Add your TorrServer address in Settings › Network, or open this link in a torrent app.",
+                    "Yumeiro streams torrents through TorrServer. Add your TorrServer address in Settings › Video quality & playback › Torrent streaming, or open this link in a torrent app.",
                 )
                 return resolveBlocking(request.copy(url = LinkHosts.torrServerUrl(server, route.link, request.title), format = StreamFormat.AUTO), userAgent, client, thorough = true)
                     .let { r -> if (r is Resolution.Failed) Resolution.Failed("TorrServer didn't answer", "Check that TorrServer is running at $server. ${r.message}") else r }
@@ -218,6 +295,9 @@ object StreamResolver {
                 probe = ok
             }
         }
+        // ADCHAIN-2: a visitor check in front of a page (link shorteners behind Cloudflare) goes to the page browser,
+        // where the user ticks it if the site asks; Yumeiro never answers it for them.
+        if (!probe.ok && probe.checkPage) return Resolution.NeedsBrowser(url, CHECK_PAGE_REASON, request)
         failureFor(probe, req)?.let { return it }
 
         return when (probe.sniff.kind) {
@@ -310,7 +390,7 @@ object StreamResolver {
             )
             val p = StreamProbe.probe(candidate, userAgent, client)
             if (p.ok && p.sniff.isPlayableMedia) return Resolution.Playable(candidate.copy(format = p.sniff.format), p.sniff)
-            if (p.ok && p.sniff.kind == MediaKind.UNKNOWN && p.text == null) return Resolution.Playable(candidate.copy(format = StreamFormat.PROGRESSIVE), p.sniff)
+            if (p.ok && p.sniff.kind == MediaKind.UNKNOWN && p.text == null && !notMediaAnswer(p)) return Resolution.Playable(candidate.copy(format = StreamFormat.PROGRESSIVE), p.sniff)
         }
 
         val reason = buildString {
@@ -322,6 +402,16 @@ object StreamResolver {
             if (page.mentionsDrm && sessionRule == null) append("\n\nThe page uses DRM (encrypted media). DRM streams play only when the site's licence server accepts this device.")
         }
         return Resolution.NeedsBrowser(pageUrl, reason, request.copy(title = request.title.ifBlank { page.title.orEmpty() }))
+    }
+
+    /**
+     * SD-2: an unknown binary answer that is plainly a picture or a font (by Content-Type) is not a video. Without this
+     * a page's `favicon.ico` was handed to the player ("Unsupported stream format", field probe 45251110253). A
+     * disguised playlist served as image/jpeg is still found: it is sniffed as HLS by its content, not UNKNOWN.
+     */
+    internal fun notMediaAnswer(p: ProbeResult): Boolean {
+        val ct = p.contentType?.substringBefore(';')?.trim()?.lowercase().orEmpty()
+        return ct.startsWith("image/") || ct.startsWith("font/") || ct == "application/font-woff" || ct == "text/css"
     }
 
     /** Maps network / HTTP problems to actionable messages. */

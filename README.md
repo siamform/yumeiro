@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/logo.png" width="132" alt="Yumeiro logo" />
+<img src=".github/readme/logo.png" width="132" alt="Yumeiro logo" />
 
 # Yumeiro
 
@@ -8,7 +8,7 @@
 
 **The all-in-one entertainment hub for Android. Made in Bangladesh.**
 
-No account. No login. No ads. No tracking.<br/>
+No account needed. No ads. No tracking.<br/>
 Local music and video, YouTube, YouTube Music, live TV / IPTV, CloudStream, Aniyomi, Mihon, Stremio and JavaScript
 sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified in one fast, beautifully designed player.
 
@@ -24,247 +24,37 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
 </p>
 
-**[Download the APK](https://yumeiro.click/download)** · **[Website](https://yumeiro.click/)** · **[Full guide](docs/GUIDE.md)** · **[Source status](https://yumeiro.click/status)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
+**[Download the APK](https://yumeiro.click/download)** · **[Website](https://yumeiro.click/)** · **[What's new](https://yumeiro.click/changelog)** · **[Source status](https://yumeiro.click/status)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
 
 </div>
 
 ---
 
-## What's new in 2.2.0
+## Latest release: 2.3.0
 
-<!-- RELEASE-2.2-IMAGES: a table keeps the four posters side by side (loose <img> tags stacked one under another) -->
-<p align="center"><img src="docs/assets/release-2.2/hero-readme-1600x800.png" alt="Yumeiro 2.2.0: online right after install, Live TV keeps its channels, one Back, solid themes" width="860"></p>
+- **Novels**: add LNReader's plugin list, install a source, browse, read with adjustable text size and keep your place.
+- **Rotate video** in 90° steps from the player, without reloading.
+- **A picture per profile**, picked from the gallery.
+- **A new splash** and skeleton loading on every feed instead of spinners.
+- **Live TV search**, a Country sheet, and new V2 options for Anime4K, Source Finding and Tracking beside the classic ones.
 
-<table>
-  <tr>
-    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-01-online-1080x1350.png" width="200" alt="Online at once" /></td>
-    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-02-live-tv-1080x1350.png" width="200" alt="Live TV keeps its channels" /></td>
-    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-03-themes-1080x1350.png" width="200" alt="Solid themes" /></td>
-    <td align="center" width="25%"><img src="docs/assets/release-2.2/post-04-back-1080x1350.png" width="200" alt="One Back everywhere" /></td>
-  </tr>
-</table>
+Highlights with images: [yumeiro.click/changelog](https://yumeiro.click/changelog) · every change and how it was checked:
+[CHANGELOG.md](CHANGELOG.md).
 
-Yumeiro 2.2.0 follows 2.1.0. Full notes, with how each item was checked: [CHANGELOG.md](CHANGELOG.md).
+**Known imperfect:** YouTube can block playback with "Sign in to confirm you're not a bot"; Android TV keeps showing
+the notification dialog after every "Don't allow". Full list in the [CHANGELOG](CHANGELOG.md).
 
-| | |
-|---|---|
-| **Online at once** | Extension Market, YouTube, Yumix, online music and Live TV work right after an install or update; no more 3 to 5 minute wait. |
-| **Live TV keeps its channels** | The saved list shows at once, even on a slow link, and is only replaced by a complete download. Lists no longer wait minutes for IPv4. |
-| **One Back** | The Back key, button bar, swipe and edge swipe close a page with the same slide as the on-screen arrow, without a blank page. |
-| **Solid themes** | Glass effects removed from every theme; Kasumi users move to Tsuki Night. |
-| **Clearer extensions** | Unsupported extensions say what is missing and what to do; HindiSubAnime-style breakages offer an older working copy; Market cards open full details. |
-| **Telegram page** | A clear sign-in card and wording about channels, not websites. Telegram's own sign-in is unchanged. |
-| **Small fixes** | Library shows its size instead of "Unkn...", Live TV shows one country filter, nothing redrawn while the app sits still. |
+## Coming next (in testing, not released yet)
 
-## What's new in 2.1.0
+These are on the `r21-major-list` branch and ship only after they pass device tests:
 
-<!-- RELEASE-2.1-IMAGES -->
-<p align="center"><img src="docs/assets/release-2.1/hero-readme-1600x800.png" alt="Yumeiro 2.1.0: no more freezes, feeds at once, a friendlier downloader" width="860"></p>
-<table>
-  <tr>
-    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-01-no-freeze-1080x1350.png" width="200" alt="No more freezes" /></td>
-    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-02-downloader-1080x1350.png" width="200" alt="A friendlier downloader" /></td>
-    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-03-shortcuts-1080x1350.png" width="200" alt="More Home shortcuts" /></td>
-    <td align="center" width="25%"><img src="docs/assets/release-2.1/post-04-telegram-1080x1350.png" width="200" alt="Telegram has its own page" /></td>
-  </tr>
-</table>
-
-Yumeiro 2.1.0 follows 2.0.0. Full notes:
-[CHANGELOG.md](CHANGELOG.md). Things that still need a real phone: [docs/release-2.1/MANUAL-TESTS-2.1.md](docs/release-2.1/MANUAL-TESTS-2.1.md).
-
-| | |
-|---|---|
-| **No more freezes** | The touch freeze of 2.0.0 is fixed, and a new automatic check fails the build on any frame over 700 ms on a low-RAM phone. |
-| **Feeds at once** | Yumix and Home show the saved feed straight away, even after a night away or an update, and refresh behind it; fastest extensions first, dead sites set aside. |
-| **A friendlier downloader** | Offline / Permanent switch, real quality, audio and subtitle choices for any stream, one episode or a range, whole music playlists. |
-| **Websites that stay open** | One website tab stays open while a stream plays; the stream bar follows the video playing now. |
-| **More sources** | Nuvio scraper repositories add their streams to any title; TeraBox plays full files when you are signed in; DiskWala hands off to its app. |
-| **Vertical player** | Swipe through Shorts and any portrait video. |
-| **Live TV by country** | Country filter in big playlists. |
-| **Your profiles, really yours** | Extensions, repositories, pins and reading are per profile; "Forgot PIN" uses security questions. |
-| **Yumeiro, all in one** | One built-in source for drama, films, documentaries, cartoons and TV, with no install; public-domain classics from the Internet Archive play with no source at all. |
-| **Yumeiro Live** | One checked Live TV list from iptv-org, dead links removed every day, with a Country filter and "checked N hours ago". |
-| **Smaller downloads** | Per-processor APKs (arm64-v8a, armeabi-v7a) next to the universal one; Settings → Updates shows your processor and the exact update file. |
-| **Upcoming you can search** | Search, a filter icon, and filters built from the calendar itself. |
-
-## What's new in 2.0.0
-
-Yumeiro 2.0.0 replaces 1.9.0: [download it from Releases](https://github.com/siamform/yumeiro/releases/latest).
-It has every 1.9.0 feature and fixes the 1.9.0 crash when a video opens. If you installed 1.9.0, update now.
-Full notes: [CHANGELOG.md](CHANGELOG.md). Per-feature test results: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md).
-
-| | |
-|---|---|
-| **Profiles with locks** | Up to 8 profiles with "Who's watching?", each with its own history, lists and 18+ setting; lock one with a PIN or the phone's fingerprint. |
-| **Private downloads** | Hide a finished video from every list and the gallery; open Private with the PIN or phone lock. |
-| **Your look, your speed** | Five accent colours; hold the video for 2x; Shorts player; volume boost to 200 %; external players. |
-| **Faster start** | Setup, feed, extensions and catalog show at once; extensions load behind, pinned ones first. |
-| **Live TV that keeps playing** | A dead link switches to the channel's other link; Now / Next from the playlist's guide. |
-| **More sources** | Public Telegram channels, open TeraBox / DiskWala links, Vega provider repos in a sandbox, your own proxy, DNS fallback. |
-| **Manga offline** | Saved chapters open without the source; on-device translation in the reader. |
-| **Safer by design** | The app no longer carries Yumeiro's Last.fm shared secret. Built-in Last.fm sign-in stays off until Yumeiro Cloud (which will sign those calls) is live; your own Last.fm key still works. |
-
-<p align="center"><img src="docs/assets/social/00-changelog-card.png" width="600" alt="Yumeiro 2.0.0 changelog card" /></p>
-
-<table>
-  <tr>
-    <td align="center" width="33%"><img src="docs/assets/social/02-video.png" width="260" alt="A film plays and resumes" /><br /><sub>A film plays and resumes</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/03-music.png" width="260" alt="Real music playback" /><br /><sub>Real music playback</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/01-extensions.png" width="260" alt="Installed extensions" /><br /><sub>Installed extensions</sub></td>
-  </tr>
-  <tr>
-    <td align="center" width="33%"><img src="docs/assets/social/04-whos-watching.png" width="260" alt="Who's watching?" /><br /><sub>Who's watching?</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/06-settings.png" width="260" alt="Settings by subject" /><br /><sub>Settings by subject</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/09-stats.png" width="260" alt="Your statistics" /><br /><sub>Your statistics</sub></td>
-  </tr>
-  <tr>
-    <td align="center" width="33%"><img src="docs/assets/social/08-telegram.png" width="260" alt="Public Telegram channels" /><br /><sub>Public Telegram channels</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/12-downloads.png" width="260" alt="Downloads and Private" /><br /><sub>Downloads and Private</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/10-sources.png" width="260" alt="Sources and script repos" /><br /><sub>Sources and script repos</sub></td>
-  </tr>
-  <tr>
-    <td align="center" width="33%"><img src="docs/assets/social/tv-video-controls.png" width="260" alt="TV: video controls" /><br /><sub>TV: video controls</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/tv-whos-watching.png" width="260" alt="TV: Who's watching?" /><br /><sub>TV: Who's watching?</sub></td>
-    <td align="center" width="33%"><img src="docs/assets/social/tv-music-playing.png" width="260" alt="TV: music playing" /><br /><sub>TV: music playing</sub></td>
-  </tr>
-</table>
-
-Real captures on CI emulators (Pixel 6 phone, Android TV 14) with a real extension, film and song from a fresh install.
-All images: [docs/assets/social](docs/assets/social/README.md).
-
-### Where to find things
-
-Settings is now organised by subject. Every page is also found by Settings search.
-
-| You want | Go to |
-|---|---|
-| Profiles, PINs, "Who's watching?", 18+ per profile | Settings → You → Profiles |
-| Your statistics (week, streak, activity map) | Settings → You → Your statistics |
-| Public Telegram channels (no login) | Settings → Sources & accounts → Telegram |
-| Saved web sites | Settings → Sources & accounts → Websites |
-| Extensions, script repos (Vega, Nuvio, SkyStream), home servers | Settings → Sources & accounts → Sources |
-| Video quality, decoder, TorrServer | Settings → Video → Video quality & playback |
-| Subtitles, subtitle downloads, skip intros | Settings → Video → Subtitles & intros |
-| Music quality, equalizer, lyrics, Last.fm | Settings → Music → Music & sound |
-| Downloads and Private downloads | Settings → Downloads & library → Downloads |
-| App lock, incognito | Settings → System → Privacy |
-| Proxy, DNS fallback | Settings → System → Network |
-
-## Release status
-
-- **2.1.0 is the current release**; it replaces 2.0.0. Notes: [CHANGELOG.md](CHANGELOG.md).
-- **2.0.0** (2026-11-20) replaced 1.9.0, whose release build crashed when a video opened.
-- **How it was tested:** every feature row on four emulators (2 GB low-RAM phone, Pixel 6, Android TV 7 and 14), one
-  pass from a fresh install each. Results with run IDs: [docs/MASTER-CHECKLIST-FINAL.md](docs/MASTER-CHECKLIST-FINAL.md);
-  what is not proven yet: [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
-- **Help test it:** start with the six mandatory tasks in the
-  [Yumeiro users checklist](docs/OWNER-MANUAL-TESTS.md#yumeiro-users-checklist).
-- **Known imperfect:** YouTube can block playback with "Sign in to confirm you're not a bot"; Android TV
-  keeps showing the notification dialog after every "Don't allow"; built-in Last.fm sign-in stays off until Yumeiro
-  Cloud is live. Full list in the [CHANGELOG](CHANGELOG.md).
-- **Source status:** [yumeiro.click/status](https://yumeiro.click/status) · **Download:** [yumeiro.click/download](https://yumeiro.click/download)
-
-**Installing on a TV:** download `Yumeiro-TV-v<version>.tv.apk` and open it with a file manager, or from a computer
-on the same network: `adb connect <tv-ip>:5555`, then `adb install -r Yumeiro-TV-v<version>.tv.apk` (`-r` keeps your
-data when you install over an older version). Turn on Developer options → USB/Network debugging on the TV first.
-
-## What's new in the redesign
-
-The biggest Yumeiro update so far: a new design, TV support, and a few hundred fixes found by testing every screen
-like a crowd of new users would. Full notes: [CHANGELOG.md](CHANGELOG.md).
-
-| | |
-|---|---|
-| **New, friendlier design** | The *Tsuki no Michi* design system across the shell, Home, Now Playing and Settings. A taller, easier floating dock, themed pop-ups with clear warning / error tones, readable tints in light and dark, smooth page transitions. |
-| **A first-run guide** | A welcome screen that asks how you'll use the app (music, video, anime, live TV), then a short tutor-style tour. Extensions stay fully asleep until the guide is finished or skipped — no surprise installs or messages before you're in. |
-| **New Home** | Reorganised around *Continue watching*, colour shortcuts, Quick picks and an endless *For you* feed. Library without tabs: colour shortcuts to Videos and Reading. |
-| **Yumix** | The online video hub (formerly "online"): a hybrid feed with a filter sheet, a resume banner, categories, latest episodes and per-language Sub / Dub groups with an audio filter. Plus a built-in short-drama source. |
-| **Audio online** | YouTube Music quick picks, search, background play and song downloads, no Google account. |
-| **New video page** | A YouTube / HiAnime-style watch page under a docked player, with sources, dub, episodes and Live TV hub. |
-| **Video player** | **Pinch to zoom** (100–400 %, pan, snap back, reset pill). **Subtitle style**: size, colour, outline / shadow / box, bold and height, with a live preview — and subtitles still load from your device (.srt, .vtt, .ass, .ttml), online search, delay sync and track select. Playback facts (size, duration, audio). Seek fixes. |
-| **Android TV & Fire TV** | A left navigation rail, visible focus rings and full remote control. See [TV support](#android-tv-google-tv-and-fire-tv). |
-| **One APK for every device** | A single universal APK per edition (arm64-v8a, armeabi-v7a, x86, x86_64 inside). Phones and tablets on Android 9+, Yumeiro TV on Android 7.0+. |
-| **Instant notices** | Optional Firebase push for announcements, updates and maintenance through the existing Yumeiro Cloud Worker. Off-switch per kind; no account, no IDs shared with anyone else. |
-| **Safer** | Fixed antivirus false positives at the cause (0 / 66 on VirusTotal for the preview build), a login-CSRF in tracker sign-in, private-file access through "Open with", backup restores that could carry code, and server abuse that could have stopped push for everyone. Details in [docs/security](docs/security). |
-
-## Android TV, Google TV and Fire TV
-
-Yumeiro installs on TV boxes and sticks with the TV APK (`Yumeiro-TV-v<version>.tv.apk`, universal, Android 7.0 or
-newer). On a TV it switches to TV mode on its own:
-
-- **Left navigation rail** instead of the bottom dock. Icon-only until focused, then it shows labels. D-pad Left from the left edge of any page opens it.
-- **Every button shows where you are**: a visible focus ring and lift on everything clickable, so the remote reaches every option.
-- **Player built for a remote**: Left / Right seek ±10 s, Centre toggles play, Up / Down show the controls, media keys work, the first Back hides the controls and the second leaves.
-- **Error cards take focus on Retry**, so you're never stuck.
-
-Tested in the emulator and by unit tests (`TvModeTest`, `TvLayoutTest`). More in [docs/TV.md](docs/TV.md).
-If something on your TV can't be reached with the remote, please [open an issue](https://github.com/siamform/yumeiro/issues) with the device name.
-
-## One app instead of five
-
-Great apps exist for each piece of the puzzle — **CloudStream** for extensions, **ArchiveTune**, **InnerTune** and
-**Metrolist** for YouTube Music, **NewPipe** and **LibreTube** for YouTube, **VLC** and **MX Player** for local video,
-**TiviMate** for IPTV. Each one does its own job well, and each one stops there.
-
-**Yumeiro brings all of them together in one app** — one library, one player, one history, one design:
-
-| | What you get |
-|---|---|
-| **Everything in one place** | Local music and video, YouTube, YouTube Music, IPTV/M3U and CloudStream `.cs3` extensions share one player, one queue and one *Continue watching* row. |
-| **Your existing extensions work** | CloudStream extension repos install as they are, with a built-in market, auto-updates, sub/dub, seasons and a crash guard, so one broken extension can't take the app down. |
-| **Fixes refused streams for you** | Before showing an error, Yumeiro retries the link with different headers, fetches fresh links, and if needed captures the stream from the page itself. |
-| **Offline downloads** | Save a whole season or the next five episodes into one folder per series (`Solo Leveling-(HiAnime-(Sub))`), pin what you want to keep, and let an auto-delete timer clear the rest. YouTube videos in every quality up to 4K, or music as audio only. Prefer **1DM** or **ADM**? Pick it in Settings → Downloads and episodes go straight to it, with the right headers. |
-| **Every extension format** | CloudStream `.cs3`, Aniyomi anime and Mihon/Tachiyomi manga APKs, Stremio add-ons and Mangayomi-style JavaScript sources, side by side in one Sources hub. |
-| **Add anything** | Paste any link or short code, or open any file: Yumeiro detects whether it is a CloudStream plugin, repository or list, an Aniyomi or Mihon repository or APK, a Stremio add-on, a JavaScript repository or a Jellyfin, Emby or Plex server, and installs it in the right place. 2,247 of the 2,248 CloudStream extensions in the market load ([compatibility audit](docs/EXTENSION-COMPAT.md)). |
-| **A market for every format** | No more hunting for repo links: each Sources tab has a Discover list of repositories and add-ons found on GitHub and in Stremio's catalogs, ranked by stars, recent updates and size, with search, sort and one-tap Add. Pasting a link by hand still works. |
-| **Your home servers** | Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV and SMB shares show up as sources, with natural episode order. |
-| **Track, back up, stay private** | AniList, MyAnimeList, Kitsu and Trakt; one-file backup and restore; app lock and incognito mode. |
-| **Watch together** | Rooms on the same Wi-Fi keep play, pause and seek in sync. No account, no server. |
-| **No login, ever** | YouTube and YouTube Music — search, quick picks, background play — with no Google account. |
-| **Live catalogs** | The playlist market, extension market and in-app news update without a new app release. |
-| **Safe updates** | Releases are signed with one key, and the in-app updater checks the signing certificate and SHA-256 before it installs anything. |
-| **Designed, not assembled** | The *Tsuki* design system, background glow that takes its colour from the artwork, one floating glass dock, and smooth 60 fps. |
-
----
-
-<div align="center">
-
-<img src="docs/redesign/shots/real/player-dark.webp" width="760" alt="Full-screen player showing Gulliver's Travels (1939) with a caption" />
-
-**Full-screen player** with captions · Gulliver's Travels (1939), Fleischer Studios, [Public Domain Mark 1.0](https://creativecommons.org/publicdomain/mark/1.0/), via [archive.org](https://archive.org/details/gullivers-travels-1939_202312)
-
-| Screen | Dark | Light |
-|:---|:---:|:---:|
-| **Home** | <img src="docs/redesign/shots/real/home-dark.webp" width="200" alt="Home with spaces, Continue watching and the mini player, dark theme" /> | <img src="docs/redesign/shots/real/home-light.webp" width="200" alt="Home with spaces, Continue watching and the mini player, light theme" /> |
-| **Shortcuts** | <img src="docs/redesign/shots/real/shortcuts-dark.webp" width="200" alt="Every shortcut on Home, dark theme" /> | <img src="docs/redesign/shots/real/shortcuts-light.webp" width="200" alt="Every shortcut on Home, light theme" /> |
-| **Music Online** | <img src="docs/redesign/shots/real/music-online-dark.webp" width="200" alt="Music Online search for Sky High from YouTube Music, dark theme" /> | <img src="docs/redesign/shots/real/music-online-light.webp" width="200" alt="Music Online search for Sky High from YouTube Music, light theme" /> |
-| **Now Playing** | <img src="docs/redesign/shots/real/now-playing-dark.webp" width="200" alt="Now Playing, a real song from YouTube Music, dark theme" /> | <img src="docs/redesign/shots/real/now-playing-light.webp" width="200" alt="Now Playing, a real song from YouTube Music, light theme" /> |
-| **Up next** | <img src="docs/redesign/shots/real/up-next-dark.webp" width="200" alt="Up next queue, dark theme" /> | <img src="docs/redesign/shots/real/up-next-light.webp" width="200" alt="Up next queue, light theme" /> |
-| **Mini player** | <img src="docs/redesign/shots/real/mini-player-dark.webp" width="200" alt="Song results with the mini player, dark theme" /> | <img src="docs/redesign/shots/real/mini-player-light.webp" width="200" alt="Song results with the mini player, light theme" /> |
-| **Yumix** | <img src="docs/redesign/shots/real/yumix-dark.webp" width="200" alt="Yumix feed with live anime and movies from SoraAnime and CineStream, dark theme" /> | <img src="docs/redesign/shots/real/yumix-light.webp" width="200" alt="Yumix feed with live anime and movies from SoraAnime and CineStream, light theme" /> |
-| **Yumix: Anime** | <img src="docs/redesign/shots/real/yumix-category-dark.webp" width="200" alt="Yumix filtered to Anime, dark theme" /> | <img src="docs/redesign/shots/real/yumix-category-light.webp" width="200" alt="Yumix filtered to Anime, light theme" /> |
-| **Installed extensions** | <img src="docs/redesign/shots/real/extensions-dark.webp" width="200" alt="Extensions page with CineStream and SoraAnime installed, dark theme" /> | <img src="docs/redesign/shots/real/extensions-light.webp" width="200" alt="Extensions page with CineStream and SoraAnime installed, light theme" /> |
-| **Market: installable** | <img src="docs/redesign/shots/real/market-search-dark.webp" width="200" alt="Extension market search with Install buttons, dark theme" /> | <img src="docs/redesign/shots/real/market-search-light.webp" width="200" alt="Extension market search with Install buttons, light theme" /> |
-| **Market: sources** | <img src="docs/redesign/shots/real/market-repos-dark.webp" width="200" alt="Extension repositories, dark theme" /> | <img src="docs/redesign/shots/real/market-repos-light.webp" width="200" alt="Extension repositories, light theme" /> |
-| **Docked player** | <img src="docs/redesign/shots/real/watch-dark.webp" width="200" alt="A film playing in the docked player with a caption, dark theme" /> | <img src="docs/redesign/shots/real/watch-light.webp" width="200" alt="A film playing in the docked player with a caption, light theme" /> |
-| **Download popup** | <img src="docs/redesign/shots/real/download-dark.webp" width="200" alt="Download popup with quality and save options, dark theme" /> | <img src="docs/redesign/shots/real/download-light.webp" width="200" alt="Download popup with quality and save options, light theme" /> |
-| **Settings** | <img src="docs/redesign/shots/real/settings-dark.webp" width="200" alt="Settings, dark theme" /> | <img src="docs/redesign/shots/real/settings-light.webp" width="200" alt="Settings, light theme" /> |
-| **Sources hub** | <img src="docs/redesign/shots/real/sources-dark.webp" width="200" alt="Sources hub for anime, manga, Stremio and JavaScript, dark theme" /> | <img src="docs/redesign/shots/real/sources-light.webp" width="200" alt="Sources hub for anime, manga, Stremio and JavaScript, light theme" /> |
-| **Market: installed** | <img src="docs/redesign/shots/real/market-installed-dark.webp" width="200" alt="Installed tab of the extension market, dark theme" /> | <img src="docs/redesign/shots/real/market-installed-light.webp" width="200" alt="Installed tab of the extension market, light theme" /> |
-
-**On a TV** (Android TV, Google TV, Fire TV)
-
-| Dark | Light |
-|:---:|:---:|
-| <img src="docs/redesign/shots/real/tv-home-dark.webp" width="380" alt="TV home with the navigation rail, dark theme" /> | <img src="docs/redesign/shots/real/tv-home-light.webp" width="380" alt="TV home with the navigation rail, light theme" /> |
-| <img src="docs/redesign/shots/real/tv-yumix-dark.webp" width="380" alt="Yumix on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-yumix-light.webp" width="380" alt="Yumix on a TV, light theme" /> |
-| <img src="docs/redesign/shots/real/tv-music-dark.webp" width="380" alt="Music Online on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-music-light.webp" width="380" alt="Music Online on a TV, light theme" /> |
-| <img src="docs/redesign/shots/real/tv-settings-dark.webp" width="380" alt="Settings on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-settings-light.webp" width="380" alt="Settings on a TV, light theme" /> |
-| <img src="docs/redesign/shots/real/tv-search-dark.webp" width="380" alt="Search on a TV, dark theme" /> | <img src="docs/redesign/shots/real/tv-search-light.webp" width="380" alt="Search on a TV, light theme" /> |
-
-<sub>Captured from the live app by <code>RealAppShotsTest</code> with the real SoraAnime and CineStream extensions (posters from AniList, TMDb, Kitsu and Simkl), the Internet Archive extension for the public-domain film only, and live YouTube Music. Feed artwork, extension names and icons belong to their owners. The song is "Sky High" by Elektronomia (NoCopyrightSounds). Video can't decode in the test JVM, so the player shows a real frame from the film's stream; the caption line is added by the test.</sub>
-
-</div>
+- **Light novels**: LNReader-compatible sources, a reader with themes, translation and saved position.
+- **Source Finding V2**: finds the same title on every installed extension, ranks matches, remembers your pick.
+- **Tracking V2** (opt-in): an offline-safe queue for AniList, MyAnimeList, Kitsu, Trakt and Simkl, careful title
+  matching (no wrong entries), and manga / novel chapter progress.
+- **Anime4K V2**: Fast / Balanced / Quality presets and a live strength control inside the player.
+- **Video rotation** (90 / 180 / 270 and reset, no reload), **profile pictures** from your gallery,
+  a new **splash screen** for light and dark, **loading skeletons** on every feed, and a labelled **bottom bar**.
 
 ## Why Yumeiro?
 
@@ -325,46 +115,33 @@ Yumeiro replaces all of them with **one fast, offline-first app that looks like 
 
 - **Tsuki** design system — calm ink-black nights or warm paper days, with a single moonlight-gold accent.
 - **Ambient colour** — the background glow quietly takes the colour of the artwork that is playing, like Spotify and Apple Music do.
-- **One floating dock** — the mini player and the navigation bar are joined into one glass capsule.
+- **One floating dock** — the mini player and the navigation bar are joined into one capsule.
 - **Endless home** — *Continue listening & watching*, shortcuts, then a *For you* feed that mixes your own songs and videos with YouTube and online picks forever.
 - **User guide in Settings** — illustrated diagrams of every tab, gesture and fix.
 - **Every error comes with a suggestion** for what to try next.
 - Smooth 60 fps: progress ticks never recompose the page, no blur on lists, baseline profiles included.
 
-## Yumeiro vs. the usual stack
+## Platforms and roadmap
 
-| | Yumeiro | Typical music player | Typical video player | YouTube app |
-|---|:---:|:---:|:---:|:---:|
-| Local music + video in one app | ✓ | – | – | – |
-| YouTube & YouTube Music, no login | ✓ | – | – | needs account for most features |
-| CloudStream extensions | ✓ | – | – | – |
-| IPTV / M3U playlists | ✓ | – | some | – |
-| Synced lyrics, equalizer | ✓ | ✓ | – | – |
-| No ads, no tracking, no account | ✓ | varies | varies | – |
-| Seamless self-updates | ✓ | – | – | via store |
+| Platform | Status |
+|---|---|
+| Android phones and tablets (9+) | Released |
+| Android TV, Google TV, Fire TV (7+) | Released |
+| Light novels, Tracking V2, Source Finding V2 | In testing (next release) |
+| iOS | Not planned: Yumeiro is native Android (Kotlin + Jetpack Compose) |
 
-## What's different
+## Tech stack
 
-How Yumeiro compares with the apps it learns from. All of them are great at their own job; the point is having it in one place.
+Kotlin, Jetpack Compose (Material 3), Media3 / ExoPlayer, OkHttp (with DNS over HTTPS), WorkManager, Coil, Firebase
+Cloud Messaging for push only (no Analytics), and on-device ML Kit for translation. Extensions run through the CloudStream, Aniyomi, Mihon, LNReader,
+Stremio and JavaScript runtimes Yumeiro ships.
 
-| | Yumeiro | Aniyomi | Mihon | CloudStream | Stremio | Kodi | Jellyfin app |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| CloudStream `.cs3` extensions | ✓ | – | – | ✓ | – | – | – |
-| Aniyomi anime extensions | ✓ | ✓ | – | – | – | – | – |
-| Mihon / Tachiyomi manga extensions + reader | ✓ | ✓ | ✓ | – | – | – | – |
-| Stremio add-ons (HTTP streams) | ✓ | – | – | – | ✓ | – | – |
-| JavaScript sources (Mangayomi format) | ✓ | – | – | – | – | – | – |
-| Jellyfin / Plex / DLNA / WebDAV / SMB | ✓ | – | – | – | – | ✓ | Jellyfin only |
-| Local music + video player | ✓ | – | – | – | – | ✓ | – |
-| YouTube & YouTube Music, no login | ✓ | – | – | – | – | add-on | – |
-| IPTV / M3U | ✓ | – | – | – | – | ✓ | Live TV via server |
-| AniList, MAL, Kitsu, Trakt tracking | ✓ | ✓ | ✓ | AniList, MAL | Trakt | add-on | – |
-| Backup / app lock / incognito | ✓ | ✓ | ✓ | backup | – | – | – |
-| Watch together without a server | ✓ (same Wi-Fi) | – | – | – | – | – | SyncPlay via server |
-| Crash guard for broken extensions | ✓ | – | – | partial | n/a | – | n/a |
-| Public source status page | [✓](https://yumeiro.click/status) | – | – | – | – | – | – |
+## Android TV, Google TV and Fire TV
 
-Torrent links (magnet links, raw info-hashes and Stremio torrent add-ons) play through your own TorrServer (Settings → Video → Video quality & playback). A built-in torrent engine is in testing and off by default.
+The TV APK (`Yumeiro-TV-v<version>.tv.apk`, Android 7.0 or newer) switches to TV mode on its own: a left navigation
+rail, a visible focus ring on everything, and a player built for the remote. Install it with a file manager, or from a
+computer on the same network: `adb connect <tv-ip>:5555`, then `adb install -r Yumeiro-TV-v<version>.tv.apk`.
+Install help: [yumeiro.click/download](https://yumeiro.click/download).
 
 ## For extension authors
 
@@ -419,70 +196,15 @@ inside the app, so install only those you trust. See [DISCLAIMER.md](DISCLAIMER.
 
 Please report vulnerabilities privately via
 [GitHub security advisories](https://github.com/siamform/yumeiro/security/advisories/new), not in public issues.
-Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Privacy: [PRIVACY.md](PRIVACY.md) · Terms: [TERMS.md](TERMS.md). Audit notes are in
-[docs/security](docs/security/).
+Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Privacy: [PRIVACY.md](PRIVACY.md) · Terms: [TERMS.md](TERMS.md).
 
-## FAQ
+## More
 
-<details>
-<summary><b>Why does Google Play Protect ask to scan the app?</b></summary>
-
-Play Protect shows that prompt for sideloaded apps whose signing key it has not seen often yet — it is about the
-app's reputation, not its code. Apps that have been installed by many people, or whose developer has registered
-the signing key with Google's Android developer verification, stop getting the prompt. You can safely tap
-**Scan app** or **Install without scanning**. Always check that the APK came from this repository's Releases page.
-</details>
-
-<details>
-<summary><b>A stream says "Access denied (HTTP 403)". What now?</b></summary>
-
-Yumeiro already retried it for you: with browser headers, the site and the host as referer, no referer,
-a media-player and a VLC user agent, and the host's own web-player headers. If it still fails, the link's token
-has expired (refresh the playlist or get a fresh link), the host needs a Cookie (add it under Headers & DRM),
-or the stream is limited to certain countries. Yumeiro does not bypass geo-blocking or access controls.
-</details>
-
-<details>
-<summary><b>Do I need an account?</b></summary>
-
-No. There is no login anywhere in the app. YouTube and YouTube Music work without signing in.
-</details>
-
-<details>
-<summary><b>Is it safe? What data does it collect?</b></summary>
-
-Nothing. No analytics, no ads, no servers of ours. Your history, playlists and settings stay on your device.
-Every update is verified against the official signing certificate before it is installed.
-</details>
-
-<details>
-<summary><b>How do I know my APK is the real one?</b></summary>
-
-Official releases are signed with one key; its fingerprint is in [SECURITY.md](SECURITY.md).
-Re-signed copies are detected by the app and marked **Unofficial build** in Settings → About.
-</details>
-
-<details>
-<summary><b>Where do online videos come from?</b></summary>
-
-From CloudStream-format extensions that *you* choose to install. Yumeiro ships only one public-domain extension
-(Internet Archive). Only add extensions for content you have the right to stream.
-</details>
-
-<details>
-<summary><b>Notifications arrive late or not at all. What can I do?</b></summary>
-
-Open Settings, Background, **Keep notifications on time**. It checks notifications, background checks, battery
-optimisation and Android's background restrictions, then shows the steps for your phone maker (auto-start,
-sleeping apps, app launch) with a button that opens the right page.
-</details>
-
-<details>
-<summary><b>The app crashed. Where is the report?</b></summary>
-
-Settings, **Crash reports**. Reports stay on your phone (web addresses, e-mails and tokens are removed). Tap
-Share to send one with your bug report.
-</details>
+| | |
+|---|---|
+| [Website](https://yumeiro.click/) | Download, install help, screenshots and release highlights |
+| [Source status](https://yumeiro.click/status) | Which online sources work right now |
+| [Changelog](CHANGELOG.md) | Every release, with how each change was checked |
 
 ## Build from source
 
@@ -493,8 +215,7 @@ cd yumeiro
 ./gradlew testMobileDebugUnitTest    # unit + UI tests
 ```
 
-Architecture, release pipeline, updater internals and the full feature list are in **[docs/GUIDE.md](docs/GUIDE.md)**
-and **[docs/HANDOVER.md](docs/HANDOVER.md)**.
+Design notes, test plans and release evidence are kept in a separate private repository, not in this one.
 
 ## Contributing
 
@@ -534,6 +255,11 @@ it is the single best way to help more people find it. Share it with a friend wh
 
 </div>
 
+## Acknowledgments
+
+Yumeiro builds on the work of CloudStream, NewPipe, Aniyomi, Mihon, LNReader, Stremio and Media3, and learned from
+Zangetsu and Hikari on novels, tracking and Anime4K presets. Anime4K by bloc97. Thank you.
+
 ## License
 
 Yumeiro is free software under the **[GNU GPL v3](LICENSE)** — the same licence as the CloudStream and NewPipe code it builds on.
@@ -542,4 +268,4 @@ You may study, change and share the code; modified versions must stay open sourc
 The **Yumeiro name, logo and icon are not covered by the licence** — forks must use their own name, icon and
 `applicationId`. See [TRADEMARKS.md](TRADEMARKS.md) and [NOTICE](NOTICE).
 
-Fonts: Manrope and Unbounded, SIL Open Font License 1.1 ([docs/licenses](docs/licenses/)).
+Fonts: Manrope and Unbounded, SIL Open Font License 1.1 ([licenses](licenses/)).

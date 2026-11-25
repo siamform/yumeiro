@@ -46,6 +46,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -82,19 +83,37 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Composable
 fun ProfileAvatar(profile: Profiles.Profile, size: Dp, selected: Boolean = false, modifier: Modifier = Modifier) {
     val c = profile.tone.swatch
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // PROFILE-PIC-1: the profile's own picture when it has one (decoded off the main thread, cached),
+    // otherwise the moon. A picture that can't be read falls back to the moon, never a blank circle.
+    val photo by androidx.compose.runtime.produceState(dev.asfakul.yumeiro.profiles.ProfilePhotos.cached(profile), profile.id, profile.photo) {
+        value = dev.asfakul.yumeiro.profiles.ProfilePhotos.load(context, profile)
+    }
     Box(
         modifier.size(size).clip(CircleShape)
             .background(Brush.radialGradient(listOf(c, c.copy(alpha = 0.72f))))
-            .border(if (selected) 3.dp else 0.dp, if (selected) TextPrimary else Color.Transparent, CircleShape),
+            .border(if (selected) 3.dp else 0.dp, if (selected) TextPrimary else Color.Transparent, CircleShape)
+            .testTag(if (photo != null) "profile_avatar_photo_${profile.id}" else "profile_avatar_moon_${profile.id}"),
         contentAlignment = Alignment.Center,
     ) {
-        // Crescent shadow: a darker disc offset to the lower right, clipped by the moon.
-        Box(Modifier.size(size).offset(x = size * 0.38f, y = size * 0.30f).clip(CircleShape).background(Color(0x22000000)))
-        Text(profile.initial, color = Color(0xFF101014), fontSize = (size.value * 0.42f).sp, fontWeight = FontWeight.Bold)
-        if (profile.locked) Icon(
-            Icons.Default.Lock, null, tint = Color(0xFF101014),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(size * 0.08f).size(size * 0.24f),
-        )
+        val bmp = photo
+        if (bmp != null) {
+            androidx.compose.foundation.Image(
+                bmp.asImageBitmap(), contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            // Crescent shadow: a darker disc offset to the lower right, clipped by the moon.
+            Box(Modifier.size(size).offset(x = size * 0.38f, y = size * 0.30f).clip(CircleShape).background(Color(0x22000000)))
+            Text(profile.initial, color = Color(0xFF101014), fontSize = (size.value * 0.42f).sp, fontWeight = FontWeight.Bold)
+        }
+        if (profile.locked) Box(
+            Modifier.align(Alignment.BottomEnd).padding(size * 0.06f).size(size * 0.30f).clip(CircleShape)
+                .background(if (bmp != null) Color(0xCC101014) else Color.Transparent),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Default.Lock, null, tint = if (bmp != null) Color.White else Color(0xFF101014), modifier = Modifier.size(size * 0.20f))
+        }
     }
 }
 

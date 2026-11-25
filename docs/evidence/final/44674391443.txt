@@ -1,5 +1,0 @@
-44674391443 tv-api34 MiniPlayerDeviceTest P1 PASS tests=1 skipped=0 sha=b676c66
-44674391443 tv-api34 MusicAccessDeviceTest P1 PASS tests=1 skipped=0 sha=b676c66
-44674391443 tv-api34 PinnedExtensionsDeviceTest P1 PASS tests=1 skipped=0 sha=b676c66
-44674391443 tv-api34 ProfilesDeviceTest P1 PASS tests=3 skipped=0 sha=b676c66
-44674391443 tv-api34 ReleaseShotsDeviceTest P1 PASS tests=3 skipped=0 sha=b676c66

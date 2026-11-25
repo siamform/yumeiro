@@ -58,7 +58,9 @@ class Own16UpcomingFilterTest {
 
     @Test fun pageHasSearchAndAFilterIconInsteadOfFixedChipRows() {
         val ui = File("src/main/java/dev/asfakul/yumeiro/ui/screens/online/UpcomingScreen.kt").readText()
-        assertTrue(ui.contains("\"upcoming_search\"") && ui.contains("\"upcoming_filter_button\"") && ui.contains("FilterSheet("))
+        // UP-FILTER-1 (R21 item 16B): the one filter icon became three (Category, Country, Date), each with its sheet.
+        assertTrue(ui.contains("\"upcoming_search\"") && ui.contains("FilterSheet("))
+        listOf("upcoming_category_button", "upcoming_country_button", "upcoming_date_button").forEach { assertTrue(it, ui.contains("\"$it\"")) }
         assertTrue("genres must come from the list", ui.contains("options.genres.forEach"))
         assertTrue("the old fixed 8-genre row is gone", !ui.contains("TvmazeSchedule.genresOf(list"))
     }

@@ -1,7 +1,0 @@
-44668397495 tv-api34 SleepTimerWithoutScreenDeviceTest P1 PASS tests=1 skipped=0 sha=aeb37d5
-44668397495 tv-api34 StabilityStressDeviceTest P1 PASS tests=3 skipped=0 sha=aeb37d5
-44668397495 tv-api34 StorageMainThreadDeviceTest P1 PASS tests=2 skipped=0 sha=aeb37d5
-44668397495 tv-api34 StreamFormatMismatchDeviceTest P1 PASS tests=5 skipped=0 sha=aeb37d5
-44668397495 tv-api34 StreamWatchDownloadDeviceTest P1 PASS tests=1 skipped=0 sha=aeb37d5
-44668397495 tv-api34 SurfaceModeDeviceTest P1 PASS tests=1 skipped=0 sha=aeb37d5
-44668397495 tv-api34 TorrentDownloadDeviceTest P1 PASS tests=2 skipped=0 sha=aeb37d5

@@ -65,10 +65,15 @@ class MTApplication : Application(), ImageLoaderFactory {
             }.getOrDefault(false)
         }
         dev.asfakul.yumeiro.stream.TeraBoxApi.cookieSource = { url -> runCatching { android.webkit.CookieManager.getInstance().getCookie(url) }.getOrNull() }
+        // DW-BOT-1: DiskWala shares open through a Telegram downloader bot once an account is signed in (read when a link resolves, off the main thread).
+        dev.asfakul.yumeiro.stream.StreamResolver.telegramSignedIn = {
+            runCatching { dev.asfakul.yumeiro.FeatureFlags.on(this, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_LOGIN) && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.signedInHint(this) }.getOrDefault(false)
+        }
         runCatching { dev.asfakul.yumeiro.notify.AppNotifier.ensureChannels(this) }
         runCatching { dev.asfakul.yumeiro.network.Connectivity.start(this) }
         runCatching { dev.asfakul.yumeiro.player.AudioQuality.init(this) }
         runCatching { dev.asfakul.yumeiro.player.VideoPrefs.init(this) }
+        runCatching { dev.asfakul.yumeiro.player.Anime4kV2.init(this) }
         runCatching { dev.asfakul.yumeiro.stream.TorrentSettings.init(this) }
         // R15: memory / thread breadcrumbs for crash reports, StrictMode in debug builds.
         runCatching { dev.asfakul.yumeiro.diagnostics.MemoryWatch.install(this) }
@@ -82,6 +87,12 @@ class MTApplication : Application(), ImageLoaderFactory {
             runCatching { dev.asfakul.yumeiro.text.RegexWarmup.run() }
             // E4: measured extension speeds (prefs read, so here and not on main).
             runCatching { dev.asfakul.yumeiro.online.ExtensionSpeed.init(app) }
+            // FIND-2: remembered title → source matches (prefs read).
+            runCatching { dev.asfakul.yumeiro.sources.hub.SourceFinder2.init(app) }
+            // TRACK-2: Tracking V2 switch and its queue file (disk read, so here and not on main).
+            runCatching { dev.asfakul.yumeiro.tracking.v2.TrackV2.init(app) }
+            // ADCHAIN-2: the page browser's ad-filter / short-link switches (prefs read, so here and not on main).
+            runCatching { dev.asfakul.yumeiro.online.web.BrowserFilters.start(app) }
             // R16 (ST-7): build the source-menu icons (Material vectors, the Yumix logo) here, not in
             // the first composition on main. Icon getters cache what they build; a race only builds twice.
             runCatching {

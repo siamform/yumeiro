@@ -126,12 +126,31 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
     var guard by remember { mutableStateOf<(() -> Unit)?>(null) }
     var settingFirst by remember { mutableStateOf(false) }
     fun guarded(action: () -> Unit) { if (ProfilePinGuard.needsCurrentPin(p)) guard = action else action() }
+    // PROFILE-PIC-1: the system photo picker (no storage permission); the copy is kept with the profile.
+    val photoScope = androidx.compose.runtime.rememberCoroutineScope()
+    var photoBusy by remember { mutableStateOf(false) }
+    val photoPicker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) photoScope.launch {
+            photoBusy = true
+            val err = dev.asfakul.yumeiro.profiles.ProfilePhotos.import(context, p.id, uri)
+            photoBusy = false
+            if (err == null) AppMessages.success(context, "Picture updated for ${p.name}") else AppMessages.error(context, err)
+        }
+    }
+    val pickPhoto = { photoPicker.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)) }
     TsukiDialog(
         onDismissRequest = onDismiss,
         icon = { ProfileAvatar(p, 56.dp) },
         title = { Text(p.name) },
         text = {
             Column {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { pickPhoto() }, enabled = !photoBusy, modifier = Modifier.testTag("profile_photo_pick")) {
+                        Text(when { photoBusy -> "Saving…"; p.photo > 0L -> "Change picture"; else -> "Choose a picture" }, color = SpotifyGreen)
+                    }
+                    if (p.photo > 0L) TextButton(onClick = { photoScope.launch { dev.asfakul.yumeiro.profiles.ProfilePhotos.remove(context, p.id); AppMessages.success(context, "Picture removed") } },
+                        enabled = !photoBusy, modifier = Modifier.testTag("profile_photo_remove")) { Text("Remove picture", color = TextSecondary) }
+                }
                 ToneRow(p.tone) { Profiles.setTone(context, p.id, it) }
                 Spacer(Modifier.height(8.dp))
                 ActionRow("Rename", "profile_rename") { rename = true }

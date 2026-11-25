@@ -201,3 +201,19 @@ internal fun LiveToolsGrid(tools: List<LiveTool>, columns: Int = 4) {
         }
     }
 }
+
+/** LIVE-1: the countries picked lately on Live TV, newest first (at most 5). Call off the main thread. */
+internal object LiveCountryRecent {
+    private const val PREFS = "live_tv"
+    private const val KEY = "country_recent"
+    private const val MAX = 5
+
+    fun read(ctx: android.content.Context): List<String> =
+        ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getString(KEY, null)
+            ?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+
+    fun add(ctx: android.content.Context, key: String) {
+        val next = (listOf(key) + read(ctx).filterNot { it.equals(key, ignoreCase = true) }).take(MAX)
+        ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putString(KEY, next.joinToString("\n")).apply()
+    }
+}

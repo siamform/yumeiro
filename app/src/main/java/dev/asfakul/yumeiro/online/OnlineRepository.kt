@@ -59,6 +59,8 @@ data class OnlineItem(
     val key: String get() = "$api|$url"
     /** Poster tags (language, release source, resolution, kind) — see [ReleaseTags]. */
     val tags: List<ReleaseTags.Tag> by lazy(LazyThreadSafetyMode.PUBLICATION) { ReleaseTags.parse(name, quality, type, dub) }
+    /** DEDUP-1: the title's identity across extensions, worked out once per card (the feed re-checks on each update). */
+    internal val titleKey: TitleDedupe.Key by lazy(LazyThreadSafetyMode.PUBLICATION) { TitleDedupe.compute(name, type) }
 }
 
 data class OnlineRow(
@@ -120,6 +122,9 @@ data class OnlineDetail(
     val imdbId: String? = null,
     val tmdbId: Int? = null,
     val unsupportedReason: String? = null,
+    /** META-1: cast and trailer addresses the extension gave (CloudStream `actors` / `trailers`). */
+    val cast: List<OnlineCast> = emptyList(),
+    val trailers: List<String> = emptyList(),
 ) {
     val versions: List<String> get() = episodes.keys.toList()
     fun seasons(version: String): List<OnlineSeason> =
@@ -127,6 +132,9 @@ data class OnlineDetail(
             OnlineSeason(s, s?.let { seasonNames[it] ?: "Season $it" } ?: "Episodes")
         }
 }
+
+/** META-1: one cast member: name, character (or role) and photo when the extension has them. */
+data class OnlineCast(val name: String, val role: String? = null, val image: String? = null)
 
 data class OnlineLink(
     val name: String,
@@ -232,6 +240,8 @@ object OnlineRepository {
         if (!force) cachedHomeNow(api)?.let { return@withContext it }
         val diskKey = diskKey(api, "home")
         if (!runCatching { api.hasMainPage }.getOrDefault(false)) return@withContext emptyList()
+        // VERIFY-2: a site whose check pass ran out is passed again in the background while the home loads.
+        warmCheck(api)
         // E4: every live fetch is timed; failures count towards quarantine (ExtensionSpeed).
         // A fetch cancelled by a newer one (Retry, leaving the screen) is not the extension's fault.
         val started = System.currentTimeMillis()
@@ -458,8 +468,17 @@ object OnlineRepository {
             }
     }
 
+    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /** VERIFY-2: see BrowserCheck.warm. Never waits; never shows a page. */
+    private fun warmCheck(api: MainAPI) {
+        val url = runCatching { api.mainUrl }.getOrNull()?.takeIf { it.startsWith("http") } ?: return
+        warmScope.launch { runCatching { dev.asfakul.yumeiro.online.web.BrowserCheck.warm(url) } }
+    }
+
     /** Live search of [api]; the caller already checked [cachedSearch] (FE-S1: the second disk read on a miss is gone). */
     private suspend fun searchOne(api: MainAPI, q: String): List<OnlineItem> {
+        warmCheck(api)
         val key = "${api.name}|${q.lowercase()}"
         val dk = diskKey(api, "search", q.lowercase())
         val results = try {
@@ -554,6 +573,12 @@ object OnlineRepository {
             aniListId = runCatching { with(LoadResponse) { r.getAniListId() }?.toIntOrNull() }.getOrNull(),
             imdbId = runCatching { with(LoadResponse) { r.getImdbId() } }.getOrNull()?.takeIf { it.startsWith("tt") },
             tmdbId = runCatching { with(LoadResponse) { r.getTMDbId() }?.toIntOrNull() }.getOrNull(),
+            cast = runCatching {
+                r.actors.orEmpty().mapNotNull { a ->
+                    a.actor.name.trim().takeIf { it.isNotEmpty() }?.let { OnlineCast(it, a.roleString?.trim()?.ifBlank { null }, a.actor.image?.takeIf { u -> u.startsWith("http") }) }
+                }.distinctBy { it.name }.take(30)
+            }.getOrDefault(emptyList()),
+            trailers = runCatching { r.trailers.map { it.extractorUrl.trim() }.filter { it.startsWith("http") }.distinct().take(6) }.getOrDefault(emptyList()),
         )
     }
 

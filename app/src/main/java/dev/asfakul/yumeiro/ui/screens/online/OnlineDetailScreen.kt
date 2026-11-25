@@ -218,6 +218,14 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
         downloads.filter { it.api == d.api && it.titleUrl == d.url && it.status == dev.asfakul.yumeiro.online.download.OnlineDownloads.Status.DONE }.mapNotNull { it.data }.toSet()
     }
 
+    // META-1 (owner list 13): release date, IMDb rating and votes, country, language, director, writers, companies,
+    // cast and trailers; the extension's own answer at once, the free sources (TitleFacts) when they arrive.
+    val facts by androidx.compose.runtime.produceState(dev.asfakul.yumeiro.online.meta.TitleFacts.fromDetail(d), d.api, d.url) {
+        value = dev.asfakul.yumeiro.online.meta.TitleFacts.load(ctx, d)
+    }
+    val year = d.year ?: facts.released?.take(4)?.toIntOrNull()
+    val runtime = d.durationMin ?: facts.runtimeMin
+
     LazyColumn(Modifier.fillMaxSize().testTag("online_detail_list"), contentPadding = PaddingValues(bottom = 48.dp)) {
         item("hero") {
             Box(Modifier.fillMaxWidth()) {
@@ -245,14 +253,22 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                         Spacer(Modifier.height(6.dp))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Pill(d.type)
-                            d.year?.let { Pill("$it", TextSecondary) }
-                            d.durationMin?.let { Pill(if (it >= 60) "${it / 60}h ${it % 60}m" else "${it}m", TextSecondary) }
-                            d.contentRating?.let { Pill(it, TextSecondary) }
+                            year?.let { Pill("$it", TextSecondary) }
+                            runtime?.let { Pill(if (it >= 60) "${it / 60}h ${it % 60}m" else "${it}m", TextSecondary) }
+                            (d.contentRating ?: facts.certification)?.let { Pill(it, TextSecondary) }
                             d.score?.takeIf { it > 0 }?.let {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(14.dp))
                                     Text(String.format(java.util.Locale.US, " %.1f", it), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
+                            }
+                        }
+                        facts.rating?.let { r ->
+                            Row(Modifier.padding(top = 6.dp).testTag("online_detail_imdb"), verticalAlignment = Alignment.CenterVertically) {
+                                Text("IMDb", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF5C518)).padding(horizontal = 5.dp, vertical = 1.dp))
+                                Text(String.format(java.util.Locale.US, " %.1f", r), color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                facts.votes?.let { Text(" · " + dev.asfakul.yumeiro.online.meta.TitleFacts.votesText(it), color = TextSecondary, fontSize = 12.sp) }
                             }
                         }
                         Text(d.api, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
@@ -314,6 +330,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
             }
         }
 
+        titleFactsItems(ctx, d, facts, tagPrefix = "online_detail") { title, trailing -> SectionHeader(title, trailing) }
         if (versions.size > 1 || versions.firstOrNull()?.isNotEmpty() == true && versions.size == 1 && d.kind == OnlineKind.ANIME) {
             item("versions") {
                 Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

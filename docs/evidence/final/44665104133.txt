@@ -1,3 +1,0 @@
-44665104133 tv-api24 FinalCoverageDeviceTest P1 FAIL tests=? skipped=0 sha=b975bb4
-44665104133 tv-api24 LocalPlayerDeviceTest P1 PASS tests=11 skipped=4 sha=b975bb4
-44665104133 tv-api24 MangaOfflineDeviceTest P1 PASS tests=2 skipped=0 sha=b975bb4

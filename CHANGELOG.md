@@ -2,12 +2,111 @@
 
 All notable changes to Yumeiro.
 
+Older entries name files under `docs/`. Those notes moved to a private repository on 2026-11-25; licence texts
+are now in [`licenses/`](licenses/).
+
+## v2.3.0: novels, rotation, profile pictures, a new splash and calmer loading
+
+Follows 2.2.0. Update straight from 2.2.0, 2.1.0 or 2.0.0; profiles, history, downloads and settings carry over.
+Every item says how it was checked: (CI) = unit / build tests in GitHub Actions, (emulator) = run on an Android
+emulator with the real app (API 36, and API 33 low-RAM where it says so). Nothing below was checked on a real
+phone yet. Where a check could not be run, the item says so.
+
+### New
+- Novels. Add LNReader's plugin list under Home › See more › Novels, install a source (for example AllNovel or
+  Royal Road), browse, open a novel, read with A− / A+ text size, keep your place, Continue and Saved
+  (NOVEL-1, CI + emulator device test on API 36 and API 33 low-RAM + emulator run with AllNovel: list, a novel
+  with 3,956 chapters, chapter 1 text, "Continue · Chapter 1" and the Continue tab; the text-size buttons were not
+  pressed in that run).
+- A site that asks for a person check (Royal Road on some networks) now says so in Yumeiro's words and offers
+  "Open <site>" and "Try again": you finish the check yourself on the site's page and the novel loads again. Nothing
+  is solved for you (NOVEL-2, CI + emulator: Royal Road on GitHub's network showed this card).
+- Rotate the video in 90° steps (90 / 180 / 270) from the player, and "Reset rotation" in More options, without
+  reloading the video (ROT-1, emulator device test).
+- A picture per profile: pick one from the gallery, change or remove it; profiles without one keep the default
+  avatar, and it stays after a restart (PROFILE-PIC-1, emulator).
+- A signature splash: the moon logo, "Yumeiro" and "Music · Video · Streams" in light and dark, then a crossfade to
+  Home with no black or white flash. It is shorter (0.7 s, 0.3 s with reduced motion) and a tap skips it
+  (SPLASH-2, emulator frame-by-frame).
+- Skeleton loading on every feed (Home, Yumix, details, Live TV, novels): shaped placeholders instead of spinners,
+  nothing flashes when the page is already cached, and "Remove animations" gives a still skeleton (SKELETON-2,
+  emulator).
+- Anime4K Enhancement V2 beside the classic one, with presets and an in-player control; Classic stays (A4K-2, CI).
+- Source Finding V2 beside V1 for Yumeiro Catalog titles (FIND-2, CI).
+- Tracking V2: tracker updates wait on disk until they are sent, titles are matched safely, and manga and novel
+  chapters are tracked too. It is a switch in Settings (findable in Settings search); V1 stays (TRACK-2, CI +
+  emulator for the switch).
+- Live TV: search channels by name, a Country sheet with search and counts, and one genre row instead of two
+  (LIVE-1, LIVE-1b, LIVE-1c, emulator).
+- Yumix "Show videos from": 30 pins, a filter by source and the search behind an icon (YF-2, emulator: "Pinned 2 of
+  30" stays after a relaunch).
+- A picked extension opens on its own sections, each with "See all" (EXT-SEC-1, emulator: Watch32 → Trending Movies).
+- Upcoming: a rotating "Coming up" card on Yumix and three filter buttons with countries and categories from the
+  data (UP-BANNER-1, UP-FILTER-1, emulator).
+- Extension Market Discover filters by source and repository from the loaded index (MKT-FILTER-1, emulator).
+- Sources page split into Installed, Browse and Repositories (SRC-HUB-1, emulator).
+- Websites: "+" reads the site's name, a search icon, recently visited sites, a browser bar with Back / Forward /
+  Reload / Open in Chrome, and an element blocker (WEB-5, WEB-RECENT-2, emulator).
+- Settings › Video player: switch any player button off and change the order (PC-1, emulator).
+- Video details: release date, IMDb votes, director, writers, companies, cast and trailers, showing only what
+  exists for that title, on the details page and on the watch page. "Reading video details…" no longer stays forever
+  when nothing plays (META-1, META-1b, emulator: Interstellar showed release date, certificate, director, writers,
+  companies, three cast members and two trailers).
+- Skip intro on any cut and a new Skip outro, from AniSkip and IntroDB (SKIP-1, SKIP-2, SKIP-3, emulator).
+- Manga translation reads the right language, says what it is doing, manages language packs and reads lines cut by
+  a webtoon strip seam (TL-2, TL-3, emulator with on-device ML Kit).
+- One place for every site security check: Extensions › Security checks lists each site with its state, "Check
+  now" and "Forget". A passed check is reused instead of asking again; Yumeiro never solves a CAPTCHA for you
+  (VERIFY-1, VERIFY-2, emulator: AnimePahe's popup no longer comes back).
+- Link-chain helper in Yumeiro's browser for shorteners and ad chains: it follows the real redirects, sends media to
+  the player, offers files as files and stops at a human check for you to pass. A short link that needs the page browser now says "This is a short
+  link", and a site check says "The site asks for a check", instead of "a web page, not a media file"
+  (ADCHAIN-1, ADCHAIN-2, ADCHAIN-3, emulator on test pages and on shrinkme.click / srnky.com; see Known limits).
+- The built-in Yumeiro source has a legal free anime part; its episodes play in Yumeiro's own player (ANIME-1,
+  ANIME-2, ANIME-3, emulator; see Known limits).
+- DiskWala links open through a Telegram downloader bot's mini app inside Yumeiro (DW-BOT-1, CI).
+
+### Fixed
+- Settings pages no longer show the Settings home through them while they open (NAV-2, NAV-3, NAV-4, emulator
+  device test and frame timing).
+- Telegram: public videos play in Yumeiro instead of sending you to the Telegram app, and the page no longer shows
+  the last website's shortcut (TG-PLAY-1, TG-TAB-1, emulator).
+- "Up next" only lists the list the video came from, never unrelated Live TV channels (UP-NEXT-1, emulator).
+- Seeking: an error right after a seek reopens the link at the place you sought to (SEEK-1, emulator device test).
+- Torrents: shared info-hashes and magnet links are resolved and reach the torrent player, titled by their name;
+  the built-in engine recovers from stuck pieces and long pauses (TOR-1, TOR-2, TOR-3, MAG-TITLE-1, B31-*, emulator).
+- Downloaded manga chapters are in chapter order, and Previous / Next work offline (MANGA-ORDER-1, emulator device
+  test).
+- The stream finder finds playlists in every frame and no longer plays a site's logo (SD-1, SD-2, emulator).
+- TeraBox plays the full video once you sign in, never the 30-second preview, under its file name (TB-PREVIEW-1,
+  TB-PREVIEW-2, TB-LOGIN, emulator with a test account).
+- Yumix "All" shows one card per title across extensions, and Home and Yumix show the same source count (DEDUP-1,
+  COUNT-1, emulator).
+- Multiline searches are kept and shown whole in search history (SEARCH-ML-1, emulator).
+- The update popup names the real step and says "Update completed!" after installing; it never names the hosting
+  service (UPD-MSG-1, emulator device test).
+- The player error card fits the portrait player (ERR-CARD-1, emulator).
+- An extension's invisible 1 × 1 web page can no longer take the focus or be read by screen readers (A11Y-EXT-1, emulator device test on API 36 and API 33 low-RAM).
+- A YouTube refusal now says what happened in plain words (ANIME-3b, CI).
+
+### Changed
+- Bottom bar: labels, an active pill and a bar that stands off the page. Same tabs, same order, same destinations
+  (NAV-BAR-2, emulator).
+- Shorter README; internal notes moved out of the public repository (DOC-README-1, README-2, DOCS-MOVE-1).
+- An unused library removed (DEP-1, CI).
+
+### Known limits
+- Signed-in Telegram (own avatar and name, chat counts, video gallery) needs a real account on the test phone:
+  TG-8ABC-1 is CI-tested; the signed-in emulator check is listed in the manual test list.
+- Some sites block GitHub's test network (animepahe.pw, MovieBox, Royal Road's Cloudflare check, YouTube for the
+  anime part, shrinkme.click). Yumeiro reports this honestly on those networks; playback there was not shown on CI.
+
 ## v2.2.0: online at once, one Back, solid themes
 
 Follows 2.1.0. Update straight from 2.1.0, 2.0.0 or 1.9.0; profiles, history, downloads and settings carry over.
 Every item says how it was checked: (CI) = unit / build tests in GitHub Actions, (emulator) = run on an Android
 emulator with the real app, (not yet on a real phone) where that is still open. Nothing below was checked on a real
-phone yet; docs/HANDOVER-LIVE.md lists the open real-device checks.
+phone yet; docs/UNVERIFIED-QUEUE.md lists the open real-device checks.
 
 ### Fixed
 - Online pages work right after a fresh install or an update. Extension Market, YouTube, Yumix, online music and Live TV

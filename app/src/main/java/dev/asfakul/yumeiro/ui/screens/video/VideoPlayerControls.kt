@@ -30,8 +30,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.Rotate90DegreesCw
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.ClosedCaptionDisabled
@@ -119,6 +121,13 @@ fun VideoPlayerTopBar(
     /** R17: time left on the video sleep timer ("12:30", "End of this video"), or null when off. */
     sleepLabel: String? = null,
     onSleepTimerClick: () -> Unit = {},
+    /** A4K-2: the active Anime4K profile ("Off", "Balanced · Sharpen", ...) and the sheet that switches it. */
+    enhanceLabel: String? = null,
+    onEnhanceClick: () -> Unit = {},
+    /** ROT-1: clockwise turn of the picture (0, 90, 180, 270) and the button that adds 90°. */
+    rotationDegrees: Int = 0,
+    onRotateClick: () -> Unit = {},
+    onRotateReset: () -> Unit = {},
 ) {
     // OL-7: the buttons get exactly the room they use, at the trailing edge; the title takes the rest.
     val aligned = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_TOPBAR_ALIGN)
@@ -207,7 +216,9 @@ fun VideoPlayerTopBar(
         ) {
             val fit = TopBarFit.split(visible, maxWidth.value, qualityLabel)
             // OWN-19: the full-screen bar keeps only the main buttons; the docked bar is already small.
-            val split = if (!compact && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_ESSENTIALS)) TopBarFit.essentials(fit) else fit
+            // PC-1: how many stay on the bar is the user's (Settings > Video player > Player controls), default 3.
+            val barCount by dev.asfakul.yumeiro.player.VideoPrefs.barCount.collectAsState()
+            val split = if (!compact && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.PLAYER_ESSENTIALS)) TopBarFit.essentials(fit, barCount) else fit
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(TopBarFit.GAP_DP.dp)
@@ -369,6 +380,21 @@ fun VideoPlayerTopBar(
                             )
                         }
                     }
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.ROTATE -> {
+                        IconButton(
+                            onClick = onRotateClick,
+                            modifier = Modifier
+                                .minimumInteractiveComponentSize()
+                                .testTag("video_rotate_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Rotate90DegreesCw,
+                                contentDescription = if (rotationDegrees == 0) "Rotate video" else "Rotate video, now ${rotationDegrees} degrees",
+                                tint = if (rotationDegrees == 0) Color.White else SpotifyGreen,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.LOCK -> {
                         // Lock screen
                         IconButton(
@@ -403,6 +429,11 @@ fun VideoPlayerTopBar(
                     onInfoClick = onInfoClick,
                     onLockClick = onLockClick,
                     onSleepTimerClick = onSleepTimerClick,
+                    enhanceLabel = enhanceLabel,
+                    onEnhanceClick = onEnhanceClick,
+                    rotationDegrees = rotationDegrees,
+                    onRotateClick = onRotateClick,
+                    onRotateReset = onRotateReset,
                 )
             }
         }
@@ -428,6 +459,11 @@ private fun VideoPlayerMoreMenu(
     onInfoClick: () -> Unit,
     onLockClick: () -> Unit,
     onSleepTimerClick: () -> Unit,
+    enhanceLabel: String? = null,
+    onEnhanceClick: () -> Unit = {},
+    rotationDegrees: Int = 0,
+    onRotateClick: () -> Unit = {},
+    onRotateReset: () -> Unit = {},
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -480,10 +516,17 @@ private fun VideoPlayerMoreMenu(
                         item("Video details", "video_info_btn_menu", androidx.compose.material.icons.Icons.Outlined.Movie, onClick = onInfoClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.LOCK ->
                         item("Lock controls", "video_screen_lock_btn_menu", Icons.Default.LockOpen, onClick = onLockClick)
+                    dev.asfakul.yumeiro.player.VideoPrefs.Control.ROTATE ->
+                        item("Rotate video", "video_rotate_btn_menu", Icons.Default.Rotate90DegreesCw,
+                            if (rotationDegrees == 0) null else "${rotationDegrees}°", onRotateClick)
                 }
             }
-            if (overflow.isNotEmpty()) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+            // ROT-1d: a turned picture can be set upright from the menu in every player size (the reset pill
+            // only fits the full-screen player), wherever Settings put the Rotate button.
+            if (rotationDegrees != 0) item("Reset rotation", "video_rotate_reset_menu", Icons.Default.Rotate90DegreesCw, "${rotationDegrees}°", onRotateReset)
+            if (overflow.isNotEmpty() || rotationDegrees != 0) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
             item("Sleep timer", "video_sleep_timer_menu", Icons.Default.Bedtime, sleepLabel, onSleepTimerClick)
+            if (enhanceLabel != null) item("Anime4K", "video_anime4k_menu", androidx.compose.material.icons.Icons.Default.AutoFixHigh, enhanceLabel, onEnhanceClick)
         }
     }
 }
@@ -510,8 +553,12 @@ fun VideoPlayerCenterControls(
         horizontalArrangement = Arrangement.spacedBy(if (compact) 22.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (!compact) CenterRoundButton(Icons.Default.SkipPrevious, "Previous video", onPrevious, "video_previous_btn", 46, 28, enabledLook = hasPrevious)
-        CenterRoundButton(Icons.Default.FastRewind, "Rewind 10s", onRewind10s, "video_rewind_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
+        // PC-1 (owner list 11): each of these can be switched off in Settings > Video player.
+        val off by dev.asfakul.yumeiro.player.VideoPrefs.extrasOff.collectAsState()
+        val skips = !compact && dev.asfakul.yumeiro.player.VideoPrefs.Extra.PREV_NEXT !in off
+        val seeks = dev.asfakul.yumeiro.player.VideoPrefs.Extra.SEEK !in off
+        if (skips) CenterRoundButton(Icons.Default.SkipPrevious, "Previous video", onPrevious, "video_previous_btn", 46, 28, enabledLook = hasPrevious)
+        if (seeks) CenterRoundButton(Icons.Default.FastRewind, "Rewind 10s", onRewind10s, "video_rewind_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
 
         // Play / Pause / Replay
         Box(
@@ -540,8 +587,8 @@ fun VideoPlayerCenterControls(
             )
         }
 
-        CenterRoundButton(Icons.Default.FastForward, "Forward 10s", onForward10s, "video_forward_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
-        if (!compact) CenterRoundButton(Icons.Default.SkipNext, "Next video", onNext, "video_next_btn", 46, 28, enabledLook = hasNext)
+        if (seeks) CenterRoundButton(Icons.Default.FastForward, "Forward 10s", onForward10s, "video_forward_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
+        if (skips) CenterRoundButton(Icons.Default.SkipNext, "Next video", onNext, "video_next_btn", 46, 28, enabledLook = hasNext)
     }
 }
 
@@ -642,6 +689,11 @@ fun VideoPlayerBottomBar(
     /** BUG-5 TV-5: TV layout is always full screen, so it has no full-screen toggle. */
     showFullscreenButton: Boolean = true,
 ) {
+    // PC-1 (owner list 11): the full-screen player's button can be switched off; the docked player keeps it,
+    // it is the only way up to full screen there.
+    val extrasOff by dev.asfakul.yumeiro.player.VideoPrefs.extrasOff.collectAsState()
+    @Suppress("NAME_SHADOWING")
+    val showFullscreenButton = showFullscreenButton && (compact || dev.asfakul.yumeiro.player.VideoPrefs.Extra.FULLSCREEN !in extrasOff)
     if (compact) {
         val known = durationMs.takeIf { it > dev.asfakul.yumeiro.player.SeekMath.UNKNOWN }
         val pos = if (isUserSeeking) dev.asfakul.yumeiro.player.SeekMath.positionFor(sliderProgress, known) ?: currentPositionMs else currentPositionMs

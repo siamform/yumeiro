@@ -1,8 +1,0 @@
-44598214395 api33-lowram MangaTranslateDeviceTest P1 PASS tests=2 skipped=0 sha=8ba8bcd
-44598214395 api33-lowram MangaTranslateDeviceTest P2 PASS tests=2 skipped=0 sha=8ba8bcd
-44598214395 api33-lowram TelegramPublicDeviceTest P1 PASS tests=1 skipped=0 sha=8ba8bcd
-44598214395 api33-lowram TelegramPublicDeviceTest P2 PASS tests=1 skipped=0 sha=8ba8bcd
-44598214395 api36 MangaTranslateDeviceTest P1 PASS tests=2 skipped=0 sha=8ba8bcd
-44598214395 api36 MangaTranslateDeviceTest P2 PASS tests=2 skipped=0 sha=8ba8bcd
-44598214395 api36 TelegramPublicDeviceTest P1 PASS tests=1 skipped=0 sha=8ba8bcd
-44598214395 api36 TelegramPublicDeviceTest P2 PASS tests=1 skipped=0 sha=8ba8bcd

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
@@ -47,6 +47,10 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.graphicsLayer
 import dev.asfakul.yumeiro.ui.navigation.bottomNavItems
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.Yume
@@ -70,13 +74,18 @@ val DockOuterCorner = 22.dp
 val DockJunctionCorner = 6.dp
 
 /**
- * The Yumeiro dock: one quiet ink bar holding the main destinations (Home · Music · Videos ·
+ * The Yumeiro dock: one floating bar holding the main destinations (Home · Music · Videos ·
  * Library by default; 3 to 6 items, see Settings → Navigation bar).
  *
- * Active state (Round 8, Snapchat-style): no capsule, circle or dot. The active icon switches
- * to its solid glyph, fills with the accent colour and springs up a touch; inactive tabs are
- * calm outlines. Tabs are icon-only (labels are announced to TalkBack and shown in Settings → Navigation bar). With the mini player
- * showing, both pieces form one joined stack.
+ * NAV-BAR-2 (owner list 33, users: "looks cheap, background and icons blend, no labels"):
+ * - The bar sits on the raised surface tone, not a near-black that matched the page, with a
+ *   hairline border, so it reads as its own layer in every theme (AMOLED keeps a near-black).
+ * - Every tab has a short label under its icon (one line, ellipsis for long pinned names).
+ * - The active tab gets an accent pill behind its solid icon and an accent, bold label; inactive
+ *   tabs are outlines in the secondary text colour (≥ 4.5:1 on the bar).
+ * - The pill grows in with a short spring (scale + fade, never a width animation); with
+ *   reduced motion it simply appears.
+ * Same items, order, routes, test tags and TalkBack labels as before.
  */
 @Composable
 fun MTBottomBar(
@@ -89,12 +98,20 @@ fun MTBottomBar(
     items: List<dev.asfakul.yumeiro.ui.navigation.BottomNavItem> = bottomNavItems,
 ) {
     val palette = LocalMtPalette.current
-    val inactive = if (palette.isDark) palette.textSecondary.copy(alpha = 0.80f) else palette.textSecondary
-    val border = palette.textPrimary.copy(alpha = if (palette.isDark) 0.07f else 0.08f)
+    val reduced = reducedMotion()
+    val amoled = palette.isDark && palette.background == Color.Black
+    val barColor = when {
+        amoled -> palette.surface
+        palette.isDark -> palette.surfaceContainerHigh
+        else -> palette.surface
+    }
+    val inactive = palette.textSecondary
+    val border = palette.textPrimary.copy(alpha = 0.10f)
     val shape = if (joinedWithMiniPlayer) {
         RoundedCornerShape(topStart = DockJunctionCorner, topEnd = DockJunctionCorner, bottomStart = DockOuterCorner, bottomEnd = DockOuterCorner)
     } else RoundedCornerShape(DockStandaloneCorner)
     val activeTint = if (palette.isDark) palette.accentBright else palette.accent
+    val pillColor = activeTint.copy(alpha = if (palette.isDark) 0.18f else 0.14f)
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -106,33 +123,34 @@ fun MTBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(DockNavHeight)
-                .shadow(if (joinedWithMiniPlayer) 2.dp else 6.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+                .shadow(if (joinedWithMiniPlayer) 2.dp else 8.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
                 .clip(shape)
-                .background(palette.navBar, shape)
+                .background(barColor, shape)
                 .border(1.dp, border, shape)
         ) {
-            val inner = 6.dp
-            // Round 8: no indicator shape at all (the old sliding capsule / circle and the seal dot
-            // are gone). Like Snapchat, the active destination is shown by its glyph alone: it
-            // switches to the solid icon, fills with the accent colour and springs up a touch.
             Row(
-                modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = inner),
+                modifier = Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEach { item ->
                     val isSelected = currentRoute == item.route
                     val tint by animateColorAsState(if (isSelected) activeTint else inactive, label = "navTint")
-                    val pop by animateFloatAsState(if (isSelected) 1.12f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = 500f), label = "navPop")
+                    val pill by animateFloatAsState(
+                        if (isSelected) 1f else 0f,
+                        if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 600f),
+                        label = "navPill",
+                    )
                     // Keyboard / D-pad focus: a ring around the tab (touch never focuses it).
                     val tabSource = remember { MutableInteractionSource() }
                     val tabFocused by tabSource.collectIsFocusedAsState()
-                    Box(
+                    Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
+                            .clip(RoundedCornerShape(16.dp))
                             .clickable(
                                 interactionSource = tabSource,
-                                indication = null,
+                                indication = androidx.compose.material3.ripple(bounded = true, color = activeTint),
                                 role = Role.Tab,
                                 onClickLabel = item.label,
                             ) { if (!isSelected) onNavigateToRoute(item.route) }
@@ -141,18 +159,39 @@ fun MTBottomBar(
                             .semantics { selected = isSelected; contentDescription = item.label }
                             .testTag(item.testTag)
                             .tourTarget(item.testTag),
-                        contentAlignment = Alignment.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        // Icon-only (no captions): the active glyph is the solid version in the accent
-                        // colour; inactive glyphs are outlines in a calm neutral.
-                        androidx.compose.animation.Crossfade(isSelected, animationSpec = androidx.compose.animation.core.tween(160), label = "navGlyph") { sel ->
-                            Icon(
-                                imageVector = if (sel) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = null,
-                                tint = tint,
-                                modifier = Modifier.size(if (sel) 28.dp else 26.dp).scale(pop).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
+                        // Up to seven tabs: the pill narrows with the tab (56 dp at most) so it never touches its neighbour.
+                        Box(Modifier.padding(horizontal = 3.dp).widthIn(max = 56.dp).fillMaxWidth().height(30.dp), contentAlignment = Alignment.Center) {
+                            Box(
+                                Modifier.matchParentSize()
+                                    .graphicsLayer { alpha = pill; scaleX = 0.6f + 0.4f * pill; scaleY = 0.85f + 0.15f * pill }
+                                    .clip(CircleShape)
+                                    .background(pillColor)
+                                    .testTag(if (isSelected) "nav_active_pill" else "nav_pill_off")
                             )
+                            androidx.compose.animation.Crossfade(isSelected, animationSpec = androidx.compose.animation.core.tween(if (reduced) 0 else 160), label = "navGlyph") { sel ->
+                                Icon(
+                                    imageVector = if (sel) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = null,
+                                    tint = tint,
+                                    modifier = Modifier.size(24.dp).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
+                                )
+                            }
                         }
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            item.label,
+                            color = tint,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 11.sp,
+                            lineHeight = 13.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 2.dp).testTag("nav_label_${item.testTag}").clearAndSetSemantics { },
+                        )
                     }
                 }
             }

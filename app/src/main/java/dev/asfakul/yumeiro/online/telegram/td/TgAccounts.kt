@@ -61,6 +61,24 @@ object TgAccounts {
         context.applicationContext.getSharedPreferences(HINT_PREFS, Context.MODE_PRIVATE).getBoolean(safe(Profiles.currentId(context.applicationContext)), false)
     private fun setSignedInHint(context: Context, profile: String, on: Boolean) {
         context.getSharedPreferences(HINT_PREFS, Context.MODE_PRIVATE).edit().putBoolean(safe(profile), on).apply()
+        if (!on) context.getSharedPreferences(ME_PREFS, Context.MODE_PRIVATE).edit().remove(safe(profile) + ".name").remove(safe(profile) + ".photo").apply()
+    }
+
+    /** TG-ME-1: the signed-in user's name and local photo for the open profile, as last read from TDLib. */
+    data class MeHint(val name: String, val photoPath: String?)
+    private const val ME_PREFS = "telegram_me_hint"
+    /** Read off the main thread (SharedPreferences). Null until the account page has read the user once. */
+    fun meHint(context: Context): MeHint? {
+        val app = context.applicationContext
+        val key = safe(Profiles.currentId(app))
+        val prefs = app.getSharedPreferences(ME_PREFS, Context.MODE_PRIVATE)
+        val name = prefs.getString("$key.name", null)?.takeIf { it.isNotBlank() } ?: return null
+        return MeHint(name, prefs.getString("$key.photo", null)?.takeIf { File(it).isFile })
+    }
+    fun rememberMe(context: Context, name: String, photoPath: String?) {
+        val app = context.applicationContext
+        val key = safe(Profiles.currentId(app))
+        app.getSharedPreferences(ME_PREFS, Context.MODE_PRIVATE).edit().putString("$key.name", name).putString("$key.photo", photoPath).apply()
     }
 
     /** OWN-3: sign-in needs keys first (no build keys and none typed). */

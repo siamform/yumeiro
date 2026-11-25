@@ -193,6 +193,7 @@ fun TrackingScreen(onBack: () -> Unit) {
             Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("tracking")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Every tracker is free. Kitsu, Simkl and Last.fm only need a sign-in; AniList, MyAnimeList and Trakt need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.",
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                TrackingV2Card()
 
                 GroupLabel("Anime")
                 val aniId = AniList.clientId().isNotBlank()

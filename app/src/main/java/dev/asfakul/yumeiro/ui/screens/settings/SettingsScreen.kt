@@ -8,6 +8,7 @@ package dev.asfakul.yumeiro.ui.screens.settings
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import dev.asfakul.yumeiro.ui.theme.legibleOnTheme
+import dev.asfakul.yumeiro.ui.theme.pageBackground
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
@@ -146,13 +147,18 @@ fun SettingsScreen(
             transitionSpec = { dev.asfakul.yumeiro.ui.components.PageMotion.pushOrPop(this, forward = targetState != null, reduced = reducedSettingsMotion).using(null) },
             label = "settings_page",
         ) { page ->
-            if (page == null) SettingsHome(onBack = onBackClick, onOpen = ::go)
-            else CategoryPage(
-                page, onBack = { openName = null },
-                onRescanClick = onRescanClick, onNavigateToEqualizer = onNavigateToEqualizer,
-                onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory,
-                onOpenPage = onOpenPage, onOpenCategory = ::go,
-            )
+            // NAV-2 (owner report): both pages were see-through, so while a category slid in the Settings home
+            // (only dimmed to 55 %, not hidden) showed under it. Each page now draws its own opaque background,
+            // like every NavHost destination (OpaquePage).
+            Box(Modifier.fillMaxSize().pageBackground().testTag(if (page == null) "settings_layer_home" else "settings_layer_page")) {
+                if (page == null) SettingsHome(onBack = onBackClick, onOpen = ::go)
+                else CategoryPage(
+                    page, onBack = { openName = null },
+                    onRescanClick = onRescanClick, onNavigateToEqualizer = onNavigateToEqualizer,
+                    onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory,
+                    onOpenPage = onOpenPage, onOpenCategory = ::go,
+                )
+            }
         }
         if (showGuide) UserGuideScreen(onBack = { showGuide = false })
     }
@@ -372,6 +378,8 @@ private fun CategoryPage(
                 Category.APPEARANCE -> item("c") { AppearanceSettingsCard() }
                 Category.PLAYER -> {
                     item("c") { VideoPlayerSettingsCard() }
+                    // PC-1 (owner list 11): the player's buttons are set where the player is (was under Video quality).
+                    item("controls") { GroupLabel("Player controls"); SettingsCard { PlayerControlsCard() } }
                     item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
                 }
                 Category.NAVIGATION -> item("c") { NavigationBarSettingsCard() }
@@ -381,10 +389,6 @@ private fun CategoryPage(
                         SettingsCard { dev.asfakul.yumeiro.ui.screens.profiles.ProfilesSettings(context as? android.app.Activity) }
                     }
                     item("adult") { GroupLabel("18+ content (this profile)"); OnlineSettingsCard(OnlinePart.ADULT) }
-                }
-                Category.PLAYER -> {
-                    item("c") { VideoPlayerSettingsCard() }
-                    item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
                 }
                 Category.VIDEO_QUALITY -> {
                     item("q") { QualityAndAudioCard() }

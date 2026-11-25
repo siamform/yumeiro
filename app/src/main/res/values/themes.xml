@@ -2,14 +2,28 @@
 <resources>
     <!-- Material Components theme so CloudStream extensions can show their own settings dialogs
          (AppCompat / Material views). The app UI itself is Jetpack Compose and draws its own theme. -->
-    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Base.Yumeiro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">#1DB954</item>
         <item name="colorPrimaryVariant">#169C46</item>
         <item name="colorOnPrimary">#000000</item>
         <item name="colorSecondary">#1DB954</item>
         <item name="colorOnSecondary">#000000</item>
-        <item name="android:windowBackground">@android:color/black</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- SPLASH-2: was always black, so a light phone flashed black before the (light) first frame. -->
+        <item name="android:windowBackground">@color/launch_bg</item>
+    </style>
+    <style name="Theme.MyApplication" parent="Base.Yumeiro" />
+
+    <!-- SPLASH-2: the launch look for the theme chosen in Yumeiro (not only the phone's). Android 13+
+         remembers it for the next cold start (SplashScreen.setSplashScreenTheme, see LaunchLook). -->
+    <style name="Theme.Yumeiro.Launch.Light" parent="Theme.MyApplication">
+        <item name="android:windowBackground">@color/launch_bg_light</item>
+    </style>
+    <style name="Theme.Yumeiro.Launch.Dark" parent="Theme.MyApplication">
+        <item name="android:windowBackground">@color/launch_bg_dark</item>
+    </style>
+    <style name="Theme.Yumeiro.Launch.Black" parent="Theme.MyApplication">
+        <item name="android:windowBackground">@color/launch_bg_black</item>
     </style>
 </resources>

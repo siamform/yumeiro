@@ -134,6 +134,18 @@ object TorrentPlan {
         return p
     }
 
+    /**
+     * B31-SEEK6 (run 45268091524): pieces that get a deadline at once, about 8 MB, at least 4 and at most 16.
+     * libtorrent asks to keep the time-critical list short: each deadline piece is raised to top priority and
+     * "any block you request that is not urgent will take away from the bandwidth you get for peers that are urgent"
+     * (https://libtorrent.org/streaming.html). The rest of the read-ahead stays wanted (priority 5) without deadlines.
+     */
+    fun urgentPieces(pieceLength: Int): Int = ((8L shl 20) / pieceLength.coerceAtLeast(1)).toInt().coerceIn(4, 16)
+
+    /** B31-SEEK6: is the read at [piece] past the middle of the timed pieces, with more of the window left to time? */
+    fun slideDeadlines(piece: Int, deadlineEnd: Int, windowEnd: Int, urgent: Int): Boolean =
+        deadlineEnd in 0 until windowEnd && piece > deadlineEnd - urgent / 2
+
     /** B31-SEEK2: read-ahead offset after a seek (see [deadlines]). */
     const val SEEK_GAP_MS = 500
 

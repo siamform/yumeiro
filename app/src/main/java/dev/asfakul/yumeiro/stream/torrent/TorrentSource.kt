@@ -29,6 +29,8 @@ class TorrentSource(
     private val window: Boolean = true,
     /** B31-SEEK5 kill switch (flag b31_target_first). */
     private val targetFirst: Boolean = true,
+    /** B31-RESCUE-1: how long a read waits before only its piece is wanted (so idle peers ask for its blocks too). */
+    private val rescueMs: Long = RESCUE_MS,
 ) : ByteSource {
     override val length: Long = file.size
     override val mimeType: String = TorrentPlan.mimeFor(file.path)
@@ -37,12 +39,23 @@ class TorrentSource(
     private var raf: RandomAccessFile? = null
     @Volatile private var windowStart = -1
     @Volatile private var windowEnd = -1
+    /** B31-SEEK6: last piece of the window that has a deadline (the rest of the window is wanted without one). */
+    @Volatile private var deadlineEnd = -1
     /** B31-SEEK3: container head / tail stay wanted at a low priority. */
     private val keep = TorrentPlan.headTail(file, meta.pieceLength)
+    /** B31-SEEK6: how many pieces ahead of the read have a deadline at once. */
+    private val urgent = TorrentPlan.urgentPieces(meta.pieceLength)
     /** B31-SEEK4: tail pieces that got a deadline in [prime] and have not lost it yet. */
     @Volatile private var tailAsked: List<Int> = emptyList()
     /** B31-SEEK5: the window (and tail) held back until the target piece has its first bytes; null = open. */
-    private var held: Held? = null
+    @Volatile private var held: Held? = null
+    /** TOR-CLOSE-1: set by [close]; a read still waiting gives up at once instead of after [waitMs]. */
+    @Volatile private var closed = false
+    /**
+     * B31-SEEK7: after a seek only the timed pieces are wanted; the rest of the read-ahead opens at the first
+     * [slide], once playback runs again.
+     */
+    @Volatile private var narrow = false
     private val plan = Any()
     private class Held(val window: List<Int>, val deadlines: List<Pair<Int, Int>>)
 
@@ -64,6 +77,7 @@ class TorrentSource(
         touched()
         val piece = TorrentPlan.pieceAt(file, position, meta.pieceLength)
         if (!TorrentPlan.insideWindow(piece, windowStart, windowEnd, last)) synchronized(plan) { focus(piece) }
+        else if (TorrentPlan.slideDeadlines(piece, deadlineEnd, windowEnd, urgent)) synchronized(plan) { slide(piece) }
         // Up to the end of this piece (the next one may not be here yet).
         val pieceEnd = (piece + 1).toLong() * meta.pieceLength - file.offset
         var upTo = pieceEnd
@@ -73,21 +87,31 @@ class TorrentSource(
             val started = System.currentTimeMillis()
             val deadline = started + waitMs
             var nextTrace = started
-            synchronized(core.signal) {
+            var rescued = false
+            try { synchronized(core.signal) {
                 while (!core.have(meta.hash, piece)) {
+                    if (closed) throw IOException("Torrent stream closed")
                     TorrentTrace.sink?.let { sink ->
                         val now = System.currentTimeMillis()
                         if (now >= nextTrace) { nextTrace = now + 1_000; sink(waitLine(piece, inPiece, now - started)) }
                     }
                     core.error(meta.hash)?.let { throw IOException("Torrent error: $it") }
-                    val ready = TorrentPlan.readableInPiece(core.finishedBlocks(meta.hash, piece), inPiece, meta.pieceLength.toLong())
+                    val bits = core.finishedBlocks(meta.hash, piece)
+                    // B31-SEEK6 (lowram run 45268091524): the piece had 6 of 8 blocks but not the one the read needs, so
+                    // the held window never opened, nothing else was wanted and the peers left; open on any block.
+                    if (held != null && bits != null && !bits.isEmpty) open()
+                    val ready = TorrentPlan.readableInPiece(bits, inPiece, meta.pieceLength.toLong())
                     if (ready > 0) { upTo = position + ready; break }
                     val left = deadline - System.currentTimeMillis()
                     if (left <= 0) throw IOException("No peer sent this part in time")
+                    if (!rescued && window && held == null && System.currentTimeMillis() - started >= rescueMs) {
+                        rescued = true
+                        rescue(piece)
+                    }
                     core.askBlocks(meta.hash)
                     core.signal.wait(minOf(left, BLOCK_POLL_MS))
                 }
-            }
+            } } finally { if (rescued) restore(piece) }
             TorrentTrace.sink?.invoke("piece $piece readable after ${System.currentTimeMillis() - started} ms (have=${core.have(meta.hash, piece)})")
         }
         open()
@@ -101,44 +125,95 @@ class TorrentSource(
         val (peers, rate) = core.stats(meta.hash)
         return "wait piece $piece block ${inPiece / TorrentPlan.BLOCK}/${meta.pieceLength / TorrentPlan.BLOCK} " +
             "finished ${bits?.cardinality() ?: -1} firstGap ${bits?.nextClearBit(0) ?: -1} peers $peers rate ${rate / 1024} KiB/s " +
-            "after $waitedMs ms"
+            "after $waitedMs ms" +
+            // B31-STALL-T: is the needed block not asked for at all, or asked and stuck with a peer?
+            (core.blockNote(meta.hash, piece, (inPiece / TorrentPlan.BLOCK).toInt())?.let { " need $it" } ?: "")
     }
 
     private fun focus(piece: Int) {
         val seek = windowStart >= 0
         val d = TorrentPlan.deadlines(piece, last, meta.pieceLength, readAhead, if (seek) TorrentPlan.SEEK_GAP_MS else 0)
         val newEnd = d.lastOrNull()?.first ?: piece
+        // B31-SEEK6 (run 45268091524, seek 13.6 s on api36): every piece of the 64 MB read-ahead had a deadline, and
+        // libtorrent raises each deadline piece to top priority, so ~500 pieces shared the peers with the one the
+        // player waited for. Only the next [urgent] pieces get deadlines; [slide] moves them on during playback.
+        val timed = d.take(urgent)
         // B-31 seek: the abandoned window's deadlines are overdue now and would be fetched first.
         // B31-SEEK4 (TV device run 44884971496): the tail deadlines from prime() are older than the seek target's, so
         // libtorrent's time-critical picker served the 4 MB tail first and no block of the target came for 9 s. They
         // go with the old window; the tail stays wanted at priority 2, and a read at the tail focuses it again.
         if (windowStart >= 0) {
-            val old = ((windowStart..windowEnd) + tailAsked).distinct().filter { it < piece || it > newEnd }
+            val timedEnd = timed.lastOrNull()?.first ?: piece
+            val old = ((windowStart..maxOf(windowStart, deadlineEnd)) + tailAsked).distinct().filter { it < piece || it > timedEnd }
             tailAsked = emptyList()
             if (old.isNotEmpty()) core.dropDeadlines(meta.hash, old)
         }
-        windowStart = piece; windowEnd = newEnd
+        windowStart = piece; windowEnd = newEnd; deadlineEnd = timed.lastOrNull()?.first ?: piece
         // B31-SEEK3: only the window is downloaded; priorities are written after the old deadlines are dropped and
         // before the new ones, so a reset never demotes the new window (libtorrent leaves reset pieces at 1).
         // B31-SEEK5 (lowram run 44884969625: no block of the first piece for 16 s while 0.4-0.9 MB/s went to the tail
         // and read-ahead): until the target piece has its first bytes it is the only piece wanted and the only
         // deadline, so every peer's free request slot goes to it; then [open] lets the window and tail in.
         held = null
+        narrow = seek && targetFirst && window && d.size > timed.size
         if (targetFirst && window && d.size > 1 && !core.have(meta.hash, piece)) {
             core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, listOf(piece), emptyList()))
             core.setDeadlines(meta.hash, d.take(1))
-            held = Held(d.map { it.first }, d.drop(1))
+            held = Held(d.map { it.first }, timed.drop(1))
             return
         }
-        if (window) core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, d.map { it.first }, keep))
-        core.setDeadlines(meta.hash, d)
+        if (window) core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, wanted(d.map { it.first }), keep))
+        core.setDeadlines(meta.hash, timed)
     }
+
+    /** B31-SEEK6: playback passed the middle of the timed pieces; the next ones in the window get deadlines. */
+    private fun slide(piece: Int) {
+        if (!TorrentPlan.slideDeadlines(piece, deadlineEnd, windowEnd, urgent)) return
+        // B31-SEEK7: playback runs again after the seek; the whole read-ahead may download now.
+        if (narrow && held == null) {
+            narrow = false
+            core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, (windowStart..windowEnd).toList(), keep))
+        }
+        val end = minOf(windowEnd, piece + urgent - 1)
+        val next = (deadlineEnd + 1..end).map { it to (it - piece) * 120 }
+        deadlineEnd = end
+        val h = held
+        if (h != null) held = Held(h.window, h.deadlines + next) else core.setDeadlines(meta.hash, next)
+    }
+
+    /**
+     * B31-RESCUE-1 (runs 45306375960 / 45308014362: the read's block "requested x1 0B" for 5-12 s while other peers
+     * sent other pieces). libtorrent gives an already-asked block to a second peer only when that peer has nothing
+     * else to ask for (strict_end_game_mode is off), and the window always had free blocks. Same idea as piece
+     * stealing in other engines: while the read is stuck, only its piece is wanted, so idle peers ask for the stuck
+     * block too; [restore] brings the window back once the bytes are readable.
+     */
+    private fun rescue(piece: Int) = synchronized(plan) {
+        TorrentTrace.sink?.invoke("rescue piece $piece")
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, listOf(piece), emptyList()))
+    }
+
+    private fun restore(piece: Int) = synchronized(plan) {
+        // A seek during the wait moved the window; focus() already wrote the new priorities.
+        if (held != null || piece !in windowStart..windowEnd) return@synchronized
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, wanted((windowStart..windowEnd).toList()), keep))
+        // libtorrent drops the deadline of a piece set to priority 0 (torrent::prioritize_pieces), so they go back on.
+        if (deadlineEnd > piece) core.setDeadlines(meta.hash, (piece + 1..deadlineEnd).map { it to (it - piece) * 120 })
+    }
+
+    /**
+     * B31-SEEK7 (lowram run 45316393663, seek 7.5 s): once the target had bytes the whole 24 MB read-ahead was
+     * wanted, peers filled their 1 s request queues with it, and each block the player needed next took 0.6-1.1 s
+     * ("any block you request that is not urgent will take away from the bandwidth you get for peers that are
+     * urgent", https://libtorrent.org/streaming.html). Right after a seek only the timed pieces are wanted.
+     */
+    private fun wanted(window: List<Int>): List<Int> = if (narrow) window.filter { it <= deadlineEnd } else window
 
     /** B31-SEEK5: the target piece has bytes; the held window and tail may download now. */
     private fun open() = synchronized(plan) {
         val h = held ?: return@synchronized
         held = null
-        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, h.window, keep))
+        core.streamWindow(meta.hash, TorrentPlan.windowPriorities(meta.numPieces, wanted(h.window), keep))
         core.setDeadlines(meta.hash, h.deadlines)
     }
 
@@ -157,7 +232,17 @@ class TorrentSource(
         /** While a piece is partial, how often a fresh block report is asked for (only while a read waits). */
         const val BLOCK_POLL_MS = 150L
         const val TAIL_DEADLINE_MS = 400
+        /** B31-RESCUE-1: about twice a healthy block time on the device runs (one block 0.3-0.6 s). */
+        const val RESCUE_MS = 1_200L
     }
 
-    fun close() { synchronized(guard) { runCatching { raf?.close() }; raf = null } }
+    /**
+     * TOR-CLOSE-1 (run 45268091524: a read of the previous torrent, paused when the next one opened, kept waiting
+     * 20 s and more on a local server thread): wakes every waiting read so it fails now.
+     */
+    fun close() {
+        closed = true
+        synchronized(core.signal) { core.signal.notifyAll() }
+        synchronized(guard) { runCatching { raf?.close() }; raf = null }
+    }
 }

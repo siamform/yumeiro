@@ -40,6 +40,11 @@ jobs:
       - name: Data script tests
         run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
 
+      - name: Link-chain script on saved shortener pages (ADCHAIN-1)
+        run: |
+          (cd /tmp && npm i --no-save --silent jsdom@24 >/dev/null)
+          NODE_PATH=/tmp/node_modules node scripts/adchain1_link_chain_check.js 2>/dev/null
+
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 

@@ -62,6 +62,10 @@ object TeraBoxApi {
         "so Yumeiro won't use that. Sign in to your free TeraBox account on this page once, then go back and play the link again."
 
     /** Whether this device has any AV1 video decoder (Android 10+ ships one). Set in MTApplication. */
+    /** TB-LOGIN: shown instead of sending a signed-in user back to the sign-in page. */
+    const val SIGNED_PREVIEW_REASON = "You're signed in to TeraBox, but it still gives only the 30-second preview of this file, " +
+        "so Yumeiro won't play it. Try the link again in a minute, or play it in the TeraBox app."
+
     @Volatile var canPlayAv1: () -> Boolean = { true }
 
     /** An AV1 original on a phone with no AV1 decoder plays TeraBox's H.264 transcode instead. */
@@ -92,6 +96,13 @@ object TeraBoxApi {
         "Do TeraBox's check on this page, then go back and play the link again."
 
     /** `1qkXq…` from `…/s/1qkXq…` or `…?surl=qkXq…` (surl drops the leading "1"). */
+    /** TB-LOGIN: the file name, unless the caller gave a real title (a shared link's title is often just its code). */
+    fun titleFor(given: String, shareUrl: String, fileName: String): String {
+        val code = shortUrl(shareUrl)
+        val t = given.trim()
+        return if (t.isEmpty() || (code != null && (t == code || t == code.removePrefix("1")))) fileName else given
+    }
+
     fun shortUrl(url: String): String? {
         val u = url.trim().toHttpUrlOrNull() ?: return null
         val segs = u.pathSegments
@@ -117,6 +128,30 @@ object TeraBoxApi {
     fun isPreview(m3u8: String, fileBytes: Long): Boolean =
         "#EXT-X-ENDLIST" in m3u8 && playlistSeconds(m3u8) <= 60.0 && fileBytes > 40L * 1024 * 1024
 
+    /**
+     * TB-PREVIEW-1: the stream TeraBox's own web player asks for (`…/share/streaming?…` on a TeraBox host). When the
+     * share page was shown (to sign in or do TeraBox's check), the page finder caught this address and played it
+     * straight away, so the anonymous 30-second preview played and TeraBoxApi's preview rule was skipped.
+     */
+    fun isWebStream(url: String): Boolean {
+        val u = url.trim().toHttpUrlOrNull() ?: return false
+        val h = u.host.lowercase()
+        return (BOX_HOSTS.any { h.contains(it) } || h.contains("dubox")) && u.encodedPath.contains("/share/streaming")
+    }
+
+    /**
+     * TB-PREVIEW-1: a captured playlist is the preview when it is closed and lasts a minute or less (TeraBox sends
+     * 3 x 10 s). The file size is unknown at capture time; a genuinely short clip is then resolved through the API,
+     * which plays it in full for a signed-in user.
+     */
+    fun isPreviewCapture(m3u8: String): Boolean =
+        m3u8.trimStart().startsWith("#EXTM3U") && "#EXT-X-ENDLIST" in m3u8 && playlistSeconds(m3u8) <= 60.0
+
+    /** TB-PREVIEW-1: the first of [urls] that is a TeraBox share link (the page the capture came from). */
+    fun shareIn(vararg urls: String?): String? = urls.firstOrNull { u ->
+        u != null && shortUrl(u) != null && (u.toHttpUrlOrNull()?.host?.lowercase()?.let { h -> BOX_HOSTS.any { h.contains(it) } || h.contains("dubox") } == true)
+    }
+
     private fun JsonObject.str(k: String): String? = (this[k])?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }
 
     /** The desktop-client identity TeraBox answers API callers with (same as Hikari's reference client). */
@@ -130,9 +165,40 @@ object TeraBoxApi {
 
     private fun q(s: String?) = java.net.URLEncoder.encode(s.orEmpty(), "UTF-8")
 
+    /**
+     * TB-PREVIEW-2: the origins worth asking, in order. TeraBox ties a sign-in (`ndus`) to the site it was made on:
+     * measured 2026-11-24 with a real account, terabox.app's own API gave the full HLS (10532 s, 1057 segments) for a
+     * 1024terabox.com share, while the share's host without its own sign-in gave only the 30 s preview. So the hosts
+     * whose cookies hold a sign-in go first (the share's host before the app's sign-in host), each with its own cookies.
+     */
+    /**
+     * TB-LOGIN: TeraBox's signed-in web app host. Measured 2026-11-24 with a real account signed in through the Android
+     * web view UA: the same `ndus` gave only the 30 s preview (30 s of 10532 s) from www.terabox.app's share/streaming,
+     * and the full HLS (10532 s) from dm.terabox.app's. So the app host is asked before the sign-in page's host.
+     */
+    internal const val SIGNED_API = "https://dm.terabox.app"
+
+    internal fun origins(shareUrl: String, cookies: (String) -> String?): List<String> {
+        val own = originFor(shareUrl)
+        if (base != DEFAULT_BASE) return listOf(own)
+        val all = listOf(own, SIGNED_API, DEFAULT_BASE, "https://www.1024tera.com", "https://www.terabox.com", "https://www.1024terabox.com").distinct()
+        val signed = all.filter { o -> signedIn(runCatching { cookies(o) }.getOrNull()) }
+        return signed.ifEmpty { listOf(own) }
+    }
+
     fun resolve(client: OkHttpClient, shareUrl: String, userAgent: String = DESKTOP_UA): Result {
         val short = shortUrl(shareUrl) ?: return Result.Failed("Not a TeraBox share link")
-        val origin = originFor(shareUrl)
+        var best: Result? = null
+        for (origin in origins(shareUrl, cookieSource)) {
+            val r = resolveOn(client, shareUrl, short, origin, userAgent)
+            if (r is Result.Ok) return r
+            // Keep the most useful answer: a human check beats "sign in", which beats a plain failure.
+            if (best == null || r is Result.NeedsVerify || (r is Result.NeedsSignIn && best is Result.Failed)) best = r
+        }
+        return best ?: Result.NeedsSignIn
+    }
+
+    private fun resolveOn(client: OkHttpClient, shareUrl: String, short: String, origin: String, userAgent: String): Result {
         val first = attempt(client, shareUrl, short, origin, userAgent)
         // OWN-10: a "verify" or refused list is often just a stale session: read the page again once with a fresh
         // session (only the user's saved sign-in, a new browserid). Never more than one retry, never solving a check.
@@ -146,7 +212,8 @@ object TeraBoxApi {
 
     private fun attempt(client: OkHttpClient, shareUrl: String, short: String, origin: String, userAgent: String): Result {
         val jar = linkedMapOf<String, String>()
-        listOf(origin, base, "https://www.terabox.com", "https://www.1024terabox.com").distinct().mapNotNull { runCatching { cookieSource(it) }.getOrNull() }
+        // TB-PREVIEW-2: only this origin's own cookies; a sign-in from another TeraBox site isn't honoured here.
+        listOfNotNull(runCatching { cookieSource(origin) }.getOrNull())
             .joinToString(";").split(';').forEach { c -> c.split('=', limit = 2).takeIf { it.size == 2 }?.let { jar.putIfAbsent(it[0].trim(), it[1].trim()) } }
         fun cookie() = jar.entries.joinToString("; ") { "${it.key}=${it.value}" }.ifBlank { null }
         fun get(url: String, referer: String = "$origin/"): String? {

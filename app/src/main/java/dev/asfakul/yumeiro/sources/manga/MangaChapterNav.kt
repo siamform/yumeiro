@@ -15,7 +15,13 @@ object MangaChapterNav {
         val list = chapters.distinctBy { it.url }
         if (list.none { it.url == currentUrl }) return null to null
         val numbered = list.isNotEmpty() && list.all { it.number >= 0f } && list.map { it.number }.distinct().size == list.size
-        val reading = if (numbered) list.sortedBy { it.number } else list.reversed()
+        // MANGA-ORDER-1: without the source's numbers, numbers read from the names decide when every chapter has one.
+        val named = !numbered && list.map { MangaChapterOrder.numberOf(it) }.let { n -> n.all { it >= 0f } && n.distinct().size == n.size }
+        val reading = when {
+            numbered -> list.sortedBy { it.number }
+            named -> MangaChapterOrder.readingOrder(list)
+            else -> list.reversed()
+        }
         val i = reading.indexOfFirst { it.url == currentUrl }
         return reading.getOrNull(i - 1) to reading.getOrNull(i + 1)
     }

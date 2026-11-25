@@ -111,7 +111,7 @@ data class TourStop(
  * each stop highlights a live control (scrolled into view first), says what it is and, where it
  * makes sense, asks the user to try it; doing so moves the lesson on. Skippable at every step;
  * the outcome is remembered by [SetupGuide] and the tour can be replayed from Settings → Setup guide.
- * Round 9: the copy now matches what is on screen (icon-only bottom bar, "See more", the source
+ * Round 9: the copy now matches what is on screen (bottom bar, "See more", the source
  * pill), and the spotlight hugs the exact control instead of the whole header.
  */
 object ExploreTour {

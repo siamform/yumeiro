@@ -27,7 +27,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -102,6 +104,10 @@ fun QualityAndAudioCard() {
     val renderer by VideoPrefs.renderer.collectAsState()
     val anime4k by VideoPrefs.anime4k.collectAsState()
     val tier by VideoPrefs.gpuTier.collectAsState()
+    remember(context) { dev.asfakul.yumeiro.player.Anime4kV2.init(context); dev.asfakul.yumeiro.player.Anime4kV2 }
+    val a4kEngine by dev.asfakul.yumeiro.player.Anime4kV2.engine.collectAsState()
+    val a4kPreset by dev.asfakul.yumeiro.player.Anime4kV2.preset.collectAsState()
+    val a4kStyle by dev.asfakul.yumeiro.player.Anime4kV2.style.collectAsState()
     val player by VideoPrefs.defaultPlayer.collectAsState()
     val resume by VideoPrefs.resume.collectAsState()
     GroupLabel("Playback")
@@ -124,9 +130,17 @@ fun QualityAndAudioCard() {
         SettingsToggleRow("Anime4K enhancement", "Sharpens and darkens line art on the GPU. Best on clean 1080p anime sources. Applies to the next video", anime4k, { VideoPrefs.setAnime4k(context, it) }, "qa_anime4k")
         if (anime4k) {
             SettingsDivider()
-            ChoiceRow("Anime4K GPU tier", "qa_gpu_tier", VideoPrefs.GpuTier.entries, tier, { it.label }, { it.detail }) { VideoPrefs.setGpuTier(context, it) }
+            ChoiceRow("Anime4K engine", "qa_a4k2_engine", dev.asfakul.yumeiro.player.Anime4kV2.Engine.entries, a4kEngine, { it.label }, { it.detail }) { dev.asfakul.yumeiro.player.Anime4kV2.setEngine(context, it) }
+            SettingsDivider()
+            if (a4kEngine == dev.asfakul.yumeiro.player.Anime4kV2.Engine.CLASSIC) {
+                ChoiceRow("Anime4K GPU tier", "qa_gpu_tier", VideoPrefs.GpuTier.entries, tier, { it.label }, { it.detail }) { VideoPrefs.setGpuTier(context, it) }
+            } else {
+                ChoiceRow("Anime4K preset", "qa_a4k2_preset", dev.asfakul.yumeiro.player.Anime4kV2.Preset.entries, a4kPreset, { it.label }, { it.detail }) { dev.asfakul.yumeiro.player.Anime4kV2.setPreset(context, it) }
+                SettingsDivider()
+                ChoiceRow("Anime4K style", "qa_a4k2_style", dev.asfakul.yumeiro.player.Anime4kV2.Style.entries, a4kStyle, { it.label }, { it.detail }) { dev.asfakul.yumeiro.player.Anime4kV2.setStyle(context, it) }
+            }
         }
-        Text("Decoder, renderer and Anime4K changes apply to the next video you open.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+        Text("Decoder, renderer and Classic Anime4K changes apply to the next video you open. V2 presets can also be switched live in the player (More → Anime4K).", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
     }
     GroupLabel("Player")
     SettingsCard {
@@ -143,35 +157,74 @@ fun QualityAndAudioCard() {
             }
             SettingsDivider()
         }
-        PlayerControlsEditor()
     }
 }
 
-/** Reorder or hide the buttons in the player's top bar. */
+/**
+ * PC-1 (owner list 11): Settings > Video player > Player controls. Every button of the player can be
+ * switched off: the top-bar buttons (in the user's order, with how many stay on the bar before the rest
+ * go into More), the previous / next and 10 s buttons, and the fullscreen button.
+ */
 @Composable
-private fun PlayerControlsEditor() {
+fun PlayerControlsCard() {
     val context = LocalContext.current
+    remember(context) { VideoPrefs.init(context); VideoPrefs }
     val order by VideoPrefs.controls.collectAsState()
     val hidden by VideoPrefs.hidden.collectAsState()
-    Text("Player controls", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
-    Text("Reorder the buttons in the player's top bar, or hide the ones you never use", color = TextTertiary, fontSize = 12.5.sp)
-    Spacer(Modifier.size(6.dp))
-    order.forEachIndexed { i, c ->
-        val off = c in hidden
-        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("qa_control_${c.name.lowercase()}"), verticalAlignment = Alignment.CenterVertically) {
-            Text(c.label, color = if (off) TextTertiary else TextPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            IconButton(onClick = { VideoPrefs.setControls(context, VideoPrefs.move(order, c, -1), hidden) }, enabled = i > 0) {
-                Icon(Icons.Default.KeyboardArrowUp, "Move ${c.label} up", tint = if (i > 0) TextSecondary else TextTertiary.copy(alpha = 0.4f))
+    val bar by VideoPrefs.barCount.collectAsState()
+    val off by VideoPrefs.extrasOff.collectAsState()
+    val place = remember(order, hidden, bar) { VideoPrefs.placeOf(order, hidden, bar) }
+    Column(Modifier.fillMaxWidth().testTag("player_controls_card")) {
+        Text("Top bar", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Reorder the buttons, or hide the ones you never use. The first ones stay on the bar, the rest are under More", color = TextTertiary, fontSize = 12.5.sp)
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("qa_bar_count"), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Buttons on the bar", color = TextPrimary, fontSize = 14.sp)
+                Text(if (bar == 1) "1 button, the rest under More" else "$bar buttons, the rest under More", color = TextTertiary, fontSize = 12.sp)
             }
-            IconButton(onClick = { VideoPrefs.setControls(context, VideoPrefs.move(order, c, 1), hidden) }, enabled = i < order.lastIndex) {
-                Icon(Icons.Default.KeyboardArrowDown, "Move ${c.label} down", tint = if (i < order.lastIndex) TextSecondary else TextTertiary.copy(alpha = 0.4f))
+            IconButton(onClick = { VideoPrefs.setBarCount(context, bar - 1) }, enabled = bar > VideoPrefs.BAR_MIN, modifier = Modifier.testTag("qa_bar_less")) {
+                Icon(Icons.Default.Remove, "Fewer buttons on the bar", tint = if (bar > VideoPrefs.BAR_MIN) TextSecondary else TextTertiary.copy(alpha = 0.4f))
             }
-            IconButton(onClick = { VideoPrefs.setControls(context, order, if (off) hidden - c else hidden + c) }) {
-                Icon(if (off) Icons.Default.VisibilityOff else Icons.Default.Visibility, if (off) "Show ${c.label}" else "Hide ${c.label}", tint = if (off) TextTertiary else SpotifyGreen)
+            Text("$bar", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(20.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            IconButton(onClick = { VideoPrefs.setBarCount(context, bar + 1) }, enabled = bar < VideoPrefs.BAR_MAX, modifier = Modifier.testTag("qa_bar_more")) {
+                Icon(Icons.Default.Add, "More buttons on the bar", tint = if (bar < VideoPrefs.BAR_MAX) TextSecondary else TextTertiary.copy(alpha = 0.4f))
             }
         }
+        order.forEachIndexed { i, c ->
+            val where = place[c] ?: VideoPrefs.Place.MORE
+            val isOff = where == VideoPrefs.Place.HIDDEN
+            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("qa_control_${c.name.lowercase()}"), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(c.label, color = if (isOff) TextTertiary else TextPrimary, fontSize = 14.sp)
+                    Text(
+                        when (where) { VideoPrefs.Place.BAR -> "On the bar"; VideoPrefs.Place.MORE -> "Under More"; VideoPrefs.Place.HIDDEN -> "Hidden" },
+                        color = if (where == VideoPrefs.Place.BAR) SpotifyGreen else TextTertiary, fontSize = 11.5.sp,
+                        modifier = Modifier.testTag("qa_control_place_${c.name.lowercase()}"),
+                    )
+                }
+                IconButton(onClick = { VideoPrefs.setControls(context, VideoPrefs.move(order, c, -1), hidden) }, enabled = i > 0) {
+                    Icon(Icons.Default.KeyboardArrowUp, "Move ${c.label} up", tint = if (i > 0) TextSecondary else TextTertiary.copy(alpha = 0.4f))
+                }
+                IconButton(onClick = { VideoPrefs.setControls(context, VideoPrefs.move(order, c, 1), hidden) }, enabled = i < order.lastIndex) {
+                    Icon(Icons.Default.KeyboardArrowDown, "Move ${c.label} down", tint = if (i < order.lastIndex) TextSecondary else TextTertiary.copy(alpha = 0.4f))
+                }
+                IconButton(onClick = { VideoPrefs.setControls(context, order, if (isOff) hidden - c else hidden + c) }, modifier = Modifier.testTag("qa_control_toggle_${c.name.lowercase()}")) {
+                    Icon(if (isOff) Icons.Default.VisibilityOff else Icons.Default.Visibility, if (isOff) "Show ${c.label}" else "Hide ${c.label}", tint = if (isOff) TextTertiary else SpotifyGreen)
+                }
+            }
+        }
+        Spacer(Modifier.size(8.dp))
+        Text("Middle and bottom", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text("Play and pause always stay", color = TextTertiary, fontSize = 12.5.sp)
+        SettingsToggleRow("Previous and next video", VideoPrefs.Extra.PREV_NEXT.hint, VideoPrefs.Extra.PREV_NEXT !in off, { VideoPrefs.setExtra(context, VideoPrefs.Extra.PREV_NEXT, it) }, "qa_extra_prev_next")
+        SettingsToggleRow("Rewind and forward 10 s", VideoPrefs.Extra.SEEK.hint, VideoPrefs.Extra.SEEK !in off, { VideoPrefs.setExtra(context, VideoPrefs.Extra.SEEK, it) }, "qa_extra_seek")
+        SettingsToggleRow("Fullscreen button", VideoPrefs.Extra.FULLSCREEN.hint, VideoPrefs.Extra.FULLSCREEN !in off, { VideoPrefs.setExtra(context, VideoPrefs.Extra.FULLSCREEN, it) }, "qa_extra_fullscreen")
+        TextButton(onClick = {
+            VideoPrefs.setControls(context, VideoPrefs.Control.entries.toList(), emptySet())
+            VideoPrefs.setBarCount(context, VideoPrefs.BAR_DEFAULT)
+            VideoPrefs.Extra.entries.forEach { VideoPrefs.setExtra(context, it, true) }
+        }, modifier = Modifier.testTag("qa_controls_reset")) { Text("Reset to default", color = SpotifyGreen) }
     }
-    TextButton(onClick = { VideoPrefs.setControls(context, VideoPrefs.Control.entries.toList(), emptySet()) }, modifier = Modifier.testTag("qa_controls_reset")) { Text("Reset to default", color = SpotifyGreen) }
 }
 
 /** Round 13: Settings → Player → Player info overlay. */

@@ -36,6 +36,14 @@ data class ApkAsset(
 /** Which channel answered the update check. */
 enum class UpdateSource { AUTHENTICATED, PUBLIC }
 
+/**
+ * UPD-MSG-1: the real step inside a download. PREPARING = the app is still asking where the file is (nothing is
+ * downloading yet); STARTING = the system download is queued but no byte has arrived; WAITING_FOR_NETWORK = the
+ * system paused it for the connection; DOWNLOADING = bytes are arriving; VERIFYING = the file is complete and its
+ * checksum and signature are being checked.
+ */
+enum class DownloadStage { PREPARING, STARTING, WAITING_FOR_NETWORK, DOWNLOADING, VERIFYING }
+
 sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
@@ -47,6 +55,8 @@ sealed interface UpdateState {
         val totalBytes: Long,
         val bytesPerSecond: Long,
         val queued: Boolean = false,
+        /** UPD-MSG-1: what the updater is really doing, so the popup never says "downloading" too early. */
+        val stage: DownloadStage = if (queued && downloadedBytes == 0L) DownloadStage.STARTING else DownloadStage.DOWNLOADING,
     ) : UpdateState {
         val progress: Float
             get() = if (totalBytes > 0) (downloadedBytes.toFloat() / totalBytes).coerceIn(0f, 1f) else 0f

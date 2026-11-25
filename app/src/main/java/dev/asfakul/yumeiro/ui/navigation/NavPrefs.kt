@@ -68,7 +68,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * (they stay one tap away on Home), and up to three shortcuts can be added (any feature: Yumix,
  * YouTube, YouTube Music, Mix, Manga, Live TV, Websites, Downloads, My List, History, Extensions,
  * Market, Sources, Source health, Search, Equalizer, Watch together, Inbox, Settings…), so the
- * icon-only bar holds 3 to 7 items. Home is
+ * bar (icon plus short label, NAV-BAR-2) holds 3 to 7 items. Home is
  * always first and can't be removed: it is where everything else is reachable from.
  */
 object NavPrefs {
@@ -80,6 +80,7 @@ object NavPrefs {
     /** A shortcut the user can pin to the bar; tapping it opens that page. */
     enum class Shortcut(val id: String, val label: String, val detail: String, val item: BottomNavItem, val newer: Boolean = false) {
         MANGA("manga", "Manga", "Your reading list and manga sources", nav("manga", "Manga", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook)),
+        NOVELS("novels", "Novels", "Web novels from LNReader sources", nav("novels", "Novels", Icons.Filled.AutoStories, Icons.Outlined.AutoStories)),
         LIVE("live", "Live TV", "Channels and your playlists", nav("live", "Live", Icons.Filled.LiveTv, Icons.Outlined.LiveTv)),
         DOWNLOADS("downloads", "Downloads", "Everything saved for offline", nav("downloads", "Saved", Icons.Filled.Download, Icons.Outlined.Download)),
         EXTENSIONS("extensions", "Extensions", "Install and manage extensions", nav("extensions", "Exts", Icons.Filled.Extension, Icons.Outlined.Extension)),

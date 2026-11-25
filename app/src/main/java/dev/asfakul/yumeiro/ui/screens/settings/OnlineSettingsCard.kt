@@ -118,7 +118,7 @@ fun OnlineSettingsCard(part: OnlinePart) {
                 }
             }
             OnlinePart.SKIP -> {
-                SettingsToggleRow("Skip intro & outro (anime)", "Shows a Skip button using AniSkip community times", skip, { OnlineSettings.setSkipIntro(context, it) }, "setting_skip_intro")
+                SettingsToggleRow("Skip intro & outro", "Community times: AniSkip for anime, IntroDB for shows and movies", skip, { OnlineSettings.setSkipIntro(context, it) }, "setting_skip_intro")
                 if (skip) SettingsToggleRow("Skip automatically", "Jump past intros and outros without asking", auto, { OnlineSettings.setAutoSkip(context, it) }, "setting_auto_skip")
             }
             OnlinePart.SUBTITLES -> {

@@ -1,2 +1,0 @@
-44676427965 api36 ProfilesDeviceTest P1 PASS tests=3 skipped=0 sha=8507b8c
-44676427965 api33-lowram ProfilesDeviceTest P1 PASS tests=3 skipped=0 sha=8507b8c

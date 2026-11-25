@@ -157,6 +157,13 @@
                 <data android:scheme="rtsp" />
                 <data android:scheme="rtsps" />
             </intent-filter>
+            <!-- TOR-1: magnet links open in Yumeiro's torrent player (built-in engine, TorrServer as fallback) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="magnet" />
+            </intent-filter>
             <!-- Extension / repository / add-on links of every supported ecosystem ("Add anything") -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

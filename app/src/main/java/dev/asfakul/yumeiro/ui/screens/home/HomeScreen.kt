@@ -175,6 +175,12 @@ data class ResumeVideo(
     val onClick: () -> Unit,
 )
 
+/** COUNT-1: the Yumix tile counts feed sources (the same number the Yumix header shows); -1 falls back to extensions. */
+internal fun yumixTileLabel(extensions: Int, sources: Int): String {
+    val n = if (sources < 0) extensions else sources
+    return if (n > 0) "$n source${if (n == 1) "" else "s"}" else "Add sources"
+}
+
 /** One tile of the Spaces grid. */
 @Immutable
 private data class Feature(
@@ -257,8 +263,10 @@ fun HomeScreen(
     onOpenOnlineTitle: (OnlineItem) -> Unit = {},
     /** Opens one extension row on its own page (paged "See all"). */
     onOpenRow: (OnlineRow) -> Unit = {},
-    /** Number of installed + working Yumix extensions. */
+    /** Number of installed + enabled extension packages (the Extensions tile). */
     huesCount: Int = 0,
+    /** COUNT-1: number of sources feeding Yumix (the Yumix tile); -1 = same as [huesCount]. */
+    yumixSources: Int = -1,
     isPlaying: Boolean = false,
     durationMs: Long = 0L,
     positionMs: () -> Long = { 0L },
@@ -371,9 +379,9 @@ fun HomeScreen(
 
     var customizing by rememberSaveable { mutableStateOf(false) }
 
-    val features = remember(stats.audioCount, stats.videoCount, huesCount, activeDownloads, mangaCount) {
+    val features = remember(stats.audioCount, stats.videoCount, huesCount, yumixSources, activeDownloads, mangaCount) {
         listOf(
-            Feature("quick_card_hues", "Yumix", if (huesCount > 0) "$huesCount sources" else "Add sources", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "彩", SpaceHues.Kobai, onOpenHues),
+            Feature("quick_card_hues", "Yumix", yumixTileLabel(huesCount, yumixSources), dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "彩", SpaceHues.Kobai, onOpenHues),
             Feature("quick_card_youtube", "YouTube", "Videos", Icons.Default.SmartDisplay, "映", SpaceHues.Shu, onOpenYouTube),
             Feature("quick_card_ytmusic", "YT Music", "Songs", Icons.Default.Album, "歌", SpaceHues.Fuji, onOpenYouTubeMusic),
             Feature("quick_card_store", "Extensions", if (huesCount > 0) "$huesCount on" else "Get some", Icons.Default.Extension, "拡", SpaceHues.Yamabuki, onOpenHueStore),
@@ -397,6 +405,7 @@ fun HomeScreen(
             if (newer && stats) Feature("quick_card_stats", "Your stats", "Streaks · totals", Icons.Default.Insights, "績", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.STATS) }) else null,
             if (newer) Feature("quick_card_upcoming", "Airing soon", "New episodes", Icons.Default.CalendarMonth, "暦", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.UPCOMING) }) else null,
             if (newer) Feature("quick_card_reading", "Reading", "Manga you read", Icons.Default.AutoStories, "頁", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.READING) }) else null,
+            Feature("quick_card_novels", "Novels", "Web novels", Icons.Default.AutoStories, "文", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.NOVELS) }),
             if (newer) Feature("quick_card_inbox", "Inbox", "News · messages", Icons.Default.Inbox, "便", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.INBOX) }) else null,
             Feature("quick_card_search", "Search", "All sources", Icons.Default.Search, "探", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SEARCH) }),
             Feature("quick_card_mylist", "My List", "Saved titles", Icons.Default.Bookmarks, "栞", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.MY_LIST) }),
@@ -982,7 +991,7 @@ private fun FeatureTile(f: Feature, modifier: Modifier) {
 }
 
 /** Round 8: the extra Spaces shortcuts (mapped to pages / Settings categories by the host). */
-enum class HomeShortcut { TELEGRAM, PROFILES, STATS, UPCOMING, READING, INBOX, SEARCH, MY_LIST, HISTORY, MARKET, WEBSITES, MIX, EQUALIZER, SOURCE_HEALTH, TOGETHER, THEME, DNS, NETWORK, TRACKING, PLAYER, NAV_BAR, NOTIFICATIONS, PRIVACY, BACKUP, YOUTUBE_ACCOUNT, SETTINGS }
+enum class HomeShortcut { TELEGRAM, PROFILES, STATS, UPCOMING, READING, NOVELS, INBOX, SEARCH, MY_LIST, HISTORY, MARKET, WEBSITES, MIX, EQUALIZER, SOURCE_HEALTH, TOGETHER, THEME, DNS, NETWORK, TRACKING, PLAYER, NAV_BAR, NOTIFICATIONS, PRIVACY, BACKUP, YOUTUBE_ACCOUNT, SETTINGS }
 
 @Composable
 private fun SpacesGroupLabel(kanji: String, title: String, modifier: Modifier = Modifier) {

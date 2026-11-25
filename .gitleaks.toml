@@ -41,3 +41,17 @@ commits = ["1bbce9186e7cfb7fee34c0955380f81e5e6212ea", "b57e1559bab8ca48fc631fba
 paths = [
   '''^app/src/(test|androidTest)/java/dev/asfakul/yumeiro/(scrobble/LastFmCloudSignTest|ScrobbleFlushDeviceTest)\.kt$''',
 ]
+
+# ADCHAIN-3 (2026-11-24): links.tpxsub.com wrappers encode the destination with a public 40-hex constant that ships in
+# the site's own redirect page script (every visitor downloads it); it decodes a link and grants no access. Only that
+# constant, only in AdChainPages.kt.
+[[allowlists]]
+description = "Public tpxsub link-decoding constant in AdChainPages (not a credential)"
+condition = "AND"
+regexTarget = "line"
+paths = [
+  '''^app/src/main/java/dev/asfakul/yumeiro/adchain/AdChainPages\.kt$''',
+]
+regexes = [
+  '''private const val TPX_KEY = "7eea12b58ee6bd4833706e6d5a9468a865315209"''',
+]

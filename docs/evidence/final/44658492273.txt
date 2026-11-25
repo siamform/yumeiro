@@ -1,7 +1,0 @@
-44658492273 tv-api34 ClosedAppAlertDeviceTest P1 PASS tests=1 skipped=0 sha=25886e2
-44658492273 tv-api34 CloudAlertsLookupDeviceTest P1 PASS tests=1 skipped=0 sha=25886e2
-44658492273 tv-api34 CrashUiDeviceTest P1 PASS tests=1 skipped=0 sha=25886e2
-44658492273 tv-api34 DecoderFaultDeviceTest P1 PASS tests=3 skipped=0 sha=25886e2
-44658492273 tv-api34 DialogsDeviceTest P1 PASS tests=1 skipped=0 sha=25886e2
-44658492273 tv-api34 DownloadCleanupDeviceTest P1 PASS tests=1 skipped=0 sha=25886e2
-44658492273 tv-api34 DownloadG8DeviceTest P1 PASS tests=4 skipped=0 sha=25886e2

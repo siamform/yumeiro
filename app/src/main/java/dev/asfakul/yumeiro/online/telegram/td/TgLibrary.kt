@@ -38,6 +38,23 @@ data class TgVideo(
     val audio: Boolean = false,
 )
 
+/** TG-ME-1 (owner list 8A): the signed-in user, as the Telegram page and the chat list show it. */
+data class TgMe(val name: String, val username: String, val photoFileId: Int)
+
+/** TG-COUNT-1 (owner list 8B): how many videos, photos and audio a chat holds (Telegram's own counts; -1 = unknown). */
+data class TgCounts(val videos: Int, val photos: Int, val audio: Int) {
+    /** "1,204 videos · 88 photos · 12 audio"; unknown kinds are left out, and zero kinds too unless all are zero. */
+    fun label(): String {
+        val parts = listOf(videos to "video", photos to "photo", audio to "audio").filter { it.first > 0 }
+            .map { (n, w) -> "%,d".format(n) + " " + if (n == 1 || w == "audio") w else w + "s" }
+        return when {
+            parts.isNotEmpty() -> parts.joinToString(" · ")
+            videos == 0 && photos == 0 && audio == 0 -> "No videos, photos or audio"
+            else -> ""
+        }
+    }
+}
+
 /** One page of a chat's videos and where the next page starts (0 = no more). */
 data class TgVideoPage(val videos: List<TgVideo>, val next: Long)
 
@@ -81,6 +98,30 @@ class TgLibrary(private val client: TdClient) {
         return TgVideoPage(vids, next)
     }
 
+    /** TG-ME-1: the signed-in user (getMe). Null when TDLib can't answer. */
+    suspend fun me(): TgMe? = runCatching { parseMe(client.call("getMe")) }.getOrNull()
+
+    /**
+     * TG-COUNT-1: the chat's video, photo and audio counts. getChatMessageCount with return_local=false asks the server,
+     * so the numbers cover the whole chat, not just what this phone has loaded. Music, voice notes and audio files count
+     * as audio, like the list below.
+     */
+    suspend fun counts(chatId: Long): TgCounts = coroutineScope {
+        fun count(vararg filters: String) = async {
+            filters.sumOf { f ->
+                runCatching {
+                    client.call("getChatMessageCount", timeoutMs = 20_000) {
+                        put("chat_id", chatId); put("filter", tdObject(f)); put("return_local", false)
+                    }.int("count")
+                }.getOrElse { return@async -1 }
+            }
+        }
+        val v = count("searchMessagesFilterVideo")
+        val ph = count("searchMessagesFilterPhoto")
+        val a = count("searchMessagesFilterAudio", "searchMessagesFilterVoiceNote")
+        TgCounts(v.await(), ph.await(), a.await())
+    }
+
     /** Local path of a small file (thumbnail, chat photo), downloading it first at low priority. Null if it can't. */
     suspend fun smallFile(fileId: Int): String? {
         if (fileId == 0) return null
@@ -91,6 +132,13 @@ class TgLibrary(private val client: TdClient) {
     }
 
     companion object {
+        fun parseMe(o: JsonObject): TgMe? {
+            if (o.type() != "user") return null
+            val name = listOf(o.str("first_name"), o.str("last_name")).filter { it.isNotBlank() }.joinToString(" ")
+            val username = (o.obj("usernames")?.get("active_usernames") as? JsonArray)?.firstOrNull()?.jsonPrimitive?.content.orEmpty()
+            return TgMe(name.ifBlank { username.ifBlank { "Telegram user" } }, username, o.obj("profile_photo")?.obj("small")?.int("id") ?: 0)
+        }
+
         fun parseChat(o: JsonObject): TgChat? {
             if (o.type() != "chat") return null
             val type = o.obj("type")

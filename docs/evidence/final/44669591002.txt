@@ -1,7 +1,0 @@
-44669591002 tv-api24 NotifySettingsEffectDeviceTest P1 PASS tests=3 skipped=0 sha=d91f052
-44669591002 tv-api24 OnlinePlaybackDeviceTest P1 PASS tests=4 skipped=0 sha=d91f052
-44669591002 tv-api24 OnlineSubtitlesFallbackDeviceTest P1 PASS tests=2 skipped=0 sha=d91f052
-44669591002 tv-api24 OnlineSwitchesEffectDeviceTest P1 PASS tests=3 skipped=0 sha=d91f052
-44669591002 tv-api24 PermissionFlowDeviceTest P1 SKIPPED tests=1 skipped=1 sha=d91f052
-44669591002 tv-api24 PinnedExtensionsDeviceTest P1 PASS tests=1 skipped=0 sha=d91f052
-44669591002 tv-api24 PlaybackSessionDeviceTest P1 PASS tests=1 skipped=0 sha=d91f052

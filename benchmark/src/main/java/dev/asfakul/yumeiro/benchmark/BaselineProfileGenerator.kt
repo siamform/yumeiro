@@ -30,5 +30,7 @@ class BaselineProfileGenerator {
         Journeys.passWelcome(device)
         Journeys.restoreOpenTab(device) // X2-1: the H8 restore path (process death, same tab)
         Journeys.browseTabs(device)
+        // NAV-3: the Settings sub-pages, so their first open is compiled code, not the interpreter.
+        Journeys.settingsPages(device)
     }
 }

@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +35,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.focus.focusRequester
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.PushPin
@@ -107,10 +110,37 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     val shown = remember(sites, query) { SavedSites.filter(SavedSites.ordered(sites), query) }
     androidx.activity.compose.BackHandler(enabled = query.isNotEmpty()) { query = "" }
 
+    // WEB-ADD-1 / WEB-SEARCH-1 (owner list 5): on the Websites page "+" opens the add card and the search icon
+    // opens one box that searches saved sites or goes to an address / web search.
+    var adding by rememberSaveable { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    val webScope = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.web.SiteHistory.init(context) }
+    val visits by dev.asfakul.yumeiro.online.web.SiteHistory.visits.collectAsState()
+    val rememberVisits by dev.asfakul.yumeiro.online.web.SiteHistory.on.collectAsState()
+    // ADCHAIN-2: the page browser's two switches (ad filter; short-link opener).
+    val filterAds by dev.asfakul.yumeiro.online.web.BrowserFilters.filterAds.collectAsState()
+    val resolveLinks by dev.asfakul.yumeiro.online.web.BrowserFilters.resolveLinks.collectAsState()
+
+    /** Reads the new site's own name and icon in the background (the row shows the guess until then). */
+    fun readMeta(url: String) {
+        if (telegramPage || SavedSites.kindOf(url) != SavedSites.Kind.WEBSITE) return
+        webScope.launch {
+            val meta = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                dev.asfakul.yumeiro.online.web.SiteMeta.fetch(dev.asfakul.yumeiro.network.NetworkClient.get(context), url)
+            } ?: return@launch
+            SavedSites.applyMeta(context, url, meta)
+        }
+    }
+
     fun add() {
         // F-02: "@name" or a t.me channel link saves the channel's public page (handled in SavedSites.add).
-        val err = SavedSites.wrongPage(input, only) ?: SavedSites.add(context, input)
-        if (err != null) error = err else { input = ""; error = null }
+        val typed = input
+        val err = SavedSites.wrongPage(typed, only) ?: SavedSites.add(context, typed)
+        if (err != null) error = err else {
+            input = ""; error = null; adding = false
+            SavedSites.find(typed)?.let { readMeta(it.url) }
+        }
     }
 
     // F-02 (ADR-052): the signed-in account opens in place, like a channel.
@@ -120,6 +150,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     // Read off the main thread (SharedPreferences + profile id); refreshed each time the page comes back from the account.
     val signedIn by androidx.compose.runtime.produceState(false, accountEnabled, account) {
         if (accountEnabled) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.signedInHint(context) }
+    }
+    // TG-ME-1 (owner list 8A): the signed-in user's name and photo, as the account page last read them.
+    val me by androidx.compose.runtime.produceState<dev.asfakul.yumeiro.online.telegram.td.TgAccounts.MeHint?>(null, accountEnabled, account, signedIn) {
+        value = if (accountEnabled && signedIn) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.meHint(context) } else null
     }
     if (account && accountEnabled) {
         TelegramAccountScreen(onBack = { account = false }, onPlay = { req -> IncomingMedia.open(context, req) })
@@ -140,8 +174,14 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     }
 
     // OL-1: websites open in the kept tab: playing a video, Downloads, Minimize or Back hide it, never close it.
-    val tabs = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
+    // TG-TAB-1: the Telegram page shares this screen; the kept website tab (and its "Open tab" card) belongs to
+    // the Websites page only. Before, the last website browsed showed as a shortcut on the Telegram page.
+    val tabs = remember(telegramPage) { !telegramPage && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
     val tab by WebsiteTab.tab.collectAsState()
+    /** An address or web search that is not saved: opens in the browser (and lands in Recently visited). */
+    fun openUnsaved(url: String, name: String) {
+        if (tabs) WebsiteTab.open(context, url, name) else open = SavedSites.Site(url, name)
+    }
     tab?.takeIf { tabs && it.visible }?.let { t ->
         PageStreamFinderDialog(
             pageUrl = t.keep.pageUrl,
@@ -149,6 +189,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             base = null,
             keep = t.keep,
             onMinimize = { WebsiteTab.minimize(byPlay = false) },
+            browser = true,
             onPlay = { req -> WebsiteTab.minimize(byPlay = true); IncomingMedia.open(context, req.copy(title = req.title.ifBlank { t.name })) },
             onDismiss = { WebsiteTab.close() },
         )
@@ -161,6 +202,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             base = null,
             onPlay = { req -> open = null; IncomingMedia.open(context, req.copy(title = req.title.ifBlank { site.name })) },
             onDismiss = { open = null },
+            browser = !telegramPage,
         )
     }
 
@@ -215,6 +257,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             title = if (telegramPage) "Telegram" else "Websites", onBack = onBack,
             subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else if (telegramPage) "Public channels, no login" else "Play videos from any site",
         ) {
+            if (!telegramPage) {
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, { searchOpen = !searchOpen; if (!searchOpen) query = "" }, "site_search_toggle", "Search or type an address")
+                IconButton(onClick = { adding = !adding }, modifier = Modifier.testTag("site_add_open")) { Icon(Icons.Default.Add, if (adding) "Close add website" else "Add website", tint = if (adding) p.accent else p.textPrimary) }
+            }
             IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, if (telegramPage) "Add channels from a list" else "Add websites from a list", tint = p.textSecondary) }
             if (sites.isNotEmpty()) IconButton(onClick = {
                 val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
@@ -222,6 +268,34 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 runCatching { context.startActivity(android.content.Intent.createChooser(send, if (telegramPage) "Share channel list" else "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, if (telegramPage) "Share channel list" else "Share website list", tint = p.textSecondary) }
             IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, if (telegramPage) "How Telegram works" else "How websites work", tint = p.textSecondary) }
+        }
+        val addCard: @Composable () -> Unit = {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                        .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
+                ) {
+                    Text(when (only) { SavedSites.Kind.TELEGRAM -> "Add a public Telegram channel"; SavedSites.Kind.WEBSITE -> "Add a website"; null -> "Add a website or Telegram channel" }, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = input, onValueChange = { input = it; error = null }, singleLine = true,
+                            placeholder = { Text(if (telegramPage) "@channel or t.me/channel" else "example.com or @channel") }, isError = error != null,
+                            leadingIcon = { Icon(Icons.Default.Public, null, tint = p.textSecondary) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { add() }),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
+                            modifier = Modifier.weight(1f).testTag("site_add_field"),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(p.accent)
+                                .combinedClickable(onClickLabel = if (telegramPage) "Add channel" else "Add website", onClick = { add() }).testTag("site_add"),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(Icons.Default.Add, if (telegramPage) "Add channel" else "Add website", tint = p.onAccent) }
+                    }
+                    error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
+                }
         }
         LazyColumn(
             Modifier.fillMaxSize(), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("websites"),
@@ -249,6 +323,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             }
             // TG-PAGE-1: a clear way in. The card says whether this profile is signed in and has a real button;
             // when sign-in can't run on this phone it says why instead of disappearing.
+            if (telegramPage) item("add") { addCard() }
             if (accountEnabled) item("tg_account_card") {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
@@ -256,8 +331,12 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         .heightIn(min = 56.dp).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp).testTag("tg_account_card"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (signedIn) {
+                        TelegramAvatar(me?.photoPath, me?.name ?: "Telegram", size = 44.dp, modifier = Modifier.testTag("tg_account_avatar"))
+                        Spacer(Modifier.width(12.dp))
+                    }
                     Column(Modifier.weight(1f)) {
-                        Text(if (signedIn) "Your Telegram account" else "Sign in to Telegram", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                        Text(if (signedIn) me?.name ?: "Your Telegram account" else "Sign in to Telegram", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
                             if (signedIn) "Signed in. Videos and audio from your chats, groups and channels, including private ones you have joined"
                             else "Watch videos from your chats, groups and the private channels you have joined. Telegram sends the code; Yumeiro never sees your password",
@@ -279,35 +358,38 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     Text(accountUnavailable, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                 }
             }
-            item("add") {
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
-                        .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
-                ) {
-                    Text(when (only) { SavedSites.Kind.TELEGRAM -> "Add a public Telegram channel"; SavedSites.Kind.WEBSITE -> "Add a website"; null -> "Add a website or Telegram channel" }, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = input, onValueChange = { input = it; error = null }, singleLine = true,
-                            placeholder = { Text(if (telegramPage) "@channel or t.me/channel" else "example.com or @channel") }, isError = error != null,
-                            leadingIcon = { Icon(Icons.Default.Public, null, tint = p.textSecondary) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { add() }),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
-                            modifier = Modifier.weight(1f).testTag("site_add_field"),
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Box(
-                            Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(p.accent)
-                                .combinedClickable(onClickLabel = if (telegramPage) "Add channel" else "Add website", onClick = { add() }).testTag("site_add"),
-                            contentAlignment = Alignment.Center,
-                        ) { Icon(Icons.Default.Add, if (telegramPage) "Add channel" else "Add website", tint = p.onAccent) }
+            // TG-ADD-1 (owner list 8A): on the Telegram page, adding a public channel comes first.
+            if (!telegramPage && (adding || sites.isEmpty())) item("add") { addCard() }
+            if (!telegramPage && searchOpen) item("search") {
+                val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+                LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = query, onValueChange = { query = it }, singleLine = true,
+                        placeholder = { Text("Search your sites or type an address") },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { SiteGo.target(query)?.let { (url, name) -> openUnsaved(url, name) } }),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
+                        modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("site_search"),
+                    )
+                    SiteGo.target(query)?.let { (url, name) ->
+                        val web = SiteGo.isSearch(url)
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceContainerHigh)
+                                .combinedClickable(onClickLabel = if (web) "Search the web" else "Open", onClick = { openUnsaved(url, name) })
+                                .padding(horizontal = 14.dp, vertical = 12.dp).testTag(if (web) "site_web_search" else "site_go"),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(if (web) Icons.Default.Search else Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(if (web) "Search the web for \"${query.trim()}\"" else "Go to ${SavedSites.hostOf(url) ?: url}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
-                    error?.let { Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp)) }
                 }
             }
-            if (sites.size >= 6) item("search") {
+            if (telegramPage && sites.size >= 6) item("search") {
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
                     placeholder = { Text(if (telegramPage) "Search your channels" else "Search your websites") },
@@ -344,6 +426,51 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     modifier = Modifier.animateItem(),
                 )
             }
+            // WEB-RECENT-1 (owner list 5): sites opened in the browser come here by themselves; + saves one.
+            val recent = if (telegramPage) emptyList() else dev.asfakul.yumeiro.online.web.SiteHistory.unsaved(visits, allSites).let { v ->
+                // WEB-RECENT-2: a typed address (archive.org/details/…) also matches the site it belongs to.
+                val qHost = SavedSites.normalize(query.trim())?.let { SavedSites.hostOf(it) }
+                if (query.isBlank()) v else v.filter { it.name.contains(query.trim(), true) || it.url.contains(query.trim(), true) || (qHost != null && SavedSites.hostOf(it.url) == qHost) }
+            }.take(10)
+            if (recent.isNotEmpty()) {
+                item("recent_head") {
+                    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Recently visited", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.TextButton(onClick = { dev.asfakul.yumeiro.online.web.SiteHistory.clear(context) }, modifier = Modifier.testTag("recent_clear")) { Text("Clear") }
+                    }
+                }
+                items(recent, key = { "recent_" + it.url }) { v ->
+                    RecentRow(v, onOpen = { openUnsaved(v.url, v.name) }, onSave = {
+                        if (SavedSites.add(context, v.url, v.name) == null) { SavedSites.find(v.url)?.let { readMeta(it.url) } }
+                    }, onForget = { dev.asfakul.yumeiro.online.web.SiteHistory.forget(context, v.url) }, modifier = Modifier.animateItem())
+                }
+            }
+            if (!telegramPage) item("recent_switch") {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).padding(horizontal = 4.dp, vertical = 2.dp).testTag("recent_switch_row"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Remember sites I visit", color = p.textPrimary, fontSize = 14.sp)
+                        Text("Shown under Recently visited, on this phone only", color = p.textTertiary, fontSize = 12.sp)
+                    }
+                    androidx.compose.material3.Switch(rememberVisits, { dev.asfakul.yumeiro.online.web.SiteHistory.setOn(context, it) }, modifier = Modifier.testTag("recent_switch"))
+                }
+            }
+            if (!telegramPage) item("browser_switches") {
+                Column {
+                    BrowserSwitchRow(
+                        title = "Block ads and pop-ups",
+                        line = "Ad sites never load, pop-ups and pop-unders stay closed. The shield button on a page turns it off there only",
+                        on = filterAds, tag = "filter_ads_switch",
+                    ) { dev.asfakul.yumeiro.online.web.BrowserFilters.setFilterAds(context, it) }
+                    BrowserSwitchRow(
+                        title = "Open the real link behind short links",
+                        line = "Waits out the timers and taps Continue on link-shortener pages; a check that needs you is left to you",
+                        on = resolveLinks, tag = "resolve_links_switch",
+                    ) { dev.asfakul.yumeiro.online.web.BrowserFilters.setResolveLinks(context, it) }
+                }
+            }
             // The step-by-step guide lives behind the "?" in the header (not in the list) so the
             // saved sites stay the focus of the page.
             item("help_hint") {
@@ -375,10 +502,19 @@ private fun SiteRow(
             .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp).testTag("site_row"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        // TG-AVATAR-1 (owner list 8A): a saved Telegram channel shows its own photo, not t.me's favicon.
+        val channel = remember(site.url) { dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelOf(site.url) }
+        if (channel != null) {
+            val context = LocalContext.current
+            val photo by androidx.compose.runtime.produceState<String?>(null, channel) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.telegram.TelegramAvatars.cached(context, channel) }
+                dev.asfakul.yumeiro.online.telegram.TelegramAvatars.get(context, channel)?.let { value = it }
+            }
+            TelegramAvatar(photo, site.name, size = 44.dp, modifier = Modifier.testTag("site_avatar"))
+        } else Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(site.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             AsyncImage(
-                model = "https://www.google.com/s2/favicons?domain=${site.host}&sz=64", contentDescription = null,
+                model = site.iconUrl ?: "https://www.google.com/s2/favicons?domain=${site.host}&sz=64", contentDescription = null,
                 modifier = Modifier.size(26.dp).clip(RoundedCornerShape(6.dp)),
             )
         }
@@ -399,5 +535,65 @@ private fun SiteRow(
                 DropdownMenuItem(text = { Text("Remove") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onRemove() }, modifier = Modifier.testTag("site_remove"))
             }
         }
+    }
+}
+
+/** WEB-SEARCH-1: what the Websites search box goes to: an address, or a web search for anything else. Pure. */
+internal object SiteGo {
+    const val SEARCH = "https://duckduckgo.com/?q="
+
+    /** (url, name) for [query], or null when it is empty. */
+    fun target(query: String): Pair<String, String>? {
+        val q = query.trim()
+        if (q.isEmpty()) return null
+        val url = SavedSites.normalize(q)?.takeIf { SavedSites.kindOf(it) == SavedSites.Kind.WEBSITE && (q.contains('.') || q.contains("://")) }
+        return if (url != null) url to SavedSites.defaultName(url)
+        else SEARCH + java.net.URLEncoder.encode(q, "UTF-8") to q.take(40)
+    }
+
+    fun isSearch(url: String) = url.startsWith(SEARCH)
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RecentRow(v: dev.asfakul.yumeiro.online.web.SiteHistory.Visit, onOpen: () -> Unit, onSave: () -> Unit, onForget: () -> Unit, modifier: Modifier = Modifier) {
+    val p = LocalMtPalette.current
+    val host = remember(v.url) { SavedSites.hostOf(v.url) ?: v.url }
+    Row(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh.copy(alpha = 0.6f))
+            .combinedClickable(onClickLabel = "Open ${v.name}", onLongClick = onForget, onClick = onOpen)
+            .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("recent_row"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+            Text(v.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.Bold)
+            AsyncImage(model = v.iconUrl ?: "https://www.google.com/s2/favicons?domain=$host&sz=64", contentDescription = null, modifier = Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(v.name, color = p.textPrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(host, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        IconButton(onClick = onSave, modifier = Modifier.testTag("recent_save")) { Icon(Icons.Default.Add, "Save ${v.name}", tint = p.accent) }
+        IconButton(onClick = onForget, modifier = Modifier.testTag("recent_forget")) { Icon(Icons.Default.Close, "Remove ${v.name} from recent", tint = p.textSecondary) }
+    }
+}
+
+/** ADCHAIN-2: one switch row; the whole row toggles (48 dp+ target), the switch shows the state. */
+@Composable
+private fun BrowserSwitchRow(title: String, line: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+    val p = LocalMtPalette.current
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            .then(Modifier.toggleable(value = on, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange))
+            .heightIn(min = 56.dp).padding(horizontal = 4.dp, vertical = 4.dp).testTag(tag + "_row"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, color = p.textPrimary, fontSize = 14.sp)
+            Text(line, color = p.textTertiary, fontSize = 12.sp, lineHeight = 16.sp)
+        }
+        Spacer(Modifier.width(8.dp))
+        androidx.compose.material3.Switch(on, null, modifier = Modifier.testTag(tag))
     }
 }

@@ -70,16 +70,35 @@ object WebDownloads {
     const val PAGE_MADE_FILE = "This page makes the file itself, so it can't be saved here. Open the page in your browser to save it."
 
     /** Installs the listener on [web] when the flag is on. [pageUrl] is the page the user is on now. */
-    fun attach(web: WebView, pageUrl: () -> String?) {
+    fun attach(web: WebView, pageUrl: () -> String?, onPlayable: ((StreamRequest) -> Boolean)? = null) {
         val ctx = web.context.applicationContext
         if (!FeatureFlags.on(ctx, FeatureFlags.Flag.WEB_DOWNLOAD_LISTENER)) return
         web.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
             val page = pageUrl()
             val cookie = runCatching { CookieManager.getInstance().getCookie(url) }.getOrNull()
             val req = requestFor(url.orEmpty(), userAgent, contentDisposition, mimeType, page, cookie)
+            // ADCHAIN-2: a video or audio the page hands over as a file plays in Yumeiro's player
+            // (its Download button is still there); every other file opens the download popup as before.
+            if (req != null && onPlayable != null && isPlayable(mimeType, req.title, url.orEmpty()) && onPlayable(req)) return@setDownloadListener
             if (req == null) AppMessages.show(web.context, PAGE_MADE_FILE)
             else StreamDownloadAsk.ask(web.context, req, sourceUrl = page ?: req.url)
         }
+    }
+
+    private val MEDIA_EXT = setOf("mp4", "m4v", "mkv", "webm", "mov", "avi", "ts", "m3u8", "mpd", "mp3", "m4a", "aac", "flac", "ogg", "opus", "wav")
+
+    /**
+     * ADCHAIN-2: the download is a file Yumeiro's player opens: a video / audio MIME type, an HLS or DASH
+     * playlist, or (for the generic application/octet-stream many hosts send) a media file name. Pure.
+     */
+    fun isPlayable(mimeType: String?, fileName: String?, url: String): Boolean {
+        val mime = mimeType?.substringBefore(';')?.trim()?.lowercase().orEmpty()
+        if (mime.startsWith("video/") || mime.startsWith("audio/")) return true
+        if (mime == "application/vnd.apple.mpegurl" || mime == "application/x-mpegurl" || mime == "application/dash+xml") return true
+        if (mime.isNotEmpty() && mime != "application/octet-stream" && mime != "binary/octet-stream" && mime != "application/force-download") return false
+        val ext = (fileName?.takeIf { '.' in it } ?: url.substringBefore('?').substringBefore('#').substringAfterLast('/'))
+            .substringAfterLast('.', "").lowercase()
+        return ext in MEDIA_EXT
     }
 
     private object Holder {

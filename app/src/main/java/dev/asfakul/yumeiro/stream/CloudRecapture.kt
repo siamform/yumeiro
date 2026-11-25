@@ -84,6 +84,12 @@ object CloudRecapture {
             override suspend fun refresh(context: Context, request: StreamRequest): StreamRequest? {
                 val page = request.pageUrl ?: return null
                 if (!budget.take(page)) return null
+                // TB-PREVIEW-1: a TeraBox share gets a fresh link from TeraBox's API (the full file for a signed-in
+                // user). Capturing its page again off screen could only bring back the anonymous 30-second preview.
+                TeraBoxApi.shareIn(page)?.let { share ->
+                    val r = runCatching { StreamResolver.resolve(context.applicationContext, request.copy(url = share, format = StreamFormat.AUTO)) }.getOrNull()
+                    return (r as? Resolution.Playable)?.request
+                }
                 return capture(context.applicationContext, page, request)
             }
         })
@@ -110,11 +116,17 @@ object CloudRecapture {
                 fun record(url: String, method: String, headers: Map<String, String>) {
                     synchronized(capture) { capture.onRequest(url, method, headers) }?.let { first.complete(Unit) }
                 }
+                fun page(url: String, kind: String) {
+                    synchronized(capture) { capture.onPageMedia(url, kind) }?.let { first.complete(Unit) }
+                }
                 addJavascriptInterface(object {
-                    @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
+                    @JavascriptInterface fun onMedia(src: String) = page(src, "element")
+                    @JavascriptInterface fun onManifest(url: String, kind: String) = page(url, kind)
                     @JavascriptInterface fun onDrm(system: String) = Unit
                 }, "MTFinder")
                 SafeWebView.harden(this)
+                // SD-1: playlists behind addresses without an extension are found by their content.
+                PageStreamCapture.addMediaTap(this)
                 webViewClient = object : SafeWebViewClient(onGone = { needsUser.complete(Unit) }) {
                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                         val scheme = request?.url?.scheme?.lowercase()

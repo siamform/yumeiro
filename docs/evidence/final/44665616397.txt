@@ -1,6 +1,0 @@
-44665616397 api33-lowram FinalCoverageDeviceTest P1 FAIL tests=? skipped=0 sha=adb0526
-44665616397 api33-lowram LocalPlayerDeviceTest P1 PASS tests=11 skipped=0 sha=adb0526
-44665616397 api33-lowram MangaOfflineDeviceTest P1 PASS tests=2 skipped=0 sha=adb0526
-44665616397 api36 FinalCoverageDeviceTest P1 FAIL tests=? skipped=0 sha=adb0526
-44665616397 api36 LocalPlayerDeviceTest P1 PASS tests=11 skipped=0 sha=adb0526
-44665616397 api36 MangaOfflineDeviceTest P1 PASS tests=2 skipped=0 sha=adb0526

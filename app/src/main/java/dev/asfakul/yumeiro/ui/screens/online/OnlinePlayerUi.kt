@@ -79,6 +79,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -534,6 +535,10 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
     val stills = stillsMap[dev.asfakul.yumeiro.online.EpisodeStills.keyOf(d)]
     val hasThumbs = remember(state.episodes, stills) { state.episodes.count { dev.asfakul.yumeiro.online.EpisodeStills.imageFor(d, it, stills) != null } > state.episodes.size / 2 }
     val listState = rememberLazyListState()
+    // META-1b: release date, director, writers, companies, cast and trailers (TitleFacts; cached 7 days per IMDb id).
+    val facts by androidx.compose.runtime.produceState(dev.asfakul.yumeiro.online.meta.TitleFacts.fromDetail(d), d.api, d.url) {
+        value = dev.asfakul.yumeiro.online.meta.TitleFacts.load(context, d)
+    }
 
     val autoSkip by dev.asfakul.yumeiro.online.OnlineSettings.autoSkip.collectAsState()
     // Long series get the numbered episode board; short ones (or ones with stills) keep the list.
@@ -572,7 +577,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
         item(key = "facts") {
             val al = dev.asfakul.yumeiro.online.AudioLanguages
             val srcAudio = state.link?.let { l -> al.filterKey(al.classify(l.name + " " + l.source, state.version)).takeIf { it.isNotEmpty() }?.let { al.keyLabel(it) } }
-            dev.asfakul.yumeiro.ui.screens.watch.PlaybackFactsRow(sourceAudio = srcAudio)
+            dev.asfakul.yumeiro.ui.screens.watch.PlaybackFactsRow(sourceAudio = srcAudio, failed = state.phase == OnlineSession.Phase.FAILED)
         }
         item(key = "actions") {
             dev.asfakul.yumeiro.ui.screens.watch.WatchActionsRow {
@@ -648,6 +653,9 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
         item(key = "plot") {
             dev.asfakul.yumeiro.ui.screens.watch.WatchDescription(d.plot.orEmpty(), header = d.tags.takeIf { it.isNotEmpty() }?.take(8)?.joinToString(" · "))
         }
+        // META-1b: catalog titles and search results open here, not on the title page, so the same About rows, Cast and
+        // Trailers show under the synopsis (each only when it exists).
+        titleFactsItems(context, d, facts, tagPrefix = "online_watch") { title, trailing -> dev.asfakul.yumeiro.ui.screens.watch.WatchSectionLabel(title, trailing) }
 
         if (state.episodes.size > 1) {
             item(key = "ep_header") {
@@ -755,23 +763,37 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
 internal fun BoxScope.SkipButton(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle) {
     val skips by dev.asfakul.yumeiro.online.anime.AnimeSync.skips.collectAsState()
     val auto by dev.asfakul.yumeiro.online.OnlineSettings.autoSkip.collectAsState()
-    val segments = skips?.segments.orEmpty()
-    if (segments.isEmpty()) return
+    val all = skips?.segments.orEmpty()
+    if (all.isEmpty()) return
     var pos by remember { mutableStateOf(0L) }
+    var duration by remember(skips?.key) { mutableStateOf(0L) }
     val autoDone = remember(skips?.key) { HashSet<Long>() }
     LaunchedEffect(skips?.key) {
-        while (true) { pos = player.positionMs(); kotlinx.coroutines.delay(400) }
+        while (true) {
+            pos = player.positionMs()
+            player.durationMs().takeIf { it > 0 }?.let { duration = it }
+            kotlinx.coroutines.delay(400)
+        }
     }
+    // SKIP-1: the submission that fits this video's length, once the player knows it.
+    val segments = remember(all, duration) { dev.asfakul.yumeiro.online.anime.AniSkip.pick(all, duration) }
     val current = segments.firstOrNull { it.contains(pos) }
     LaunchedEffect(current, auto) {
-        if (auto && current != null && autoDone.add(current.startMs)) player.seekTo(current.endMs)
+        // SKIP-1: only times submitted for a video of this length are skipped without asking.
+        if (auto && current != null && current.fits && autoDone.add(current.startMs)) player.seekTo(current.endMs)
     }
-    AnimatedVisibility(visible = current != null && !auto, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomEnd)) {
+    val ask = current != null && (!auto || !current.fits)
+    // SKIP-1: on TV the button takes D-pad focus when it shows, so OK skips (the remote can't tap it).
+    val tv = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
+    val skipFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(current?.startMs, ask, tv) { if (tv && ask) { kotlinx.coroutines.delay(150); runCatching { skipFocus.requestFocus() } } }
+    AnimatedVisibility(visible = ask, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomEnd)) {
         val seg = current ?: return@AnimatedVisibility
         Surface(
             shape = RoundedCornerShape(12.dp), color = Color.White,
             modifier = Modifier.navigationBarsPadding().padding(end = 20.dp, bottom = 120.dp).clip(RoundedCornerShape(12.dp))
-                .clickable { player.seekTo(seg.endMs) }.testTag("online_skip"),
+                .focusRequester(skipFocus)
+                .clickable(onClickLabel = seg.kind.label) { player.seekTo(seg.endMs) }.testTag(if (seg.kind == dev.asfakul.yumeiro.online.anime.AniSkip.Kind.OUTRO || seg.kind == dev.asfakul.yumeiro.online.anime.AniSkip.Kind.MIXED_OUTRO) "online_skip_outro" else "online_skip"),
         ) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.SkipNext, null, tint = Color.Black, modifier = Modifier.size(20.dp))

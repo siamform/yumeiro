@@ -1,7 +1,0 @@
-44666251821 tv-api34 PushAlertsEffectDeviceTest P1 PASS tests=3 skipped=0 sha=da98754
-44666251821 tv-api34 QualityListDeviceTest P1 PASS tests=1 skipped=0 sha=da98754
-44666251821 tv-api34 QueuePersistenceDeviceTest P1 PASS tests=1 skipped=0 sha=da98754
-44666251821 tv-api34 ReleaseFeaturesDeviceTest P1 PASS tests=5 skipped=0 sha=da98754
-44666251821 tv-api34 RemotePlaylistMemoryDeviceTest P1 PASS tests=1 skipped=0 sha=da98754
-44666251821 tv-api34 RestoreAfterClearDeviceTest P1 PASS tests=1 skipped=0 sha=da98754
-44666251821 tv-api34 ResumeAcrossProcessDeviceTest P1 PASS tests=1 skipped=0 sha=da98754

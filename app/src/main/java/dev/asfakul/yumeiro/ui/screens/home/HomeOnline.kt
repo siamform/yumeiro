@@ -77,10 +77,8 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
     val providers = remember(engine.generation, engine.usable, adultOn, adultPrivate) {
         // SPD-1: rows join as each extension finishes loading instead of after the last one.
-        if (engine.usable) ExtensionManager.providers()
+        ExtensionManager.feedProviders(adultOn, adultPrivate)
             .filter { runCatching { it.hasMainPage }.getOrDefault(false) }
-            .filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) }
-        else emptyList()
     }
     val feed = HomeMemory.feed
     LaunchedEffect(providers) {

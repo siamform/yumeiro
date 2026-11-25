@@ -35,6 +35,9 @@ object ProfileScope {
     const val SCRIPT_PLUGINS = "eco_ext"
     const val TACHI_REPOS = "tachi_repo"
     const val TACHI_EXTENSIONS = "tachi_ext"
+    // NOVEL-1: LNReader novel plugins, same rules.
+    const val NOVEL_REPOS = "novel_repo"
+    const val NOVEL_PLUGINS = "novel_ext"
     private const val FILE = "profile_scope.json"
 
     /** Pure ownership table of one store. Owners per key; [init] = the first-use seed has run. */

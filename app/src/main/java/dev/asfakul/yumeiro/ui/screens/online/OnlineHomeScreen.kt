@@ -195,7 +195,7 @@ fun OnlineHomeScreen(
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
     // 18+ Hues stay out of the feed when 18+ is off or kept private (they are still searchable).
     val providers = remember(engine.generation, engine.usable, adultOn, adultPrivate) {
-        if (engine.usable) ExtensionManager.providers().filterNot { (!adultOn || adultPrivate) && dev.asfakul.yumeiro.online.AdultContent.isAdultApi(it.name) } else emptyList()
+        ExtensionManager.feedProviders(adultOn, adultPrivate)
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
     var showFilter by rememberSaveable { mutableStateOf(false) }
@@ -358,7 +358,7 @@ fun OnlineHomeScreen(
         ) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp).testTag("online_extension_bar"), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} extension${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
+                dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} source${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
                 style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, maxLines = 1,
                 modifier = Modifier.weight(1f).clickable(onClickLabel = "Manage extensions", onClick = onOpenExtensions).padding(vertical = 12.dp),
             )
@@ -390,9 +390,12 @@ fun OnlineHomeScreen(
         remember { dev.asfakul.yumeiro.online.PinnedExtensions.init(context); true }
         // F-21: language chip, source count, ecosystem and repo per row; built once per provider set.
         val labels = remember(providers, showFilter) { if (showFilter && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS)) providers.associate { it.name to dev.asfakul.yumeiro.online.ExtensionLabels.forApi(it) } else emptyMap() }
+        val sourceOf = remember(providers, showFilter) { if (showFilter) providers.associate { it.name to dev.asfakul.yumeiro.sources.SourceHub.ecosystemOf(it).label } else emptyMap() }
         if (showFilter) SourceFilterSheet(
             names = channelNames, selected = selected,
             pins = pins, details = labels::get,
+            // YF-2 (owner list 10): source chips from each provider's own ecosystem (CloudStream, Vega, SkyStream…).
+            group = sourceOf::get,
             onTogglePin = { n ->
                 if (!dev.asfakul.yumeiro.online.PinnedExtensions.toggle(context, n))
                     dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "You can pin up to ${dev.asfakul.yumeiro.online.PinnedExtensions.MAX} extensions. Unpin one first", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
@@ -461,28 +464,44 @@ fun OnlineHomeScreen(
                 dev.asfakul.yumeiro.ui.components.TabSwap(selected, { n -> if (n == null) -1 else channelNames.indexOf(n) }, Modifier.fillMaxSize(), label = "yumix_channel") { sel ->
                 val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (sel ?: ""))
                 if (sel == null) {
-                    val hero = remember(ready) { heroPicks(ready.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
+                    // DEDUP-1 (owner list 14): one card per title across extensions on "All"; an extension's own page is unfiltered.
+                    val feedReady = remember(ready) {
+                        dev.asfakul.yumeiro.online.TitleDedupe.acrossExtensions(ready).also { out ->
+                            // DEDUP-1 evidence: how many cards the "All" feed dropped as the same title from another extension.
+                            val before = ready.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
+                            val after = out.sumOf { (_, rows) -> rows.sumOf { it.items.size } }
+                            // Warning level: release (R8) strips Log.d/i, and isLoggable(INFO) is false by default (probe 45335841840 had no line).
+                            if (before > 0) {
+                                val kept = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<dev.asfakul.yumeiro.online.OnlineItem, Boolean>())
+                                out.forEach { (_, rows) -> rows.forEach { kept.addAll(it.items) } }
+                                val examples = ready.asSequence().flatMap { (_, rows) -> rows.asSequence().flatMap { it.items.asSequence() } }
+                                    .filter { it !in kept }.map { it.api + ": " + it.name }.distinct().take(5).joinToString(" | ")
+                                android.util.Log.w("YuDedupe", "all feed: ${ready.size} extensions, $before cards, ${before - after} same-title cards removed" + if (examples.isEmpty()) "" else " (e.g. $examples)")
+                            }
+                        }
+                    }
+                    val hero = remember(feedReady) { heroPicks(feedReady.mapNotNull { (_, rows) -> rows.firstOrNull { it.items.isNotEmpty() }?.items }) }
                     // Round 10 order: Resume → banners (spotlight + new episodes) → Continue → Fresh
                     // from your sources → Latest episodes (categories are the chip bar on top) → per-extension → endless mix.
-                    val latestAll = remember(ready) { YumixFeed.latest(ready, 30) }
+                    val latestAll = remember(feedReady) { YumixFeed.latest(feedReady, 30) }
                     val banner = remember(hero, latestAll) { YumixFeed.bannerSlides(hero, latestAll) }
                     val resume = remember(continueItems) { continueItems.firstOrNull { it.fraction < 0.92f } }
                     val bannerKeys = remember(banner) { banner.first.map { it.key }.toSet() }
                     val latest = remember(latestAll, bannerKeys) { latestAll.filter { it.key !in bannerKeys } }
                     // "Fresh from your sources": one mixed row across every extension (round-robin, de-duplicated).
-                    val picks = remember(ready, bannerKeys) {
-                        buildMixFeed(ready, 24, cardsPerShelf = Int.MAX_VALUE, skip = bannerKeys)
+                    val picks = remember(feedReady, bannerKeys) {
+                        buildMixFeed(feedReady, 24, cardsPerShelf = Int.MAX_VALUE, skip = bannerKeys)
                             .filterIsInstance<FeedEntry.Card>().map { it.item }
                     }
                     val upcomingOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.UPCOMING) }
                     val tagSections = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.YUMIX_TAG_SECTIONS) }
-                    val cats = remember(ready) { YumixFeed.categories(ready, byTags = tagSections) }
+                    val cats = remember(feedReady) { YumixFeed.categories(feedReady, byTags = tagSections) }
                     var cat by rememberSaveable { mutableStateOf<String?>(null) }
                     androidx.activity.compose.BackHandler(enabled = cat != null) { cat = null }
                     // Then one tidy section per extension: its first rows as shelves. More sections
                     // appear as you scroll, so many extensions never load a wall of rows at once.
                     var groupLimit by rememberSaveable { mutableStateOf(4) }
-                    val groups = remember(ready, groupLimit) { mixGroups(ready, groupLimit) }
+                    val groups = remember(feedReady, groupLimit) { mixGroups(feedReady, groupLimit) }
                     // Endless "More to explore": every row of every extension, round-robin, then the
                     // next pages of those rows as you scroll (like a streaming app's bottomless home).
                     val explore = YumixMemory.explore
@@ -490,15 +509,21 @@ fun OnlineHomeScreen(
                     val shownAbove = remember(banner, picks, groups) {
                         HashSet<String>().apply { banner.first.forEach { add(it.key) }; picks.forEach { add(it.key) }; groups.forEach { g -> g.rows.forEach { r -> r.items.forEach { add(it.key) } } } }
                     }
+                    // DEDUP-1: the titles of every card above, so "More to explore" doesn't bring another extension's copy.
+                    val shownAboveTitles = remember(feedReady) { feedReady.flatMap { (_, rows) -> rows.flatMap { it.items } } }
                     // R15: append-only. The old derived list re-merged and re-shuffled everything on each
                     // page, so cards already on screen moved, and cards vanished when a section above grew.
                     val exploreItems = YumixMemory.exploreShown
                     val latestShownAbove = androidx.compose.runtime.rememberUpdatedState(shownAbove)
+                    val latestTitlesAbove = androidx.compose.runtime.rememberUpdatedState(shownAboveTitles)
                     LaunchedEffect(Unit) {
                         androidx.compose.runtime.snapshotFlow { explore.toList() }.collect { snap ->
                             val skip = latestShownAbove.value
+                            val above = latestTitlesAbove.value
+                            val shownNow = exploreItems.toList()
                             val tail = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                                YumixFeed.appendNew(hueFeed(snap, null), YumixMemory.exploreSeen, skip, shuffleSeed) { it.first.key }
+                                val candidates = dev.asfakul.yumeiro.online.TitleDedupe.exploreCandidates(hueFeed(snap, null), above, shownNow.map { it.first }) { it.first }
+                                YumixFeed.appendNew(candidates, YumixMemory.exploreSeen, skip, shuffleSeed) { it.first.key }
                             }
                             if (tail.isNotEmpty()) exploreItems.addAll(tail)
                         }
@@ -510,7 +535,7 @@ fun OnlineHomeScreen(
                     // (loadingNames.isEmpty()). One slow or hung extension therefore stopped "All" at
                     // a loading skeleton forever. Explore now starts as soon as the sections for the
                     // extensions that did answer are shown; late extensions join the grid when ready.
-                    val groupsDone = YumixFeed.sectionsDone(groups.size, ready)
+                    val groupsDone = YumixFeed.sectionsDone(groups.size, feedReady)
                     fun pageExplore() {
                         val targets = explore.indices.filter { explore[it].hasNext && !explore[it].loading }.sortedBy { explore[it].items.size }.take(3)
                         if (targets.isEmpty()) return
@@ -538,7 +563,7 @@ fun OnlineHomeScreen(
                     LaunchedEffect(nearEnd, groups.size, ready.size, exploreItems.size, exploreBusy) {
                         if (!nearEnd) return@LaunchedEffect
                         when {
-                            !groupsDone && groupLimit < ready.size -> groupLimit += 3
+                            !groupsDone && groupLimit < feedReady.size -> groupLimit += 3
                             // FE-4b: every section shown; extensions outside the working set go live next.
                             workingSetOn && waitingLive.isNotEmpty() -> workingLimit = dev.asfakul.yumeiro.online.FeedWorkingSet.grow(workingLimit, waitingLive.size)
                             exploreLimit < exploreItems.size -> exploreLimit += 30
@@ -580,9 +605,12 @@ fun OnlineHomeScreen(
                             PosterShelf("Favorites", null, favorites.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         // F-08: one compact entry to the release calendar (kill switch FeatureFlags.UPCOMING).
-                        if (onOpenUpcoming != null && upcomingOn) st.item("upcoming_entry") { UpcomingEntryCard(onOpenUpcoming) }
+                        if (onOpenUpcoming != null && upcomingOn) st.item("upcoming_entry") {
+                            // UP-BANNER-1 (R21 item 16A): a rotating "Coming up" card; the plain entry when nothing is due.
+                            UpcomingBanner(onOpenUpcoming, onSearch = { q -> OnlineSearchPending.query = q; onOpenSearch() })
+                        }
                         if (picks.isNotEmpty()) st.item("feed_label") {
-                            PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} extensions", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
+                            PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} sources", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         if (latest.isNotEmpty()) st.item("latest") {
                             PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
@@ -601,7 +629,7 @@ fun OnlineHomeScreen(
                         }
                         if (groupsDone && exploreSnap.isNotEmpty()) {
                             st.item("explore_h") {
-                                dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} extensions", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
+                                dev.asfakul.yumeiro.ui.components.YuSection("探索", "More to explore", "From all ${ready.size} sources", modifier = Modifier.padding(horizontal = 16.dp).testTag("online_explore"))
                             }
                             st.items(exploreRows, key = { r -> "ex_" + r.first().first.key }, contentType = { r -> if (r.first().second) "wide" else "tall" }) { r ->
                                 val wide = r.first().second
@@ -660,6 +688,7 @@ fun OnlineHomeScreen(
                         onRetry = { if (api != null) scope.launch { loadOne(api, true) } },
                         openItem = openItem, openInfo = openInfo,
                         otherCopy = otherCopy,
+                        onOpenRow = onOpenRow,
                         onTryCopy = { copy ->
                             scope.launch {
                                 runCatching { ExtensionManager.install(context, copy) }
@@ -779,7 +808,7 @@ fun VideoSourceSwitch(
 }
 
 @Composable
-private fun UpcomingEntryCard(onClick: () -> Unit) {
+internal fun UpcomingEntryCard(onClick: () -> Unit) {
     androidx.compose.foundation.layout.Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(16.dp))
             .background(dev.asfakul.yumeiro.ui.theme.GlassFill).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp)

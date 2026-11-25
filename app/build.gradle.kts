@@ -324,7 +324,6 @@ dependencies {
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.ui.graphics)
-  implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
   // CloudStream extensions build their settings screens with AppCompat / Fragment / Material views.
   implementation(libs.androidx.appcompat)
@@ -425,6 +424,8 @@ dependencies {
   androidTestImplementation(libs.androidx.compose.ui.test.junit4.accessibility)
   androidTestImplementation(libs.androidx.espresso.core)
   androidTestImplementation(libs.androidx.junit)
+  // NAV-2 device test: taps and system screenshots on the app's own clock (no Compose test clock).
+  androidTestImplementation(libs.androidx.uiautomator)
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.okhttp.mockwebserver)
 

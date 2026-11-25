@@ -57,6 +57,8 @@ object OnlineCodec {
         .put("sn", JSONObject().apply { d.seasonNames.forEach { (k, v) -> put(k.toString(), v) } })
         .put("rc", JSONArray(d.recommendations.map(::item)))
         .put("mal", d.malId).put("al", d.aniListId).put("imdb", d.imdbId).put("tmdb", d.tmdbId).put("un", d.unsupportedReason)
+        .put("ca", JSONArray(d.cast.map { JSONObject().put("n", it.name).put("r", it.role).put("i", it.image) }))
+        .put("tr", JSONArray(d.trailers))
         .toString()
 
     fun detail(text: String): OnlineDetail? = runCatching {
@@ -72,6 +74,8 @@ object OnlineCodec {
             sn.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.let { it to sn.optString(k) } }.toMap(),
             (0 until rc.length()).map { item(rc.getJSONObject(it)) },
             o.int("mal"), o.int("al"), o.str("imdb"), o.int("tmdb"), o.str("un"),
+            cast = o.optJSONArray("ca")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { c -> c.str("n")?.let { n -> dev.asfakul.yumeiro.online.OnlineCast(n, c.str("r"), c.str("i")) } } } }.orEmpty(),
+            trailers = strings(o.optJSONArray("tr")),
         )
     }.getOrNull()
 }

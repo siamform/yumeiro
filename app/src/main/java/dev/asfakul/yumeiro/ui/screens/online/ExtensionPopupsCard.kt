@@ -60,7 +60,7 @@ internal fun ExtensionPopupsCard() {
             held.forEach { h ->
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp).testTag("extensions_popup_held"), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("${h.extName} has a message", color = TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(ExtensionPopups.cardText(h.extName, h.functional), color = TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (h.title.isNotBlank()) Text(h.title, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     TextButton(onClick = { ExtensionPopups.reveal(h.id) }, modifier = Modifier.testTag("extensions_popup_show")) { Text("Show", color = SpotifyGreen) }

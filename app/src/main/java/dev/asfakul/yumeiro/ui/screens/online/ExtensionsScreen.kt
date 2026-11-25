@@ -363,6 +363,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                     }
                 }
                 item("popups") { ExtensionPopupsCard() }
+                item("security_checks") { SecurityChecksCard() }
                 item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.cloudstream) }
                 item("note") {
                     Text(

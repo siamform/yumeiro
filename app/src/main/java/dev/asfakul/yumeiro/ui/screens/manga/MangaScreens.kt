@@ -217,7 +217,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                         tag = "manga_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (feed == Feed.SEARCH) item("f_search") { FilterPill("Results for \"$submitted\"", true, {}) }
+                        if (feed == Feed.SEARCH) item("f_search") { FilterPill("Results for \"${dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.oneLine(submitted)}\"", true, {}) }
                         item("f_pop") { FilterPill("Popular", feed == Feed.POPULAR && !savedOnly, { query = ""; feed = Feed.POPULAR; savedOnly = false }) }
                         if (provider?.supportsLatest == true) item("f_new") { FilterPill("Latest", feed == Feed.LATEST && !savedOnly, { query = ""; feed = Feed.LATEST; savedOnly = false }) }
                         item("f_saved") { FilterPill("Saved", savedOnly, { query = ""; savedOnly = true }) }
@@ -357,8 +357,9 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
             }
         }
         items(items, key = { it.url }, contentType = { "cover" }) { m -> Cover(m, null) { onOpen(it) } }
-        if (loading) item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
+        // SKELETON-2: cover placeholders in the grid's own shape instead of a spinner.
+        if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(items.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
+            dev.asfakul.yumeiro.ui.components.CoverSkeleton()
         }
         error?.let { e -> item(span = { GridItemSpan(maxLineSpan) }, key = "error") {
             StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { more() }, testTag = "manga_error")
@@ -397,8 +398,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
         if (provider == null) {
             error = "This source isn't installed any more"
             // F-13: chapters saved on the phone still open without the source.
-            chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.list(context) }
-                .filter { it.providerId == providerId && it.mangaUrl == url }.map { MangaChapter(it.chapterUrl, it.chapterName) }.takeIf { it.isNotEmpty() }
+            // MANGA-ORDER-1: in chapter order, not download order.
+            chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.chapters(context, providerId, url) }.takeIf { it.isNotEmpty() }
             return@LaunchedEffect
         }
         error = null
@@ -409,9 +410,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (e: Exception) {
             // F-13: no connection (or the source broke): the chapters saved on this phone stay readable.
-            val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.list(context) }
-                .filter { it.providerId == providerId && it.mangaUrl == url }
-            if (saved.isNotEmpty()) chapters = saved.map { MangaChapter(it.chapterUrl, it.chapterName) }
+            val saved = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.chapters(context, providerId, url) }
+            if (saved.isNotEmpty()) chapters = saved
             error = OnlineErrors.friendly(e)
         }
     }
@@ -473,7 +473,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
             } }
             error?.let { e -> item("err") { StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { attempt++ }) } }
             if (chapters == null && error == null) item("loading") {
-                Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = SpotifyGreen) }
+                dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 6, modifier = Modifier.padding(top = 12.dp))
             }
             sorted?.let { list ->
                 item("ch_head") {
@@ -577,9 +577,16 @@ private suspend fun loadPage(provider: MangaProvider, page: MangaPageRef, lowRam
 fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, chapterUrl: String, chapterName: String, onBack: () -> Unit) {
     var cur by rememberSaveable { mutableStateOf(chapterUrl to chapterName) }
     var chapters by remember { mutableStateOf<List<MangaChapter>>(emptyList()) }
+    val readerContext = LocalContext.current
     LaunchedEffect(providerId, mangaUrl) {
-        val p = SourceHub.manga(providerId) ?: return@LaunchedEffect
-        chapters = try { p.chapters(mangaUrl) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { emptyList() }
+        // MANGA-ORDER-1: no connection, a broken source or a removed one: Previous / Next move through the chapters
+        // saved on the phone (in chapter order), with no network request for chapters that aren't there.
+        // The saved list comes first (from disk, at once), so the buttons work while the source is still timing out.
+        chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.chapters(readerContext, providerId, mangaUrl) }
+        val online = SourceHub.manga(providerId)?.let { p ->
+            try { p.chapters(mangaUrl) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { null }
+        }
+        if (!online.isNullOrEmpty()) chapters = online
     }
     val (prev, next) = remember(chapters, cur.first) { dev.asfakul.yumeiro.sources.manga.MangaChapterNav.neighbours(chapters, cur.first) }
     androidx.compose.runtime.key(cur.first) {
@@ -606,23 +613,31 @@ private fun MangaReaderChapter(
     var chrome by remember { mutableStateOf(true) }
     var current by remember { mutableStateOf(0) }
     // F-11 (ADR-044): Translate pages (on-device). Off until the user turns it on in the reader.
-    val tlAllowed = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.MANGA_TRANSLATE) }
+    val tlAllowed = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.MANGA_TRANSLATE) && MangaTranslate.allowedOn(context) }
     var tl by remember { mutableStateOf(MangaTranslate.settings(context)) }
+    // TL-2: Auto reads the source's language (a Spanish source is translated from Spanish, not as English).
+    val tlEff = remember(tl, provider) { MangaTranslate.resolve(tl, provider?.lang) }
     var tlSheet by remember { mutableStateOf(false) }
     var tlReady by remember { mutableStateOf(false) }
     var tlStatus by remember { mutableStateOf<String?>(null) }
     var tlTry by remember { mutableStateOf(0) }
-    LaunchedEffect(tlAllowed, tl.on, tl.src, tl.dst, tl.wifiOnly, tlTry) {
+    LaunchedEffect(tlAllowed, tlEff, tlTry) {
         tlReady = false
-        if (!tlAllowed || !tl.on) { tlStatus = null; return@LaunchedEffect }
-        val pair = "${tl.src.label} → ${MangaTlPlan.TARGETS[tl.dst] ?: tl.dst}"
-        tlStatus = if (MangaTranslate.ready(context, tl)) null else "Getting the $pair language pack…"
-        MangaTranslate.prepare(context, tl)
+        if (!tlAllowed || !tlEff.on) { tlStatus = null; return@LaunchedEffect }
+        val toName = MangaTlPlan.TARGETS[tlEff.dst] ?: tlEff.dst
+        if (tlEff.from == tlEff.dst) {
+            // The first version did nothing here (an English chapter on an English phone): say why.
+            tlStatus = "This chapter is already in $toName. Tap to pick another language."
+            return@LaunchedEffect
+        }
+        val pair = "${MangaTlPlan.FROM[tlEff.from] ?: tlEff.from} → $toName"
+        tlStatus = if (MangaTranslate.ready(context, tlEff)) null else "Getting the $pair language pack…"
+        MangaTranslate.prepare(context, tlEff)
             .onSuccess { tlReady = true; tlStatus = null }
             .onFailure { tlStatus = "Couldn't get the $pair language pack. Check the connection, then tap to try again." }
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { MangaTranslate.release() } }
-    val tlUse = if (tlAllowed && tl.on && tlReady) tl else null
+    val tlUse = if (tlAllowed && tlEff.on && tlReady) tlEff else null
     val item = MangaItem(providerId, mangaUrl, mangaTitle, MangaLibrary.get(providerId, mangaUrl)?.cover)
     val chapter = MangaChapter(chapterUrl, chapterName)
     LaunchedEffect(attempt) {
@@ -652,16 +667,17 @@ private fun MangaReaderChapter(
                     LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
                         itemsIndexed(list, key = { i, _ -> i }) { _, p -> PageImage(provider!!, p, fillWidth = true, tl = tlUse) }
                         if (next != null) item(key = "next_chapter") { NextChapterCard(next) { onGo(next) } }
+                        else if (provider?.ecosystem == "offline") item(key = "saved_end") { SavedEndCard() }
                     }
                 }
             }
             else -> {
                 // F-18: one extra page after the last one offers the next chapter.
-                val extra = if (next != null) 1 else 0
+                val extra = if (next != null || provider?.ecosystem == "offline") 1 else 0
                 val pager = rememberPagerState(initialPage = start.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size + extra }
                 LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { current = it.coerceAtMost(list.size - 1) } }
                 HorizontalPager(pager, modifier = Modifier.fillMaxSize(), reverseLayout = false, beyondViewportPageCount = 1) { i ->
-                    if (i >= list.size) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { next?.let { n -> NextChapterCard(n) { onGo(n) } } }
+                    if (i >= list.size) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { next?.let { n -> NextChapterCard(n) { onGo(n) } } ?: SavedEndCard() }
                     else ZoomBox(onTap = { chrome = !chrome }) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PageImage(provider!!, list[i], fillWidth = false, tl = tlUse) } }
                 }
             }
@@ -695,11 +711,25 @@ private fun MangaReaderChapter(
         tlStatus?.let { msg ->
             Text(msg, color = Color.White, fontSize = 12.sp,
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 44.dp)
-                    .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(12.dp)).clickable { tlTry++ }
+                    .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(12.dp)).clickable { if (tlEff.from == tlEff.dst) tlSheet = true else tlTry++ }
                     .padding(horizontal = 12.dp, vertical = 6.dp).testTag("tl_status"))
         }
-        if (tlSheet) TranslateSheet(tl, onChange = { tl = it; MangaTranslate.save(context, it) }, onDismiss = { tlSheet = false })
+        if (tlSheet) TranslateSheet(tl, MangaTlPlan.fromProvider(provider?.lang), onChange = { tl = it; MangaTranslate.save(context, it) }, onDismiss = { tlSheet = false })
         androidx.activity.compose.BackHandler(onBack = onBack)
+    }
+}
+
+/** MANGA-ORDER-1: the last saved chapter, read offline: say why there is no next one instead of a silent dead end. */
+@Composable
+private fun SavedEndCard() {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp)).padding(20.dp).testTag("reader_saved_end"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("End of your saved chapters", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(6.dp))
+        Text("Connect to the internet or save the next chapter to keep reading.", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
     }
 }
 
@@ -726,7 +756,12 @@ private fun NextChapterCard(next: MangaChapter, onClick: () -> Unit) {
 /** F-11: reader's Translate pages settings (switch, language from / to, Wi-Fi only for the pack). */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun TranslateSheet(s: MangaTranslate.Settings, onChange: (MangaTranslate.Settings) -> Unit, onDismiss: () -> Unit) {
+private fun TranslateSheet(s: MangaTranslate.Settings, sourceLang: String?, onChange: (MangaTranslate.Settings) -> Unit, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var packs by remember { mutableStateOf<List<String>?>(null) }
+    var packsTry by remember { mutableStateOf(0) }
+    LaunchedEffect(packsTry) { packs = MangaTranslate.packs(context) }
     @Composable fun Chip(label: String, on: Boolean, tag: String, click: () -> Unit) {
         Text(label, color = if (on) OnAccent else TextPrimary, fontSize = 13.sp,
             modifier = Modifier.padding(end = 6.dp, bottom = 6.dp).background(if (on) SpotifyGreen else Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
@@ -747,7 +782,10 @@ private fun TranslateSheet(s: MangaTranslate.Settings, onChange: (MangaTranslate
                 Spacer(Modifier.height(10.dp))
                 Text("From", color = TextSecondary, fontSize = 12.sp)
                 androidx.compose.foundation.layout.FlowRow {
-                    for (src in MangaTlPlan.Src.entries) Chip(src.label, s.src == src, "tl_src_${src.code}") { onChange(s.copy(src = src)) }
+                    for ((code, label) in MangaTlPlan.FROM) {
+                        val shown = if (code == MangaTlPlan.AUTO) sourceLang?.let { "Auto · ${MangaTlPlan.FROM[it]}" } ?: "Auto · from the page" else label
+                        Chip(shown, s.from == code, "tl_src_$code") { onChange(s.copy(from = code)) }
+                    }
                 }
                 Text("To", color = TextSecondary, fontSize = 12.sp)
                 androidx.compose.foundation.layout.FlowRow {
@@ -758,9 +796,48 @@ private fun TranslateSheet(s: MangaTranslate.Settings, onChange: (MangaTranslate
                     androidx.compose.material3.Switch(s.wifiOnly, { onChange(s.copy(wifiOnly = it)) }, modifier = Modifier.testTag("tl_wifi"))
                 }
                 Text("Long-press a translation to hide it.", color = TextSecondary, fontSize = 12.sp)
+                // TL-2: packs are about 30 MB each; the reader shows which are on the phone and lets you remove them.
+                Spacer(Modifier.height(10.dp))
+                Text("Language packs on this phone", color = TextSecondary, fontSize = 12.sp)
+                val list = packs
+                when {
+                    list == null -> Text("Checking…", color = TextSecondary, fontSize = 12.sp)
+                    list.isEmpty() -> Text("None yet. English is built in; others download the first time you use them.", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.testTag("tl_packs_none"))
+                    else -> for (code in list) Row(Modifier.fillMaxWidth().testTag("tl_pack_$code"), verticalAlignment = Alignment.CenterVertically) {
+                        Text(MangaTlPlan.TARGETS[code] ?: MangaTlPlan.FROM[code] ?: java.util.Locale.forLanguageTag(code).displayLanguage, Modifier.weight(1f), color = TextPrimary, fontSize = 13.sp)
+                        androidx.compose.material3.TextButton(
+                            onClick = { scope.launch { MangaTranslate.deletePack(context, code); packsTry++ } },
+                            modifier = Modifier.testTag("tl_pack_delete_$code"),
+                        ) { Text("Remove") }
+                    }
+                }
             }
         },
     )
+}
+
+/** TL-2: one page's translation state. */
+private sealed interface TlPage {
+    data object Off : TlPage
+    data object Working : TlPage
+    data class Done(val bubbles: List<MangaTlPlan.Bubble>) : TlPage
+    data class Same(val language: String) : TlPage
+    data object Failed : TlPage
+}
+
+/** TL-2: small corner note on a page: translating, failed (tap to retry), or already in the target language. */
+@Composable
+private fun TlPill(state: TlPage, pageIndex: Int, modifier: Modifier, onRetry: () -> Unit) {
+    val text = when (state) {
+        TlPage.Working -> "Translating…"
+        TlPage.Failed -> "Couldn't translate · tap to retry"
+        is TlPage.Same -> "Already in ${state.language}"
+        else -> return
+    }
+    Text(text, color = Color.White, fontSize = 11.sp,
+        modifier = modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+            .then(if (state == TlPage.Failed) Modifier.clickable(onClick = onRetry) else Modifier)
+            .padding(horizontal = 8.dp, vertical = 4.dp).testTag("tl_page_${pageIndex}_state"))
 }
 
 /** F-11: translated bubbles drawn over one page, placed with the same scaling as the page image. */
@@ -824,12 +901,20 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
     }
     val r = bmp
     val loaded = r?.getOrNull()
-    val bubbles by produceState<List<MangaTlPlan.Bubble>?>(null, loaded, tl) {
-        value = null
-        if (loaded != null && tl != null) value = runCatching {
-            MangaTranslate.page(context, provider.id + "|" + (page.imageUrl ?: page.url) + "|" + page.index, loaded.strips, tl)
-        }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }.getOrNull()
+    // TL-2: the page says what translation is doing instead of staying silent (the first version showed nothing
+    // while working, and nothing when a translation failed).
+    var tlTry by remember { mutableStateOf(0) }
+    val tlState by produceState<TlPage>(TlPage.Off, loaded, tl, tlTry) {
+        value = TlPage.Off
+        if (loaded == null || tl == null) return@produceState
+        value = TlPage.Working
+        value = try {
+            TlPage.Done(MangaTranslate.page(context, provider.id + "|" + (page.imageUrl ?: page.url) + "|" + page.index, loaded.strips, tl))
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (e: MangaTranslate.SameLanguage) { TlPage.Same(MangaTlPlan.TARGETS[e.lang] ?: e.lang) }
+        catch (e: Throwable) { TlPage.Failed }
     }
+    val bubbles = (tlState as? TlPage.Done)?.bubbles
     when {
         r == null -> Box(Modifier.fillMaxWidth().aspectRatio(0.7f), contentAlignment = Alignment.Center) {
             Text("${page.index + 1}", color = Color.White.copy(alpha = 0.4f), fontSize = 28.sp)
@@ -843,6 +928,7 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
                 Image(p.strips[0].asImageBitmap(), "Page ${page.index + 1}", contentScale = if (fillWidth) ContentScale.FillWidth else ContentScale.Fit,
                     modifier = if (fillWidth) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                 bubbles?.let { TlOverlay(it, page.index, p.width, p.height, fillWidth, Modifier.matchParentSize()) }
+                TlPill(tlState, page.index, Modifier.align(Alignment.TopEnd)) { tlTry++ }
             } else {
                 // A tall page: each strip is drawn on its own, so no single bitmap passes the draw or texture limit.
                 val images = remember(p) { p.strips.map { it.asImageBitmap() } }
@@ -860,6 +946,7 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
                     }
                 }
                 bubbles?.let { TlOverlay(it, page.index, p.width, p.height, true, Modifier.matchParentSize()) }
+                TlPill(tlState, page.index, Modifier.align(Alignment.TopEnd)) { tlTry++ }
                 }
             }
         }

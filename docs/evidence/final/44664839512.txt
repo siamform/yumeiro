@@ -1,7 +1,0 @@
-44664839512 tv-api24 PlayerExtrasSettingsEffectDeviceTest P1 PASS tests=5 skipped=1 sha=b975bb4
-44664839512 tv-api24 PlayerSettingsEffectDeviceTest P1 PASS tests=3 skipped=0 sha=b975bb4
-44664839512 tv-api24 PlayerSwitchDeviceTest P1 PASS tests=5 skipped=1 sha=b975bb4
-44664839512 tv-api24 PlaylistIndexRecoveryDeviceTest P1 PASS tests=2 skipped=0 sha=b975bb4
-44664839512 tv-api24 PlaylistRetryDeviceTest P1 PASS tests=2 skipped=0 sha=b975bb4
-44664839512 tv-api24 PosterActionsDeviceTest P1 PASS tests=2 skipped=0 sha=b975bb4
-44664839512 tv-api24 ProfilesDeviceTest P1 PASS tests=3 skipped=0 sha=b975bb4

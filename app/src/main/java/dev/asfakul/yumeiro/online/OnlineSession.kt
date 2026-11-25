@@ -343,9 +343,37 @@ object OnlineSession {
         val provider = ExtensionManager.provider(s.api)
         OnlinePlayback.registerInterceptors(provider, link)
         val request = OnlinePlayback.request(s.title, link, s.subtitles, s.detail.posterUrl)
+        // ANIME-3: a source that links a YouTube watch page (Yumeiro Anime's official channels) plays
+        // through the app's own YouTube streams, as the YouTube tab does; the stream resolver only
+        // hands YouTube links to the YouTube app, so the episode never played in Yumeiro.
+        val ytId = if (OnlinePlayback.isYouTubePage(link.url)) dev.asfakul.yumeiro.youtube.YouTube.idFrom(link.url) else null
+        if (ytId != null) { playYouTube(context, ytId, request, id, resume, s.detail.api); return }
         val site = runCatching { provider?.mainUrl }.getOrNull()
         AccessLadder.reset(request.url); AccessLadder.hint(request.url, site)
         IncomingMedia.open(context, request, id = id, positionMs = resume, folder = s.detail.api)
+    }
+
+    private var ytJob: Job? = null
+
+    private fun playYouTube(context: Context, ytId: String, base: dev.asfakul.yumeiro.stream.StreamRequest, id: String, resume: Long, folder: String) {
+        ytJob?.cancel()
+        val app = context.applicationContext
+        ytJob = scope.launch {
+            runCatching { dev.asfakul.yumeiro.youtube.YouTubeStreams.videoRequest(app, ytId) }
+                .onSuccess { yt ->
+                    if (_state.value?.videoId != id) return@onSuccess // another episode or source was picked meanwhile
+                    Log.i(TAG, "youtube $ytId -> ${yt.format}")
+                    // Group YouTube: YouTubePlayback's refresher renews an expired or refused link (403).
+                    IncomingMedia.open(app, yt.copy(title = base.title, logoUrl = base.logoUrl ?: yt.logoUrl,
+                        subtitles = base.subtitles + yt.subtitles), id = id, positionMs = resume, folder = folder)
+                }
+                .onFailure { e ->
+                    if (e is kotlinx.coroutines.CancellationException) return@onFailure
+                    Log.w(TAG, "youtube $ytId failed: ${e.javaClass.simpleName}: ${e.message}")
+                    if (_state.value?.videoId != id) return@onFailure
+                    _state.update { it?.copy(phase = Phase.FAILED, message = dev.asfakul.yumeiro.youtube.YtAccount.refusalMessage(e) ?: "YouTube couldn't play this episode: ${OnlineErrors.friendly(e)}") }
+                }
+        }
     }
 
     /** Switches to another link of the same episode, keeping the position. */

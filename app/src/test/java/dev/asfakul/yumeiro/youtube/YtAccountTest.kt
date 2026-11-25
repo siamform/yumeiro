@@ -10,6 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException
 import java.io.IOException
 
@@ -56,5 +57,13 @@ class YtAccountTest {
         assertTrue(YtAccount.accountCanHelp(SignInConfirmNotBotException("bot")))
         assertTrue(YtAccount.accountCanHelp(IOException("wrap", AgeRestrictedContentException("age"))))
         assertFalse(YtAccount.accountCanHelp(IOException("net")))
+    }
+
+    @Test fun `a refused video gets a readable sentence, other errors keep theirs`() {
+        val unplayable = IOException("wrap", ContentNotAvailableException("Got error UNPLAYABLE: \"This content isn't available.\""))
+        val m = YtAccount.refusalMessage(unplayable)!!
+        assertTrue(m, m.startsWith("YouTube says this video isn't available here") && !m.contains("UNPLAYABLE"))
+        assertTrue(YtAccount.refusalMessage(SignInConfirmNotBotException("bot"))!!.contains("sign"))
+        assertEquals(null, YtAccount.refusalMessage(IOException("timeout")))
     }
 }

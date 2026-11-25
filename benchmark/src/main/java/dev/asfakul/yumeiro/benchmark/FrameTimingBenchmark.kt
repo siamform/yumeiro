@@ -29,6 +29,25 @@ class FrameTimingBenchmark {
 
     @Test fun scrollBaselineProfile() = scroll(CompilationMode.Partial(BaselineProfileMode.Require))
 
+    /** NAV-3: open and close three Settings sub-pages (the NAV-2 device test's pages), cold page each iteration. */
+    @Test fun settingsPagesNoCompilation() = settings(CompilationMode.None())
+
+    @Test fun settingsPagesBaselineProfile() = settings(CompilationMode.Partial(BaselineProfileMode.Require))
+
+    private fun settings(mode: CompilationMode) = rule.measureRepeated(
+        packageName = TARGET,
+        metrics = listOf(FrameTimingMetric()),
+        compilationMode = mode,
+        // No startupMode: COLD kills the process after setupBlock (run 45337558852 measured the launcher). A fresh
+        // process per iteration instead: kill here, start, open Settings home, then measure only the sub-pages.
+        startupMode = null,
+        iterations = 5,
+        setupBlock = { Journeys.grantPermissions(device); killProcess(); startActivityAndWait(); Journeys.firstFrameSettles(device); Journeys.passWelcome(device); Journeys.openSettings(device) },
+    ) {
+        Journeys.settingsPages(device, listOf("Look & feel", "Video quality & playback", "Profiles"))
+        Journeys.snapshot(device, "settings_after")
+    }
+
     private fun scroll(mode: CompilationMode) = rule.measureRepeated(
         packageName = TARGET,
         metrics = listOf(FrameTimingMetric()),

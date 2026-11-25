@@ -123,6 +123,13 @@ class YumixShowcaseTest {
             if (open) SourceFilterSheet(names, sel, status = { SourceStatus.Ready(12) }, onPick = { sel = it }, onDismiss = { open = false })
         }
         rule.mainClock.advanceTimeBy(800)
+        // YF-2: search sits behind the header icon. The sheet's open animation runs on the frozen test
+        // clock, so let the clock run until idle before the tap (as YumixFilterRedesignTest does).
+        rule.mainClock.autoAdvance = true
+        rule.waitForIdle()
+        rule.onNodeWithTag("online_filter-search-open").performClick()
+        rule.waitForIdle()
+        rule.mainClock.autoAdvance = false
         rule.onNodeWithTag("online_filter_search").assertExists().performTextInput("anim")
         rule.mainClock.advanceTimeBy(400)
         rule.onNodeWithTag("online_filter_AnimePahe").assertExists()

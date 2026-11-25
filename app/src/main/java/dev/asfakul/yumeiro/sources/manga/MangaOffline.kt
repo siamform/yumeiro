@@ -38,7 +38,11 @@ object MangaOffline {
     data class Saved(
         val providerId: String, val mangaUrl: String, val mangaTitle: String,
         val chapterUrl: String, val chapterName: String, val pages: Int, val bytes: Long, val savedAt: Long,
-    )
+        /** MANGA-ORDER-1: the chapter's number (source's, else read from the name); -1 = none. */
+        val number: Float = -1f,
+    ) {
+        fun chapter() = MangaChapter(chapterUrl, chapterName, number)
+    }
 
     /** Download progress per chapter key ([folderName]): 0..1, or absent when idle. */
     private val _progress = MutableStateFlow<Map<String, Float>>(emptyMap())
@@ -61,13 +65,22 @@ object MangaOffline {
     private fun read(dir: File): Saved? = runCatching {
         val o = JSONObject(File(dir, "meta.json").readText())
         Saved(o.getString("provider"), o.getString("manga"), o.optString("title"), o.getString("chapter"),
-            o.optString("name"), o.getInt("pages"), o.optLong("bytes"), o.optLong("at"))
+            o.optString("name"), o.getInt("pages"), o.optLong("bytes"), o.optLong("at"),
+            // Saves from before MANGA-ORDER-1 have no number: read it from the name.
+            if (o.has("number")) o.optDouble("number", -1.0).toFloat() else MangaChapterOrder.number(o.optString("name")))
             .takeIf { s -> (0 until s.pages).all { pageFile(dir, it).isFile } }
     }.getOrNull()
 
     fun saved(c: Context, providerId: String, chapterUrl: String): Saved? = folder(c, providerId, chapterUrl).takeIf { it.isDirectory }?.let(::read)
 
-    /** Every saved chapter, newest first. */
+    /**
+     * MANGA-ORDER-1: the saved chapters of one title, newest first by chapter number (the order the title page and
+     * [MangaChapterNav] expect), never by download time. Reads the disk: call off the main thread.
+     */
+    fun chapters(c: Context, providerId: String, mangaUrl: String): List<MangaChapter> =
+        MangaChapterOrder.newestFirst(list(c).filter { it.providerId == providerId && it.mangaUrl == mangaUrl }.map { it.chapter() })
+
+    /** Every saved chapter, newest download first. */
     fun list(c: Context): List<Saved> = root(c).listFiles { f -> f.isDirectory && !f.name.endsWith(".part") }
         ?.mapNotNull(::read)?.sortedByDescending { it.savedAt }.orEmpty()
 
@@ -100,10 +113,11 @@ object MangaOffline {
                 bytes += img.bytes.size
                 _progress.value = _progress.value + (key to (i + 1f) / refs.size)
             }
-            val saved = Saved(provider.id, item.url, item.title, chapter.url, chapter.name, refs.size, bytes, System.currentTimeMillis())
+            val saved = Saved(provider.id, item.url, item.title, chapter.url, chapter.name, refs.size, bytes, System.currentTimeMillis(),
+                MangaChapterOrder.numberOf(chapter))
             File(part, "meta.json").writeText(JSONObject().put("provider", saved.providerId).put("manga", saved.mangaUrl)
                 .put("title", saved.mangaTitle).put("chapter", saved.chapterUrl).put("name", saved.chapterName)
-                .put("pages", saved.pages).put("bytes", saved.bytes).put("at", saved.savedAt).toString())
+                .put("pages", saved.pages).put("bytes", saved.bytes).put("at", saved.savedAt).put("number", saved.number.toDouble()).toString())
             dir.deleteRecursively()
             if (!part.renameTo(dir)) error("Couldn't save the chapter")
             _changes.value++
@@ -155,7 +169,8 @@ object MangaOffline {
             override suspend fun latest(page: Int) = MangaListPage(emptyList(), false)
             override suspend fun search(query: String, page: Int) = MangaListPage(emptyList(), false)
             override suspend fun details(url: String) = MangaDetails(providerId, s.mangaUrl, s.mangaTitle, null)
-            override suspend fun chapters(url: String) = listOf(MangaChapter(s.chapterUrl, s.chapterName))
+            // MANGA-ORDER-1: every saved chapter of the title, so Previous / Next work offline.
+            override suspend fun chapters(url: String) = withContext(Dispatchers.IO) { chapters(c, providerId, s.mangaUrl) }.ifEmpty { listOf(s.chapter()) }
             override suspend fun pages(chapterUrl: String) = (0 until s.pages).map { MangaPageRef(it, "offline:${dir.name}/$it", null) }
             override suspend fun image(page: MangaPageRef) = withContext(Dispatchers.IO) { MangaImage(pageFile(dir, page.index).readBytes(), null) }
         }

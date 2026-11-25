@@ -94,7 +94,7 @@ class E1CatalogTest {
     }
 
     @Test fun homeShelfAndSearchComeFromYumeiroCloud() = runBlocking {
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "https://api.yumeiro.click/v1/hub")
+        val p = YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { emptyList() }, base = "https://api.yumeiro.click/v1/hub")
         val home = p.getMainPage(1, MainPageRequest("Korean drama", "kdrama", false))!!
         val row = home.items.single()
         assertEquals(listOf("Queen of Tears", "Parasite"), row.list.map { it.name })
@@ -104,7 +104,7 @@ class E1CatalogTest {
     }
 
     @Test fun titlePagesHaveIdsAndEveryEpisode() = runBlocking {
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "")
+        val p = YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { emptyList() }, base = "")
         val film = p.load("catalog:movie:2") as MovieLoadResponse
         assertEquals("Parasite", film.name); assertEquals(2019, film.year); assertEquals(132, film.duration)
         assertEquals("tt6751668", with(LoadResponse) { film.getImdbId() })
@@ -118,7 +118,7 @@ class E1CatalogTest {
         val a = Src("Source A", mapOf("Parasite" to 2019, "Parasite 2" to 2030))
         val b = Src("Source B", mapOf("Parasite" to 1982)) // same name, other film: year too far
         val c = Src("Source C", mapOf("Okja" to 2017))
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(a, b, c) }, base = "", builtins = { emptyList() })
+        val p = YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { listOf(a, b, c) }, base = "", builtins = { emptyList() })
         val links = mutableListOf<ExtractorLink>()
         assertTrue(p.loadLinks("catalog:movie:2", false, {}) { links += it })
         assertEquals(listOf("https://cdn.example/Parasite#play"), links.map { it.url })
@@ -130,7 +130,7 @@ class E1CatalogTest {
 
     @Test fun seriesEpisodesResolveBySeasonAndEpisode() = runBlocking {
         val a = Src("Source A", mapOf("S:Queen of Tears" to 2024))
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(a) }, base = "", builtins = { emptyList() })
+        val p = YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { listOf(a) }, base = "", builtins = { emptyList() })
         val links = mutableListOf<ExtractorLink>()
         assertTrue(p.loadLinks("https://yumeiro.click/catalog:tv:1:1:5", false, {}) { links += it })
         assertEquals(listOf("https://cdn.example/Queen of Tears#1x5"), links.map { it.url })
@@ -139,13 +139,13 @@ class E1CatalogTest {
     @Test fun aSlowSourceDoesNotBlockTheOthersAndNoSourceMeansNoLinks() = runBlocking {
         val slow = Src("Slow", mapOf("Parasite" to 2019), slow = true)
         val a = Src("Source A", mapOf("Parasite" to 2019))
-        val p = YumeiroCatalogProvider(fetch = ::fetch, sources = { listOf(slow, a) }, base = "", builtins = { emptyList() })
+        val p = YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { listOf(slow, a) }, base = "", builtins = { emptyList() })
         val links = mutableListOf<ExtractorLink>()
         val t = System.currentTimeMillis()
         assertTrue(p.loadLinks("catalog:movie:2", false, {}) { links += it })
         assertTrue("finished within the total limit", System.currentTimeMillis() - t < YumeiroCatalogProvider.TOTAL_MS + 5_000)
         assertEquals(listOf("Source A"), links.map { it.source })
-        assertFalse(YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { emptyList() }).loadLinks("catalog:movie:2", false, {}) {})
+        assertFalse(YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { emptyList() }).loadLinks("catalog:movie:2", false, {}) {})
     }
 
     /** E1-C: with no source installed, a public-domain film still plays from Yumeiro's own Internet Archive part. */
@@ -154,16 +154,16 @@ class E1CatalogTest {
         val wrongYear = Src("Yumeiro Classics", mapOf("Parasite" to 1950))
         val noYear = Src("Yumeiro Classics", mapOf("Parasite" to null))
         val links = mutableListOf<ExtractorLink>()
-        assertTrue(YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { listOf(archive) })
+        assertTrue(YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { listOf(archive) })
             .loadLinks("catalog:movie:2", false, {}) { links += it })
         assertEquals(listOf("Yumeiro Classics"), links.map { it.source })
-        for (bad in listOf(wrongYear, noYear)) assertFalse(YumeiroCatalogProvider(fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { listOf(bad) })
+        for (bad in listOf(wrongYear, noYear)) assertFalse(YumeiroCatalogProvider(findV2 = { false }, fetch = ::fetch, sources = { emptyList() }, base = "", builtins = { listOf(bad) })
             .loadLinks("catalog:movie:2", false, {}) {})
     }
 
     @Test fun builtInPartsAndTheHubAreNeverAskedThemselves() {
         val hub = YumeiroHubProvider(emptyList())
-        val self = YumeiroCatalogProvider(fetch = { null }, sources = { emptyList() }, base = "")
+        val self = YumeiroCatalogProvider(findV2 = { false }, fetch = { null }, sources = { emptyList() }, base = "")
         val other = Src("Other", emptyMap())
         assertEquals(listOf("Other"), YumeiroCatalog.eligible(listOf(hub, self, other)).map { it.name })
     }

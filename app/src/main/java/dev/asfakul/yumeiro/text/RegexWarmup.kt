@@ -40,6 +40,13 @@ object RegexWarmup {
 
     /** JVM names of the classes whose static initialiser compiles patterns. */
     val CLASSES: List<String> = listOf(
+        "dev.asfakul.yumeiro.online.TitleDedupe",
+        "dev.asfakul.yumeiro.sources.novel.NovelSiteCheck",
+        "dev.asfakul.yumeiro.sources.manga.MangaChapterOrder",
+        "dev.asfakul.yumeiro.adchain.AdChainPages",
+        "dev.asfakul.yumeiro.sources.novel.NovelText",
+        "dev.asfakul.yumeiro.sources.novel.NovelSources",
+        "dev.asfakul.yumeiro.adchain.AdChainDestinations",
         // UI classes first: a screen's first composition is what touches them.
         "com.lagradost.cloudstream3.ui.home.HomeViewModelKt",
         "dev.asfakul.yumeiro.ui.components.ErrorHelp",
@@ -71,6 +78,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.network.SmartDnsKt",
         "dev.asfakul.yumeiro.notify.FcmPlan",
         "dev.asfakul.yumeiro.online.AudioLanguages",
+        "dev.asfakul.yumeiro.online.meta.TitleFacts",
         "dev.asfakul.yumeiro.online.EpisodeMatcherKt",
         "dev.asfakul.yumeiro.online.ExtensionFormats",
         "dev.asfakul.yumeiro.online.ExtensionManagerKt",
@@ -100,6 +108,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.TeraBoxApi", // B-29 jsToken pattern
         "dev.asfakul.yumeiro.stream.DiskWalaApi", // B-30 share id pattern
         "dev.asfakul.yumeiro.online.ExtensionPopups", // ADR-014 classifier words (first touch is a window check on main)
+        "dev.asfakul.yumeiro.online.ExtensionCheckWindows", // ADR-059 check-window words (first touch is a window check on main)
         "dev.asfakul.yumeiro.scrobble.ScrobbleRulesKt",
         "dev.asfakul.yumeiro.scrobble.TrackNames",
         "dev.asfakul.yumeiro.sources.UniversalAdd",
@@ -109,6 +118,8 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.sources.drama.OnShortCatalogKt",
         "dev.asfakul.yumeiro.sources.drama.YumeiroDrama",
         "dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider", // OWN-9 adult words, ids, query cleaning
+        "dev.asfakul.yumeiro.sources.anime.YumeiroAnimeProvider", // ANIME-1 series / adult / title filters
+        "dev.asfakul.yumeiro.sources.anime.AnimeRx", // ANIME-1 id / series / adult / title patterns
         "dev.asfakul.yumeiro.sources.manga.MangaTlPlan", // F-11 bubble filter (first touch is the reader)
         "dev.asfakul.yumeiro.online.telegram.TelegramPublicKt", // F-02 public post / channel name
         "dev.asfakul.yumeiro.sources.js.JsBridgeKt",
@@ -127,6 +138,8 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.stream.LinkHosts", // T-1 info-hash patterns
         "dev.asfakul.yumeiro.stream.torrent.TorrentPlan", // B-31 info-hash, episode in file names
         "dev.asfakul.yumeiro.stream.LiveCountry", // Live TV country filter
+        "dev.asfakul.yumeiro.stream.LiveFindKt", // LIVE-1 Live TV channel and country search
+        "dev.asfakul.yumeiro.online.web.SiteMetaKt", // WEB-ADD-1 site name and icon from the page
         "dev.asfakul.yumeiro.profiles.Profiles", // F-19 answer normalising
         "dev.asfakul.yumeiro.stream.M3uParser",
         "dev.asfakul.yumeiro.stream.PlaylistMarketKt",

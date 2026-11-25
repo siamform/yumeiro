@@ -92,9 +92,9 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.update.ReleaseInfo
-import dev.asfakul.yumeiro.update.UpdateConfig
 import dev.asfakul.yumeiro.update.UpdateSource
 import dev.asfakul.yumeiro.update.UpdateState
+import dev.asfakul.yumeiro.update.UpdateStatusText
 
 private val ErrorRed: Color @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.DangerTone
 
@@ -247,23 +247,34 @@ private fun DownloadingContent(
         Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 26.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        // UPD-MSG-1: the title names the real step (preparing / starting / waiting / downloading / checking).
         Text(
-            "Downloading v${s.release.versionName}",
+            UpdateStatusText.title(s.stage),
             style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary,
-        )
-        Spacer(Modifier.height(22.dp))
-        DownloadRing(progress = s.progress, indeterminate = s.queued && s.downloadedBytes == 0L)
-        Spacer(Modifier.height(20.dp))
-        Text(
-            text = if (s.queued && s.downloadedBytes == 0L) "Starting download…"
-            else "${formatBytes(s.downloadedBytes)} of ${formatBytes(s.totalBytes)}",
-            style = MaterialTheme.typography.bodyLarge, color = TextPrimary,
+            textAlign = TextAlign.Center, modifier = Modifier.testTag("update_stage_title"),
         )
         Spacer(Modifier.height(4.dp))
-        Text(
-            text = if (s.bytesPerSecond > 0) "${formatBytes(s.bytesPerSecond)}/s · ${eta(s)}" else "Connecting to GitHub…",
-            style = MaterialTheme.typography.bodySmall, color = TextSecondary,
-        )
+        Text("Yumeiro v${s.release.versionName}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        Spacer(Modifier.height(20.dp))
+        DownloadRing(progress = s.progress, indeterminate = UpdateStatusText.indeterminate(s.stage))
+        Spacer(Modifier.height(20.dp))
+        val detail = UpdateStatusText.detail(s.stage)
+        if (detail == null) {
+            Text(
+                "${formatBytes(s.downloadedBytes)} of ${formatBytes(s.totalBytes)}",
+                style = MaterialTheme.typography.bodyLarge, color = TextPrimary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (s.bytesPerSecond > 0) "${formatBytes(s.bytesPerSecond)}/s · ${eta(s)}" else "${(s.progress * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall, color = TextSecondary,
+            )
+        } else {
+            Text(
+                detail, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center,
+                modifier = Modifier.testTag("update_stage_detail"),
+            )
+        }
         Spacer(Modifier.height(24.dp))
         Button(
             onClick = onBackground,
@@ -307,7 +318,7 @@ private fun ReadyContent(
             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = SpotifyGreenBright, modifier = Modifier.size(56.dp))
         }
         Spacer(Modifier.height(14.dp))
-        Text("Ready to install", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(UpdateStatusText.READY_TITLE, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
         Text(
             "Yumeiro v${release.versionName} has been downloaded and verified.",
@@ -315,7 +326,7 @@ private fun ReadyContent(
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "Source: github.com/${UpdateConfig.owner}/${UpdateConfig.repo} · SHA-256 and signature checked",
+            UpdateStatusText.SOURCE_LINE,
             style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center,
         )
         if (needsPermission) {
@@ -353,9 +364,11 @@ private fun InstallingContent(release: ReleaseInfo) {
     ) {
         DownloadRing(progress = 1f, indeterminate = true, size = 96)
         Spacer(Modifier.height(18.dp))
-        Text("Installing v${release.versionName}…", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+        Text(UpdateStatusText.INSTALLING_TITLE, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+        Spacer(Modifier.height(2.dp))
+        Text("Yumeiro v${release.versionName}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         Spacer(Modifier.height(4.dp))
-        Text("Confirm in the system dialog if asked.", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        Text(UpdateStatusText.INSTALLING_DETAIL, style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
     }
 }
 
@@ -367,7 +380,7 @@ private fun FailedContent(s: UpdateState.Failed, onRetry: () -> Unit, onClose: (
     ) {
         Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(56.dp))
         Spacer(Modifier.height(12.dp))
-        Text("Update problem", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text("Update didn't finish", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
         Text(s.message, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(22.dp))
@@ -447,7 +460,7 @@ private fun MetaRow(release: ReleaseInfo) {
         Dot()
         MetaItem(
             if (release.source == UpdateSource.AUTHENTICATED) Icons.Default.Lock else Icons.Default.Public,
-            "GitHub",
+            "Official release",
         )
     }
 }

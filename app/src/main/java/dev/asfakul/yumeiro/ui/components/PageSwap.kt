@@ -125,8 +125,15 @@ object PageMotion {
 
     /** Settings home → category and back: the NavHost push / pop, so it feels like every other page. */
     fun <S> pushOrPop(scope: AnimatedContentTransitionScope<S>, forward: Boolean, reduced: Boolean): ContentTransform = with(scope) {
-        if (forward) push(reduced) togetherWith pushExit(reduced) else popEnter(reduced) togetherWith popExit(reduced)
+        // NAV-2: the page that slides is always on top. AnimatedContent draws the newest content above by
+        // default, so on Back the Settings home covered the closing category instead of the category sliding
+        // away over it (the NavHost keeps the popped page on top the same way).
+        (if (forward) push(reduced) togetherWith pushExit(reduced) else popEnter(reduced) togetherWith popExit(reduced))
+            .apply { targetContentZIndex = slidingZ(forward) }
     }
+
+    /** Pure, unit-tested: the pushed page above, the page coming back below the one closing. */
+    fun slidingZ(forward: Boolean): Float = if (forward) 1f else -1f
 
     /** Pure, unit-tested: every pair runs as long both ways (OWN-14). */
     fun isSymmetric(): Boolean = POP_MS == PUSH_MS

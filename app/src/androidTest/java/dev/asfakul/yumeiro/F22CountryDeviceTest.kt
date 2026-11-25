@@ -43,6 +43,13 @@ class F22CountryDeviceTest {
     }.getOrDefault(false)
 
     private fun count(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().size
+    // UP-FILTER-1 (R21 item 16B): Series / Movies / Anime sit in the Category sheet.
+    private fun kind(k: String) {
+        if (count("upcoming_kind_$k") == 0) { rule.onAllNodesWithTag("upcoming_category_button", true)[0].performClick(); rule.waitUntil(5_000) { count("upcoming_kind_$k") > 0 } }
+        rule.onAllNodesWithTag("upcoming_kind_$k", true)[0].performClick(); rule.waitForIdle()
+        if (count("upcoming_category_sheet_done") > 0) { rule.onAllNodesWithTag("upcoming_category_sheet_done", true)[0].performClick(); rule.waitForIdle() }
+        rule.waitUntil(5_000) { count("upcoming_category_sheet") == 0 }
+    }
     private fun texts(tag: String): List<String> = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes()
         .mapNotNull { n -> n.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text } }
 
@@ -52,10 +59,10 @@ class F22CountryDeviceTest {
         File(ctx.cacheDir, "upcoming_tvmaze_jp.json").delete()
         UpcomingPrefs.setCountry(ctx, null); UpcomingPrefs.setGenre(ctx, null)
         rule.setContent { MTPlayerTheme { UpcomingScreen(onBack = {}, onSearch = {}) } }
-        rule.waitUntil(5_000) { count("upcoming_kind_series") > 0 }
-        rule.onAllNodesWithTag("upcoming_kind_series", true)[0].performClick()
-        // OWN-16: the country and genre choices are in the filter sheet behind the filter icon.
-        rule.onAllNodesWithTag("upcoming_filter_button", true)[0].performClick()
+        rule.waitUntil(5_000) { count("upcoming_category_button") > 0 }
+        kind("series")
+        // UP-FILTER-1: the schedule countries are in the Country sheet; genres in the Category sheet.
+        rule.onAllNodesWithTag("upcoming_country_button", true)[0].performClick()
         rule.waitUntil(5_000) { count("upcoming_country_jp") > 0 }
         val t0 = System.currentTimeMillis()
         rule.onAllNodesWithTag("upcoming_country_jp", true)[0].performClick()
@@ -68,6 +75,9 @@ class F22CountryDeviceTest {
         log("F22C_RESULT jp ${System.currentTimeMillis() - t0}ms entries=${count("upcoming_entry")} badges=${badges.take(5)}")
         assertTrue("JP: no entries", badges.isNotEmpty())
         assertTrue("JP: a badge without JP: $badges", badges.all { it.startsWith("JP") })
+        rule.onAllNodesWithTag("upcoming_country_sheet_done", true)[0].performClick(); rule.waitForIdle()
+        rule.onAllNodesWithTag("upcoming_category_button", true)[0].performClick()
+        rule.waitUntil(5_000) { count("upcoming_genres") > 0 }
         val genreTags = rule.onAllNodesWithTag("upcoming_genres", true).fetchSemanticsNodes()
         assertTrue("JP: no genre chips", genreTags.isNotEmpty())
         val genres = TvmazeSchedule.genresOf(TvmazeSchedule.cached(ctx, "JP", java.time.LocalDate.now()).orEmpty())

@@ -31,6 +31,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RemoveModerator
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -59,6 +64,7 @@ import dev.asfakul.yumeiro.stream.MediaKind
 import dev.asfakul.yumeiro.stream.PlatformRules
 import dev.asfakul.yumeiro.stream.StreamFormat
 import dev.asfakul.yumeiro.stream.StreamRequest
+import dev.asfakul.yumeiro.stream.Sniff
 import dev.asfakul.yumeiro.stream.StreamSniffer
 import dev.asfakul.yumeiro.ui.theme.DarkSurface
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
@@ -66,6 +72,8 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.net.URI
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 internal const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
 
@@ -82,6 +90,21 @@ private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, mod
             androidx.compose.animation.AnimatedContent(step, label = "autoStep") { Text("$it…", color = TextSecondary, fontSize = 13.sp) }
             androidx.compose.material3.TextButton(onClick = onShowPage, modifier = Modifier.testTag("page_finder_show_page")) {
                 Text("Show the page", color = SpotifyGreen)
+            }
+        }
+    }
+}
+
+/** DW-BOT-1: asked once before a Telegram bot's mini app opens with the user's account. */
+@Composable
+private fun MiniAppConsentCard(bot: String, onAllow: () -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+    Box(modifier.background(DarkSurface).testTag("page_finder_miniapp_consent"), contentAlignment = Alignment.Center) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(28.dp)) {
+            Text("Open @$bot with your Telegram account?", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Text(dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.CONSENT_TEXT, color = TextSecondary, fontSize = 13.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.TextButton(onClick = onCancel, modifier = Modifier.testTag("page_finder_miniapp_cancel")) { Text("Not now", color = TextSecondary) }
+                androidx.compose.material3.Button(onClick = onAllow, modifier = Modifier.testTag("page_finder_miniapp_allow")) { Text("Open") }
             }
         }
     }
@@ -108,7 +131,32 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
     var drmSystem: String? = null
 
     /** @return the new capture, or null when the request isn't a stream (or was already seen). */
-    fun onRequest(url: String, method: String, headers: Map<String, String>): CapturedStream? {
+    fun onRequest(url: String, method: String, headers: Map<String, String>): CapturedStream? = onRequest(url, method, headers, null)
+
+    /**
+     * SD-1: what the page itself proved is media. [kind] comes from [MEDIA_TAP_JS] ("hls-master", "hls",
+     * "dash": the response body starts like a playlist) or from a `<video>` element's own source
+     * ("element"). Hosts hide playlists behind addresses without an extension and even a fake
+     * image/jpeg type, so the address alone can't tell.
+     */
+    fun onPageMedia(url: String, kind: String): CapturedStream? {
+        val hint = when (kind) {
+            "hls-master" -> Sniff(MediaKind.HLS, "master", "page")
+            "hls" -> {
+                // A master's variant playlists are the same video: offer the master only.
+                if (seen.values.any { it.kind == MediaKind.HLS && it.label.endsWith("master") }) return null
+                Sniff(MediaKind.HLS, null, "page")
+            }
+            "dash" -> Sniff(MediaKind.DASH, null, "page")
+            // A <video> element's source is media whatever its address looks like; a known extension still wins.
+            "element" -> StreamSniffer.fromUrl(url) ?: Sniff(MediaKind.VIDEO, null, "element")
+            "audio" -> StreamSniffer.fromUrl(url) ?: Sniff(MediaKind.AUDIO, null, "element")
+            else -> return null
+        }
+        return onRequest(url, "GET", emptyMap(), hint)
+    }
+
+    private fun onRequest(url: String, method: String, headers: Map<String, String>, hint: Sniff?): CapturedStream? {
         if (!url.startsWith("http", ignoreCase = true)) return null
         // A hostile page can call the JS bridge in a loop with endless unique URLs: cap memory.
         if (url.length > MAX_URL || seen.size >= MAX_CAPTURES) return null
@@ -119,7 +167,7 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
             if (licenseUrl == null) licenseUrl = url
             return null
         }
-        val sniff = StreamSniffer.fromUrl(url) ?: return null
+        val sniff = hint ?: StreamSniffer.fromUrl(url) ?: return null
         if (!sniff.isPlayableMedia) return null
         // Segments are noise; manifests and whole files are what the player needs.
         if (SEGMENT_EXT.any { lower.substringBefore('?').endsWith(it) } && sniff.kind != MediaKind.AUDIO) {
@@ -217,9 +265,12 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
   } catch(e) {}
   function scan(){
     try {
-      document.querySelectorAll('video,audio,source').forEach(function(v){
+      document.querySelectorAll('video,audio,video source,audio source').forEach(function(v){
         var s = v.currentSrc || v.src;
-        if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) MTFinder.onMedia(s);
+        if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) {
+          var a = (v.tagName === 'AUDIO' || (v.parentNode && v.parentNode.tagName === 'AUDIO'));
+          if (a && MTFinder.onManifest) MTFinder.onManifest(s, 'audio'); else MTFinder.onMedia(s);
+        }
       });
     } catch(e) {}
   }
@@ -261,9 +312,12 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
         const val RESCAN_JS = """
 (function(){
   try {
-    document.querySelectorAll('video,audio,source').forEach(function(v){
+    document.querySelectorAll('video,audio,video source,audio source').forEach(function(v){
       var s = v.currentSrc || v.src;
-      if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) MTFinder.onMedia(s);
+      if (s && s.indexOf('blob:') !== 0 && s.indexOf('data:') !== 0) {
+        var a = (v.tagName === 'AUDIO' || (v.parentNode && v.parentNode.tagName === 'AUDIO'));
+        if (a && MTFinder.onManifest) MTFinder.onManifest(s, 'audio'); else MTFinder.onMedia(s);
+      }
     });
     var since = (window.__mtLoadAt || 0) - 2000; // OL-3: only what the video playing now fetched
     (performance.getEntriesByType('resource') || []).forEach(function(e){
@@ -299,6 +353,68 @@ class PageStreamCapture(private val clock: () -> Long = { System.nanoTime() / 1_
   } catch(e) { return 'error'; }
 })();
 """
+
+        /**
+         * SD-1: runs at document start in every frame (players often sit in an iframe). It reads only the
+         * first bytes of what the page's own XHR / fetch calls get back and reports playlists
+         * (`#EXTM3U`, `<MPD`) with `MTFinder.onManifest(url, kind)`. Nothing is changed or blocked: the
+         * page gets its response untouched, and a fetch body is read from a clone that is cancelled after
+         * its first chunk, so a large file is never downloaded twice.
+         */
+        const val MEDIA_TAP_JS = """
+(function(){
+  if (window.__yuTap) return; window.__yuTap = true;
+  function kind(t){
+    if (!t) return '';
+    var s = String(t).slice(0, 4096).replace(/^\uFEFF/, '').replace(/^\s+/, '');
+    if (s.indexOf('#EXTM3U') === 0) return s.indexOf('#EXT-X-STREAM-INF') >= 0 ? 'hls-master' : 'hls';
+    if (/^(<\?xml[^>]*>\s*)?<MPD[\s>]/.test(s)) return 'dash';
+    return '';
+  }
+  function tell(u, k){ try { if (k && window.MTFinder && MTFinder.onManifest) MTFinder.onManifest(String(u), k); } catch(e) {} }
+  function bytes(a, n){ var s = ''; n = Math.min(a.length, n); for (var i = 0; i < n; i++) s += String.fromCharCode(a[i]); return s; }
+  try {
+    var X = XMLHttpRequest.prototype, op = X.open, sd = X.send;
+    X.open = function(m, u){ try { this.__yuU = new URL(u, location.href).href; } catch(e) {} return op.apply(this, arguments); };
+    X.send = function(){
+      var x = this;
+      try {
+        x.addEventListener('load', function(){
+          try {
+            var rt = x.responseType, t = '';
+            if (rt === '' || rt === 'text') t = x.responseText;
+            else if (rt === 'arraybuffer' && x.response) t = bytes(new Uint8Array(x.response), 4096);
+            tell(x.responseURL || x.__yuU, kind(t));
+          } catch(e) {}
+        });
+      } catch(e) {}
+      return sd.apply(this, arguments);
+    };
+  } catch(e) {}
+  try {
+    var f = window.fetch;
+    if (f) window.fetch = function(){
+      return f.apply(this, arguments).then(function(r){
+        try {
+          if (r && r.body && r.clone && !r.bodyUsed) {
+            var rd = r.clone().body.getReader();
+            rd.read().then(function(c){ try { rd.cancel(); } catch(e) {} if (c && c.value) tell(r.url, kind(bytes(c.value, 4096))); }).catch(function(){});
+          }
+        } catch(e) {}
+        return r;
+      });
+    };
+  } catch(e) {}
+})();
+"""
+
+        /** SD-1: adds [MEDIA_TAP_JS] to every frame of [web] where the WebView supports document-start scripts. */
+        @android.annotation.SuppressLint("RequiresFeature")
+        fun addMediaTap(web: android.webkit.WebView): Boolean = runCatching {
+            if (!androidx.webkit.WebViewFeature.isFeatureSupported(androidx.webkit.WebViewFeature.DOCUMENT_START_SCRIPT)) return@runCatching false
+            androidx.webkit.WebViewCompat.addDocumentStartJavaScript(web, MEDIA_TAP_JS, setOf("*"))
+            true
+        }.getOrDefault(false)
 
         /** How long auto mode waits for the page's stream before showing the page itself. */
         const val AUTO_TIMEOUT_MS = 25_000L
@@ -337,6 +453,8 @@ fun PageStreamFinderDialog(
     keep: PageKeep? = null,
     /** OL-1: hides the page and keeps it (Minimize button; Back at the first page). Null = no minimize. */
     onMinimize: (() -> Unit)? = null,
+    /** WEB-BAR-1 (owner list 5): Yumeiro's browser for the Websites page: bottom bar, element blocker, visited sites. */
+    browser: Boolean = false,
 ) {
     val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
@@ -367,6 +485,155 @@ fun PageStreamFinderDialog(
     androidx.compose.runtime.LaunchedEffect(autoNote) { if (autoNote != null) showHint = true }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val main = remember { Handler(Looper.getMainLooper()) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    // WEB-BAR-1: page history state for Back / Forward, and the element picker.
+    var canBack by remember { mutableStateOf(false) }
+    var canForward by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
+    // Notes of the browser bar, shown inside the page (an app message would sit behind this full-screen window).
+    var barNote by remember { mutableStateOf<BarNote?>(null) }
+    androidx.compose.runtime.LaunchedEffect(barNote) { if (barNote != null) { kotlinx.coroutines.delay(5_000); barNote = null } }
+    fun history(view: WebView?) { view?.let { canBack = it.canGoBack(); canForward = it.canGoForward() } }
+
+    // ADCHAIN-1 (owner list 23, ADR-060): a link-shortener chain walks to the real link by itself.
+    var chainState by remember(pageUrl) { mutableStateOf(dev.asfakul.yumeiro.online.web.LinkChainPolicy.State()) }
+    var chainBanner by remember(pageUrl) { mutableStateOf<ChainBanner?>(null) }
+    // ADCHAIN-2 (ADR-062): the saved switches (Websites page) and this page's own Filter button.
+    val resolveLinks by dev.asfakul.yumeiro.online.web.BrowserFilters.resolveLinks.collectAsState()
+    val filterSaved by dev.asfakul.yumeiro.online.web.BrowserFilters.filterAds.collectAsState()
+    var pageFilter by remember(pageUrl) { mutableStateOf(dev.asfakul.yumeiro.online.web.BrowserFilters.pageChoice(keep?.webView)) }
+    val filterOn = pageFilter ?: filterSaved
+    val chainActiveNow = androidx.compose.runtime.rememberUpdatedState(chainState.active)
+    val chainRevealedNow = androidx.compose.runtime.rememberUpdatedState(chainState.revealed)
+    // A chain that ended on a host page (Gofile): the first stream its player loads plays in Yumeiro.
+    var chainAutoPick by remember(pageUrl) { mutableStateOf(false) }
+    if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.ADCHAIN_1)) {
+        androidx.compose.runtime.LaunchedEffect(pageUrl) {
+            val script = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { dev.asfakul.yumeiro.online.web.LinkChain.script(appContext) }.getOrNull()
+            } ?: return@LaunchedEffect
+            var lastUrl = ""
+            var quiet = 0
+            while (true) {
+                kotlinx.coroutines.delay(if (chainState.active) 1_000L else 1_500L)
+                val wv = webViewRef ?: continue
+                val url = currentUrl
+                if (url != lastUrl) { lastUrl = url; quiet = 0 }
+                // An ordinary page is read a few times after it loads, then left alone until the address changes.
+                if (!chainState.active && quiet >= 6) continue
+                if (chainState.stopped) continue
+                // Switched off on the Websites page: Yumeiro leaves every page alone (nothing is tapped or hidden).
+                if (!resolveLinks) { if (chainBanner != null) chainBanner = null; continue }
+                if (progress in 1..29) continue
+                // A page that is navigating away may never answer; the next scan tries again.
+                val result = kotlinx.coroutines.withTimeoutOrNull(4_000L) {
+                    kotlinx.coroutines.suspendCancellableCoroutine<String?> { c ->
+                        wv.evaluateJavascript(script) { r -> if (c.isActive) c.resumeWith(Result.success(r)) }
+                    }
+                }
+                val scan = dev.asfakul.yumeiro.online.web.LinkChain.parse(result)
+                if (scan?.chain != true) quiet++
+                val host = PlatformRules.hostOf(url) ?: url
+                val adPage = dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(wv) && dev.asfakul.yumeiro.online.web.AdFilter.isAd(url)
+                val (next, act) = dev.asfakul.yumeiro.online.web.LinkChainPolicy.next(chainState, scan, url, host, android.os.SystemClock.elapsedRealtime(), adPage)
+                // Device evidence: host, step and action only (never the address; shortener links carry tokens).
+                if (scan?.chain == true || next.active) android.util.Log.w("YuLinkChain", "$host step=${scan?.step} ${act::class.simpleName} taps=${next.taps}")
+                chainState = next
+                val title = dev.asfakul.yumeiro.online.web.LinkChainPolicy.title(next, scan?.stepText)
+                val hidden = if (next.defused > 0) " · ${next.defused} ad layer${if (next.defused == 1) "" else "s"} hidden" else ""
+                when (act) {
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Idle -> if (!next.active) chainBanner = null
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Wait -> chainBanner = ChainBanner(title, act.text + hidden, ChainBanner.Kind.WORKING)
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.AskUser -> chainBanner = ChainBanner(title, act.text, ChainBanner.Kind.ASK)
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Tap -> {
+                        chainBanner = ChainBanner(title, "Tapping “${act.label}” for you$hidden", ChainBanner.Kind.WORKING)
+                        dev.asfakul.yumeiro.online.web.LinkChain.tap(wv, act.x, act.y, act.vw, act.vh)
+                    }
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Open -> {
+                        chainBanner = ChainBanner(title, act.text, ChainBanner.Kind.WORKING)
+                        dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(wv, act.url, emptyMap())
+                    }
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Back -> {
+                        chainBanner = ChainBanner(title, act.text, ChainBanner.Kind.WORKING)
+                        if (wv.canGoBack()) wv.goBack()
+                    }
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.Done -> {
+                        // The sign-in and session cookies of every step are on disk before anything else reads them.
+                        runCatching { CookieManager.getInstance().flush() }
+                        val dest = dev.asfakul.yumeiro.online.web.ChainDestination.of(act.url)
+                        android.util.Log.w("YuLinkChain", "reached ${act.host} kind=${dest::class.simpleName}")
+                        when (dest) {
+                            is dev.asfakul.yumeiro.online.web.ChainDestination.Kind.Media, is dev.asfakul.yumeiro.online.web.ChainDestination.Kind.FileHost -> {
+                                val u: String
+                                val label: String
+                                if (dest is dev.asfakul.yumeiro.online.web.ChainDestination.Kind.Media) { u = dest.url; label = dest.label }
+                                else { val fh = dest as dev.asfakul.yumeiro.online.web.ChainDestination.Kind.FileHost; u = fh.url; label = fh.label }
+                                chainBanner = ChainBanner("Link reached", "$label · playing in Yumeiro", ChainBanner.Kind.DONE)
+                                if (!played) {
+                                    played = true
+                                    val req = StreamRequest(
+                                        url = u, title = pageTitle.ifBlank { dev.asfakul.yumeiro.online.web.WebDownloads.fileName(u, null) },
+                                        format = dev.asfakul.yumeiro.stream.StreamSniffer.fromUrl(u)?.format ?: StreamFormat.AUTO,
+                                        userAgent = wv.settings.userAgentString, referer = chainState.pages.lastOrNull(),
+                                        cookie = runCatching { CookieManager.getInstance().getCookie(u) }.getOrNull(), pageUrl = act.url,
+                                    )
+                                    wv.onPause()
+                                    onPlay(req)
+                                }
+                            }
+                            is dev.asfakul.yumeiro.online.web.ChainDestination.Kind.HostPage -> {
+                                chainBanner = ChainBanner("Link reached", "${dest.label} · starting its player", ChainBanner.Kind.DONE)
+                                // Hosts like Gofile hand the file only to their own page: start its player, play what it loads.
+                                chainAutoPick = true
+                                repeat(6) {
+                                    if (!played) wv.evaluateJavascript(PageStreamCapture.AUTOPLAY_JS, null)
+                                    kotlinx.coroutines.delay(2_000L)
+                                }
+                            }
+                            dev.asfakul.yumeiro.online.web.ChainDestination.Kind.Page -> chainBanner = ChainBanner("Link reached", act.host, ChainBanner.Kind.DONE)
+                        }
+                        kotlinx.coroutines.delay(5_000L)
+                        chainBanner = null
+                        chainState = dev.asfakul.yumeiro.online.web.LinkChainPolicy.State() // another link can be walked
+                        quiet = 6
+                    }
+                    is dev.asfakul.yumeiro.online.web.LinkChainPolicy.Action.GiveUp -> {
+                        chainBanner = ChainBanner(title, act.text, ChainBanner.Kind.STOPPED)
+                        kotlinx.coroutines.delay(10_000L)
+                        chainBanner = null
+                    }
+                }
+            }
+        }
+    }
+    /** WEB-BLOCK-1: generic ad-box rules plus the site's own picked elements. */
+    fun applyBlock(view: WebView?, url: String?) {
+        if (!browser || view == null || url == null) return
+        if (!dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(view)) return // ADCHAIN-2: filter off for this page
+        view.evaluateJavascript(dev.asfakul.yumeiro.online.web.ElementBlocker.styleJs(dev.asfakul.yumeiro.online.web.ElementBlocker.css(dev.asfakul.yumeiro.online.web.ElementBlocker.rulesFor(appContext, url))), null)
+    }
+    // TB-PREVIEW-1 (owner list 19): TeraBox captures that turned out to be the 30-second preview (never auto-played again),
+    // and the TeraBox share this page belongs to (resolved through TeraBox's API once the user has signed in here).
+    val rejected = remember(pageUrl) { HashSet<String>() }
+    val teraShare = remember(pageUrl, base) { dev.asfakul.yumeiro.stream.TeraBoxApi.shareIn(base?.url, base?.pageUrl, pageUrl) }
+    var teraResumed by remember(pageUrl) { mutableStateOf(false) }
+    val teraSignedInAtOpen = remember(pageUrl) { teraShare != null && dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(teraCookies()) }
+
+    /** ADCHAIN-2: this page's Filter button. Only this page changes; cookies and sign-ins stay. */
+    fun togglePageFilter() {
+        val wv = webViewRef ?: return
+        val on = !filterOn
+        pageFilter = on
+        dev.asfakul.yumeiro.online.web.BrowserFilters.setPage(wv, on)
+        barNote = BarNote(if (on) "Ad filter on for this page" else "Ad filter off for this page. Pop-ups and ads can show", null, null)
+        wv.reload()
+    }
+
+    /** ADCHAIN-2: a pop-up the filter held back; the person can still open it. */
+    fun popupHeld(target: String?) = main.post {
+        barNote = BarNote("Pop-up blocked", if (target != null) "Open" else null, target?.let { t -> { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, t, emptyMap()) }; Unit } })
+    }
 
     fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
 
@@ -387,6 +654,37 @@ fun PageStreamFinderDialog(
         }
     }
 
+    fun pageMedia(url: String, kind: String) {
+        synchronized(capture) { capture.onPageMedia(url, kind) }?.let { c ->
+            main.post { if (found.none { it.url == c.url }) { found.clear(); found.addAll(synchronized(capture) { capture.all() }) } }
+        }
+    }
+
+    /** TB-PREVIEW-1: plays what TeraBox's API or the capture check gave, or keeps the page with the reason. */
+    fun afterTeraCheck(r: dev.asfakul.yumeiro.stream.Resolution?, capturedUrl: String?) {
+        when (r) {
+            is dev.asfakul.yumeiro.stream.Resolution.Playable -> { webViewRef?.onPause(); onPlay(r.request) }
+            else -> {
+                capturedUrl?.let { rejected += it }
+                played = false
+                autoActive = false
+                autoNote = when (r) {
+                    is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser -> r.reason
+                    is dev.asfakul.yumeiro.stream.Resolution.Failed -> "${r.title}. ${r.message}"
+                    else -> dev.asfakul.yumeiro.stream.TeraBoxApi.SIGN_IN_REASON
+                }
+                // TB-LOGIN: already signed in but TeraBox still answered with the preview: say so, never loop back to sign-in.
+                val toSignIn = r is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser && r.pageUrl == dev.asfakul.yumeiro.stream.StreamResolver.TERABOX_SIGN_IN
+                if (toSignIn && dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(teraCookies())) {
+                    autoNote = dev.asfakul.yumeiro.stream.TeraBoxApi.SIGNED_PREVIEW_REASON
+                } else if (r is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser && r.pageUrl != currentUrl) {
+                    // Sign-in needed: take the user to TeraBox's sign-in page in this same browser.
+                    webViewRef?.loadUrl(r.pageUrl)
+                }
+            }
+        }
+    }
+
     fun play(c: CapturedStream) {
         if (played) return // a second capture or a double tap never opens two players
         played = true
@@ -400,8 +698,67 @@ fun PageStreamFinderDialog(
                 base = base,
             )
         }
+        if (dev.asfakul.yumeiro.stream.TeraBoxApi.isWebStream(c.url)) {
+            // TB-PREVIEW-1: TeraBox's page player may hold only the 30-second preview; check it before playing.
+            autoStep = "Checking the TeraBox stream"
+            val share = teraShare ?: currentUrl
+            scope.launch {
+                val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { dev.asfakul.yumeiro.stream.StreamResolver.checkCapture(request, dev.asfakul.yumeiro.network.NetworkClient.get(appContext), share) }.getOrNull()
+                }
+                afterTeraCheck(r, c.url)
+            }
+            return
+        }
         wv?.onPause()
         onPlay(request)
+    }
+
+    androidx.compose.runtime.LaunchedEffect(chainAutoPick, found.size) {
+        if (!chainAutoPick || played || found.isEmpty()) return@LaunchedEffect
+        kotlinx.coroutines.delay(PageStreamCapture.AUTO_SETTLE_MS)
+        PageStreamCapture.bestForAuto(found.filter { it.url !in rejected })?.let { play(it) }
+    }
+
+    /** TB-PREVIEW-1: the user just signed in to TeraBox on this page: play the share in full without asking again. */
+    fun resumeTeraBox() {
+        val share = teraShare ?: return
+        if (teraResumed || played || teraSignedInAtOpen) return
+        if (!dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(teraCookies())) return
+        teraResumed = true
+        played = true
+        autoNote = "Signed in. Getting the full video from TeraBox"
+        val req = (base ?: StreamRequest(url = share)).copy(url = share, format = StreamFormat.AUTO, pageUrl = share)
+        scope.launch {
+            val r = runCatching { dev.asfakul.yumeiro.stream.StreamResolver.resolve(appContext, req) }.getOrNull()
+            afterTeraCheck(r, null)
+        }
+    }
+
+    // DW-BOT-1: a Telegram bot's mini app (t.me/<bot>?startapp=…) opens through the signed-in account, as in Telegram.
+    var miniAsk by remember(pageUrl) { mutableStateOf<dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Link?>(null) }
+    fun openMini(link: dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Link) {
+        if (!dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.consented(appContext)) { autoActive = false; miniAsk = link; return }
+        autoStep = "Opening @${link.bot} on Telegram"
+        scope.launch {
+            val s = runCatching { dev.asfakul.yumeiro.online.telegram.td.TgAccounts.session(appContext) }.getOrNull()
+            val st = s?.let { kotlinx.coroutines.withTimeoutOrNull(20_000L) { it.state.first { x -> x != dev.asfakul.yumeiro.online.telegram.td.TgAuthState.Starting } } }
+            if (s == null || st != dev.asfakul.yumeiro.online.telegram.td.TgAuthState.Ready) {
+                autoActive = false
+                autoNote = "Sign in to Telegram (Websites > Telegram) to open @${link.bot} here."
+                return@launch
+            }
+            when (val r = dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.open(s, link)) {
+                is dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Opened.Url -> {
+                    android.util.Log.w("YuMiniApp", "opened @${link.bot} mini app") // device evidence; never the address (it carries the signed launch data)
+                    webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, r.url, emptyMap()) }
+                }
+                is dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.Opened.Error -> {
+                    android.util.Log.w("YuMiniApp", "@${link.bot}: ${r.message}")
+                    autoActive = false; autoNote = r.message
+                }
+            }
+        }
     }
 
     if (auto) {
@@ -418,7 +775,7 @@ fun PageStreamFinderDialog(
             if (!autoActive || played || found.isEmpty()) return@LaunchedEffect
             autoStep = "Picking up the stream"
             kotlinx.coroutines.delay(PageStreamCapture.AUTO_SETTLE_MS)
-            PageStreamCapture.bestForAuto(found.toList())?.let { play(it) }
+            PageStreamCapture.bestForAuto(found.filter { it.url !in rejected })?.let { play(it) }
         }
         // Nudge the page's player a few times while the page settles (players load late).
         androidx.compose.runtime.LaunchedEffect(pageUrl, progress >= 100, autoActive) {
@@ -452,10 +809,29 @@ fun PageStreamFinderDialog(
                         Text(PlatformRules.hostOf(currentUrl) ?: currentUrl, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = TextSecondary) }
+                    IconButton(
+                        onClick = { togglePageFilter() },
+                        modifier = Modifier.testTag("page_filter_toggle").semantics { stateDescription = if (filterOn) "On" else "Off" },
+                    ) {
+                        Icon(
+                            if (filterOn) Icons.Default.Shield else Icons.Default.RemoveModerator,
+                            if (filterOn) "Ad filter on for this page. Turn off" else "Ad filter off for this page. Turn on",
+                            tint = if (filterOn) SpotifyGreen else TextSecondary,
+                        )
+                    }
                     IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
                 if (showHint && !autoActive) PageFinderHint(autoNote ?: reason, onHide = { showHint = false })
+                chainBanner?.let { b ->
+                    LinkChainBanner(b, onStop = if (b.kind == ChainBanner.Kind.DONE || chainState.stopped) null else ({
+                        chainState = chainState.copy(stopped = true)
+                        chainBanner = null
+                    }), onBack = if (b.kind == ChainBanner.Kind.STOPPED && canBackAny(webViewRef)) ({ webViewRef?.goBack(); chainBanner = null }) else null,
+                        onOutside = if (b.kind == ChainBanner.Kind.STOPPED) ({
+                            if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote("No browser on this phone can open the page", null, null)
+                        }) else null)
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
@@ -487,7 +863,8 @@ fun PageStreamFinderDialog(
                                 CookieManager.getInstance().setAcceptCookie(true)
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 addJavascriptInterface(object {
-                                    @JavascriptInterface fun onMedia(src: String) = record(src, "GET", emptyMap())
+                                    @JavascriptInterface fun onMedia(src: String) = pageMedia(src, "element")
+                                    @JavascriptInterface fun onManifest(url: String, kind: String) = pageMedia(url, kind)
                                     @JavascriptInterface fun onNewMedia(title: String) = switched(title)
                                     @JavascriptInterface fun onTitle(title: String) = titled(title)
                                     @JavascriptInterface fun onDrm(system: String) {
@@ -496,27 +873,90 @@ fun PageStreamFinderDialog(
                                         main.post { drmNote = "This page uses DRM ($system). It plays here only if the site's licence server accepts this app; protection is never bypassed." }
                                     }
                                 }, "MTFinder")
+                                if (browser) addJavascriptInterface(object {
+                                    @JavascriptInterface fun onPicked(selector: String) = main.post {
+                                        val url = currentUrl
+                                        picking = false
+                                        barNote = if (dev.asfakul.yumeiro.online.web.ElementBlocker.add(appContext, url, selector)) BarNote("Hidden on this site from now on", "Undo") {
+                                            dev.asfakul.yumeiro.online.web.ElementBlocker.undoLast(appContext, url)
+                                            webViewRef?.reload()
+                                        } else BarNote("That part can't be blocked", null, null)
+                                    }
+                                    @JavascriptInterface fun onPickEnd() = main.post { picking = false }
+                                }, "YuBlock")
                                 webChromeClient = object : android.webkit.WebChromeClient() {
-                                    override fun onProgressChanged(view: WebView?, newProgress: Int) { progress = newProgress }
+                                    override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                        progress = newProgress
+                                        // Hide ad boxes as soon as the page has a body, not only when every image is in.
+                                        if (newProgress >= 60) applyBlock(view, view?.url)
+                                    }
                                     override fun onReceivedTitle(view: WebView?, title: String?) { pageTitle = title.orEmpty() }
+                                    // ADCHAIN-2: a new window (target=_blank, window.open) opens in this page when it is the
+                                    // person's own link; ad windows are held back with a note that can still open them.
+                                    override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
+                                        val v = view ?: return false
+                                        val hit = runCatching { v.hitTestResult }.getOrNull()
+                                        val link = hit?.type == WebView.HitTestResult.SRC_ANCHOR_TYPE || hit?.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE
+                                        val target = hit?.extra?.takeIf { link }
+                                        val filter = dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(v)
+                                        return when (dev.asfakul.yumeiro.online.web.PopupPolicy.window(v.url, target, isUserGesture, link, filter, chainActiveNow.value)) {
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Decision.OPEN_HERE -> { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(v, target!!, emptyMap()); false }
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Decision.CAPTURE -> {
+                                                // Filter off, a script window from a tap: a hidden helper learns where it goes, then this page opens it.
+                                                val helper = WebView(v.context)
+                                                helper.webViewClient = object : android.webkit.WebViewClient() {
+                                                    override fun shouldOverrideUrlLoading(h: WebView?, r: WebResourceRequest?): Boolean {
+                                                        r?.url?.toString()?.takeIf { it.startsWith("http") }?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(v, it, emptyMap()) }
+                                                        main.post { runCatching { helper.destroy() } }
+                                                        return true
+                                                    }
+                                                }
+                                                val msg = resultMsg
+                                                val transport = msg?.obj as? WebView.WebViewTransport
+                                                if (msg != null && transport != null) { transport.webView = helper; msg.sendToTarget(); true } else { helper.destroy(); false }
+                                            }
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Decision.BLOCK -> { if (isUserGesture) popupHeld(target); false }
+                                        }
+                                    }
                                 }
                                 SafeWebView.harden(this)
-                                // Pop-ups and click-catcher ad overlays stay off while the user browses.
-                                SafeWebView.addAdShield(this)
+                                // Pop-ups and click-catcher ad overlays stay off while the user browses (unless the filter is off).
+                                dev.asfakul.yumeiro.online.web.BrowserFilters.shield(this)
+                                // SD-1: playlists the page's player loads are found by their content, in every frame.
+                                PageStreamCapture.addMediaTap(this)
                                 // DL-WEB: a file link on the page opens the shared download popup.
-                                dev.asfakul.yumeiro.online.web.WebDownloads.attach(this) { currentUrl }
+                                // ADCHAIN-2: a video / audio file the page hands over plays in Yumeiro's player.
+                                dev.asfakul.yumeiro.online.web.WebDownloads.attach(this, { currentUrl }) { req ->
+                                    main.post { if (!played) { played = true; webViewRef?.onPause(); onPlay(req.copy(title = req.title.ifBlank { pageTitle })) } }
+                                    true
+                                }
                                 webViewClient = object : SafeWebViewClient(onGone = { onDismiss() }) {
                                     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                        // DW-BOT-1: a hop to another bot's mini app (the DiskWala bot sends its links on) opens it here.
+                                        if (request?.isForMainFrame == true) dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.parse(request.url.toString())?.let { openMini(it); return true }
+                                        // ADCHAIN-2: the page jumping to an ad host (pop-under, "you won" redirect) is stopped; the person can still open it.
+                                        if (request?.isForMainFrame == true && dev.asfakul.yumeiro.online.web.PopupPolicy.blockJump(view?.url, request.url.toString(), dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(view))) {
+                                            android.util.Log.w("YuAdFilter", "held an ad redirect to ${dev.asfakul.yumeiro.online.web.ChainDestination.hostOf(request.url.toString())}")
+                                            // During a walk whose real link the site already revealed, the hijack is answered with that link.
+                                            val real = chainRevealedNow.value?.takeIf { chainActiveNow.value }
+                                            if (real != null && view != null) dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(view, real, emptyMap())
+                                            else popupHeld(request.url.toString())
+                                            return true
+                                        }
                                         val scheme = request?.url?.scheme?.lowercase()
                                         return scheme != "http" && scheme != "https" // block intent:, market:, file: …
                                     }
                                     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                                         // Built-in ad blocking: pre-rolls and pop-unders never load or get offered as "the stream".
-                                        if (request != null && dev.asfakul.yumeiro.online.web.AdFilter.isAd(request.url.toString())) return dev.asfakul.yumeiro.online.web.AdFilter.blocked()
+                                        if (request != null && dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(view) && dev.asfakul.yumeiro.online.web.AdFilter.isAd(request.url.toString())) return dev.asfakul.yumeiro.online.web.AdFilter.blocked()
                                         request?.let { record(it.url.toString(), it.method ?: "GET", it.requestHeaders.orEmpty()) }
+                                        // TB-LOGIN: device evidence of the sign-in calls (method and path only; never the query, body or cookies).
+                                        request?.url?.takeIf { teraShare != null && it.host.orEmpty().contains("terabox") && (it.path.orEmpty().startsWith("/passport") || it.path.orEmpty().startsWith("/api/check")) }
+                                            ?.let { android.util.Log.w("YuTeraBox", "${request.method} ${it.host}${it.path}") }
                                         return null // the page loads normally; we only observe
                                     }
                                     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                        history(view)
                                         // OL-3: an in-page navigation (single-page sites) to another address is another video.
                                         if (url != null && !isReload && url.substringBefore('#') != currentUrl.substringBefore('#')) {
                                             currentUrl = url
@@ -534,6 +974,20 @@ fun PageStreamFinderDialog(
                                     }
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         view?.evaluateJavascript(PageStreamCapture.HOOK_JS, null)
+                                        history(view)
+                                        applyBlock(view, url)
+                                        // WEB-RECENT-1: the site goes to "Recently visited" on the Websites page.
+                                        if (browser && url != null) dev.asfakul.yumeiro.online.web.SiteHistory.visit(appContext, url, view?.title)
+                                        if (teraShare != null && url.orEmpty().contains("terabox")) {
+                                            // TB-LOGIN: which cookie names the page has (names only), so a lost sign-in shows on the device log.
+                                            val at = android.net.Uri.parse(url).let { "${it.host}${it.path}" }
+                                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                                val jar = teraCookies()
+                                                val names = jar.split(';').map { it.substringBefore('=').trim() }.filter { it.isNotEmpty() }.distinct().sorted()
+                                                android.util.Log.w("YuTeraBox", "page $at signedIn=${dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(jar)} cookies=$names")
+                                            }
+                                        }
+                                        resumeTeraBox()
                                     }
                                 }
                                 val headers = buildMap {
@@ -541,11 +995,24 @@ fun PageStreamFinderDialog(
                                     base?.headers?.let { putAll(it) }
                                 }
                                 // OL-1: a kept tab that gave its page back on low memory reopens where it was.
-                                dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, if (keep != null) currentUrl else pageUrl, headers)
+                                val mini = if (keep == null) dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.parse(pageUrl) else null
+                                if (mini != null) main.post { openMini(mini) }
+                                else dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(this, if (keep != null) currentUrl else pageUrl, headers)
                             }
                             page
                         },
                     )
+                    miniAsk?.let { link ->
+                        MiniAppConsentCard(
+                            bot = link.bot,
+                            onAllow = {
+                                dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.setConsented(appContext, true)
+                                miniAsk = null; autoActive = auto; openMini(link)
+                            },
+                            onCancel = onDismiss,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     if (autoActive) AutoFindCard(
                         host = PlatformRules.hostOf(pageUrl) ?: "the page",
                         step = autoStep,
@@ -564,7 +1031,29 @@ fun PageStreamFinderDialog(
                     },
                     onPlay = { play(it) },
                 )
+                barNote?.let { n -> BrowserNote(n) { barNote = null } }
+                if (browser) BrowserBar(
+                    canBack = canBack, canForward = canForward, picking = picking,
+                    onBack = { webViewRef?.let { if (it.canGoBack()) it.goBack() } },
+                    onForward = { webViewRef?.let { if (it.canGoForward()) it.goForward() } },
+                    onReload = { webViewRef?.reload() },
+                    onBlock = {
+                        picking = !picking
+                        webViewRef?.evaluateJavascript(dev.asfakul.yumeiro.online.web.ElementBlocker.PICK_JS, null)
+                        barNote = if (picking) BarNote("Tap the part of the page to hide. Tap the block button again to stop.", null, null) else null
+                    },
+                    onOpenOutside = {
+                        if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote("No browser on this phone can open the page", null, null)
+                    },
+                    accent = SpotifyGreen,
+                )
             }
         }
     }
 }
+
+private fun canBackAny(view: WebView?): Boolean = runCatching { view?.canGoBack() == true }.getOrDefault(false)
+
+/** TB-PREVIEW-1: the cookies the web view holds for TeraBox's sign-in hosts (the `ndus` sign-in lives on one of them). */
+private fun teraCookies(): String = listOf("https://dm.terabox.app", "https://www.terabox.app", "https://www.terabox.com", "https://www.1024terabox.com", "https://www.1024tera.com")
+    .mapNotNull { runCatching { CookieManager.getInstance().getCookie(it) }.getOrNull() }.joinToString("; ")

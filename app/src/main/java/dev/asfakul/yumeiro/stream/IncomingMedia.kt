@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
-private val RX_INCOMINGMEDIA_HOT_1 = Regex("""(https?|rtsps?)://\S+""")
+private val RX_INCOMINGMEDIA_HOT_1 = Regex("""(https?|rtsps?)://\S+|magnet:\?\S+""", RegexOption.IGNORE_CASE)
 
 /** Media handed to the app by other apps ("Open with" / "Share"), consumed by the UI once. */
 object IncomingMedia {
@@ -60,7 +60,7 @@ object IncomingMedia {
         intent ?: return false
         val uri: Uri? = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let { extractUrl(it) }?.let(Uri::parse)
+            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let { linkFromText(it) }?.let(Uri::parse)
                 ?: @Suppress("DEPRECATION") (intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri)
             else -> null
         }
@@ -73,7 +73,9 @@ object IncomingMedia {
             return true
         }
         when (scheme) {
-            "http", "https", "rtsp", "rtsps", "rtmp" -> open(context, StreamRequest(url = uri.toString()), recent = Recent.LINK)
+            // TOR-1 (owner list 12): magnet links (a browser's "Open with", or a shared info-hash) play through the
+            // built-in torrent engine like a pasted one; before, Yumeiro wasn't offered for magnet: at all.
+            "http", "https", "rtsp", "rtsps", "rtmp", "magnet" -> open(context, StreamRequest(url = uri.toString()), recent = Recent.LINK)
             "content", "file" -> _pending.value = VideoItem(
                 id = "external:$uri",
                 title = displayName(context, uri) ?: uri.lastPathSegment ?: "Video",
@@ -102,6 +104,9 @@ object IncomingMedia {
             .mapNotNull { runCatching { java.io.File(it).canonicalPath }.getOrNull() }
         return roots.any { path == it || path.startsWith("$it/") }
     }
+
+    /** TOR-1: the first link in shared text, or a bare torrent info-hash as its magnet link. */
+    internal fun linkFromText(text: String): String? = extractUrl(text) ?: LinkHosts.magnetFromHash(text.trim())
 
     private fun extractUrl(text: String): String? =
         RX_INCOMINGMEDIA_HOT_1.find(text)?.value?.trimEnd(')', ']', '"', '\'', '.', ',')

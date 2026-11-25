@@ -69,13 +69,11 @@ object SafeWebView {
      * supports document-start scripts; elsewhere the pop-up handling in the client still applies.
      */
     @android.annotation.SuppressLint("RequiresFeature")
-    fun addAdShield(web: WebView) {
-        runCatching {
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                androidx.webkit.WebViewCompat.addDocumentStartJavaScript(web, AdShield.DOCUMENT_START_JS, setOf("*"))
-            }
-        }
-    }
+    fun addAdShield(web: WebView): androidx.webkit.ScriptHandler? = runCatching {
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            androidx.webkit.WebViewCompat.addDocumentStartJavaScript(web, AdShield.DOCUMENT_START_JS, setOf("*"))
+        } else null
+    }.getOrNull()
 
     /** Detaches and destroys a WebView whose renderer is gone. Never throws. */
     fun dispose(view: WebView?) {
