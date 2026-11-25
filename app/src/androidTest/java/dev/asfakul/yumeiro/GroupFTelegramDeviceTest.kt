@@ -181,8 +181,12 @@ class GroupFTelegramDeviceTest {
             FirstRun.shot("groupf_withheld")
             click("tg_sign_in_play")
             assertTrue("sign-in did not open", waitTag("tg_account", 10_000) || has("tg_keys"))
+            // The account page swaps its header from "Getting ready" to the phone step while TDLib starts; on the 2 GB
+            // emulator a tap landing in that swap was lost (run 45694288259). Tap again only if the page is still there.
             click("subpage_back")
-            assertTrue("after sign-in Back returns to the same channel", waitTag("tg_channel", 10_000))
+            var back = waitTag("tg_channel", 10_000)
+            if (!back && has("tg_account")) { log("GROUPF_D back tap lost during the header swap; tapping again"); click("subpage_back"); back = waitTag("tg_channel", 10_000) }
+            assertTrue("after sign-in Back returns to the same channel (account=${has("tg_account")} home=${has("telegram_screen")})", back)
         } else {
             assertTrue("where sign-in can't run, Open in Telegram stays", has("tg_open_app"))
         }

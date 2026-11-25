@@ -164,11 +164,9 @@ fun TelegramHome(onBack: () -> Unit) {
         tag = "tg_add",
         onDismiss = { adding = false },
         showRetry = false,
-        onAdd = { typed ->
-            val err = SavedSites.wrongPage(typed, SavedSites.Kind.TELEGRAM) ?: SavedSites.add(context, typed)
-            if (err != null) AppMessages.error(context, err)
-            err == null
-        },
+        onAdd = { false },
+        // The reason goes straight into the sheet (it was posted as a bottom message and read back).
+        reasonOf = { typed -> SavedSites.wrongPage(typed, SavedSites.Kind.TELEGRAM) ?: SavedSites.add(context, typed) },
     )
 
     if (help) TsukiDialog(

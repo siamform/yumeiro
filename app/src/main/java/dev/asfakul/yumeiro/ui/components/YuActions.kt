@@ -121,6 +121,12 @@ fun AddLinkSheet(
     onAdd: suspend (String) -> Boolean,
     /** False where a failure is the user's typing (not a network call), so "Retry" would repeat the same mistake. */
     showRetry: Boolean = true,
+    /**
+     * Where the caller knows the reason itself (a typing mistake checked on the spot), it returns it here: null on
+     * success, else the words the sheet shows. Then the sheet does not wait for a bottom message (on the TV api 24
+     * emulator that message was not read in time and the sheet showed the generic text, run 45694303025).
+     */
+    reasonOf: (suspend (String) -> String?)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val p = LocalMtPalette.current
@@ -139,6 +145,12 @@ fun AddLinkSheet(
         error = null
         val before = AppMessages.current.value?.id ?: 0L
         scope.launch {
+            if (reasonOf != null) {
+                val why = reasonOf(url)
+                busy = false
+                if (why == null) { text = ""; onDismiss() } else error = why
+                return@launch
+            }
             val ok = onAdd(url)
             busy = false
             if (ok) { text = ""; onDismiss() }
