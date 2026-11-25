@@ -371,7 +371,7 @@ object OnlineSession {
                     if (e is kotlinx.coroutines.CancellationException) return@onFailure
                     Log.w(TAG, "youtube $ytId failed: ${e.javaClass.simpleName}: ${e.message}")
                     if (_state.value?.videoId != id) return@onFailure
-                    _state.update { it?.copy(phase = Phase.FAILED, message = "YouTube couldn't play this episode: ${OnlineErrors.friendly(e)}") }
+                    _state.update { it?.copy(phase = Phase.FAILED, message = dev.asfakul.yumeiro.youtube.YtAccount.refusalMessage(e) ?: "YouTube couldn't play this episode: ${OnlineErrors.friendly(e)}") }
                 }
         }
     }

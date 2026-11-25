@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.schabi.newpipe.extractor.exceptions.AgeRestrictedContentException
+import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException
 
 /**
@@ -186,6 +187,21 @@ object YtAccount {
 
     internal fun accountCanHelp(t: Throwable): Boolean =
         generateSequence(t) { it.cause }.take(8).any { it is SignInConfirmNotBotException || it is AgeRestrictedContentException }
+
+    /**
+     * ANIME-3b: a sentence for a YouTube refusal of one video, or null when it isn't one. YouTube answers
+     * UNPLAYABLE "This content isn't available." both for country limits and for networks it is limiting, so the
+     * sentence names both instead of the raw "Got error UNPLAYABLE: …".
+     */
+    fun refusalMessage(t: Throwable): String? {
+        val chain = generateSequence(t) { it.cause }.take(8).toList()
+        return when {
+            accountCanHelp(t) -> blockedHint()
+            chain.any { it is ContentNotAvailableException } ->
+                "YouTube says this video isn't available here. It may be limited to some countries, or YouTube is limiting this network. Try again later or on another network"
+            else -> null
+        }
+    }
 
     /** What to tell the user when YouTube put up a sign-in wall. */
     fun blockedHint(): String = when {
