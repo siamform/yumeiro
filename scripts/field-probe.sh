@@ -23,13 +23,22 @@ signal() { [ -n "${GH_TOKEN:-}" ] && [ -n "${GITHUB_SHA:-}" ] && gh api -X POST 
 # A secret the agent sends during the run: a later dispatch of this workflow with steps "code <blob>", where blob is
 # base64 of openssl aes-256-cbc -pbkdf2 -iter 200000 with PROBE_SEAL_KEY over "<kind>:<value>" (kind c = code, p = password).
 secret_in() { # $1 kind, $2 minutes; prints the value
-  local end=$(( $(date +%s) + $2 * 60 )) since; since=$(date -u -d "@$(( T0 / 1000 ))" +%Y-%m-%dT%H:%M:%SZ)
+  local end=$(( $(date +%s) + $2 * 60 )) since last="" titles blobs bad n v diag
+  since=$(date -u -d "@$(( T0 / 1000 ))" +%Y-%m-%dT%H:%M:%SZ)
   while [ "$(date +%s)" -lt "$end" ]; do
-    for b in $(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/field-probe.yml/runs?event=workflow_dispatch&per_page=20" \
-        --jq ".workflow_runs[] | select(.created_at > \"$since\") | .display_title" 2>/dev/null | sed -n 's/^code //p'); do
-      v=$(printf '%s' "$b" | base64 -d 2>/dev/null | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:PROBE_SEAL_KEY 2>/dev/null)
+    titles=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/field-probe.yml/runs?event=workflow_dispatch&per_page=30" \
+        --jq ".workflow_runs[] | select(.created_at > \"$since\") | .display_title" 2>&1) || titles="API-ERROR"
+    blobs=0; bad=0
+    for b in $(printf '%s\n' "$titles" | sed -n 's/^code //p'); do
+      blobs=$((blobs + 1))
+      v=$(printf '%s' "$b" | base64 -d 2>/dev/null | openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -pass env:PROBE_SEAL_KEY 2>/dev/null) || bad=$((bad + 1))
       case "$v" in "$1:"*) printf '%s' "${v#*:}"; return 0 ;; esac
-    done; sleep 10
+    done
+    # PROBE-SEAL-3: content-free health line (counts only, never a title or value) so a stuck wait can be explained.
+    n=$(printf '%s\n' "$titles" | grep -c . || true)
+    diag="$1: api=$([ "$titles" = API-ERROR ] && echo err || echo ok) runs=$n blobs=$blobs undecryptable=$bad key=$([ -n "${PROBE_SEAL_KEY:-}" ] && echo set || echo EMPTY)"
+    [ "$diag" != "$last" ] && { signal pending "$diag" >&2; last=$diag; }
+    sleep 10
   done; return 1
 }
 note() { echo "PROBE t=$(ms) $*" | tl; }
