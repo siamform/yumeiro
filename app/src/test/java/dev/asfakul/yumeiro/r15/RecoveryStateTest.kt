@@ -23,8 +23,20 @@ class RecoveryStateTest {
     private val codes = setOf(401, 403, 405, 407, 410, 428, 451)
 
     private fun input(code: Int, status: Int? = null, online: Boolean = true, network: Boolean = true, refresh: Boolean = false,
-                      refreshes: Int = 0, onlineSource: Boolean = true, quick: Int = 0, gpu: Boolean = false) =
-        RecoveryRouter.Input(ErrorFacts(code, status), gpu, network, online, refresh, refreshes, onlineSource, quick, codes)
+                      refreshes: Int = 0, onlineSource: Boolean = true, quick: Int = 0, gpu: Boolean = false, auto: Boolean = false) =
+        RecoveryRouter.Input(ErrorFacts(code, status), gpu, network, online, refresh, refreshes, onlineSource, quick, codes, auto)
+
+    /** H-3: Auto's software retry comes before every source-level step (it used to be reached only by plain links). */
+    @Test fun autoDecoderSwitchesBeforeLocalFailureAndNextSource() {
+        val none: () -> String? = { null }
+        val init = androidx.media3.common.PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
+        assertEquals("local file", Step.SwitchToSoftwareDecoder, RecoveryRouter.route(input(init, network = false, auto = true), none))
+        assertEquals("online source", Step.SwitchToSoftwareDecoder, RecoveryRouter.route(input(init, auto = true), none))
+        assertEquals("plain link", Step.SwitchToSoftwareDecoder, RecoveryRouter.route(input(4003, onlineSource = false, auto = true), none))
+        assertEquals("already switched: local failure", Step.LocalFailure, RecoveryRouter.route(input(init, network = false), none))
+        assertEquals("not a decoder error", Step.LocalFailure, RecoveryRouter.route(input(2005, network = false, auto = true), none))
+        assertEquals("GPU effect first", Step.DropGpuEffect, RecoveryRouter.route(input(init, gpu = true, auto = true), none))
+    }
 
     @Test fun startWatchGivesUpOnASilentSourceAfter12s() {
         val w = StartWatch()

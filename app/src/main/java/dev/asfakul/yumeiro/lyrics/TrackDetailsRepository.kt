@@ -123,6 +123,32 @@ object TrackDetailsRepository {
         runCatching { importedFile(context.applicationContext, trackId).delete() }.getOrDefault(false)
     }
 
+    /**
+     * H-8: the two facts Song info must never miss, read cheaply and first: the size (provider SIZE column or the
+     * file on disk) and the duration (container header through MediaExtractor). [loadDetails] uses
+     * MediaMetadataRetriever, which can take many seconds on a busy or low-end phone; the dialog no longer waits
+     * for it to show these two rows. Null fields = unknown. Streamed songs return (null, null).
+     */
+    suspend fun quickFacts(context: Context, uri: String): Pair<Long?, Long?> = withContext(Dispatchers.IO) {
+        if (!uri.startsWith("content:") && !uri.startsWith("file:") && !uri.startsWith("/")) return@withContext null to null
+        val app = context.applicationContext
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        val path = runCatching { resolvePath(app, uri) }.getOrNull()
+        val size = runCatching { sizeOf(app, uri, path) }.getOrNull()
+        val duration = runCatching {
+            val ex = android.media.MediaExtractor()
+            try {
+                if (uri.startsWith("/")) ex.setDataSource(uri) else ex.setDataSource(app, Uri.parse(uri), null)
+                (0 until ex.trackCount).maxOfOrNull { i ->
+                    val f = ex.getTrackFormat(i)
+                    if (f.containsKey(android.media.MediaFormat.KEY_DURATION)) f.getLong(android.media.MediaFormat.KEY_DURATION) / 1000L else 0L
+                }?.takeIf { it > 0 }
+            } finally { runCatching { ex.release() } }
+        }.getOrNull()
+        Log.i(TAG, "quick facts in ${android.os.SystemClock.elapsedRealtime() - t0} ms: size=${size != null} duration=${duration != null}")
+        duration to size
+    }
+
     suspend fun loadDetails(context: Context, uri: String): TrackDetails = withContext(Dispatchers.IO) {
         val app = context.applicationContext
         // Streamed tracks (YouTube Music) have no local file to inspect.

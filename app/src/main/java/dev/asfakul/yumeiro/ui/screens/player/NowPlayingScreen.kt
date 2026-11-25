@@ -699,7 +699,12 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
     val details by produceState<TrackDetails?>(null, track.uri) {
         value = runCatching { TrackDetailsRepository.loadDetails(context, track.uri) }.getOrNull() ?: TrackDetails()
     }
+    // H-8: size and duration first and fast (the full read above can take seconds on a busy phone).
+    val quick by androidx.compose.runtime.produceState<Pair<Long?, Long?>?>(null, track.uri) {
+        value = runCatching { TrackDetailsRepository.quickFacts(context, track.uri) }.getOrNull() ?: (null to null)
+    }
     val d = details
+    val q = quick
     val rows = buildList {
         add("Title" to track.title)
         add("Artist" to track.artist)
@@ -711,7 +716,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         d?.trackNumber?.let { add("Track" to it) }
         d?.discNumber?.let { add("Disc" to it) }
         // H-8: the file's own duration (then the player's) when the library row has none.
-        add("Duration" to (dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, d?.durationMs, playerDurationMs)?.let(::formatDuration) ?: if (d == null) "\u2026" else "Unknown"))
+        add("Duration" to (dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, q?.first ?: d?.durationMs, playerDurationMs)?.let(::formatDuration) ?: if (d == null && q == null) "\u2026" else "Unknown"))
         d?.format?.let { add("Format" to it) }
         // Live from the decoder first (works for online songs too), the file's tags otherwise.
         codec?.codecName?.let { add("Codec" to (if (codec.lossless) "$it (lossless)" else it)) }
@@ -722,7 +727,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         codec?.channelsLabel?.let { add("Channels" to it) }
         codec?.decoder?.let { add("Decoder" to "${codec.decoderKind} · $it") }
         // H-8: always shown (it used to vanish when the library row had 0).
-        add("File size" to dev.asfakul.yumeiro.player.SongFacts.sizeLabel(dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, d?.sizeBytes), track.uri, ::formatFileSize).let { if (d == null && it == "Unknown") "\u2026" else it })
+        add("File size" to dev.asfakul.yumeiro.player.SongFacts.sizeLabel(dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, q?.second ?: d?.sizeBytes), track.uri, ::formatFileSize).let { if (d == null && q == null && it == "Unknown") "\u2026" else it })
         if (track.playCount > 0) add("Plays" to track.playCount.toString())
         add("Folder" to track.folderName)
         d?.path?.let { add("Path" to it) }

@@ -12,6 +12,9 @@ package dev.asfakul.yumeiro.player
  *
  * The order (first match wins):
  * 1. GPU effect refused by this video → play without it.
+ * 1b. H-3: a decoder error (4xxx) under the Auto decoder → switch this video to software decoders once and retry
+ *     at the same position. Comes before every source-level step, so local files, online sources and plain links
+ *     all get it (before, only plain links reached it, inside [PlaybackRecovery.decide]).
  * 2. Local file → next item in the queue, else a plain explanation.
  * 3. Network error while offline → wait for the connection (no attempts are burned).
  * 4. Refused / network error on a refreshable source (YouTube) → fetch a fresh link (2 times max).
@@ -25,6 +28,8 @@ package dev.asfakul.yumeiro.player
 object RecoveryRouter {
     sealed interface Step<out A> {
         data object DropGpuEffect : Step<Nothing>
+        /** H-3: Auto decoder: retry this video on software decoders (once). */
+        data object SwitchToSoftwareDecoder : Step<Nothing>
         data object LocalFailure : Step<Nothing>
         data object WaitForNetwork : Step<Nothing>
         data object RefreshLink : Step<Nothing>
@@ -46,6 +51,8 @@ object RecoveryRouter {
         val onlineSource: Boolean,
         val quickRetries: Int,
         val accessCodes: Set<Int>,
+        /** H-3: Auto is the chosen decoder and this video has not been switched to software decoders yet. */
+        val autoDecoderCanSwitch: Boolean = false,
     )
 
     const val MAX_REFRESHES = 2
@@ -54,6 +61,7 @@ object RecoveryRouter {
     fun <A> route(i: Input, nextHeaderVariant: () -> A?): Step<A> {
         val f = i.facts
         if (i.gpuEffectFailed) return Step.DropGpuEffect
+        if (f.isDecoder && i.autoDecoderCanSwitch) return Step.SwitchToSoftwareDecoder
         if (!i.networkStream) return Step.LocalFailure
         val refused = f.httpStatus in i.accessCodes
         if (f.isNetwork && !i.online) return Step.WaitForNetwork

@@ -1542,6 +1542,13 @@ fun SongDetailsDialog(
     val details by androidx.compose.runtime.produceState<dev.asfakul.yumeiro.lyrics.TrackDetails?>(null, track.uri) {
         value = runCatching { dev.asfakul.yumeiro.lyrics.TrackDetailsRepository.loadDetails(ctx, track.uri) }.getOrNull()
     }
+    // H-8: size and duration come first and fast; the slower metadata read above only fills in the rest.
+    val quick by androidx.compose.runtime.produceState<Pair<Long?, Long?>?>(null, track.uri) {
+        value = runCatching { dev.asfakul.yumeiro.lyrics.TrackDetailsRepository.quickFacts(ctx, track.uri) }.getOrNull() ?: (null to null)
+    }
+    val reading = quick == null && details == null && !dev.asfakul.yumeiro.player.SongFacts.streamed(track.uri)
+    val durationMs = dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, quick?.first ?: details?.durationMs, 0L)
+    val sizeBytes = dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, quick?.second ?: details?.sizeBytes)
     TsukiDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1557,8 +1564,8 @@ fun SongDetailsDialog(
                 DetailItem(label = "Title", value = track.title)
                 DetailItem(label = "Artist", value = track.artist)
                 DetailItem(label = "Album", value = track.album)
-                DetailItem(label = "Duration", value = dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, details?.durationMs, 0L)?.let(::formatDuration) ?: "Unknown")
-                DetailItem(label = "File size", value = dev.asfakul.yumeiro.player.SongFacts.sizeLabel(dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, details?.sizeBytes), track.uri, ::formatFileSize))
+                DetailItem(label = "Duration", value = durationMs?.let(::formatDuration) ?: if (reading && durationMs == null) "Reading…" else "Unknown")
+                DetailItem(label = "File size", value = if (reading && sizeBytes == null) "Reading…" else dev.asfakul.yumeiro.player.SongFacts.sizeLabel(sizeBytes, track.uri, ::formatFileSize))
                 DetailItem(label = "Folder", value = track.folderName)
                 if (track.folderPath.isNotBlank()) {
                     DetailItem(label = "Path", value = track.folderPath)

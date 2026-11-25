@@ -36,6 +36,8 @@ import org.junit.runner.RunWith
  * button. Checked in full screen, for 6 s: the player box fills the screen, the video surface fills the box
  * (no small picture in a corner), the picture really moves (two screenshots of the surface differ), the
  * position advances, and no error. Then back to the watch page, still playing.
+ * a) a local YouTube-style stream through the same path (always runs); b) real YouTube (skipped when YouTube
+ *    refuses the emulator's address, which it does on CI).
  */
 @RunWith(AndroidJUnit4::class)
 class GroupHYouTubeFullscreenDeviceTest {
@@ -116,18 +118,69 @@ class GroupHYouTubeFullscreenDeviceTest {
         throw AssertionError("no full-screen button · ${FirstRun.onScreen(rule)}")
     }
 
-    @Test fun a_youTubeFullscreenKeepsPlayingAndFillsTheScreen() {
+    private val servers = mutableListOf<mockwebserver3.MockWebServer>()
+    @After fun stopServers() { servers.forEach { runCatching { it.close() } } }
+
+    /** Serves an asset with byte ranges (like googlevideo.com), so the player streams and seeks over HTTP. */
+    private fun serve(vararg names: String): mockwebserver3.MockWebServer {
+        val files = names.associateWith { n -> inst.context.assets.open(n).use { it.readBytes() } }
+        val s = mockwebserver3.MockWebServer().also { servers += it }
+        s.dispatcher = object : mockwebserver3.Dispatcher() {
+            override fun dispatch(request: mockwebserver3.RecordedRequest): mockwebserver3.MockResponse {
+                val b = files[request.url.encodedPath.removePrefix("/")] ?: return mockwebserver3.MockResponse.Builder().code(404).build()
+                val type = if (request.url.encodedPath.endsWith(".m4a")) "audio/mp4" else "video/mp4"
+                val range = request.headers["Range"]?.removePrefix("bytes=")?.split('-')
+                val from = range?.getOrNull(0)?.toLongOrNull() ?: 0L
+                val to = range?.getOrNull(1)?.toLongOrNull() ?: (b.size - 1L)
+                val part = b.copyOfRange(from.toInt(), (to + 1).toInt().coerceAtMost(b.size))
+                return mockwebserver3.MockResponse.Builder().code(if (range != null) 206 else 200)
+                    .addHeader("Content-Type", type).addHeader("Accept-Ranges", "bytes")
+                    .apply { if (range != null) addHeader("Content-Range", "bytes $from-${from + part.size - 1}/${b.size}") }
+                    .body(okio.Buffer().write(part)).build()
+            }
+        }
+        s.start()
+        return s
+    }
+
+    /**
+     * Opened exactly like a YouTube video (YouTubePlayback.playVideo): the watch page first, then the player with
+     * the YouTube group, the watch-page URL and the audio as a separate track merged at playback (YouTube's
+     * adaptive video-only + audio-only pair). Only the network source is local, so it never depends on YouTube
+     * letting the CI address in. This is the run that cannot be skipped.
+     */
+    @Test fun a_youTubeStyleStreamFullscreenKeepsPlayingAndFillsTheScreen() {
+        val s = serve("yt_fs_video.mp4", "yt_fs_audio.m4a")
+        val vid = "yuH7local01"
+        val item = YtItem(id = vid, url = "https://www.youtube.com/watch?v=$vid", title = "H-7 local", channel = "Yumeiro")
+        val req = dev.asfakul.yumeiro.stream.StreamRequest(
+            url = s.url("/yt_fs_video.mp4").toString(), title = item.title, group = YouTubePlayback.GROUP, pageUrl = item.url,
+            audioTracks = listOf(dev.asfakul.yumeiro.stream.StreamAudio(s.url("/yt_fs_audio.m4a").toString(), "English", "en")),
+        )
+        rule.runOnUiThread {
+            dev.asfakul.yumeiro.youtube.YtWatch.open(ctx, item)
+            dev.asfakul.yumeiro.youtube.YtWatch.onResolved(vid)
+            dev.asfakul.yumeiro.stream.IncomingMedia.open(ctx, req, id = "yt:$vid", folder = YouTubePlayback.GROUP)
+        }
+        checkFullscreen("local")
+    }
+
+    @Test fun b_youTubeFullscreenKeepsPlayingAndFillsTheScreen() {
         val reachable = runCatching { runBlocking { YouTubeStreams.videoRequest(ctx, id, maxHeight = 360) }; true }
             .onFailure { log("RESULT_H7 SKIP youtube unreachable: $it") }.getOrDefault(false)
         assumeTrue("YouTube unreachable from this emulator", reachable)
         val item = YtItem(id = id, url = "https://www.youtube.com/watch?v=$id", title = "Big Buck Bunny", channel = "Blender")
         rule.runOnUiThread { YouTubePlayback.playVideo(ctx, item, maxHeight = 360) }
+        checkFullscreen("youtube")
+    }
+
+    private fun checkFullscreen(case: String) {
         val ok = runCatching { rule.waitUntil(90_000) { PlaybackDiagnostics.state.value.firstFrame }; true }.getOrDefault(false)
         assertTrue("no first frame · ${PlaybackDiagnostics.state.value}", ok)
         Thread.sleep(2_000)
         val docked = boxes()
         log("docked $docked")
-        FirstRun.shot("grouph_yt_docked")
+        FirstRun.shot("grouph_yt_docked_$case")
         val tv = has("tv_nav_rail")
 
         if (!tv) toggleFullscreen()
@@ -140,8 +193,8 @@ class GroupHYouTubeFullscreenDeviceTest {
         Thread.sleep(4_000)
         val p1 = position(); val dt = System.currentTimeMillis() - t0
         val s = PlaybackDiagnostics.state.value
-        FirstRun.shot("grouph_yt_fullscreen")
-        log("RESULT_H7 full=$full pos $p0->$p1 in ${dt}ms motion=${"%.1f".format(moved)} light=${"%.1f".format(light)} playing=${playing()} err=${s.error} decoder=${s.width}x${s.height}")
+        FirstRun.shot("grouph_yt_fullscreen_$case")
+        log("RESULT_H7 $case full=$full pos $p0->$p1 in ${dt}ms motion=${"%.1f".format(moved)} light=${"%.1f".format(light)} playing=${playing()} err=${s.error} decoder=${s.width}x${s.height}")
         assertTrue("player view found", full != null)
         val f = full!!
         assertTrue("full screen: the player fills the window (box ${f.box} window ${f.window})",
@@ -157,8 +210,9 @@ class GroupHYouTubeFullscreenDeviceTest {
             toggleFullscreen()
             Thread.sleep(3_000)
             val p2 = position(); Thread.sleep(2_500); val p3 = position()
-            log("RESULT_H7 back on the watch page ${boxes()} pos $p2->$p3")
+            log("RESULT_H7 $case back on the watch page ${boxes()} pos $p2->$p3")
             assertTrue("back on the watch page: still playing ($p2 -> $p3)", p3 - p2 >= 1_000)
         }
+        log("RESULT_H7 $case PASS")
     }
 }

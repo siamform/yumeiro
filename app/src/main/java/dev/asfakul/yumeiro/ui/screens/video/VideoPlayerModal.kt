@@ -758,6 +758,8 @@ private fun VideoPlayerModalContent(
                 onlineSource = onFatalError != null,
                 quickRetries = onlineQuickRetries,
                 accessCodes = dev.asfakul.yumeiro.online.AccessLadder.ACCESS_CODES,
+                autoDecoderCanSwitch = dev.asfakul.yumeiro.player.VideoPrefs.decoder.value == dev.asfakul.yumeiro.player.VideoPrefs.Decoder.AUTO &&
+                    !dev.asfakul.yumeiro.stream.DecoderAuto.softwareFirst,
             ),
         ) {
             if (onFatalError == null) dev.asfakul.yumeiro.online.AccessLadder.hint(originalRequest.url, originalRequest.pageUrl)
@@ -772,6 +774,18 @@ private fun VideoPlayerModalContent(
                 if (dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees != 0) { dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees = 0; chrome.rotation = 0 }
                 showToast("Anime4K is off for this video (not supported here)")
                 exoPlayer.prepare(); exoPlayer.playWhenReady = true
+                return
+            }
+            dev.asfakul.yumeiro.player.RecoveryRouter.Step.SwitchToSoftwareDecoder -> {
+                // H-3: Auto: the phone's decoder refused this video; play it on the software decoder from here.
+                dev.asfakul.yumeiro.stream.DecoderAuto.switchToSoftware()
+                android.util.Log.i("VideoPlayer", "H-3 Auto decoder: ${error.errorCodeName} → software decoders at $pos0 ms")
+                showToast(dev.asfakul.yumeiro.player.PlaybackRecovery.AUTO_SOFTWARE)
+                isBuffering = true
+                lease.schedule("retry", 300L) {
+                    if (pos0 > 0L) exoPlayer.seekTo(pos0)
+                    exoPlayer.prepare(); exoPlayer.playWhenReady = true
+                }
                 return
             }
             dev.asfakul.yumeiro.player.RecoveryRouter.Step.LocalFailure -> {
