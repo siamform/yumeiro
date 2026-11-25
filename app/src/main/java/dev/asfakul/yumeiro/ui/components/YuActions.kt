@@ -43,6 +43,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -158,10 +160,11 @@ fun AddLinkSheet(
             }
             if (busy) LinearProgressIndicator(color = p.accent, modifier = Modifier.fillMaxWidth())
             error?.let { e ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().testTag(tag + "_error")) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Warning, null, tint = dev.asfakul.yumeiro.ui.theme.WarnTone, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.weight(1f).testTag(tag + "_error")
+                        .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
                     TextButton(onClick = { submit() }, enabled = !busy, modifier = Modifier.testTag(tag + "_retry")) { Text("Retry", color = p.accent, fontWeight = FontWeight.Bold) }
                 }
             }

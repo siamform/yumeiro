@@ -139,15 +139,15 @@ class GroupCIconsDeviceTest {
         // Phones start in touch mode, where nothing holds focus; a remote / keyboard leaves it (as on TV).
         InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         rule.waitForIdle()
-        // The TV emulator can hand first focus to the window after our request, so ask like a remote would, again.
-        var ok = false
-        repeat(10) {
-            if (ok) return@repeat
-            rule.onNodeWithTag("hub_js_add_plus", true).requestFocus(); rule.waitForIdle()
-            ok = rule.onAllNodes(isFocused() and hasTestTag("hub_js_add_plus"), true).fetchSemanticsNodes().isNotEmpty()
-            if (!ok) Thread.sleep(200)
+        // Reach the + the way a remote does: real D-pad presses, logging who holds focus at each step.
+        fun focusedTags() = rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().map { it.config.getOrElse(SemanticsProperties.TestTag) { "?" } }
+        fun on() = rule.onAllNodes(isFocused() and hasTestTag("hub_js_add_plus"), true).fetchSemanticsNodes().isNotEmpty()
+        var ok = on()
+        for (k in listOf(20, 19, 22, 22, 22, 22, 20, 19, 22, 22)) {
+            if (ok) break
+            key(k); ok = on()
+            Log.i("YuGroupC", "GROUPC_D key=$k focused=${focusedTags()}")
         }
-        if (!ok) Log.i("YuGroupC", "GROUPC_D focused=" + rule.onAllNodes(isFocused(), true).fetchSemanticsNodes().map { it.config.getOrElse(SemanticsProperties.TestTag) { "?" } })
         assertTrue("+ icon not focusable", ok)
         key(23) // DPAD_CENTER
         waitTag("hub_js_add")

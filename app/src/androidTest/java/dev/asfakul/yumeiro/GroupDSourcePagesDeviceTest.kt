@@ -56,14 +56,14 @@ class GroupDSourcePagesDeviceTest {
         n.config.getOrElse(androidx.compose.ui.semantics.SemanticsProperties.TestTag) { "?" } }
     /** The overview keeps its scroll position (ScrollMemory) across visits, so bring the row on screen first. */
     private fun row(p: String) { rule.onNodeWithTag("src_home", true).performScrollToNode(hasTestTag("src_page_$p")); rule.waitForIdle() }
-    /** Focus [tag] like a remote does; the TV emulator can hand first focus to the window after our request. */
+    /** Reach [tag] the way a remote does: real D-pad DOWN presses, logging who holds focus at each step. */
     private fun focus(tag: String): Boolean {
-        repeat(10) {
-            rule.onNodeWithTag(tag, true).requestFocus(); rule.waitForIdle()
+        if (focused(tag)) return true
+        repeat(14) { i ->
+            FirstRun.shell("input keyevent 20"); Thread.sleep(400); rule.waitForIdle()
+            Log.i("YuGroupD", "focus $tag step=$i focused=${focusedTags()}")
             if (focused(tag)) return true
-            Thread.sleep(200)
         }
-        Log.i("YuGroupD", "focus $tag failed; focused=${focusedTags()}")
         return false
     }
 
