@@ -415,7 +415,8 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
             }
         }
         if (d == null) {
-            error?.let { e -> NovelError(pluginId, "Couldn't open this novel", e, "novel_detail_error", onRetry = { attempt++ }) }
+            val e = error
+            if (e != null) NovelError(pluginId, "Couldn't open this novel", e, "novel_detail_error", onRetry = { attempt++ })
             else dev.asfakul.yumeiro.ui.components.CoverDetailSkeleton() // SKELETON-2
             return@Column
         }
