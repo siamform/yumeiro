@@ -7,8 +7,10 @@ package dev.asfakul.yumeiro.benchmark
 
 import androidx.benchmark.macro.BaselineProfileMode
 import androidx.benchmark.macro.CompilationMode
+import androidx.benchmark.macro.ExperimentalMetricApi
 import androidx.benchmark.macro.FrameTimingMetric
 import androidx.benchmark.macro.StartupMode
+import androidx.benchmark.macro.TraceSectionMetric
 import androidx.benchmark.macro.junit4.MacrobenchmarkRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -48,9 +50,22 @@ class FrameTimingBenchmark {
         Journeys.snapshot(device, "settings_after")
     }
 
+    /**
+     * PERF-A1: frame times on the software-rendered CI emulators move by up to 40 % between runs (v2.2.0 measured
+     * 293 ms and 430 ms P50 on the same image), so they cannot hold a budget. The amount of work can: how many
+     * times Compose recomposed and laid out during the journey. `.github/scripts/jank_budget.py` fails the run
+     * when these counts go over the budget.
+     */
+    @OptIn(ExperimentalMetricApi::class)
+    private fun workMetrics() = listOf(
+        TraceSectionMetric("Compose:recompose", TraceSectionMetric.Mode.Count),
+        TraceSectionMetric("AndroidOwner:measureAndLayout", TraceSectionMetric.Mode.Count),
+    )
+
+    @OptIn(ExperimentalMetricApi::class)
     private fun scroll(mode: CompilationMode) = rule.measureRepeated(
         packageName = TARGET,
-        metrics = listOf(FrameTimingMetric()),
+        metrics = listOf(FrameTimingMetric()) + workMetrics(),
         compilationMode = mode,
         startupMode = StartupMode.WARM,
         iterations = 5,
