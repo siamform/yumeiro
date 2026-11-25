@@ -26,6 +26,7 @@ import dev.asfakul.yumeiro.sources.ecosystem.NuvioStreams
 import dev.asfakul.yumeiro.sources.lookup.StreamLookup
 import dev.asfakul.yumeiro.sources.lookup.StreamLookupProvider
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
@@ -65,10 +66,11 @@ class A0SearchAllDeviceTest {
         val others = (1..10).map { i -> Site("Site$i", wait = if (i == 4) 20_000 else 50L * i, fail = i == 7) }
         val t0 = System.currentTimeMillis()
         var lookupAt = -1L
-        val updates = OnlineRepository.search("Inception", listOf(lookup) + others).toList().onEach {
+        // Stamp each update as it arrives (device run 45618334246 stamped them after toList(), i.e. all at 20 s).
+        val updates = OnlineRepository.search("Inception", listOf(lookup) + others).onEach {
             if (it.api == "Nuvio" && lookupAt < 0) lookupAt = System.currentTimeMillis() - t0
-            log("A0 ${it.api}: ${it.items.size} items, error=${it.error}")
-        }
+            log("A0 ${it.api}: ${it.items.size} items, error=${it.error} at ${System.currentTimeMillis() - t0} ms")
+        }.toList()
         val total = System.currentTimeMillis() - t0
         log("A0 lookup answered after $lookupAt ms; all done after $total ms")
         val nuvio = updates.first { it.api == "Nuvio" }

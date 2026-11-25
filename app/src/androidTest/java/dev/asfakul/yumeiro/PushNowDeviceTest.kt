@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.notify.FcmPush
 import dev.asfakul.yumeiro.notify.NotifySettings
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -30,8 +31,10 @@ class PushNowDeviceTest {
     private val ctx: Context = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext
 
     @Before fun setUp() {
+        // Device run 45618334246: on api33 the shell grant was closed before it ran (executeShellCommand is async),
+        // so AppNotifier saw no permission and the test failed for that reason only. grantRuntimePermission waits.
         if (Build.VERSION.SDK_INT >= 33) InstrumentationRegistry.getInstrumentation().uiAutomation
-            .executeShellCommand("pm grant ${ctx.packageName} android.permission.POST_NOTIFICATIONS").close()
+            .grantRuntimePermission(ctx.packageName, android.Manifest.permission.POST_NOTIFICATIONS)
         NotifySettings.init(ctx)
         ctx.getSharedPreferences("notify_pacer", Context.MODE_PRIVATE).edit().clear()
             .putLong("last_shown", System.currentTimeMillis() - 60_000).commit()
@@ -39,6 +42,9 @@ class PushNowDeviceTest {
 
     @Test fun anAnnouncementRightAfterAnotherNoticeIsInTheShadeAtOnce() {
         val id = "a6dev${System.nanoTime() % 1_000_000}"
+        val block = dev.asfakul.yumeiro.notify.AppNotifier.block(ctx)
+        Log.w("YuPush", "PUSH_CASE block=$block")
+        assertEquals("notifications blocked on this emulator, the test cannot prove anything", dev.asfakul.yumeiro.notify.AppNotifier.Block.NONE, block)
         val title = "Push check $id"
         FcmPush.handle(ctx, mapOf("y" to "1", "kind" to "announcement", "id" to id, "title" to title, "body" to "Shown at once.",
             "sent" to (System.currentTimeMillis() / 1000).toString()), null, null, System.currentTimeMillis())
