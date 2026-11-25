@@ -67,13 +67,22 @@ object AdChainBridge {
                 syncCookies(out.cookies)
                 when {
                     out.url == request.url -> null
-                    prior is Resolution.NeedsBrowser -> prior.copy(pageUrl = out.url)
-                    else -> Resolution.NeedsBrowser(out.url, out.reason, request.copy(userAgent = ua))
+                    // ADCHAIN-3d (probe 45530077234 / 45533723311): srnky.com kept the resolver's generic "web page …
+                    // start playback" text, which is wrong for a short link. Say what the page browser will do.
+                    prior is Resolution.NeedsBrowser -> prior.copy(pageUrl = out.url, reason = browserReason(out))
+                    else -> Resolution.NeedsBrowser(out.url, browserReason(out), request.copy(userAgent = ua))
                 }
             }
             else -> null
         }
     }
+
+    internal const val SHORT_LINK_REASON = "This is a short link. Open it in the page browser: Yumeiro goes through its " +
+        "steps and walks on to the real link by itself. If the site asks you to tick a box, do it there (Yumeiro " +
+        "doesn't answer these checks for you)."
+
+    private fun browserReason(out: AdChainHttp.Outcome.NeedsBrowser): String =
+        if (out.check != null) StreamResolver.CHECK_PAGE_REASON else SHORT_LINK_REASON
 
     private fun Resolution.reasonOr(): String = (this as? Resolution.NeedsBrowser)?.reason ?: "Open the link's page to finish"
 
