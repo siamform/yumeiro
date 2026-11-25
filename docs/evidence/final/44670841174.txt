@@ -1,7 +1,0 @@
-44670841174 tv-api24 SleepTimerWithoutScreenDeviceTest P1 PASS tests=1 skipped=0 sha=d91f052
-44670841174 tv-api24 StabilityStressDeviceTest P1 PASS tests=3 skipped=0 sha=d91f052
-44670841174 tv-api24 StorageMainThreadDeviceTest P1 SKIPPED tests=2 skipped=2 sha=d91f052
-44670841174 tv-api24 StreamFormatMismatchDeviceTest P1 PASS tests=5 skipped=0 sha=d91f052
-44670841174 tv-api24 StreamWatchDownloadDeviceTest P1 PASS tests=1 skipped=0 sha=d91f052
-44670841174 tv-api24 SurfaceModeDeviceTest P1 PASS tests=1 skipped=0 sha=d91f052
-44670841174 tv-api24 TorrentDownloadDeviceTest P1 PASS tests=2 skipped=0 sha=d91f052

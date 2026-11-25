@@ -16,13 +16,13 @@ Third-party code included in this repository:
     Files under app/src/main/java/com/lagradost/ are adapted from CloudStream and were modified by
     siamform (2026) to run as a compatibility layer inside Yumeiro (GPL-3.0 section 5(a)).
   - NewPipe Extractor — GPL-3.0 — https://github.com/TeamNewPipe/NewPipeExtractor
-  - Manrope and Unbounded fonts — SIL OFL 1.1 — see docs/licenses/
+  - Manrope and Unbounded fonts — SIL OFL 1.1 — see licenses/
   - Aniyomi source API and extensions-lib stubs (eu.kanade.tachiyomi.*, tachiyomi.*, mihon.*) —
     Apache-2.0 — https://github.com/aniyomiorg/aniyomi and https://github.com/mihonapp/mihon
     Copyright the Aniyomi, Mihon and Tachiyomi open source projects. Files under
     app/src/main/java/eu/, app/src/main/java/tachiyomi/ and app/src/main/java/mihon/ are taken from
     those projects; some were trimmed by siamform (2026) so extension APKs can run inside Yumeiro.
-    License text: docs/licenses/Apache-2.0.txt
+    License text: licenses/Apache-2.0.txt
   - Mangayomi JavaScript runtime shims (app/src/main/assets/js/mangayomi_runtime.js) — Apache-2.0 —
     https://github.com/kodjodevf/mangayomi — Copyright Moustapha Kodjo Amadou. Adapted by siamform (2026).
   - LNReader novel plugin harness (app/src/main/assets/js/lnreader_harness.js) — GPL-3.0 — from Zangetsu,

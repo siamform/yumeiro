@@ -1,7 +1,0 @@
-44661905343 tv-api34 Nbug15RecentsDeviceTest P1 PASS tests=2 skipped=0 sha=92e03d7
-44661905343 tv-api34 Nbug15RedesignDeviceTest P1 PASS tests=3 skipped=0 sha=92e03d7
-44661905343 tv-api34 Nbug16ExtensionVersionDeviceTest P1 PASS tests=1 skipped=0 sha=92e03d7
-44661905343 tv-api34 Nbug6EngineCostDeviceTest P1 PASS tests=1 skipped=0 sha=92e03d7
-44661905343 tv-api34 Nbug9DnsProbeDeviceTest P1 PASS tests=1 skipped=0 sha=92e03d7
-44661905343 tv-api34 NetworkStateDeviceTest P1 PASS tests=4 skipped=1 sha=92e03d7
-44661905343 tv-api34 NewPipeCompatDeviceTest P1 PASS tests=2 skipped=0 sha=92e03d7

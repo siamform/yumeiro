@@ -2,7 +2,10 @@
 
 All notable changes to Yumeiro.
 
-## v2.3.0 (next release): novels, rotation, profile pictures, a new splash and calmer loading
+Older entries name files under `docs/`. Those notes moved to a private repository on 2026-11-25; licence texts
+are now in [`licenses/`](licenses/).
+
+## v2.3.0: novels, rotation, profile pictures, a new splash and calmer loading
 
 Follows 2.2.0. Update straight from 2.2.0, 2.1.0 or 2.0.0; profiles, history, downloads and settings carry over.
 Every item says how it was checked: (CI) = unit / build tests in GitHub Actions, (emulator) = run on an Android

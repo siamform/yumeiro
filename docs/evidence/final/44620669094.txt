@@ -1,4 +1,0 @@
-44620669094 tv-api24 DownloadKillDeviceTest P1 PASS tests=2 skipped=0 sha=e57a7c3
-44620669094 tv-api24 DownloadQualityDeviceTest P1 PASS tests=1 skipped=0 sha=e57a7c3
-44620669094 tv-api24 DownloadResumeDeviceTest P1 PASS tests=4 skipped=0 sha=e57a7c3
-44620669094 tv-api24 DownloadThroughputDeviceTest P1 PASS tests=5 skipped=0 sha=e57a7c3

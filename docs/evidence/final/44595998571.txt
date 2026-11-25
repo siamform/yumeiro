@@ -1,8 +1,0 @@
-44595998571 tv-api34 CloudRecaptureDeviceTest P1 PASS tests=1 skipped=0 sha=ac01e6b
-44595998571 tv-api34 CloudRecaptureDeviceTest P2 PASS tests=1 skipped=0 sha=ac01e6b
-44595998571 tv-api34 MangaTranslateDeviceTest P1 FAIL tests=? skipped=0 sha=ac01e6b
-44595998571 tv-api34 MangaTranslateDeviceTest P2 FAIL tests=? skipped=0 sha=ac01e6b
-44595998571 tv-api34 TelegramPlaybackDeviceTest P1 PASS tests=2 skipped=0 sha=ac01e6b
-44595998571 tv-api34 TelegramPlaybackDeviceTest P2 PASS tests=2 skipped=0 sha=ac01e6b
-44595998571 tv-api34 TelegramPublicDeviceTest P1 FAIL tests=? skipped=0 sha=ac01e6b
-44595998571 tv-api34 TelegramPublicDeviceTest P2 FAIL tests=? skipped=0 sha=ac01e6b

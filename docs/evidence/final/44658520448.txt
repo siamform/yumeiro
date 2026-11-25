@@ -1,7 +1,0 @@
-44658520448 tv-api24 EpisodeStillsDeviceTest P1 PASS tests=2 skipped=0 sha=25886e2
-44658520448 tv-api24 ExtensionCompatDeviceTest P1 PASS tests=1 skipped=0 sha=25886e2
-44658520448 tv-api24 ExtensionPopupsDeviceTest P1 PASS tests=8 skipped=0 sha=25886e2
-44658520448 tv-api24 ExtensionSharedFileDeviceTest P1 PASS tests=1 skipped=0 sha=25886e2
-44658520448 tv-api24 ExtensionsDeviceTest P1 FAIL tests=? skipped=0 sha=25886e2
-44658520448 tv-api24 ExternalDownloaderDeviceTest P1 PASS tests=0 skipped=0 sha=25886e2
-44658520448 tv-api24 FeedPositionDeviceTest P1 FAIL tests=? skipped=0 sha=25886e2

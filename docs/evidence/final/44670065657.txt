@@ -1,6 +1,0 @@
-44670065657 api36 FinalCoverageDeviceTest P1 PASS tests=11 skipped=0 sha=d91f052
-44670065657 api36 LocalPlayerDeviceTest P1 PASS tests=11 skipped=0 sha=d91f052
-44670065657 api36 MangaOfflineDeviceTest P1 PASS tests=2 skipped=0 sha=d91f052
-44670065657 api33-lowram FinalCoverageDeviceTest P1 PASS tests=11 skipped=0 sha=d91f052
-44670065657 api33-lowram LocalPlayerDeviceTest P1 PASS tests=11 skipped=0 sha=d91f052
-44670065657 api33-lowram MangaOfflineDeviceTest P1 PASS tests=2 skipped=0 sha=d91f052

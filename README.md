@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/logo.png" width="132" alt="Yumeiro logo" />
+<img src=".github/readme/logo.png" width="132" alt="Yumeiro logo" />
 
 # Yumeiro
 
@@ -24,22 +24,22 @@ sources, plus your own Jellyfin, Plex, DLNA, WebDAV and SMB servers — unified 
   <a href="https://github.com/siamform/yumeiro/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/siamform/yumeiro/ci.yml?style=flat-square&label=CI&labelColor=16161A" /></a>
 </p>
 
-**[Download the APK](https://yumeiro.click/download)** · **[Website](https://yumeiro.click/)** · **[What's new](docs/WHATS-NEW.md)** · **[Full guide](docs/GUIDE.md)** · **[Source status](https://yumeiro.click/status)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
+**[Download the APK](https://yumeiro.click/download)** · **[Website](https://yumeiro.click/)** · **[What's new](https://yumeiro.click/changelog)** · **[Source status](https://yumeiro.click/status)** · **[Report a bug](https://github.com/siamform/yumeiro/issues)**
 
 </div>
 
 ---
 
-## Latest release: 2.2.0
+## Latest release: 2.3.0
 
-- **Online at once**: Extension Market, YouTube, Yumix, online music and Live TV work right after an install or update.
-- **Live TV keeps its channels**: the saved list shows at once, even on a slow link.
-- **One Back**: the Back key, button bar and swipes close a page with the same slide as the on-screen arrow.
-- **Solid themes**: glass effects removed from every theme.
-- **Clearer extensions**: unsupported ones say what is missing; broken ones can offer an older working copy.
+- **Novels**: add LNReader's plugin list, install a source, browse, read with adjustable text size and keep your place.
+- **Rotate video** in 90° steps from the player, without reloading.
+- **A picture per profile**, picked from the gallery.
+- **A new splash** and skeleton loading on every feed instead of spinners.
+- **Live TV search**, a Country sheet, and new V2 options for Anime4K, Source Finding and Tracking beside the classic ones.
 
-Highlights with images: [docs/WHATS-NEW.md](docs/WHATS-NEW.md) · every change and how it was checked: [CHANGELOG.md](CHANGELOG.md) ·
-what is not proven yet: [docs/UNVERIFIED-QUEUE.md](docs/UNVERIFIED-QUEUE.md).
+Highlights with images: [yumeiro.click/changelog](https://yumeiro.click/changelog) · every change and how it was checked:
+[CHANGELOG.md](CHANGELOG.md).
 
 **Known imperfect:** YouTube can block playback with "Sign in to confirm you're not a bot"; Android TV keeps showing
 the notification dialog after every "Don't allow". Full list in the [CHANGELOG](CHANGELOG.md).
@@ -141,7 +141,7 @@ Stremio and JavaScript runtimes Yumeiro ships.
 The TV APK (`Yumeiro-TV-v<version>.tv.apk`, Android 7.0 or newer) switches to TV mode on its own: a left navigation
 rail, a visible focus ring on everything, and a player built for the remote. Install it with a file manager, or from a
 computer on the same network: `adb connect <tv-ip>:5555`, then `adb install -r Yumeiro-TV-v<version>.tv.apk`.
-More in [docs/TV.md](docs/TV.md).
+Install help: [yumeiro.click/download](https://yumeiro.click/download).
 
 ## For extension authors
 
@@ -196,19 +196,14 @@ inside the app, so install only those you trust. See [DISCLAIMER.md](DISCLAIMER.
 
 Please report vulnerabilities privately via
 [GitHub security advisories](https://github.com/siamform/yumeiro/security/advisories/new), not in public issues.
-Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Privacy: [PRIVACY.md](PRIVACY.md) · Terms: [TERMS.md](TERMS.md). Audit notes are in
-[docs/security](docs/security/).
+Scope, response times and the disclosure policy are in [SECURITY.md](SECURITY.md). Privacy: [PRIVACY.md](PRIVACY.md) · Terms: [TERMS.md](TERMS.md).
 
 ## More
 
 | | |
 |---|---|
-| [What's new](docs/WHATS-NEW.md) | Release highlights with images (2.2.0, 2.1.0, 2.0.0, the redesign) |
-| [Screenshots](docs/SCREENSHOTS.md) | Every main screen, dark and light, phone and TV |
-| [How it compares](docs/COMPARISON.md) | Yumeiro next to CloudStream, Aniyomi, Mihon, Stremio, Kodi and Jellyfin |
-| [Full guide](docs/GUIDE.md) | Every feature and where to find it in Settings |
-| [TV](docs/TV.md) | Android TV, Google TV and Fire TV |
-| [FAQ](docs/FAQ.md) | Play Protect, HTTP 403, accounts, privacy, crash reports |
+| [Website](https://yumeiro.click/) | Download, install help, screenshots and release highlights |
+| [Source status](https://yumeiro.click/status) | Which online sources work right now |
 | [Changelog](CHANGELOG.md) | Every release, with how each change was checked |
 
 ## Build from source
@@ -220,8 +215,7 @@ cd yumeiro
 ./gradlew testMobileDebugUnitTest    # unit + UI tests
 ```
 
-Architecture, release pipeline, updater internals and the full feature list are in **[docs/GUIDE.md](docs/GUIDE.md)**,
-**[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** and **[docs/SYSTEM-DESIGN.md](docs/SYSTEM-DESIGN.md)**. What lives in `docs/`: [docs/README.md](docs/README.md).
+Design notes, test plans and release evidence are kept in a separate private repository, not in this one.
 
 ## Contributing
 
@@ -274,4 +268,4 @@ You may study, change and share the code; modified versions must stay open sourc
 The **Yumeiro name, logo and icon are not covered by the licence** — forks must use their own name, icon and
 `applicationId`. See [TRADEMARKS.md](TRADEMARKS.md) and [NOTICE](NOTICE).
 
-Fonts: Manrope and Unbounded, SIL Open Font License 1.1 ([docs/licenses](docs/licenses/)).
+Fonts: Manrope and Unbounded, SIL Open Font License 1.1 ([licenses](licenses/)).
