@@ -23,6 +23,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
@@ -231,7 +232,7 @@ internal fun ValueSlider(
         if (help != null) {
             Spacer(Modifier.width(6.dp))
             Box(
-                Modifier.size(24.dp).clip(CircleShape).background(p.glass).clickable { showHelp = true }
+                Modifier.minimumInteractiveComponentSize().size(24.dp).clip(CircleShape).background(p.glass).clickable { showHelp = true }
                     .semantics { contentDescription = "About $label" }.testTag("${tag}_help"),
                 contentAlignment = Alignment.Center,
             ) { Text("?", color = p.textPrimary, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
