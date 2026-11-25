@@ -136,6 +136,9 @@ class GroupCIconsDeviceTest {
     @Test fun d_remoteOpensAddSheet() {
         rule.setContent { CompositionLocalProvider(LocalTvMode provides true) { MTPlayerTheme { SourcesHubScreen(onBack = {}, initialTab = 3) } } }
         waitTag("hub_js_add_plus")
+        // Phones start in touch mode, where nothing holds focus; a remote / keyboard leaves it (as on TV).
+        InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
+        rule.waitForIdle()
         rule.onNodeWithTag("hub_js_add_plus", true).requestFocus()
         rule.waitForIdle()
         assertTrue("+ icon not focusable", rule.onAllNodes(isFocused() and hasTestTag("hub_js_add_plus"), true).fetchSemanticsNodes().isNotEmpty())
