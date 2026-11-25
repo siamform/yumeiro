@@ -238,7 +238,8 @@ fun AspectRatioDialog(
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // GROUP K: scrolls, so the Picture size row is reachable in landscape on small phones.
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 modes.forEach { (mode, title, desc) ->
                     val isSelected = currentResizeMode == mode
                     Surface(

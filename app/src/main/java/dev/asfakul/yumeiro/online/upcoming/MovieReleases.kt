@@ -107,10 +107,11 @@ object MovieReleases {
             .header("Accept", "application/sparql-results+json")
             .header("User-Agent", "Yumeiro/" + dev.asfakul.yumeiro.BuildConfig.VERSION_NAME + " (https://yumeiro.click; upcoming movies)")
             .build()
-        val body = client.newCall(req).execute().use { r ->
-            if (!r.isSuccessful) throw java.io.IOException("HTTP ${r.code}")
-            r.body.string()
-        }
+        // H-9 (run 45710085458 api36/tv run 1: SocketTimeoutException): a cold Wikidata SPARQL query can take
+        // longer than the app's normal read timeout. This one gets 40 s to answer and one more try after a
+        // timeout, a 429 or a 5xx; a second failure still shows the error card, never "nothing".
+        val slow = client.newBuilder().readTimeout(java.time.Duration.ofSeconds(40)).callTimeout(java.time.Duration.ofSeconds(50)).build()
+        val body = fetchWithRetry(slow, req)
         val list = parse(body, country, today)
         runCatching {
             val f = cacheFile(context, country)
@@ -118,6 +119,22 @@ object MovieReleases {
             tmp.writeText(Upcoming.encodeCache(list)); tmp.renameTo(f)
         }
         return list
+    }
+
+    internal fun fetchWithRetry(client: OkHttpClient, req: Request, pauseMs: Long = 1_500): String {
+        var last: java.io.IOException? = null
+        repeat(2) { attempt ->
+            if (attempt > 0) Thread.sleep(pauseMs)
+            try {
+                client.newCall(req).execute().use { r ->
+                    if (r.isSuccessful) return r.body.string()
+                    val e = java.io.IOException("HTTP ${r.code}")
+                    if (r.code != 429 && r.code < 500) throw e
+                    last = e
+                }
+            } catch (e: java.io.InterruptedIOException) { last = e }
+        }
+        throw last ?: java.io.IOException("no answer")
     }
 
     // endregion

@@ -1240,7 +1240,8 @@ private fun VideoPlayerModalContent(
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
                 dev.asfakul.yumeiro.player.StartTimeline.mark("first frame")
-                dev.asfakul.yumeiro.player.PlaybackDiagnostics.update { it.copy(firstFrame = true) }
+                // H-3: a frame after a recovered error (Auto switched decoder, a retry worked) means that error is over.
+                dev.asfakul.yumeiro.player.PlaybackDiagnostics.update { it.copy(firstFrame = true, error = null) }
             }
 
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
