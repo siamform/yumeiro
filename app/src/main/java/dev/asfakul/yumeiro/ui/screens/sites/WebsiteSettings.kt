@@ -96,7 +96,7 @@ internal fun WebsiteSettingsSheet(onDismiss: () -> Unit, onImport: () -> Unit, o
 }
 
 @Composable
-private fun SettingSwitch(title: String, line: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
+internal fun SettingSwitch(title: String, line: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
     val p = LocalMtPalette.current
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).toggleable(value = on, role = Role.Switch, onValueChange = onChange)
@@ -113,7 +113,7 @@ private fun SettingSwitch(title: String, line: String, on: Boolean, tag: String,
 }
 
 @Composable
-private fun SettingLink(icon: ImageVector, title: String, line: String, tag: String, onClick: () -> Unit) {
+internal fun SettingLink(icon: ImageVector, title: String, line: String, tag: String, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = title, onClick = onClick)

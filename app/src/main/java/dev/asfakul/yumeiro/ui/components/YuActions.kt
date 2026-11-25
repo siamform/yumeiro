@@ -119,6 +119,8 @@ fun AddLinkSheet(
     tag: String,
     onDismiss: () -> Unit,
     onAdd: suspend (String) -> Boolean,
+    /** False where a failure is the user's typing (not a network call), so "Retry" would repeat the same mistake. */
+    showRetry: Boolean = true,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val p = LocalMtPalette.current
@@ -171,7 +173,7 @@ fun AddLinkSheet(
                     Spacer(Modifier.width(6.dp))
                     Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.weight(1f).testTag(tag + "_error")
                         .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
-                    TextButton(onClick = { submit() }, enabled = !busy, modifier = Modifier.testTag(tag + "_retry")) { Text("Retry", color = p.accent, fontWeight = FontWeight.Bold) }
+                    if (showRetry) TextButton(onClick = { submit() }, enabled = !busy, modifier = Modifier.testTag(tag + "_retry")) { Text("Retry", color = p.accent, fontWeight = FontWeight.Bold) }
                 }
             }
             Button(

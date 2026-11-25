@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import dev.asfakul.yumeiro.online.web.SavedSites
 import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
@@ -33,16 +34,25 @@ class TelegramPageWordsTest {
 
     @Test fun telegramPageSpeaksAboutChannels() {
         rule.setContent { MTPlayerTheme { WebSitesScreen(onBack = {}, only = SavedSites.Kind.TELEGRAM) } }
-        rule.onNodeWithContentDescription("Add channels from a list").assertIsDisplayed()
+        // GROUP F: import and help moved into the "More" menu.
         assertEquals(0, rule.onAllNodesWithContentDescription("Add websites from a list").fetchSemanticsNodes().size)
-        rule.onNodeWithContentDescription("How Telegram works").performClick()
+        rule.onNodeWithContentDescription("More").performClick()
+        rule.onNodeWithText("Add channels from a list").assertIsDisplayed()
+        rule.onNodeWithText("How Telegram works").performClick()
         rule.onNodeWithText("Watch Telegram channels in Yumeiro").assertIsDisplayed()
     }
 
     @Test fun websitesPageKeepsItsWords() {
         rule.setContent { MTPlayerTheme { WebSitesScreen(onBack = {}, only = SavedSites.Kind.WEBSITE) } }
-        rule.onNodeWithContentDescription("Add websites from a list").assertIsDisplayed()
         rule.onNodeWithContentDescription("How websites work").performClick()
         rule.onNodeWithText("Watch any website in Yumeiro's player").assertIsDisplayed()
+    }
+
+    @Test fun websitesListImportLivesInSettings() {
+        rule.setContent { MTPlayerTheme { WebSitesScreen(onBack = {}, only = SavedSites.Kind.WEBSITE) } }
+        // GROUP E: list import moved into Website settings.
+        rule.onNodeWithContentDescription("Website settings").performClick()
+        rule.waitForIdle()
+        assertEquals(1, rule.onAllNodesWithText("Add websites from a list", useUnmergedTree = true).fetchSemanticsNodes().size)
     }
 }

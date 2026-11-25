@@ -110,4 +110,20 @@ class TgLibraryTest {
         assertEquals("video/x-matroska", TgLibrary.mimeFor("mkv"))
         assertEquals("video/mp4", TgLibrary.mimeFor("m4v"))
     }
+
+    /** GROUP F (owner items 4 and 6): a public post's video through the signed-in account (getMessageLinkInfo). */
+    @Test fun videoOfAPublicPostLink() {
+        assertEquals("https://t.me/yutest/7", TgLibrary.postLink("yutest", 7))
+        val info = tdObject("messageLinkInfo") {
+            put("is_public", true); put("chat_id", "-1001234567890")
+            put("message", message(tdObject("messageVideo") {
+                put("video", tdObject("video") { put("duration", 1450); put("file_name", "ep02.mp4"); put("mime_type", "video/mp4"); put("video", file(77, 900_000_000)) })
+            }))
+        } as JsonObject
+        val v = TgLibrary.videoOfLinkInfo(info)!!
+        assertEquals(77, v.fileId); assertEquals(900_000_000L, v.size); assertEquals(1450, v.durationSec)
+        // A post that isn't a video, or a link TDLib couldn't resolve (no message), plays nothing.
+        assertNull(TgLibrary.videoOfLinkInfo(tdObject("messageLinkInfo") { put("message", message(tdObject("messageText") {})) } as JsonObject))
+        assertNull(TgLibrary.videoOfLinkInfo(tdObject("messageLinkInfo") { put("is_public", true) } as JsonObject))
+    }
 }

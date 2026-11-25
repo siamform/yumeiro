@@ -100,7 +100,7 @@ class TelegramPublicDeviceTest {
 
     @Test fun savedChannelListsVideoPostsSearchesAndPlays() {
         assertTrue("'@yutest' was not saved as t.me/s/yutest", SavedSites.sites.value.any { it.url == "https://t.me/s/yutest" && it.name == "@yutest" })
-        compose.setContent { CompositionLocalProvider(LocalTvMode provides Edition.isTv) { MTPlayerTheme { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = {}) } } }
+        compose.setContent { CompositionLocalProvider(LocalTvMode provides Edition.isTv) { MTPlayerTheme { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = {}, only = SavedSites.Kind.TELEGRAM) } } }
         assertTrue("no site row", waitTag("site_row"))
         compose.onAllNodesWithTag("site_row", true).onFirst().performClick()
         assertTrue("the channel screen didn't open (old code opens the page browser)", waitTag("tg_channel"))
@@ -120,10 +120,14 @@ class TelegramPublicDeviceTest {
         // A withheld post says why, with a way to open it in Telegram, instead of a player that would fail.
         row("tg_post_7"); compose.onAllNodesWithTag("tg_post_7", true).onFirst().performClick()
         assertTrue("no card for the app-only post", rowWithin("tg_app_only", 15_000))
-        assertTrue("no Open in Telegram button", has("tg_open_app"))
+        // GROUP F (owner items 4 and 6): where sign-in runs, the card asks for it here; "Open in Telegram" only otherwise.
+        if (dev.asfakul.yumeiro.online.telegram.td.TgAccounts.enabled(ctx)) assertTrue("no Sign in to play button", has("tg_sign_in_play") && !has("tg_open_app"))
+        else assertTrue("no Open in Telegram button", has("tg_open_app"))
         assertEquals(null, IncomingMedia.pending.value)
 
-        // Search goes to Telegram's own ?q=.
+        // Search goes to Telegram's own ?q= (GROUP F: the box opens from the search icon).
+        compose.onAllNodesWithTag("tg_search_toggle", true).onFirst().performClick()
+        assertTrue("search box", waitTag("tg_search", 5_000))
         compose.onAllNodesWithTag("tg_search", true).onFirst().performTextInput("Episode")
         compose.onAllNodesWithTag("tg_search_go", true).onFirst().performClick()
         compose.waitUntil(10_000) { paths.any { it.startsWith("/s/yutest?q=Episode") } }

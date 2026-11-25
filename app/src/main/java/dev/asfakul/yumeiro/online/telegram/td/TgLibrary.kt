@@ -98,6 +98,17 @@ class TgLibrary(private val client: TdClient) {
         return TgVideoPage(vids, next)
     }
 
+    /**
+     * GROUP F (owner items 4 and 6): one post of a public channel, read with the signed-in account. Telegram keeps big
+     * videos out of its web preview; the account can still open them, so they play here instead of "only in the app".
+     * Null when the post has no video or audio.
+     */
+    suspend fun postVideo(channel: String, id: Int): TgVideo? {
+        val info = client.call("getMessageLinkInfo") { put("url", postLink(channel, id)) }
+        val m = info.obj("message") ?: return null
+        return parseVideo(m)?.also { fileOf(m)?.let(client::remember) }
+    }
+
     /** TG-ME-1: the signed-in user (getMe). Null when TDLib can't answer. */
     suspend fun me(): TgMe? = runCatching { parseMe(client.call("getMe")) }.getOrNull()
 
@@ -132,6 +143,12 @@ class TgLibrary(private val client: TdClient) {
     }
 
     companion object {
+        /** The public post address TDLib resolves (pure). */
+        fun postLink(channel: String, id: Int): String = "https://t.me/$channel/$id"
+
+        /** The video in a getMessageLinkInfo answer (pure; TgLibraryTest feeds it TDLib JSON). */
+        fun videoOfLinkInfo(info: JsonObject): TgVideo? = info.obj("message")?.let { m -> parseVideo(m) }
+
         fun parseMe(o: JsonObject): TgMe? {
             if (o.type() != "user") return null
             val name = listOf(o.str("first_name"), o.str("last_name")).filter { it.isNotBlank() }.joinToString(" ")

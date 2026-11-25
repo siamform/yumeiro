@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -66,8 +67,11 @@ import kotlinx.coroutines.withContext
  * web preview (newest first) under the channel's own header (photo, subscribers, description),
  * loads older posts on its own when the end of the list is reached (the "Older posts" button stays
  * for remotes and screen readers), marks posts that are new since the last visit, searches with
- * Telegram's own search and plays a post in Yumeiro's player. A post whose video Telegram keeps for
- * its apps is shown with that note and an "Open in Telegram" button, never faked.
+ * Telegram's own search and plays a post in Yumeiro's player.
+ *
+ * GROUP F (owner items 4 and 6): a post whose video Telegram keeps out of its web preview plays with the user's own
+ * signed-in account ([TelegramAccountPlay]); without one, the card asks the user to sign in here. "Open in Telegram"
+ * is offered only where sign-in can't run on this phone.
  */
 /** At most this many older pages load on their own per opening (about 20 posts each); then the button. */
 private const val AUTO_PAGES_MAX = 5
@@ -95,6 +99,15 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
     val lastSeen = remember(channel) { TelegramSeen.get(context, channel) }
     val newIds = TelegramSeen.newIds(lastSeen, posts.map { it.id })
     val withheld = posts.count { !it.playable }
+    // Read off the main thread; refreshed when the screen opens again after a sign-in.
+    val signedIn by androidx.compose.runtime.produceState(false, channel) {
+        value = withContext(Dispatchers.IO) {
+            dev.asfakul.yumeiro.online.telegram.td.TgAccounts.enabled(context) && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.signedInHint(context)
+        }
+    }
+    var appOnlyText by remember(channel) { mutableStateOf(dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.NEEDS_SIGN_IN) }
+    var opening by remember(channel) { mutableStateOf<Int?>(null) }
+    var searchOpen by androidx.compose.runtime.saveable.rememberSaveable(channel) { mutableStateOf(false) }
     val list = rememberLazyListState()
 
     fun load(older: Int?) {
@@ -162,15 +175,40 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
         if (!ok) note = "No app on this device can open Telegram links. The post is ${post.link}"
     }
 
-    androidx.activity.compose.BackHandler(enabled = query.isNotEmpty()) { input = ""; search("") }
+    /** A withheld post: play it with the account, or say what is needed. */
+    fun playWithAccount(post: TelegramPublic.VideoPost) {
+        if (opening != null) return
+        opening = post.id
+        scope.launch {
+            val title = post.text.lineSequence().firstOrNull()?.take(80)?.ifBlank { null } ?: "@$channel · ${post.id}"
+            val r = dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.request(context, channel, post.id, title, post.thumbUrl)
+            opening = null
+            when (r) {
+                is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Ok -> { appOnly = null; onPlay(r.request) }
+                dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.NeedsSignIn -> {
+                    appOnlyText = dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.NEEDS_SIGN_IN; appOnly = post
+                }
+                is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Unavailable -> { appOnlyText = TelegramPublic.Messages.APP_ONLY + " " + r.reason; appOnly = post }
+                is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Failed -> { appOnlyText = r.message; appOnly = post }
+            }
+        }
+    }
+
+    androidx.activity.compose.BackHandler(enabled = query.isNotEmpty() || searchOpen) { if (query.isNotEmpty()) { input = ""; search("") } else searchOpen = false }
 
     Column(Modifier.fillMaxSize().background(p.background).testTag("tg_channel")) {
         SubPageHeader(
             title = title,
-            subtitle = "@$channel · public posts" + if (withheld > 0) " · $withheld only in the Telegram app" else "",
+            subtitle = "@$channel · public posts" + if (withheld > 0) " · " + dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.withheld(withheld, signedIn) else "",
             onBack = onBack,
-        )
-        androidx.compose.material3.OutlinedTextField(
+        ) {
+            // GROUP F: search is an icon that opens the box (Group C pattern), not a field that is always there.
+            dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, {
+                searchOpen = !searchOpen
+                if (!searchOpen && query.isNotEmpty()) { input = ""; search("") }
+            }, "tg_search_toggle", "Search this channel")
+        }
+        if (searchOpen) androidx.compose.material3.OutlinedTextField(
             value = input, onValueChange = { input = it }, singleLine = true,
             placeholder = { Text("Search this channel") },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
@@ -192,18 +230,26 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
             appOnly?.let { post ->
                 item(key = "app_only") {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)).padding(12.dp).testTag("tg_app_only")) {
-                        Text(TelegramPublic.Messages.APP_ONLY, color = p.textPrimary, fontSize = 13.sp)
+                        Text(appOnlyText, color = p.textPrimary, fontSize = 13.sp, modifier = Modifier.testTag("tg_app_only_text"))
                         Row {
-                            TextButton(onClick = { openInTelegram(post) }, modifier = Modifier.testTag("tg_open_app")) { Text("Open in Telegram") }
-                            TextButton(onClick = { appOnly = null }) { Text("Close") }
+                            if (onSignIn != null) {
+                                androidx.compose.material3.Button(
+                                    onClick = onSignIn,
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
+                                    modifier = Modifier.heightIn(min = 48.dp).testTag("tg_sign_in_play"),
+                                ) { Text(if (signedIn) "Open my account" else "Sign in to play") }
+                            } else {
+                                TextButton(onClick = { openInTelegram(post) }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_open_app")) { Text("Open in Telegram") }
+                            }
+                            TextButton(onClick = { appOnly = null }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_app_only_close")) { Text("Close") }
                         }
                     }
                 }
             }
             note?.let { n -> item(key = "note") { Text(n, color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.testTag("tg_note")) } }
             items(posts, key = { it.id }) { post ->
-                TelegramPostRow(post, isNew = post.id in newIds) {
-                    if (!post.playable) { appOnly = post; return@TelegramPostRow }
+                TelegramPostRow(post, isNew = post.id in newIds, signedIn = signedIn, opening = opening == post.id) {
+                    if (!post.playable) { playWithAccount(post); return@TelegramPostRow }
                     // UP-NEXT-1: "Up next" on the watch page is this channel's other videos.
                     dev.asfakul.yumeiro.ui.screens.watch.StreamWatch.setQueue("@$channel", posts.filter { it.playable }.map { tgRequest(it, channel) })
                     onPlay(tgRequest(post, channel))
@@ -255,12 +301,12 @@ private fun TelegramChannelHeader(page: TelegramPublic.Page) {
 }
 
 @Composable
-private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, onClick: () -> Unit) {
+private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, signedIn: Boolean, opening: Boolean, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     val label = post.text.lineSequence().firstOrNull()?.ifBlank { null } ?: "Video ${post.id}"
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceContainerHigh)
-            .clickable(onClickLabel = if (post.playable) "Play" else "Why it can't play", role = Role.Button, onClick = onClick)
+            .clickable(onClickLabel = if (post.playable || signedIn) "Play" else "Sign in to play", role = Role.Button, onClick = onClick)
             .padding(10.dp).testTag("tg_post_${post.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -279,7 +325,7 @@ private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, onCl
             }
             Text(label, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(post.date?.take(10), if (post.playable) null else "Only in the Telegram app").joinToString(" · ").ifBlank { "Post ${post.id}" },
+                listOfNotNull(post.date?.take(10), when { post.playable -> null; opening -> "Opening with your account…"; else -> dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.rowNote(signedIn) }).joinToString(" · ").ifBlank { "Post ${post.id}" },
                 color = if (post.playable) p.textTertiary else p.textSecondary, fontSize = 12.sp, maxLines = 1,
             )
         }

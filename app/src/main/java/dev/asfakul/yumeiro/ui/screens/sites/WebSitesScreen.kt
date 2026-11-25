@@ -94,6 +94,8 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
+    // GROUP F: the Telegram page is its own module now (TelegramHome); `only` never changes for a screen.
+    if (only == SavedSites.Kind.TELEGRAM) { TelegramHome(onBack); return }
     val context = LocalContext.current
     val p = LocalMtPalette.current
     LaunchedEffect(Unit) { SavedSites.init(context) }
@@ -488,7 +490,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SiteRow(
+internal fun SiteRow(
     site: SavedSites.Site, onOpen: () -> Unit, onRename: () -> Unit, onRemove: () -> Unit,
     onPin: () -> Unit = {}, onMove: ((up: Boolean) -> Unit)? = null, onDuplicate: (() -> Unit)? = null, modifier: Modifier = Modifier,
 ) {

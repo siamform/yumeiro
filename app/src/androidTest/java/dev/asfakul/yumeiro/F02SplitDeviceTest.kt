@@ -62,11 +62,14 @@ class F02SplitDeviceTest {
                 val otherPage = if (c.page == "telegram_screen") "websites_screen" else "telegram_screen"
                 val alone = opened && !has(otherPage)
                 var refused = false
-                // WEB-ADD-1: with saved sites the Websites add card opens from "+".
-                if (opened && !waitFor("site_add_field", 2_000) && has("site_add_open")) rule.onNodeWithTag("site_add_open", true).performClick()
-                if (opened && waitFor("site_add_field", 5_000)) {
-                    rule.onNodeWithTag("site_add_field", true).performTextInput(c.other)
-                    rule.onNodeWithTag("site_add", true).performClick()
+                // WEB-ADD-1: with saved sites the Websites add card opens from "+". GROUP F: Telegram adds through its "+" sheet.
+                val tg = c.page == "telegram_screen"
+                val field = if (tg) "tg_add_field" else "site_add_field"
+                if (opened && !tg && !waitFor(field, 2_000) && has("site_add_open")) rule.onNodeWithTag("site_add_open", true).performClick()
+                if (opened && tg && has("tg_add_open")) rule.onNodeWithTag("tg_add_open", true).performClick()
+                if (opened && waitFor(field, 5_000)) {
+                    rule.onNodeWithTag(field, true).performTextInput(c.other)
+                    rule.onNodeWithTag(if (tg) "tg_add_add" else "site_add", true).performClick()
                     refused = runCatching { rule.waitUntil(5_000) { hasText(c.hint) }; true }.getOrDefault(false)
                 }
                 FirstRun.shot("f02s_${c.id}")
