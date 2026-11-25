@@ -31,6 +31,7 @@ internal class GitHubReleaseClient(
     private val endpoint: String = UpdateConfig.latestReleaseApi,
     /** Round 12: which app's files to pick (TV or phone); asked each check. */
     private val wantTv: () -> Boolean = { dev.asfakul.yumeiro.Edition.isTv },
+    private val beta: Boolean = UpdateConfig.isBeta,
 ) {
 
     class UpdateCheckException(message: String, cause: Throwable? = null) : IOException(message, cause)
@@ -39,13 +40,13 @@ internal class GitHubReleaseClient(
         var authError: Throwable? = null
         if (token.isNotBlank()) {
             try {
-                return@withContext withTrustedChecksum(parseRelease(get(endpoint, token), UpdateSource.AUTHENTICATED, tv = wantTv()))
+                return@withContext withTrustedChecksum(parseRelease(forChannel(get(endpoint, token)), UpdateSource.AUTHENTICATED, tv = wantTv()))
             } catch (t: Throwable) {
                 authError = t
             }
         }
         try {
-            withTrustedChecksum(parseRelease(get(endpoint, null), UpdateSource.PUBLIC, tv = wantTv()))
+            withTrustedChecksum(parseRelease(forChannel(get(endpoint, null)), UpdateSource.PUBLIC, tv = wantTv()))
         } catch (t: Throwable) {
             val reason = when {
                 t is HttpStatusException && t.code == 404 ->
@@ -58,6 +59,9 @@ internal class GitHubReleaseClient(
             throw UpdateCheckException(reason, authError ?: t)
         }
     }
+
+    /** Group I: the Beta endpoint returns a list; the Stable one already is the release object. */
+    private fun forChannel(json: String): String = if (beta) pickBetaRelease(json) else json
 
     /**
      * Trust gate for a release: the APK must live in the official repository and its SHA-256 must
@@ -226,6 +230,22 @@ internal class GitHubReleaseClient(
 
         fun deviceAbis(): List<String> = runCatching { android.os.Build.SUPPORTED_ABIS.toList() }.getOrDefault(emptyList())
 
+        /**
+         * Group I: the newest published Beta release in a GitHub `/releases` list (newest first): not a draft, tag
+         * `beta-v…`. Stable `v…` releases in the same list are skipped, so a Beta install never moves to Stable.
+         */
+        fun pickBetaRelease(json: String): String {
+            val list = runCatching { org.json.JSONArray(json) }.getOrNull()
+                ?: throw UpdateCheckException("The update service sent an unexpected reply.")
+            for (i in 0 until list.length()) {
+                val r = list.optJSONObject(i) ?: continue
+                if (r.optBoolean("draft")) continue
+                if (!r.optString("tag_name").startsWith(UpdateConfig.BETA_TAG_PREFIX)) continue
+                return r.toString()
+            }
+            throw UpdateCheckException("No Beta release has been published yet.")
+        }
+
         /** Parses a GitHub `release` JSON object. Exposed for unit tests. */
         fun parseRelease(json: String, source: UpdateSource, abis: List<String> = deviceAbis(), tv: Boolean = false): ReleaseInfo {
             val obj = JSONObject(json)
@@ -253,7 +273,7 @@ internal class GitHubReleaseClient(
             val digest = apk.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")
             return ReleaseInfo(
                 tagName = tag,
-                versionName = tag.removePrefix("v").removePrefix("V"),
+                versionName = tag.removePrefix("beta-").removePrefix("v").removePrefix("V"),
                 versionCode = VERSION_CODE_MARKER.find(body)?.groupValues?.get(1)?.toLongOrNull(),
                 title = obj.optString("name").ifBlank { tag },
                 notes = body.replace(VERSION_CODE_MARKER, "").trim(),

@@ -56,6 +56,39 @@ These are on the `r21-major-list` branch and ship only after they pass device te
 - **Video rotation** (90 / 180 / 270 and reset, no reload), **profile pictures** from your gallery,
   a new **splash screen** for light and dark, **loading skeletons** on every feed, and a labelled **bottom bar**.
 
+## Yumeiro Beta
+
+**Yumeiro Beta** is the experimental release channel. It gets new features and fixes before Yumeiro (Stable), so it
+**may contain unfinished features and bugs**. Use Stable if you want the app that has passed every check.
+
+| | Stable | Beta |
+|---|---|---|
+| Branch | `main` | `beta-main` (protected) |
+| Android package | `dev.asfakul.yumeiro` | `dev.asfakul.yumeiro.beta` |
+| GitHub release | tag `vX.Y.Z`, marked **Latest** | tag `beta-vX.Y.Z-beta.N`, marked **Pre-release** |
+| Phone file | `release-Yumeiro-vX.Y.Z.apk` (+ per-processor files) | `Yumeiro-Beta-vX.Y.Z-beta.N.apk` |
+| TV file | `Yumeiro-TV-vX.Y.Z.tv.apk` | `Yumeiro-Beta-TV-vX.Y.Z-beta.N.tv.apk` |
+| In-app updates from | the latest Stable release | the newest Beta pre-release |
+| Built by | `.github/workflows/release.yml` | `.github/workflows/release-beta.yml` |
+
+**Get the Beta APK:** open [Releases](https://github.com/siamform/yumeiro/releases), find a release marked
+**Pre-release** whose tag starts with `beta-v`, and download `Yumeiro-Beta-v….apk` (phones, tablets) or
+`Yumeiro-Beta-TV-v….tv.apk` (Android TV, Google TV, Fire TV). Each push to `beta-main` builds and checks a Beta; it is
+published as a pre-release only while the owner has Beta publishing switched on, so there may be none yet.
+
+**Install next to Stable:** Beta is a different Android app (`dev.asfakul.yumeiro.beta`), so installing it never
+replaces Yumeiro and installing Yumeiro never replaces Beta. Both can be on one device. Allow "Install unknown apps"
+for your browser or file manager as for Stable. Both are signed with the same Yumeiro release key (see
+[Verify a release](#verify-a-release); the certificate is the same for both channels).
+
+**Separate data:** Beta has its own library, settings, accounts, downloads and history. Nothing is shared with Stable;
+use Settings → Backup & restore to move data between them if you want to. Updates stay in their channel: Beta updates only to
+newer Betas, Stable only to newer Stable releases.
+
+Good to know: both apps answer the `yumeiro://` sign-in links (AniList, MyAnimeList). With both installed, Android
+asks which app should finish a sign-in; pick the one you started it from. Instant notices (push) in Beta work only
+after the Beta package is added to the project's Firebase setup.
+
 ## Why Yumeiro?
 
 Most people juggle four apps: a music player, a video player, YouTube, and something for anime or live TV.

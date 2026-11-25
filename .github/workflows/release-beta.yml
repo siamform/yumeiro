@@ -1,0 +1,240 @@
+name: Release Beta
+
+# Group I: the Yumeiro Beta channel, built from beta-main only.
+#   * Same repository, same secrets, same constant release keystore and the same certificate check as release.yml.
+#   * Package dev.asfakul.yumeiro.beta (gradle.properties: yumeiro.channel=beta), so it installs next to Stable.
+#   * Version: the next Stable version from compute-version.sh plus "-beta.<run>", versionCode = code * 10000 + run.
+#     Nothing is committed back; version.properties on beta-main stays as it is.
+#   * Tag beta-v<version> and a GitHub *pre-release*: it never becomes "latest", so the Stable updater
+#     (/releases/latest) and compute-version.sh (tags v[0-9]*) never see it. File names start with Yumeiro-Beta.
+#   * Publishing needs the repository variable YUMEIRO_BETA_PUBLISH=true (owner's switch). Without it the run still
+#     builds, tests, checks the signature and package, and keeps the APKs as a workflow artifact.
+
+on:
+  push:
+    branches: [beta-main]
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - ".github/release-signing-cert.sha256"
+      - ".github/workflows/release-beta.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-beta
+  cancel-in-progress: false
+
+env:
+  APP_NAME: Yumeiro-Beta
+  BETA_PACKAGE: dev.asfakul.yumeiro.beta
+  TZ: UTC
+  LC_ALL: C.UTF-8
+
+jobs:
+  beta:
+    name: Build & publish Beta
+    permissions:
+      contents: write # tag + pre-release (only when YUMEIRO_BETA_PUBLISH is true)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # Beta never builds from main or any other branch, not even by hand.
+    if: ${{ github.ref == 'refs/heads/beta-main' }}
+
+    steps:
+      - name: Checkout (full history for tags & notes)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21.0.13"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Check this is the Beta branch setup
+        run: |
+          grep -qx 'yumeiro.channel=beta' gradle.properties || { echo "::error::gradle.properties has no yumeiro.channel=beta"; exit 1; }
+
+      - name: Compute Beta version
+        id: version
+        run: |
+          bash .github/scripts/compute-version.sh > "$RUNNER_TEMP/version.log"
+          cat "$RUNNER_TEMP/version.log"
+          base=$(grep -E '^VERSION_NAME=' version.properties | cut -d= -f2 | tr -d '[:space:]')
+          code=$(grep -E '^VERSION_CODE=' version.properties | cut -d= -f2 | tr -d '[:space:]')
+          n=${{ github.run_number }}
+          [ "$n" -lt 10000 ] || { echo "::error::run number $n does not fit the Beta versionCode scheme"; exit 1; }
+          name="${base}-beta.${n}"
+          bcode=$(( code * 10000 + n ))
+          sed -i -E "s/^VERSION_NAME=.*/VERSION_NAME=$name/; s/^VERSION_CODE=.*/VERSION_CODE=$bcode/" version.properties
+          prev=$(git tag --list 'beta-v*' --sort=-creatordate | head -1 || true)
+          [ -n "$prev" ] || prev=$(git tag --list 'v[0-9]*' --sort=-v:refname | head -1 || true)
+          echo "Beta version : $name ($bcode), previous tag ${prev:-<none>}"
+          { echo "version_name=$name"; echo "version_code=$bcode"; echo "tag=beta-v$name"; echo "previous_tag=$prev"; } >> "$GITHUB_OUTPUT"
+
+      - name: Restore constant release keystore
+        env:
+          MT_KEYSTORE_BASE64: ${{ secrets.MT_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$MT_KEYSTORE_BASE64" ]; then
+            echo "::error::MT_KEYSTORE_BASE64 secret is missing. Refusing to sign with a random key."
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$MT_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "MT_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Cache Robolectric Android jars
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: robolectric-
+
+      - name: Build signed Beta APKs
+        env:
+          MT_KEYSTORE_PASSWORD: ${{ secrets.MT_KEYSTORE_PASSWORD }}
+          MT_KEY_ALIAS: ${{ secrets.MT_KEY_ALIAS }}
+          MT_KEY_PASSWORD: ${{ secrets.MT_KEY_PASSWORD }}
+          ANILIST_CLIENT_ID: ${{ secrets.ANILIST_CLIENT_ID }}
+          MAL_CLIENT_ID: ${{ secrets.MAL_CLIENT_ID }}
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LRCLIB_APP_ID: ${{ secrets.LRCLIB_APP_ID }}
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+          YUMEIRO_TG_API_ID: ${{ secrets.YUMEIRO_TG_API_ID }}
+          YUMEIRO_TG_API_HASH: ${{ secrets.YUMEIRO_TG_API_HASH }}
+          YUMEIRO_FCM_PROJECT_ID: ${{ secrets.YUMEIRO_FCM_PROJECT_ID }}
+          YUMEIRO_FCM_SENDER_ID: ${{ secrets.YUMEIRO_FCM_SENDER_ID }}
+          YUMEIRO_FCM_API_KEY: ${{ secrets.YUMEIRO_FCM_API_KEY }}
+          YUMEIRO_FCM_APP_ID: ${{ secrets.YUMEIRO_FCM_APP_ID }}
+          MT_UPDATER_TOKEN: ${{ github.event.repository.private && secrets.MT_UPDATER_TOKEN || '' }}
+        run: |
+          ./gradlew --no-configuration-cache --no-build-cache assembleMobileRelease assembleTvRelease
+          tests() { ./gradlew --no-configuration-cache --no-build-cache testMobileDebugUnitTest 2>&1 | tee "$RUNNER_TEMP/unit-tests.log"; return "${PIPESTATUS[0]}"; }
+          if ! tests; then
+            if grep -q 'MavenArtifactFetcher' "$RUNNER_TEMP/unit-tests.log"; then
+              echo "::warning::Robolectric jar download failed (network); retrying the unit tests once"
+              sleep 30
+              tests
+            else
+              exit 1
+            fi
+          fi
+
+      - name: Remove keystore from the runner
+        if: always()
+        run: |
+          if [ -n "${MT_KEYSTORE_PATH:-}" ] && [ -f "$MT_KEYSTORE_PATH" ]; then
+            shred -u "$MT_KEYSTORE_PATH" 2>/dev/null || rm -f "$MT_KEYSTORE_PATH"
+          fi
+          echo "MT_KEYSTORE_PATH=" >> "$GITHUB_ENV"
+
+      - name: Verify signature, package & rename APKs
+        id: apk
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          OUT=app/build/outputs/apk/mobile/release
+          TV_OUT=app/build/outputs/apk/tv/release
+          EXPECTED=$(tr -d '[:space:]' < .github/release-signing-cert.sha256)
+          V="${{ steps.version.outputs.version_name }}"
+          CODE="${{ steps.version.outputs.version_code }}"
+          NAME="${APP_NAME}-v${V}.apk"
+          TV_NAME="${APP_NAME}-TV-v${V}.tv.apk"
+          mkdir -p dist
+          check() {
+            ACTUAL=$("$BT/apksigner" verify --print-certs "$1" | grep -m1 'certificate SHA-256 digest' | awk '{print $NF}')
+            echo "Signing cert of $1: $ACTUAL"
+            [ "$ACTUAL" = "$EXPECTED" ] || { echo "::error::$1 is not signed with the constant release key"; exit 1; }
+            BADGING=$("$BT/aapt2" dump badging "$1")
+            echo "$BADGING" | grep -q "application-debuggable" && { echo "::error::$1 is debuggable"; exit 1; }
+            # The whole point of the channel: a different Android package, so Beta never replaces Stable.
+            echo "$BADGING" | grep -q "^package: name='${BETA_PACKAGE}' versionCode='${CODE}' versionName='${V}'" \
+              || { echo "::error::$1 is not ${BETA_PACKAGE} ${V} (${CODE})"; echo "$BADGING" | head -1; exit 1; }
+            echo "$BADGING" | head -1
+          }
+          SRC=$(ls $OUT/*.apk 2>/dev/null | grep -v unsigned | head -1)
+          TV_SRC=$(ls $TV_OUT/*.apk 2>/dev/null | grep -v unsigned | head -1)
+          [ -n "$SRC" ] && [ -n "$TV_SRC" ] || { echo "::error::No signed APK produced"; exit 1; }
+          check "$SRC"; cp "$SRC" "dist/$NAME"
+          check "$TV_SRC"; cp "$TV_SRC" "dist/$TV_NAME"
+          for F in "dist/$NAME" "dist/$TV_NAME"; do
+            for ABI in arm64-v8a armeabi-v7a x86 x86_64; do
+              python3 -c "import sys,zipfile; n=zipfile.ZipFile(sys.argv[1]).namelist(); sys.exit(0 if any(x.startswith('lib/'+sys.argv[2]+'/') for x in n) else 1)" "$F" "$ABI" \
+                || { echo "::error::$F has no lib/$ABI"; exit 1; }
+            done
+          done
+          SHA=$(sha256sum "dist/$NAME" | awk '{print $1}')
+          (cd dist && sha256sum *.apk > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Dex register budget (FINAL-49, ART verifier safety)
+        run: |
+          python3 -m pip install --quiet "androguard==4.1.4"
+          for F in dist/*.apk; do python3 scripts/dex_register_budget.py "$F" 224; done
+
+      - name: Generate Beta release notes
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          bash .github/scripts/release-notes.sh \
+            "${{ steps.version.outputs.version_name }}" \
+            "${{ steps.version.outputs.version_code }}" \
+            "${{ steps.version.outputs.previous_tag }}" \
+            "${{ steps.apk.outputs.name }}" \
+            "${{ steps.apk.outputs.sha }}" > "$RUNNER_TEMP/notes.md"
+          {
+            echo "> **Yumeiro Beta** is the experimental channel. It may contain unfinished features and bugs."
+            echo "> Package \`${BETA_PACKAGE}\`: it installs next to Yumeiro (Stable) and keeps its own data."
+            echo
+            # One universal APK per edition on Beta (no per-processor files), so the Stable install line is replaced.
+            sed -E "s/^## Yumeiro v/## Yumeiro Beta v/; s#\.\.\.v${{ steps.version.outputs.version_name }}#...${TAG}#; s#^\*\*Install:\*\*.*#**Install:** \`${{ steps.apk.outputs.name }}\` for phones and tablets, \`${APP_NAME}-TV-v${{ steps.version.outputs.version_name }}.tv.apk\` for Android TV and Fire TV. Android 9 (phones) or Android 7.0 (TV) or newer. Installing it does not replace Yumeiro (Stable).#" "$RUNNER_TEMP/notes.md"
+          } > dist/RELEASE_NOTES.md
+          cat dist/RELEASE_NOTES.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the Beta APKs (workflow artifact)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: yumeiro-beta-${{ steps.version.outputs.version_name }}
+          path: dist/
+          retention-days: 14
+
+      - name: Tag & publish Beta pre-release
+        if: ${{ vars.YUMEIRO_BETA_PUBLISH == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          case "$TAG" in beta-v*) ;; *) echo "::error::Beta tag must start with beta-v ($TAG)"; exit 1 ;; esac
+          git tag -a "$TAG" -m "Yumeiro Beta $TAG"
+          git push origin "$TAG"
+          gh release create "$TAG" \
+            dist/*.apk \
+            dist/SHA256SUMS.txt \
+            --title "Yumeiro Beta ${{ steps.version.outputs.version_name }}" \
+            --notes-file dist/RELEASE_NOTES.md \
+            --verify-tag \
+            --prerelease \
+            --latest=false
+
+      - name: Not published
+        if: ${{ vars.YUMEIRO_BETA_PUBLISH != 'true' }}
+        run: echo "::notice::Built and verified only. Set the repository variable YUMEIRO_BETA_PUBLISH=true to publish Beta pre-releases."

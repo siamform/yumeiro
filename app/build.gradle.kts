@@ -104,6 +104,14 @@ fun fcmClient(pkg: String, suffix: String): Pair<String, String> {
 
 fun buildConfigSafe(value: String): String = value.trim().filter { it.isLetterOrDigit() || it == '-' || it == '_' || it == '.' }
 
+/**
+ * Group I (beta-main only): `yumeiro.channel=beta` in gradle.properties makes the release build the Beta app,
+ * `dev.asfakul.yumeiro.beta`, which installs next to the Stable app and updates only from Beta pre-releases.
+ * Absent or anything else = Stable (unchanged package, `/releases/latest`).
+ */
+val updateChannel: String = if (providers.gradleProperty("yumeiro.channel").orNull?.trim() == "beta") "beta" else "stable"
+val releasePackage: String = if (updateChannel == "beta") "dev.asfakul.yumeiro.beta" else "dev.asfakul.yumeiro"
+
 val yumeiroAbis = listOf("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
 val abiSplits = providers.gradleProperty("yumeiro.abiSplits").orNull == "true"
 
@@ -128,6 +136,7 @@ android {
 
     buildConfigField("String", "UPDATE_REPO_OWNER", "\"$updateRepoOwner\"")
     buildConfigField("String", "UPDATE_REPO_NAME", "\"$updateRepoName\"")
+    buildConfigField("String", "UPDATE_CHANNEL", "\"$updateChannel\"")
     buildConfigField("int[]", "UPDATER_TOKEN_BYTES", "new int[]{$obfuscatedToken}")
     buildConfigField("int", "UPDATER_TOKEN_KEY", "$obfuscationKey")
     buildConfigField("int[]", "INTEGRITY_BYTES", "new int[]{$obfuscatedCert}")
@@ -186,7 +195,9 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = if (hasReleaseSigning) signingConfigs.getByName("release") else null
       buildConfigField("boolean", "AUTO_UPDATE_CHECK", "true")
-      fcmClient("dev.asfakul.yumeiro", "").let { (id, key) ->
+      // Group I: the Beta release is its own Android app (data, preferences and update identity apart).
+      if (updateChannel == "beta") applicationIdSuffix = ".beta"
+      fcmClient(releasePackage, "").let { (id, key) ->
         buildConfigField("String", "FCM_APP_ID", "\"$id\"")
         buildConfigField("String", "FCM_API_KEY", "\"$key\"")
       }
