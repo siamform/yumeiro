@@ -137,7 +137,7 @@ class GroupIUpdateDownloadDeviceTest {
         val seen = LinkedHashSet<String>()
         val bad = LinkedHashSet<String>()
         val bytes = ArrayList<Long>()
-        var cut = false; var cutWorked = false; var sawWaiting = false; var resumedAfter = false
+        var cut = false; var cutDone = false; var cutWorked = false; var sawWaiting = false; var resumedAfter = false
         var end: UpdateState? = null
         val until = System.currentTimeMillis() + 420_000
         while (System.currentTimeMillis() < until) {
@@ -149,13 +149,16 @@ class GroupIUpdateDownloadDeviceTest {
                 if (s.downloadedBytes > 0 && (bytes.isEmpty() || bytes.last() != s.downloadedBytes)) bytes += s.downloadedBytes
                 if (lines.any { it == "Waiting for a connection…" }) { if (!sawWaiting) FirstRun.shot("groupi_update_waiting"); sawWaiting = true }
                 if (sawWaiting && !cut && s.stage.name == "DOWNLOADING" && lines.firstOrNull() == "Downloading update…") resumedAfter = true
-                if (!cut && s.totalBytes > 0 && s.downloadedBytes > s.totalBytes / 5 && s.downloadedBytes < s.totalBytes / 2) {
+                if (!cut && !cutDone && s.totalBytes > 0 && s.downloadedBytes > s.totalBytes / 5 && s.downloadedBytes < s.totalBytes / 2) {
                     FirstRun.shot("groupi_update_downloading")
                     network(false); cut = true
                     cutWorked = runCatching { rule.waitUntil(10_000) { !online() }; true }.getOrDefault(false)
                     log("network cut at ${s.downloadedBytes} worked=$cutWorked")
                     if (!cutWorked) { network(true); cut = false; bytes.clear(); bytes += s.downloadedBytes }
                     else {
+                        // One cut per run: api33-lowram run 45717326746 cut again on every loop pass after the network came
+                        // back (the byte count was still between 20 % and 50 %), so the download never had a chance to go on.
+                        cutDone = true
                         val waited = runCatching { rule.waitUntil(120_000) { popupLines().any { it == "Waiting for a connection…" } || mgr.state.value is UpdateState.Failed }; true }.getOrDefault(false)
                         log("after cut: waited=$waited lines=${popupLines()} state=${mgr.state.value::class.simpleName}")
                         popupLines().filter { "github" in it.lowercase() || "connecting" in it.lowercase() }.forEach { bad += it }
