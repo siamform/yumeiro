@@ -71,10 +71,18 @@ object ForeignViewGuard {
         })
     }
 
+    /**
+     * Pure: a class name that belongs to Yumeiro's own UI stack. A11Y-EXT-1e (probe 45537866533): enableEdgeToEdge()
+     * adds a 0 × 0 androidx.activity view to the decor; the guard quieted it and logged it as "added by an
+     * extension", which was wrong. Quieting it did no harm, but the log must only name extension views.
+     */
+    fun isOwnClass(name: String): Boolean =
+        name.startsWith("androidx.compose.ui.") || name.startsWith("androidx.activity.") || name.startsWith("com.android.internal.")
+
     /** Yumeiro's Compose root, and the window's own parts (the decor's content column and bar backgrounds). */
-    private fun isOwn(v: View) = v.javaClass.name.startsWith("androidx.compose.ui.") ||
+    private fun isOwn(v: View) = isOwnClass(v.javaClass.name) ||
         v.id == android.R.id.content || v.id == android.R.id.statusBarBackground || v.id == android.R.id.navigationBarBackground ||
-        v.javaClass.name.startsWith("com.android.internal.") || (v is ViewGroup && v.findViewById<View>(android.R.id.content) != null)
+        (v is ViewGroup && v.findViewById<View>(android.R.id.content) != null)
 
     private fun check(v: View, w: Int, h: Int) {
         if (!shouldQuiet(false, w, h) || v.getTag(TAG_KEY) == true) return
