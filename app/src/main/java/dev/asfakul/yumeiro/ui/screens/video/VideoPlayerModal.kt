@@ -76,6 +76,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -1965,10 +1966,17 @@ private fun VideoPlayerModalContent(
                         .padding(horizontal = 16.dp, vertical = 8.dp).testTag("video_zoom_hint"),
                 )
             }
+            // ROT-1f: an online player puts its action chips (Source, More, ...) at statusBars + 60 dp in full screen
+            // (OnlinePlayerOverlay). The reset pills went at 56 dp, under those chips, so a tap on "Reset rotation"
+            // hit "Source" / "More" (device-check 45477633204, shot rot_fs_reset_pill). Below the chips there.
+            // Same top inset as that chip row (it uses statusBarsPadding too); elsewhere the pills stay at 56 dp.
+            val belowChips = overlay != null && !LocalPlayerDocked.current
+            val pillTop = if (belowChips) 104.dp else 56.dp
+            val pillInset = if (belowChips) Modifier.statusBarsPadding() else Modifier
             androidx.compose.animation.AnimatedVisibility(
                 visible = videoZoom.zoomed && isControlsVisible && !isScreenLocked && !chrome.zoomHintVisible,
                 enter = fadeIn(), exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
+                modifier = Modifier.align(Alignment.TopCenter).then(pillInset).padding(top = pillTop),
             ) {
                 Text(
                     "Reset zoom · ${dev.asfakul.yumeiro.player.VideoZoom.label(videoZoom.scale)}",
@@ -1981,7 +1989,7 @@ private fun VideoPlayerModalContent(
             androidx.compose.animation.AnimatedVisibility(
                 visible = chrome.rotation != 0 && !videoZoom.zoomed && isControlsVisible && !isScreenLocked,
                 enter = fadeIn(), exit = fadeOut(),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 56.dp),
+                modifier = Modifier.align(Alignment.TopCenter).then(pillInset).padding(top = pillTop),
             ) {
                 Text(
                     "Reset rotation · ${dev.asfakul.yumeiro.player.VideoRotation.label(chrome.rotation)}",
