@@ -65,11 +65,15 @@ object StreamMediaFactory {
 
     /** Every `setVideoEffects` goes through here so [PlaybackSession] knows the player can't be reused. */
     fun setEffects(player: ExoPlayer, effects: List<androidx.media3.common.Effect>) {
+        effectSets.incrementAndGet()
         if (effects.isNotEmpty()) withEffects += player
         player.setVideoEffects(effects)
     }
 
     fun usedEffects(player: ExoPlayer): Boolean = player in withEffects
+
+    /** A4K-3: how many times an effect list was set (each one rebuilds or re-registers the graph). */
+    val effectSets = java.util.concurrent.atomic.AtomicInteger()
 
     /**
      * [uriNow] is the key of the video the player is playing now (headers, DRM): a player reused by
