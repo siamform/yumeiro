@@ -195,6 +195,33 @@ object SavedSites {
         persist(context)
     }
 
+    /**
+     * Owner item 10 (Group E): duplicate a saved site under another address (a mirror domain, a section,
+     * another language). Returns why it can't, or null when the copy was saved. Never replaces a saved site.
+     */
+    fun duplicate(context: Context, input: String, name: String): String? {
+        init(context)
+        duplicateError(_sites.value, input)?.let { return it }
+        return add(context, input, name)
+    }
+
+    /** Why [input] can't be the copy's address, or null. Pure. */
+    fun duplicateError(sites: List<Site>, input: String): String? {
+        val url = normalize(input) ?: return "That doesn't look like a web address"
+        if (kindOf(url) != Kind.WEBSITE) return "A website copy needs a web address"
+        val key = keyOf(url)
+        sites.firstOrNull { keyOf(it.url) == key }?.let { return "Already saved as ${it.name}. Change the address, for example a mirror domain" }
+        return null
+    }
+
+    /** "Name" -> "Name copy", "Name copy" -> "Name copy 2", … (40 chars max). Pure. */
+    fun copyName(name: String, taken: Collection<String>): String {
+        val base = name.trim().ifEmpty { "Website" }.removeSuffix(" copy").take(34)
+        var n = "$base copy"; var i = 2
+        while (n in taken) n = "$base copy ${i++}"
+        return n.take(40)
+    }
+
     /** The saved site for [input] after [add], or null. */
     fun find(input: String): Site? {
         val url = normalize(input) ?: return null

@@ -67,6 +67,20 @@ object ElementBlocker {
         return true
     }
 
+    /** GROUP E (Manage ads): every site with its hidden parts, sites sorted by name. */
+    fun all(context: Context): List<Pair<String, List<String>>> = load(context).entries.filter { it.value.isNotEmpty() }
+        .sortedBy { it.key }.map { it.key to it.value }
+
+    /** GROUP E (Manage ads): stops hiding one part on [site] (a key from [all]). */
+    fun removeRule(context: Context, site: String, selector: String) {
+        val now = load(context)
+        val list = now[site].orEmpty() - selector
+        save(context, if (list.isEmpty()) now - site else now + (site to list))
+    }
+
+    /** GROUP E (Manage ads): shows everything on [site] again (a key from [all]). */
+    fun clearSite(context: Context, site: String) { save(context, load(context) - site) }
+
     fun clear(context: Context, url: String) {
         val site = siteOf(url) ?: return
         save(context, load(context) - site)

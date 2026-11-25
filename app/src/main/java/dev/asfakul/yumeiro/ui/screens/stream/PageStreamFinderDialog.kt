@@ -455,7 +455,16 @@ fun PageStreamFinderDialog(
     onMinimize: (() -> Unit)? = null,
     /** WEB-BAR-1 (owner list 5): Yumeiro's browser for the Websites page: bottom bar, element blocker, visited sites. */
     browser: Boolean = false,
+    /** GROUP E2: website tabs. Count for the bar's tab button, the tab switcher, a link to another site in a new tab, close this tab. */
+    tabCount: Int = 0,
+    onTabs: (() -> Unit)? = null,
+    onNewTab: ((String) -> Unit)? = null,
+    onCloseTab: (() -> Unit)? = null,
+    /** GROUP E2: drawn inside the page's window (the tab switcher), so it sits above the page, not under it. */
+    overlay: @Composable () -> Unit = {},
 ) {
+    val newTabNow = androidx.compose.runtime.rememberUpdatedState(onNewTab)
+    var manageAds by remember { mutableStateOf(false) }
     val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
     var autoActive by remember(pageUrl) { mutableStateOf(auto) }
@@ -612,6 +621,8 @@ fun PageStreamFinderDialog(
         if (!browser || view == null || url == null) return
         if (!dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(view)) return // ADCHAIN-2: filter off for this page
         view.evaluateJavascript(dev.asfakul.yumeiro.online.web.ElementBlocker.styleJs(dev.asfakul.yumeiro.online.web.ElementBlocker.css(dev.asfakul.yumeiro.online.web.ElementBlocker.rulesFor(appContext, url))), null)
+        // GROUP E3: see-through click-catchers, anti-ad-blocker walls and the scroll lock they leave.
+        view.evaluateJavascript(dev.asfakul.yumeiro.online.web.PageAnnoyances.CLEAN_JS, null)
     }
     // TB-PREVIEW-1 (owner list 19): TeraBox captures that turned out to be the 30-second preview (never auto-played again),
     // and the TeraBox share this page belongs to (resolved through TeraBox's API once the user has signed in here).
@@ -809,7 +820,8 @@ fun PageStreamFinderDialog(
                         Text(PlatformRules.hostOf(currentUrl) ?: currentUrl, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = TextSecondary) }
-                    IconButton(
+                    // GROUP E2: in the browser the ad filter and Reload live in the bottom bar's menu.
+                    if (!browser) IconButton(
                         onClick = { togglePageFilter() },
                         modifier = Modifier.testTag("page_filter_toggle").semantics { stateDescription = if (filterOn) "On" else "Off" },
                     ) {
@@ -819,7 +831,7 @@ fun PageStreamFinderDialog(
                             tint = if (filterOn) SpotifyGreen else TextSecondary,
                         )
                     }
-                    IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
+                    if (!browser) IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
                 if (showHint && !autoActive) PageFinderHint(autoNote ?: reason, onHide = { showHint = false })
@@ -899,8 +911,10 @@ fun PageStreamFinderDialog(
                                         val link = hit?.type == WebView.HitTestResult.SRC_ANCHOR_TYPE || hit?.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE
                                         val target = hit?.extra?.takeIf { link }
                                         val filter = dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(v)
-                                        return when (dev.asfakul.yumeiro.online.web.PopupPolicy.window(v.url, target, isUserGesture, link, filter, chainActiveNow.value)) {
+                                        val newTab = newTabNow.value
+                                        return when (dev.asfakul.yumeiro.online.web.PopupPolicy.window(v.url, target, isUserGesture, link, filter, chainActiveNow.value, tabs = newTab != null)) {
                                             dev.asfakul.yumeiro.online.web.PopupPolicy.Decision.OPEN_HERE -> { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(v, target!!, emptyMap()); false }
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Decision.NEW_TAB -> { main.post { newTab?.invoke(target!!) }; false }
                                             dev.asfakul.yumeiro.online.web.PopupPolicy.Decision.CAPTURE -> {
                                                 // Filter off, a script window from a tap: a hidden helper learns where it goes, then this page opens it.
                                                 val helper = WebView(v.context)
@@ -1046,9 +1060,20 @@ fun PageStreamFinderDialog(
                         if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote("No browser on this phone can open the page", null, null)
                     },
                     accent = SpotifyGreen,
+                    filterOn = filterOn, onFilter = { togglePageFilter() }, onManageAds = { manageAds = true },
+                    tabCount = tabCount, onTabs = onTabs, onCloseTab = onCloseTab,
                 )
             }
         }
+        if (manageAds) {
+            var changed by remember { mutableStateOf(false) }
+            dev.asfakul.yumeiro.ui.screens.sites.ManageAdsDialog(onDismiss = {
+                manageAds = false
+                // Show again what was un-hidden: the page's style sheet is rebuilt from the saved rules.
+                if (changed) webViewRef?.reload()
+            }, onChanged = { changed = true })
+        }
+        overlay()
     }
 }
 

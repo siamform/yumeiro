@@ -84,8 +84,9 @@ class WebsitesPageTest {
         click("recent_save")
         assertTrue(SavedSites.sites.value.any { it.name == "MovieLinkBD" })
         assertFalse(has("recent_row"))
-        // Off: nothing is remembered and the list is cleared.
-        click("recent_switch")
+        // Off: nothing is remembered and the list is cleared (GROUP E1: the switch lives behind the gear).
+        click("site_settings")
+        click("recent_switch_row")
         SiteHistory.visit(ctx, "https://www.youtube.com/", "YouTube")
         assertTrue(SiteHistory.visits.value.isEmpty())
     }

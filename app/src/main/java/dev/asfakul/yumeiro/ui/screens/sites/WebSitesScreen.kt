@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Close
@@ -103,6 +105,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     var error by remember { mutableStateOf<String?>(null) }
     var open by remember { mutableStateOf<SavedSites.Site?>(null) }
     var renaming by remember { mutableStateOf<SavedSites.Site?>(null) }
+    // GROUP E1: the gear opens the page's settings; owner item 10: a saved site can be duplicated.
+    var settings by rememberSaveable { mutableStateOf(false) }
+    var duplicating by remember { mutableStateOf<SavedSites.Site?>(null) }
     var help by rememberSaveable { mutableStateOf(false) }
     // F-04: search (shown from 6 sites), pin, move, import / export.
     var query by rememberSaveable { mutableStateOf("") }
@@ -117,10 +122,6 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     val webScope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.web.SiteHistory.init(context) }
     val visits by dev.asfakul.yumeiro.online.web.SiteHistory.visits.collectAsState()
-    val rememberVisits by dev.asfakul.yumeiro.online.web.SiteHistory.on.collectAsState()
-    // ADCHAIN-2: the page browser's two switches (ad filter; short-link opener).
-    val filterAds by dev.asfakul.yumeiro.online.web.BrowserFilters.filterAds.collectAsState()
-    val resolveLinks by dev.asfakul.yumeiro.online.web.BrowserFilters.resolveLinks.collectAsState()
 
     /** Reads the new site's own name and icon in the background (the row shows the guess until then). */
     fun readMeta(url: String) {
@@ -178,11 +179,13 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     // the Websites page only. Before, the last website browsed showed as a shortcut on the Telegram page.
     val tabs = remember(telegramPage) { !telegramPage && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.WEBSITE_TAB) }
     val tab by WebsiteTab.tab.collectAsState()
+    val allTabs by WebsiteTab.tabs.collectAsState()
+    var tabsOpen by rememberSaveable { mutableStateOf(false) }
     /** An address or web search that is not saved: opens in the browser (and lands in Recently visited). */
     fun openUnsaved(url: String, name: String) {
         if (tabs) WebsiteTab.open(context, url, name) else open = SavedSites.Site(url, name)
     }
-    tab?.takeIf { tabs && it.visible }?.let { t ->
+    tab?.takeIf { tabs && it.visible }?.let { t -> androidx.compose.runtime.key(t.id) {
         PageStreamFinderDialog(
             pageUrl = t.keep.pageUrl,
             reason = "Browsing ${t.name}. Press play on any video; Yumeiro plays the stream in its own player.",
@@ -192,8 +195,14 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             browser = true,
             onPlay = { req -> WebsiteTab.minimize(byPlay = true); IncomingMedia.open(context, req.copy(title = req.title.ifBlank { t.name })) },
             onDismiss = { WebsiteTab.close() },
+            // GROUP E2: several tabs; a tapped link to another site opens in a new one.
+            tabCount = allTabs.size,
+            onTabs = { tabsOpen = true },
+            onNewTab = { url -> WebsiteTab.open(context, url, SavedSites.defaultName(url)) },
+            onCloseTab = { WebsiteTab.close() },
+            overlay = { if (tabsOpen) WebsiteTabsSheet(onDismiss = { tabsOpen = false }) },
         )
-    }
+    } }
 
     open?.let { site ->
         PageStreamFinderDialog(
@@ -240,6 +249,20 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         )
     }
 
+    fun exportList() {
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(android.content.Intent.EXTRA_TEXT, SavedSites.export(sites))
+        runCatching { context.startActivity(android.content.Intent.createChooser(send, if (telegramPage) "Share channel list" else "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+    if (settings) WebsiteSettingsSheet(onDismiss = { settings = false }, onImport = { importing = true }, onExport = if (sites.isNotEmpty()) ({ exportList() }) else null)
+    duplicating?.let { site ->
+        DuplicateSiteDialog(site, allSites.map { it.name }, onDismiss = { duplicating = null }, onSaved = { url ->
+            duplicating = null
+            dev.asfakul.yumeiro.ui.components.AppMessages.info(context, "Copy saved")
+            SavedSites.find(url)?.let { readMeta(it.url) }
+        })
+    }
+
     renaming?.let { site ->
         var name by remember(site.url) { mutableStateOf(site.name) }
         TsukiDialog(
@@ -261,12 +284,12 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, { searchOpen = !searchOpen; if (!searchOpen) query = "" }, "site_search_toggle", "Search or type an address")
                 IconButton(onClick = { adding = !adding }, modifier = Modifier.testTag("site_add_open")) { Icon(Icons.Default.Add, if (adding) "Close add website" else "Add website", tint = if (adding) p.accent else p.textPrimary) }
             }
-            IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, if (telegramPage) "Add channels from a list" else "Add websites from a list", tint = p.textSecondary) }
-            if (sites.isNotEmpty()) IconButton(onClick = {
-                val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(android.content.Intent.EXTRA_TEXT, SavedSites.export(sites))
-                runCatching { context.startActivity(android.content.Intent.createChooser(send, if (telegramPage) "Share channel list" else "Share website list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, if (telegramPage) "Share channel list" else "Share website list", tint = p.textSecondary) }
+            if (!telegramPage) {
+                IconButton(onClick = { settings = true }, modifier = Modifier.testTag("site_settings")) { Icon(Icons.Default.Settings, "Website settings", tint = p.textSecondary) }
+            } else {
+                IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add channels from a list", tint = p.textSecondary) }
+                if (sites.isNotEmpty()) IconButton(onClick = { exportList() }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, "Share channel list", tint = p.textSecondary) }
+            }
             IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, if (telegramPage) "How Telegram works" else "How websites work", tint = p.textSecondary) }
         }
         val addCard: @Composable () -> Unit = {
@@ -313,11 +336,11 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(22.dp))
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Open tab · ${t.name}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(if (allTabs.size > 1) "${allTabs.size} open tabs · ${t.name}" else "Open tab · ${t.name}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(t.keep.title.ifBlank { t.keep.address }, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         androidx.compose.material3.TextButton(onClick = { WebsiteTab.resume() }, modifier = Modifier.testTag("website_tab_resume")) { Text("Resume") }
-                        IconButton(onClick = { WebsiteTab.close() }, modifier = Modifier.testTag("website_tab_close")) { Icon(Icons.Default.Close, "Close tab", tint = p.textSecondary) }
+                        IconButton(onClick = { if (allTabs.size > 1) WebsiteTab.closeAll() else WebsiteTab.close() }, modifier = Modifier.testTag("website_tab_close")) { Icon(Icons.Default.Close, if (allTabs.size > 1) "Close all tabs" else "Close tab", tint = p.textSecondary) }
                     }
                 }
             }
@@ -421,6 +444,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                             dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.TELEGRAM_PUBLIC)
                         if (tabs && !tg) WebsiteTab.open(context, site.url, site.name) else open = site
                     }, onRename = { renaming = site }, onRemove = { SavedSites.remove(context, site.url) },
+                    onDuplicate = if (telegramPage || SavedSites.kindOf(site.url) != SavedSites.Kind.WEBSITE) null else ({ duplicating = site }),
                     onPin = { SavedSites.setPinned(context, site.url, !site.pinned) },
                     onMove = if (query.isBlank()) ({ up -> SavedSites.moveSite(context, site.url, up) }) else null,
                     modifier = Modifier.animateItem(),
@@ -445,35 +469,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     }, onForget = { dev.asfakul.yumeiro.online.web.SiteHistory.forget(context, v.url) }, modifier = Modifier.animateItem())
                 }
             }
-            if (!telegramPage) item("recent_switch") {
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).padding(horizontal = 4.dp, vertical = 2.dp).testTag("recent_switch_row"),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Remember sites I visit", color = p.textPrimary, fontSize = 14.sp)
-                        Text("Shown under Recently visited, on this phone only", color = p.textTertiary, fontSize = 12.sp)
-                    }
-                    androidx.compose.material3.Switch(rememberVisits, { dev.asfakul.yumeiro.online.web.SiteHistory.setOn(context, it) }, modifier = Modifier.testTag("recent_switch"))
-                }
-            }
-            if (!telegramPage) item("browser_switches") {
-                Column {
-                    BrowserSwitchRow(
-                        title = "Block ads and pop-ups",
-                        line = "Ad sites never load, pop-ups and pop-unders stay closed. The shield button on a page turns it off there only",
-                        on = filterAds, tag = "filter_ads_switch",
-                    ) { dev.asfakul.yumeiro.online.web.BrowserFilters.setFilterAds(context, it) }
-                    BrowserSwitchRow(
-                        title = "Open the real link behind short links",
-                        line = "Waits out the timers and taps Continue on link-shortener pages; a check that needs you is left to you",
-                        on = resolveLinks, tag = "resolve_links_switch",
-                    ) { dev.asfakul.yumeiro.online.web.BrowserFilters.setResolveLinks(context, it) }
-                }
-            }
             // The step-by-step guide lives behind the "?" in the header (not in the list) so the
             // saved sites stay the focus of the page.
-            item("help_hint") {
+            if (telegramPage) item("help_hint") {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).combinedClickable(onClickLabel = "How it works", onClick = { help = true })
                         .padding(vertical = 10.dp).testTag("site_help_hint"),
@@ -492,7 +490,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
 @Composable
 private fun SiteRow(
     site: SavedSites.Site, onOpen: () -> Unit, onRename: () -> Unit, onRemove: () -> Unit,
-    onPin: () -> Unit = {}, onMove: ((up: Boolean) -> Unit)? = null, modifier: Modifier = Modifier,
+    onPin: () -> Unit = {}, onMove: ((up: Boolean) -> Unit)? = null, onDuplicate: (() -> Unit)? = null, modifier: Modifier = Modifier,
 ) {
     val p = LocalMtPalette.current
     var menu by remember { mutableStateOf(false) }
@@ -532,6 +530,7 @@ private fun SiteRow(
                     DropdownMenuItem(text = { Text("Move down") }, leadingIcon = { Icon(Icons.Default.ArrowDownward, null) }, onClick = { menu = false; onMove(false) }, modifier = Modifier.testTag("site_move_down"))
                 }
                 DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onRename() })
+                if (onDuplicate != null) DropdownMenuItem(text = { Text("Duplicate") }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) }, onClick = { menu = false; onDuplicate() }, modifier = Modifier.testTag("site_duplicate"))
                 DropdownMenuItem(text = { Text("Remove") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onRemove() }, modifier = Modifier.testTag("site_remove"))
             }
         }
@@ -579,21 +578,3 @@ private fun RecentRow(v: dev.asfakul.yumeiro.online.web.SiteHistory.Visit, onOpe
     }
 }
 
-/** ADCHAIN-2: one switch row; the whole row toggles (48 dp+ target), the switch shows the state. */
-@Composable
-private fun BrowserSwitchRow(title: String, line: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
-    val p = LocalMtPalette.current
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-            .then(Modifier.toggleable(value = on, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange))
-            .heightIn(min = 56.dp).padding(horizontal = 4.dp, vertical = 4.dp).testTag(tag + "_row"),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, color = p.textPrimary, fontSize = 14.sp)
-            Text(line, color = p.textTertiary, fontSize = 12.sp, lineHeight = 16.sp)
-        }
-        Spacer(Modifier.width(8.dp))
-        androidx.compose.material3.Switch(on, null, modifier = Modifier.testTag(tag))
-    }
-}

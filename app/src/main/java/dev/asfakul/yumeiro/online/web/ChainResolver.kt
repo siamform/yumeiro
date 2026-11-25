@@ -130,23 +130,27 @@ object ChainDestination {
  * makes by itself. Pure, unit tested. Ad hosts are recognised by [AdFilter]'s list, never by a guess.
  */
 object PopupPolicy {
-    /** OPEN_HERE: load the address in this page; CAPTURE: let a hidden helper learn the address first (filter off, script-made window). */
-    enum class Decision { OPEN_HERE, CAPTURE, BLOCK }
+    /**
+     * OPEN_HERE: load the address in this page; NEW_TAB: open it in a new website tab (GROUP E2: the person tapped a
+     * link to another site); CAPTURE: let a hidden helper learn the address first (filter off, script-made window).
+     */
+    enum class Decision { OPEN_HERE, NEW_TAB, CAPTURE, BLOCK }
 
     /**
      * A page asked for a new window to [target] (null when Android can't tell where it goes).
      * [gesture] = the person tapped; [link] = the tap was on a real link (not a script-made window).
      */
-    fun window(current: String?, target: String?, gesture: Boolean, link: Boolean, filter: Boolean, chainActive: Boolean): Decision {
+    fun window(current: String?, target: String?, gesture: Boolean, link: Boolean, filter: Boolean, chainActive: Boolean, tabs: Boolean = false): Decision {
         val t = target?.trim().orEmpty()
         val web = t.startsWith("http://", true) || t.startsWith("https://", true)
+        val elsewhere = web && !ChainDestination.sameSite(current, t)
         // Filter off: a normal browser opens what the person asked for (no tap, no window).
-        if (!filter) return if (!gesture) Decision.BLOCK else if (web) Decision.OPEN_HERE else if (t.isEmpty()) Decision.CAPTURE else Decision.BLOCK
+        if (!filter) return if (!gesture) Decision.BLOCK else if (web) (if (tabs && link && elsewhere) Decision.NEW_TAB else Decision.OPEN_HERE) else if (t.isEmpty()) Decision.CAPTURE else Decision.BLOCK
         if (!web || AdFilter.isAd(t)) return Decision.BLOCK
-        if (ChainDestination.sameSite(current, t)) return Decision.OPEN_HERE
+        if (!elsewhere) return Decision.OPEN_HERE
         // On a shortener page every tap opens an ad window: only the walker's own page changes count.
         if (chainActive) return Decision.BLOCK
-        return if (gesture && link) Decision.OPEN_HERE else Decision.BLOCK
+        return if (gesture && link) (if (tabs) Decision.NEW_TAB else Decision.OPEN_HERE) else Decision.BLOCK
     }
 
     /** The page itself moves to [target] in the main frame: true = stop it (an ad redirect). */

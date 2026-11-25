@@ -20,6 +20,25 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RemoveModerator
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -38,15 +57,19 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
 /**
- * WEB-BAR-1 (owner list 5): the bottom bar of Yumeiro's browser (Websites page): Back, Forward, Reload,
- * Block element and Open in Chrome. Off for the stream finder used by links and extensions.
+ * WEB-BAR-1 + GROUP E2: the bottom bar of Yumeiro's browser (Websites page): Back, Forward, the open tabs (with
+ * their count) and the page menu (Reload, this page's ad filter, Hide an element, Manage ads, Open in Chrome,
+ * Close tab). Off for the stream finder used by links and extensions.
  */
 @Composable
 internal fun BrowserBar(
     canBack: Boolean, canForward: Boolean, picking: Boolean,
     onBack: () -> Unit, onForward: () -> Unit, onReload: () -> Unit, onBlock: () -> Unit, onOpenOutside: () -> Unit,
     accent: Color,
+    filterOn: Boolean = true, onFilter: (() -> Unit)? = null, onManageAds: (() -> Unit)? = null,
+    tabCount: Int = 0, onTabs: (() -> Unit)? = null, onCloseTab: (() -> Unit)? = null,
 ) {
+    var menu by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().background(TextPrimary.copy(alpha = 0.05f)).navigationBarsPadding().height(52.dp).testTag("browser_bar"),
         horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
@@ -57,11 +80,29 @@ internal fun BrowserBar(
         IconButton(onClick = onForward, enabled = canForward, modifier = Modifier.testTag("browser_forward")) {
             Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward", tint = if (canForward) TextPrimary else TextTertiary)
         }
-        IconButton(onClick = onReload, modifier = Modifier.testTag("browser_reload")) { Icon(Icons.Default.Refresh, "Reload", tint = TextPrimary) }
-        IconButton(onClick = onBlock, modifier = Modifier.testTag("browser_block")) {
-            Icon(Icons.Default.Block, if (picking) "Cancel blocking" else "Block element", tint = if (picking) accent else TextPrimary)
+        if (picking) IconButton(onClick = onBlock, modifier = Modifier.testTag("browser_block_stop")) { Icon(Icons.Default.Block, "Stop hiding parts", tint = accent) }
+        if (onTabs != null) IconButton(onClick = onTabs, modifier = Modifier.testTag("browser_tabs").semantics { stateDescription = if (tabCount == 1) "1 tab" else "$tabCount tabs" }) {
+            // The tab count in a rounded square, like other browsers' tab button.
+            Box(Modifier.size(22.dp).border(1.6.dp, TextPrimary, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+                Text(if (tabCount > 9) "9+" else tabCount.toString(), color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clearAndSetSemantics { })
+            }
         }
-        IconButton(onClick = onOpenOutside, modifier = Modifier.testTag("browser_open_outside")) { Icon(Icons.AutoMirrored.Filled.OpenInNew, "Open in Chrome", tint = TextPrimary) }
+        Box {
+            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("browser_menu")) { Icon(Icons.Default.MoreVert, "Page menu", tint = TextPrimary) }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, modifier = Modifier.testTag("browser_menu_list")) {
+                DropdownMenuItem(text = { Text("Reload") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onReload() }, modifier = Modifier.testTag("browser_reload"))
+                if (onFilter != null) DropdownMenuItem(
+                    text = { Text(if (filterOn) "Ad filter on for this page" else "Ad filter off for this page") },
+                    leadingIcon = { Icon(if (filterOn) Icons.Default.Shield else Icons.Default.RemoveModerator, null, tint = if (filterOn) accent else TextTertiary) },
+                    trailingIcon = { Switch(filterOn, null) },
+                    onClick = { menu = false; onFilter() }, modifier = Modifier.testTag("browser_menu_filter").semantics { stateDescription = if (filterOn) "On" else "Off" },
+                )
+                DropdownMenuItem(text = { Text(if (picking) "Stop hiding parts" else "Hide an element") }, leadingIcon = { Icon(Icons.Default.Block, null) }, onClick = { menu = false; onBlock() }, modifier = Modifier.testTag("browser_block"))
+                if (onManageAds != null) DropdownMenuItem(text = { Text("Manage ads") }, leadingIcon = { Icon(Icons.Default.VisibilityOff, null) }, onClick = { menu = false; onManageAds() }, modifier = Modifier.testTag("browser_manage_ads"))
+                DropdownMenuItem(text = { Text("Open in Chrome") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, null) }, onClick = { menu = false; onOpenOutside() }, modifier = Modifier.testTag("browser_open_outside"))
+                if (onCloseTab != null) DropdownMenuItem(text = { Text("Close tab") }, leadingIcon = { Icon(Icons.Default.Close, null) }, onClick = { menu = false; onCloseTab() }, modifier = Modifier.testTag("browser_close_tab"))
+            }
+        }
     }
 }
 
