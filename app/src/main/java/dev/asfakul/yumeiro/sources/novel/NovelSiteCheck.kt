@@ -17,10 +17,11 @@ object NovelSiteCheck {
         "bot check", "cloudflare", "captcha", "in webview", "just a moment", "attention required",
         "verify you are human", "are you a robot", "checking your browser", "turnstile", "ddos-guard",
     )
+    private val statusCode = Regex("""\b(403|503)\b""")
 
     fun isSiteCheck(message: String?): Boolean {
         val m = message?.lowercase() ?: return false
-        return markers.any { it in m } || Regex("""\b(403|503)\b""").containsMatchIn(m) && ("forbidden" in m || "unavailable" in m || "blocked" in m)
+        return markers.any { it in m } || statusCode.containsMatchIn(m) && ("forbidden" in m || "unavailable" in m || "blocked" in m)
     }
 
     fun message(siteName: String): String =
