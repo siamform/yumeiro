@@ -125,6 +125,9 @@ internal fun HuePage(
     onTryCopy: (dev.asfakul.yumeiro.online.RemoteExtension) -> Unit = {},
     /** EXT-SEC-1 (owner list R21, item 15): "See all" of one of this extension's sections (rows with paging). */
     onOpenRow: ((OnlineRow) -> Unit)? = null,
+    /** GROUP G: change / clear the "Show videos from" pick from the page's own header. */
+    onChangeFilter: (() -> Unit)? = null,
+    onClearFilter: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     // R15: keyed by the channel only. A refreshed copy of [rows] (background refresh of a saved
@@ -206,11 +209,15 @@ internal fun HuePage(
 
     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
         item("channels") { strip() }
-        item("channel_header") { ChannelHeader(name, feeds.size, fullFeed.size, onSearch) }
-        if (feeds.isNotEmpty()) item("section_search") {
+        item("channel_header") { ChannelHeader(name, feeds.size, fullFeed.size, onChangeFilter, onClearFilter) }
+        // GROUP G2: the page's one search box (the top bar's magnifier hides while one extension is picked).
+        if (feeds.isNotEmpty() || (api != null && !runCatching { api.hasMainPage }.getOrDefault(false))) item("section_search") {
             dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                query = query, onQuery = { query = it.take(80) }, hint = "Search ${fullFeed.size}${if (canLoadMore) "+" else ""} titles on $name",
+                query = query, onQuery = { query = it.take(80) },
+                hint = if (feeds.isEmpty()) "Search $name" else "Search ${fullFeed.size}${if (canLoadMore) "+" else ""} titles on $name",
                 tag = "hue_section_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                // Enter searches the whole site when the loaded titles have no match (or nothing is loaded).
+                onDone = { if (query.isNotBlank() && (feeds.isEmpty() || feed.isEmpty())) { OnlineSearchPending.query = query.trim(); onSearch() } },
             )
         }
         if (query.isNotBlank()) item("section_search_state") {
@@ -219,7 +226,7 @@ internal fun HuePage(
                     "${feed.size} match${if (feed.size == 1) "" else "es"} in ${fullFeed.size} loaded" + if (pagingBusy) " · looking further…" else "",
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.weight(1f).testTag("hue_section_search_count"),
                 )
-                androidx.compose.material3.TextButton(onClick = onSearch) { Text("Search $name", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 12.sp) }
+                androidx.compose.material3.TextButton(onClick = { OnlineSearchPending.query = query.trim(); onSearch() }, modifier = Modifier.testTag("hue_search_everywhere")) { Text("Search all sources", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 12.sp) }
             }
         }
         when {

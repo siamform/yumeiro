@@ -255,9 +255,19 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
         // long title made its card taller than its neighbours and the whole shelf jumped while
         // scrolling sideways.
         Text(item.name.replace('\n', ' '), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
-        val sub = listOfNotNull(item.type?.takeIf { it.isNotBlank() }, if (showSource) item.api else null).joinToString(" · ")
-        Text(sub.ifBlank { " " }, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // GROUP G1: the type already sits on the poster as a chip; the line under the name no longer repeats it.
+        val sub = posterSubline(item, showSource)
+        if (sub.isNotEmpty()) Text(sub, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("online_poster_sub"))
     }
+}
+
+/**
+ * GROUP G1: the small line under a card's name. The type is left out when the poster already shows it as a chip
+ * (a TYPE release tag), so "Anime" is not written twice; the source name stays when asked for. Pure.
+ */
+internal fun posterSubline(item: OnlineItem, showSource: Boolean): String {
+    val chip = item.tags.any { it.kind == dev.asfakul.yumeiro.online.ReleaseTags.Kind.TYPE }
+    return listOfNotNull(item.type?.takeIf { it.isNotBlank() && !chip }, if (showSource) item.api.takeIf { it.isNotBlank() } else null).joinToString(" · ")
 }
 
 @Composable

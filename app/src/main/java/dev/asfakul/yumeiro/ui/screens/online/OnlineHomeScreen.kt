@@ -201,6 +201,9 @@ fun OnlineHomeScreen(
         ExtensionManager.feedProviders(adultOn, adultPrivate)
     }
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    // GROUP G2: the top bar hides its magnifier while one extension is picked (the page has its own search box).
+    LaunchedEffect(selected) { YumixPick.selected.value = selected }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { YumixPick.selected.value = null } }
     var showFilter by rememberSaveable { mutableStateOf(false) }
     // One seed per visit: "More to explore" is shuffled, but stays put while you scroll.
     val shuffleSeed = YumixMemory.seed
@@ -687,7 +690,10 @@ fun OnlineHomeScreen(
                         errorFix = (h as? ProviderHome.Failed)?.fix,
                         needsSetup = h is ProviderHome.NeedsSetup,
                         listState = listState,
-                        strip = { ActiveFilterBar(name, onChange = { showFilter = true }, onClear = { selected = null }) },
+                        // GROUP G1/G2: the name, the filter and "show all" are one header (no "Showing: name" strip above it).
+                        strip = {},
+                        onChangeFilter = { showFilter = true },
+                        onClearFilter = { selected = null },
                         onSearch = onOpenSearch,
                         onRetry = { if (api != null) scope.launch { loadOne(api, true) } },
                         openItem = openItem, openInfo = openInfo,
@@ -839,4 +845,9 @@ internal fun UpcomingEntryCard(onClick: () -> Unit) {
         }
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = dev.asfakul.yumeiro.ui.theme.TextTertiary)
     }
+}
+
+/** GROUP G2: the extension picked in "Show videos from" (null = all), read by the top bar. */
+object YumixPick {
+    val selected = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 }

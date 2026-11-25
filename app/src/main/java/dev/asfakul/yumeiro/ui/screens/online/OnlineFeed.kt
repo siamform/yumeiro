@@ -34,7 +34,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -290,9 +291,12 @@ private fun Badge(text: String) {
 
 /** Slim bar on a single extension page: logo, name, stats and search — no banner. */
 @Composable
-internal fun ChannelHeader(name: String, rows: Int, titles: Int, onSearch: () -> Unit) {
+internal fun ChannelHeader(name: String, rows: Int, titles: Int, onChange: (() -> Unit)? = null, onClear: (() -> Unit)? = null) {
+    // GROUP G (G1, G2): one header for a single-extension page. The "Showing: name" strip above it (the same name
+    // twice) and its own search icon (a second magnifier under the top bar's) are gone; the filter and "show all"
+    // actions live here, and the page keeps exactly one search box.
     Row(
-        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 2.dp).testTag("online_channel_header"),
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 2.dp).testTag("online_channel_header"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ChannelAvatar(name, selected = true, size = 40.dp)
@@ -301,7 +305,12 @@ internal fun ChannelHeader(name: String, rows: Int, titles: Int, onSearch: () ->
             Text(name, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("$rows playlist${if (rows == 1) "" else "s"} · $titles titles", maxLines = 1, color = TextTertiary, fontSize = 12.sp)
         }
-        androidx.compose.material3.IconButton(onClick = onSearch) { Icon(Icons.Default.Search, "Search $name", tint = TextPrimary) }
+        if (onChange != null) androidx.compose.material3.IconButton(onClick = onChange, modifier = Modifier.testTag("online_filter_active")) {
+            Icon(Icons.Default.FilterList, "Change extension", tint = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent)
+        }
+        if (onClear != null) androidx.compose.material3.IconButton(onClick = onClear, modifier = Modifier.testTag("online_filter_active_clear")) {
+            Icon(Icons.Default.Close, "Show all extensions", tint = TextSecondary)
+        }
     }
 }
 

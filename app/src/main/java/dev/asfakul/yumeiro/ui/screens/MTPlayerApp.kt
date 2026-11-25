@@ -485,6 +485,7 @@ fun MTPlayerApp(
     val isSettings = currentRoute == Screen.Settings.route
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.notify.Inbox.ensureLoaded(context) }
     val inboxUnread by dev.asfakul.yumeiro.notify.Inbox.unread.collectAsStateWithLifecycle()
+    val yumixPick by dev.asfakul.yumeiro.ui.screens.online.YumixPick.selected.collectAsStateWithLifecycle()
     val appPage by dev.asfakul.yumeiro.ui.screens.extras.AppPages.page.collectAsStateWithLifecycle()
     val isOnline by dev.asfakul.yumeiro.network.Connectivity.online.collectAsStateWithLifecycle()
     val sourceExtCount = dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsStateWithLifecycle().value.installed.count { it.enabled }
@@ -590,7 +591,9 @@ fun MTPlayerApp(
                         // One search entry per tab, always the magnifier up here (no fixed boxes on the page).
                         showSearch = when (tabRoute) {
                             Screen.Stream.route -> false
-                            Screen.Videos.route -> videoSource != dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE
+                            // GROUP G2: one search on a single-extension page: its own box, so no second magnifier up here.
+                            Screen.Videos.route -> videoSource != dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE &&
+                                !(videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE && yumixPick != null)
                             Screen.Music.route -> true
                             else -> true
                         },

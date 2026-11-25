@@ -177,7 +177,11 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
         when (feed) {
             Feed.SAVED -> EntryGrid(library.values.filter { it.saved }.sortedByDescending { maxOf(it.readAt, it.addedAt) }, "Nothing saved yet", "Tap the bookmark on a novel to keep it here.", onOpenNovel)
             Feed.HISTORY -> EntryGrid(library.values.filter { it.readAt > 0 }.sortedByDescending { it.readAt }, "Nothing read yet", "Novels you open are listed here with the chapter you reached.", onOpenNovel)
-            else -> if (plugin != null) BrowseGrid(plugin, feed == Feed.LATEST, onOpenNovel)
+            else -> if (plugin != null) {
+                // GROUP G3: the page opens on a banner: the novel you were reading, then this source's top picks.
+                val reading = remember(library) { library.values.filter { it.readAt > 0 }.maxByOrNull { it.readAt } }
+                BrowseGrid(plugin, feed == Feed.LATEST, onOpenNovel, reading)
+            }
         }
     }
 }
@@ -211,7 +215,7 @@ private fun NovelError(pluginId: String, title: String, error: String, testTag: 
 }
 
 @Composable
-private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit) {
+private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry? = null) {
     val context = LocalContext.current
     val items = remember(plugin.id, latest) { mutableStateListOf<NovelItem>() }
     var page by remember(plugin.id, latest) { mutableIntStateOf(1) }
@@ -242,6 +246,12 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
     }
     LazyVerticalGrid(GridCells.Adaptive(108.dp), state = grid, modifier = Modifier.fillMaxSize().testTag("novel_browse_grid"),
         contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        val banner = NovelBanner.slides(items, reading, plugin.name, latest)
+        if (banner.isNotEmpty()) item(key = "novel_banner", span = { GridItemSpan(maxLineSpan) }, contentType = "banner") {
+            Box(Modifier.padding(bottom = 6.dp)) {
+                dev.asfakul.yumeiro.ui.screens.home.HeroCarousel(banner.map { it.slide }, tag = "novel_banner") { i -> onOpen(banner[i].item) }
+            }
+        }
         itemsIndexed(items, key = { _, it -> it.path }) { _, it -> NovelCover(it, null) { n -> onOpen(n) } }
         // SKELETON-2: cover placeholders in the grid's own shape instead of a spinner.
         if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(items.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
@@ -615,5 +625,32 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
                 }
             }
         }
+    }
+}
+
+/**
+ * GROUP G3: the Novel page's banner. The novel being read comes first ("Continue reading" with its chapter), then the
+ * first few novels of the source's list that have a cover. Built only from real data; empty → no banner. Pure.
+ */
+internal object NovelBanner {
+    data class Slide(val item: NovelItem, val slide: dev.asfakul.yumeiro.ui.screens.home.HeroSlide)
+    const val PICKS = 5
+
+    fun slides(items: List<NovelItem>, reading: NovelLibrary.Entry?, source: String, latest: Boolean): List<Slide> {
+        val out = ArrayList<Slide>(PICKS + 1)
+        if (reading != null) {
+            val it = NovelItem(reading.pluginId, reading.name, reading.path, reading.cover)
+            out += Slide(it, dev.asfakul.yumeiro.ui.screens.home.HeroSlide(
+                key = "read:" + reading.key, name = reading.name, poster = reading.cover, headers = emptyMap(), badge = "Continue reading",
+                fresh = false, line = reading.chapterName, meta = NovelSources.plugin(reading.pluginId)?.name.orEmpty(), cta = "Continue",
+            ))
+        }
+        items.asSequence().filter { !it.cover.isNullOrBlank() && (reading == null || it.path != reading.path) }.take(PICKS).forEach {
+            out += Slide(it, dev.asfakul.yumeiro.ui.screens.home.HeroSlide(
+                key = "pick:" + it.path, name = it.name, poster = it.cover, headers = emptyMap(), badge = if (latest) "Latest" else "Popular",
+                fresh = latest, line = null, meta = source, cta = "Read",
+            ))
+        }
+        return out
     }
 }
