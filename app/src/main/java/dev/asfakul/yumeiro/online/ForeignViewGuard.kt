@@ -29,8 +29,15 @@ object ForeignViewGuard {
         !isOwnRoot && widthPx in 0..TINY_PX && heightPx in 0..TINY_PX
 
     fun attach(activity: Activity) {
-        val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
-        content.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
+        // A11Y-EXT-1b (probe 45530059278): AnimePahe's 1 × 1 FrameLayout + WebView goes straight into the window's
+        // root (the decor view, beside the content), not into android.R.id.content. Watch both.
+        val content = activity.findViewById<ViewGroup>(android.R.id.content)
+        val decor = activity.window?.decorView as? ViewGroup
+        listOfNotNull(decor, content).distinct().forEach { watch(it) }
+    }
+
+    private fun watch(group: ViewGroup) {
+        group.setOnHierarchyChangeListener(object : ViewGroup.OnHierarchyChangeListener {
             override fun onChildViewAdded(parent: View?, child: View?) {
                 child ?: return
                 if (isOwn(child)) return
@@ -42,7 +49,10 @@ object ForeignViewGuard {
         })
     }
 
-    private fun isOwn(v: View) = v.javaClass.name.startsWith("androidx.compose.ui.")
+    /** Yumeiro's Compose root, and the window's own parts (the decor's content column and bar backgrounds). */
+    private fun isOwn(v: View) = v.javaClass.name.startsWith("androidx.compose.ui.") ||
+        v.id == android.R.id.content || v.id == android.R.id.statusBarBackground || v.id == android.R.id.navigationBarBackground ||
+        v.javaClass.name.startsWith("com.android.internal.")
 
     private fun check(v: View, w: Int, h: Int) {
         if (!shouldQuiet(false, w, h) || v.importantForAccessibility == View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS) return
