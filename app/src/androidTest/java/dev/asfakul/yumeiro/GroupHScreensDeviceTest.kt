@@ -94,7 +94,15 @@ class GroupHScreensDeviceTest {
         settled()
         val usOffered = country("US")
         assertTrue("H-9: Movies offers a country schedule (US chip)", usOffered)
-        val usOk = settled(120_000)
+        var usOk = settled(120_000)
+        // Run 45717326746 (api36 run 1): query.wikidata.org timed out twice (SocketTimeoutException after the 40 s
+        // read + one retry) and the screen showed its error card. Do what a person does: "Try again", once.
+        if (count("upcoming_entry") == 0 && count("upcoming_error") > 0) {
+            log("h9 movies US: error card, tapping Try again once")
+            FirstRun.shot("grouph_h9_movies_us_error")
+            rule.onAllNodesWithTag("upcoming_retry", true)[0].performClick()
+            usOk = settled(120_000)
+        }
         val us = count("upcoming_entry")
         log("h9 movies US settled=$usOk entries=$us empty=${count("upcoming_empty_country")} error=${count("upcoming_error")}")
         FirstRun.shot("grouph_h9_movies_us")

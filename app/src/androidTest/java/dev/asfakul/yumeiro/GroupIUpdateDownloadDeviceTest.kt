@@ -86,7 +86,42 @@ class GroupIUpdateDownloadDeviceTest {
         }
     }
 
-    private fun latest(): ReleaseInfo = runBlocking { GitHubReleaseClient(wantTv = { mgr.wantsTvEdition() }).fetchLatestRelease() }
+    /**
+     * The real latest release through the app's own client. Runs 45717326746 / 45717330319: the shared CI address had
+     * used up GitHub's anonymous API allowance (HTTP 403, "Too many update checks"), which says nothing about the
+     * download popup. Then the same real release is read from the github.com pages (not the API): tag from the
+     * /releases/latest redirect, the real file, its real size and its SHA-256 from SHA256SUMS.txt. The download still
+     * goes through the app's own resolve + DownloadManager path (API first, browser link when the API says no).
+     */
+    private fun latest(): ReleaseInfo {
+        val tv = mgr.wantsTvEdition()
+        val viaApi = runCatching { runBlocking { GitHubReleaseClient(wantTv = { tv }).fetchLatestRelease() } }
+        viaApi.getOrNull()?.let { return it }
+        val err = viaApi.exceptionOrNull()!!
+        if (err.message?.startsWith("Too many update checks") != true) throw err
+        log("GitHub API rate-limited on this runner; reading the same latest release from github.com pages")
+        fun open(url: String, head: Boolean, follow: Boolean) = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+            instanceFollowRedirects = follow; connectTimeout = 20_000; readTimeout = 30_000
+            if (head) requestMethod = "HEAD"; setRequestProperty("User-Agent", "Yumeiro-device-test")
+        }
+        val base = "https://github.com/siamform/yumeiro/releases"
+        val loc = open("$base/latest", head = true, follow = false).let { c -> try { c.responseCode; c.getHeaderField("Location") } finally { c.disconnect() } }
+        val tag = loc?.substringAfterLast("/tag/")?.takeIf { it.startsWith("v") } ?: throw AssertionError("no latest tag from $loc", err)
+        val v = tag.removePrefix("v")
+        val name = if (tv) "Yumeiro-TV-v$v.tv.apk" else "release-Yumeiro-v$v.apk"
+        val url = "$base/download/$tag/$name"
+        val sums = open("$base/download/$tag/SHA256SUMS.txt", head = false, follow = true).let { c -> try { c.inputStream.bufferedReader().readText() } finally { c.disconnect() } }
+        val sha = sums.lines().map { it.trim().split(Regex("\\s+")) }.firstOrNull { it.size == 2 && it[1].removePrefix("*") == name }?.get(0)
+            ?: throw AssertionError("$name not in SHA256SUMS.txt of $tag", err)
+        val size = open(url, head = true, follow = true).let { c -> try { c.responseCode; c.contentLengthLong } finally { c.disconnect() } }
+        assertTrue("real size of $name ($size)", size > 1_000_000)
+        return ReleaseInfo(
+            tagName = tag, versionName = v, versionCode = null, title = "Yumeiro $tag", notes = "", publishedAt = "",
+            htmlUrl = "$base/tag/$tag",
+            asset = dev.asfakul.yumeiro.update.ApkAsset(id = 0, name = name, sizeBytes = size, apiUrl = "", browserUrl = url, sha256 = sha.lowercase(), checksumsUrl = null),
+            source = dev.asfakul.yumeiro.update.UpdateSource.PUBLIC,
+        )
+    }
 
     private fun startFromThePopup(release: ReleaseInfo) {
         offer(release)
