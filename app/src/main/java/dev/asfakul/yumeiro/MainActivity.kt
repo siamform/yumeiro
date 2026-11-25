@@ -76,6 +76,8 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         // PR-1: decided before the first frame, so nothing of the app is drawn (or reachable with the
         // remote) behind "Who's watching?" (Plex fixed exactly that bypass on Android TV).
         dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.decide(this)
+        // A11Y-EXT-1: an extension's invisible 1 px WebView stays out of screen readers and remote focus.
+        dev.asfakul.yumeiro.online.ForeignViewGuard.attach(this)
         setContent {
             val palette = rememberMtPalette()
             LaunchedEffect(palette.isDark, palette.background) {
