@@ -90,33 +90,62 @@ import kotlinx.coroutines.withContext
  * Everything runs on the device; nothing here needs a Yumeiro server.
  */
 @Composable
-fun SourcesHubScreen(onBack: () -> Unit, initialTab: Int = 0) {
-    val tabs = listOf("Aniyomi", "Mihon", "Stremio", "JavaScript", "Home servers", "Script repos")
-    var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0, tabs.lastIndex)) }
+fun SourcesHubScreen(onBack: () -> Unit, initialTab: Int = -1, onOpenCloudStream: (() -> Unit)? = null) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { dev.asfakul.yumeiro.sources.Bridges.start(context.applicationContext) }
+    // GROUP D: a stack of pages (overview → ecosystem → Browse / Repositories) instead of tabs inside tabs.
+    var keys by rememberSaveable { mutableStateOf(SourcesNav.save(SourcesNav.start(initialTab))) }
+    var lastOpened by rememberSaveable { mutableStateOf<String?>(null) }
+    val stack = SourcesNav.restore(keys)
+    fun go(r: SourceRoute) {
+        if (r.part == null && r.page != SourcePage.HOME) lastOpened = r.page.name
+        keys = SourcesNav.save(SourcesNav.push(SourcesNav.restore(keys), r))
+    }
+    fun up() { val p = SourcesNav.pop(SourcesNav.restore(keys)); if (p == null) onBack() else keys = SourcesNav.save(p) }
+    val depth: (SourceRoute) -> Int = { if (it.page == SourcePage.HOME) 0 else if (it.part == null) 1 else 2 }
 
-    Column(Modifier.fillMaxSize().testTag("sources_hub")) {
-        var any by remember { mutableStateOf(false) }
-        SubPageHeader(title = "Sources", onBack = onBack, subtitle = "Extensions, add-ons and home servers") {
-            TextButton(onClick = { any = true }, modifier = Modifier.testTag("sources_add_any")) { Text("Add anything", color = SpotifyGreen) }
-        }
-        if (any) UniversalAddDialog(onDismiss = { any = false }, onServer = { out -> AppMessages.show(context, out.message); tab = 4 })
-        PillTabRow(tabs = tabs, selectedIndex = tab, onSelect = { tab = it }, tagPrefix = "sources_tab")
-        // Round 8: tabs glide along the X axis (they used to cut to the new tab in one frame).
-        dev.asfakul.yumeiro.ui.components.TabSwap(tab, { it }, Modifier.fillMaxSize(), label = "sources_tab") { t ->
-            Column(Modifier.fillMaxSize()) {
-                when (t) {
-                    0 -> TachiyomiTab(TachiyomiExtensions.Kind.ANIME)
-                    1 -> TachiyomiTab(TachiyomiExtensions.Kind.MANGA)
-                    2 -> StremioTab()
-                    3 -> JsTab()
-                    5 -> ScriptReposTab()
-                    else -> ServersTab()
-                }
+    dev.asfakul.yumeiro.ui.components.TabSwap(stack.last(), depth, Modifier.fillMaxSize().testTag("sources_hub"), label = "sources_page") { r ->
+        val nav = SourcesPageNav(r, ::up, ::go)
+        Column(Modifier.fillMaxSize().testTag(r.tag)) {
+            when (r.page) {
+                SourcePage.HOME -> HomePage(nav, lastOpened?.let { n -> runCatching { SourcePage.valueOf(n) }.getOrNull() }, onOpenCloudStream)
+                SourcePage.ANIYOMI -> TachiyomiTab(TachiyomiExtensions.Kind.ANIME, nav)
+                SourcePage.MIHON -> TachiyomiTab(TachiyomiExtensions.Kind.MANGA, nav)
+                SourcePage.STREMIO -> StremioTab(nav)
+                SourcePage.JS -> JsTab(nav)
+                SourcePage.SCRIPTS -> { nav.Header("Script repos", "Vega provider repositories"); ScriptReposTab() }
+                SourcePage.SERVERS -> ServersTab(nav)
             }
         }
     }
+}
+
+/** What a page needs to move around the Source page flow. */
+internal class SourcesPageNav(val route: SourceRoute, val up: () -> Unit, val go: (SourceRoute) -> Unit) {
+    fun open(part: HubPart) = go(SourceRoute(route.page, part))
+}
+
+@Composable
+internal fun SourcesPageNav.Header(title: String, subtitle: String? = null, actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}) {
+    SubPageHeader(title = title, onBack = up, subtitle = subtitle, actions = actions)
+}
+
+@Composable
+private fun HomePage(nav: SourcesPageNav, lastOpened: SourcePage?, onOpenCloudStream: (() -> Unit)?) {
+    val context = LocalContext.current
+    var any by rememberSaveable { mutableStateOf(false) }
+    nav.Header("Sources", "Extensions, add-ons and home servers") {
+        dev.asfakul.yumeiro.ui.components.AddIconButton("Add anything", "sources_add_any", { any = true })
+        dev.asfakul.yumeiro.ui.components.HelpIconButton("About sources", SourcesNav.HOME_HELP, "sources_help")
+    }
+    if (any) UniversalAddDialog(onDismiss = { any = false }, onServer = { out -> AppMessages.show(context, out.message); any = false; nav.go(SourceRoute(SourcePage.SERVERS)) })
+    SourcesHome(lastOpened, onOpenCloudStream) { nav.go(SourceRoute(it)) }
+}
+
+/** Last fetched repository listings, so going Installed → Browse → back does not refetch every index. */
+internal object HubAvailable {
+    val tachi = java.util.concurrent.ConcurrentHashMap<String, List<TachiyomiExtensions.Available>>()
+    @Volatile var js: Pair<Int, List<JsSources.Entry>>? = null
 }
 
 // region shared bits
@@ -218,14 +247,15 @@ private fun afterChange() = OnlineRepository.clearCaches()
 // region Aniyomi / Mihon
 
 @Composable
-private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
+private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by TachiyomiExtensions.state.collectAsState()
     val adult by OnlineSettings.adult.collectAsState()
     val repos = state.repos.filter { it.kind == kind }
     val installed = state.installed.filter { it.kind == kind }
-    var available by remember(kind) { mutableStateOf<List<TachiyomiExtensions.Available>>(emptyList()) }
+    val cacheKey = kind.name + "/" + repos.size
+    var available by remember(kind) { mutableStateOf(HubAvailable.tachi[cacheKey] ?: emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
@@ -237,9 +267,10 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
     suspend fun refresh() {
         loading = true
         available = runCatching { TachiyomiExtensions.available(context, kind) }.getOrDefault(available)
+        HubAvailable.tachi[kind.name + "/" + TachiyomiExtensions.state.value.repos.count { it.kind == kind }] = available
         loading = false
     }
-    LaunchedEffect(kind, repos.size) { if (repos.isNotEmpty()) refresh() }
+    LaunchedEffect(kind, repos.size) { if (repos.isNotEmpty() && HubAvailable.tachi[cacheKey] == null) refresh() }
     suspend fun addRepo(url: String): Boolean {
         loading = true
         val r = TachiyomiExtensions.addRepo(context, url, kind)
@@ -255,21 +286,36 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
         .filter { adult || it.entry.nsfw == 0 }
         .filter { query.isBlank() || it.displayName.contains(query, true) || it.entry.lang.equals(query, true) }
         .sortedBy { it.displayName.lowercase() }
-    // SRC-HUB-1: Installed / Browse / Repositories instead of one long mixed list.
-    // The tab follows what is loaded until the user picks a part (the lists arrive after the first frame).
-    var picked by rememberSaveable(kind) { mutableStateOf<HubPart?>(null) }
-    val part = picked ?: HubParts.default(installed.size, repos.size)
+    // GROUP D: Installed is the page; Browse and Repositories open as their own pages (no inner tab row).
+    val part = nav.route.part ?: HubPart.INSTALLED
     val updates = installed.count { e -> available.any { it.entry.pkg == e.pkg && e.versionCode < it.entry.code } }
+    val help = (if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
+        else "Mihon / Tachiyomi manga extensions (lib 1.2–1.5). Their titles appear in the Manga section.") +
+        "\n\nAdd a repository with +: GitHub repo links, raw links or the index.min.json URL. Only add repositories you trust."
+    val page = if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi" else "Mihon"
 
     Column(Modifier.fillMaxSize()) {
-        HubPartRow(part, mapOf(HubPart.INSTALLED to installed.size, HubPart.BROWSE to available.size.takeIf { repos.isNotEmpty() }, HubPart.REPOS to repos.size)) { picked = it }
+        nav.Header(
+            when (part) { HubPart.BROWSE -> "Browse"; HubPart.REPOS -> "Repositories"; else -> page },
+            when (part) { HubPart.INSTALLED -> "${kind.label.replaceFirstChar { it.uppercase() }} extensions"; else -> page },
+        ) {
+            dev.asfakul.yumeiro.ui.components.AddIconButton("Add a ${kind.label} repository", kTag + "_add_plus", { addOpen = true })
+            dev.asfakul.yumeiro.ui.components.HelpIconButton("About ${kind.label} extensions", help, kTag + "_help")
+        }
         if (loading || busy != null) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_tachiyomi_" + kind.name + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (part) {
                 HubPart.INSTALLED -> {
-                    item("installed") { SectionTitle("Installed", "${installed.size} extension${if (installed.size == 1) "" else "s"}" + if (updates > 0) " · $updates to update in Browse" else "") }
+                    item("go") {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SubPageLink("src_go_browse", "Browse extensions",
+                                if (repos.isEmpty()) "Add a repository first" else "${available.size} available" + if (updates > 0) " · $updates updates" else "") { nav.open(HubPart.BROWSE) }
+                            SubPageLink("src_go_repos", "Repositories", "${repos.size} added · Discover more") { nav.open(HubPart.REPOS) }
+                        }
+                    }
+                    item("installed") { SectionTitle("Installed", "${installed.size} extension${if (installed.size == 1) "" else "s"}") }
                     if (installed.isEmpty()) item("noinst") {
-                        HubEmpty("Nothing installed yet.", if (repos.isEmpty()) "Add a repository" to { picked = HubPart.REPOS } else "Browse extensions" to { picked = HubPart.BROWSE })
+                        HubEmpty("Nothing installed yet.", if (repos.isEmpty()) "Add a repository" to { nav.open(HubPart.REPOS) } else "Browse extensions" to { nav.open(HubPart.BROWSE) })
                     }
                     items(installed, key = { "i" + it.pkg }) { e ->
                         HubCard(
@@ -284,7 +330,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
                     }
                 }
                 HubPart.BROWSE -> {
-                    if (repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its extensions are listed here.", "Add a repository" to { picked = HubPart.REPOS }) }
+                    if (repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its extensions are listed here.", "Add a repository" to { nav.open(HubPart.REPOS) }) }
                     else {
                         item("available") {
                             BrowseHeader("Available", "${shown.size} in your ${repos.size} repositor${if (repos.size == 1) "y" else "ies"}", searchOpen, query,
@@ -313,14 +359,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
                     }
                 }
                 HubPart.REPOS -> {
-                    item("repos") {
-                        RepoHeader(
-                            "${repos.size} added", kTag, "Add a ${kind.label} repository", "About ${kind.label} extensions",
-                            (if (kind == TachiyomiExtensions.Kind.ANIME) "Aniyomi anime extensions (lib 12–16) run inside Yumeiro. Their titles appear in Videos → Online like any other source."
-                            else "Mihon / Tachiyomi manga extensions (lib 1.2–1.5). Their titles appear in the Manga section.") +
-                                "\n\nAdd a repository with +: GitHub repo links, raw links or the index.min.json URL. Only add repositories you trust.",
-                        ) { addOpen = true }
-                    }
+                    item("repos") { SectionTitle("Your repositories", "${repos.size} added") }
                     if (repos.isEmpty()) note("norepo", "No repositories yet. Tap + to add a link, or pick one from Discover below.")
                     items(repos, key = { "r" + it.url }) { r ->
                         HubCard(r.name.ifBlank { r.url }, r.url) {
@@ -373,7 +412,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind) {
 // region Stremio
 
 @Composable
-private fun StremioTab() {
+private fun StremioTab(nav: SourcesPageNav) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val addons by StremioAddons.addons.collectAsState()
@@ -387,17 +426,22 @@ private fun StremioTab() {
         return r.isSuccess
     }
     fun addUrl(url: String) { scope.launch { addAddon(url) } }
-    // SRC-HUB-1: add-ons have no repositories, so two parts: what you added, and where to get more.
-    var picked by rememberSaveable { mutableStateOf<HubPart?>(null) }
+    // GROUP D: add-ons have no repositories: the page is "Your add-ons", "Get add-ons" opens as a page.
     var addOpen by rememberSaveable { mutableStateOf(false) }
-    val part = picked ?: if (addons.isNotEmpty()) HubPart.INSTALLED else HubPart.BROWSE
+    val part = nav.route.part ?: HubPart.INSTALLED
     Column(Modifier.fillMaxSize()) {
-        HubPartRow(part, mapOf(HubPart.INSTALLED to addons.size), parts = listOf(HubPart.INSTALLED, HubPart.BROWSE)) { picked = it }
+        nav.Header(if (part == HubPart.BROWSE) "Get add-ons" else "Stremio", if (part == HubPart.BROWSE) "Stremio" else "Catalogs and streams") {
+            dev.asfakul.yumeiro.ui.components.AddIconButton("Add a Stremio add-on", "hub_stremio_add_plus", { addOpen = true })
+            dev.asfakul.yumeiro.ui.components.HelpIconButton("About Stremio add-ons",
+                "Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Get add-ons or add any add-on's manifest link with +. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
+                "hub_stremio_help")
+        }
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_stremio" + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (part == HubPart.INSTALLED) {
+                item("go") { SubPageLink("src_go_browse", "Get add-ons", "Suggested add-ons and Discover") { nav.open(HubPart.BROWSE) } }
                 item("head") { SectionTitle("Your add-ons", "${addons.size} added") }
-                if (addons.isEmpty()) item("none") { HubEmpty("No add-ons yet.", "Get add-ons" to { picked = HubPart.BROWSE }) }
+                if (addons.isEmpty()) item("none") { HubEmpty("No add-ons yet.", "Get add-ons" to { nav.open(HubPart.BROWSE) }) }
                 items(addons, key = { it.manifestUrl }) { a ->
                     val res = a.resources.joinToString(" · ") { it.name }
                     HubCard(a.name, "v${a.version} · ${a.types.joinToString()} · $res", badge = if (a.catalogs.isNotEmpty()) "${a.catalogs.size} catalogs" else null) {
@@ -405,14 +449,6 @@ private fun StremioTab() {
                     }
                 }
             } else {
-                item("add") {
-                    dev.asfakul.yumeiro.ui.components.YuSectionHeader("Get add-ons", "Add one by link, or pick from Discover") {
-                        dev.asfakul.yumeiro.ui.components.AddIconButton("Add a Stremio add-on", "hub_stremio_add_plus", { addOpen = true })
-                        dev.asfakul.yumeiro.ui.components.HelpIconButton("About Stremio add-ons",
-                            "Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Discover or add any add-on's manifest link with +. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
-                            "hub_stremio_help")
-                    }
-                }
                 if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
                     HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
                         TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text("Add", color = SpotifyGreen) }
@@ -437,18 +473,23 @@ private fun StremioTab() {
 // region JavaScript
 
 @Composable
-private fun JsTab() {
+private fun JsTab(nav: SourcesPageNav) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by JsSources.state.collectAsState()
     val adult by OnlineSettings.adult.collectAsState()
-    var available by remember { mutableStateOf<List<JsSources.Entry>>(emptyList()) }
+    var available by remember { mutableStateOf(HubAvailable.js?.takeIf { it.first == state.repos.size }?.second ?: emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var addOpen by rememberSaveable { mutableStateOf(false) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
-    suspend fun refresh() { loading = true; available = runCatching { JsSources.available(context) }.getOrDefault(available); loading = false }
-    LaunchedEffect(state.repos.size) { if (state.repos.isNotEmpty()) refresh() }
+    suspend fun refresh() {
+        loading = true
+        available = runCatching { JsSources.available(context) }.getOrDefault(available)
+        HubAvailable.js = JsSources.state.value.repos.size to available
+        loading = false
+    }
+    LaunchedEffect(state.repos.size) { if (state.repos.isNotEmpty() && HubAvailable.js?.first != state.repos.size) refresh() }
     suspend fun addRepo(url: String): Boolean {
         loading = true
         val r = JsSources.addRepo(context, url)
@@ -460,19 +501,29 @@ private fun JsTab() {
     fun addRepoUrl(url: String) { scope.launch { addRepo(url) } }
     val installedIds = state.installed.associateBy { it.id }
     val shown = available.filter { it.isJs && (adult || !it.nsfw) && (query.isBlank() || it.name.contains(query, true) || it.lang.equals(query, true)) }.sortedBy { it.name.lowercase() }
-    // SRC-HUB-1: Installed / Browse / Repositories.
-    var picked by rememberSaveable { mutableStateOf<HubPart?>(null) }
-    val part = picked ?: HubParts.default(state.installed.size, state.repos.size)
-
+    // GROUP D: Installed is the page; Browse and Repositories open as their own pages.
+    val part = nav.route.part ?: HubPart.INSTALLED
     Column(Modifier.fillMaxSize()) {
-        HubPartRow(part, mapOf(HubPart.INSTALLED to state.installed.size, HubPart.BROWSE to available.count { it.isJs }.takeIf { state.repos.isNotEmpty() }, HubPart.REPOS to state.repos.size)) { picked = it }
+        nav.Header(when (part) { HubPart.BROWSE -> "Browse"; HubPart.REPOS -> "Repositories"; else -> "JavaScript" },
+            if (part == HubPart.INSTALLED) "Mangayomi-format sources" else "JavaScript") {
+            dev.asfakul.yumeiro.ui.components.AddIconButton("Add a JavaScript repository", "hub_js_add_plus", { addOpen = true })
+            dev.asfakul.yumeiro.ui.components.HelpIconButton("About JavaScript sources",
+                "JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online." +
+                    "\n\nAdd a Mangayomi-format repository with +. Only JavaScript sources are used.", "hub_js_help")
+        }
         if (loading) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_js" + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (part) {
                 HubPart.INSTALLED -> {
+                    item("go") {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SubPageLink("src_go_browse", "Browse sources", if (state.repos.isEmpty()) "Add a repository first" else "${available.count { it.isJs }} available") { nav.open(HubPart.BROWSE) }
+                            SubPageLink("src_go_repos", "Repositories", "${state.repos.size} added · Discover more") { nav.open(HubPart.REPOS) }
+                        }
+                    }
                     item("inst") { SectionTitle("Installed", "${state.installed.size} sources") }
                     if (state.installed.isEmpty()) item("noinst") {
-                        HubEmpty("Nothing installed yet.", if (state.repos.isEmpty()) "Add a repository" to { picked = HubPart.REPOS } else "Browse sources" to { picked = HubPart.BROWSE })
+                        HubEmpty("Nothing installed yet.", if (state.repos.isEmpty()) "Add a repository" to { nav.open(HubPart.REPOS) } else "Browse sources" to { nav.open(HubPart.BROWSE) })
                     }
                     items(state.installed, key = { "i" + it.id }) { e ->
                         HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}") {
@@ -481,7 +532,7 @@ private fun JsTab() {
                     }
                 }
                 HubPart.BROWSE -> {
-                    if (state.repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its sources are listed here.", "Add a repository" to { picked = HubPart.REPOS }) }
+                    if (state.repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its sources are listed here.", "Add a repository" to { nav.open(HubPart.REPOS) }) }
                     else {
                         item("avail") {
                             BrowseHeader("Available", "${shown.size} JavaScript sources", searchOpen, query,
@@ -504,11 +555,7 @@ private fun JsTab() {
                     }
                 }
                 HubPart.REPOS -> {
-                    item("repos") {
-                        RepoHeader("${state.repos.size} added", "hub_js", "Add a JavaScript repository", "About JavaScript sources",
-                            "JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online." +
-                                "\n\nAdd a Mangayomi-format repository with +. Only JavaScript sources are used.") { addOpen = true }
-                    }
+                    item("repos") { SectionTitle("Your repositories", "${state.repos.size} added") }
                     if (state.repos.isEmpty()) note("norepo", "No repositories yet. Tap + to add a link, or pick one from Discover below.")
                     items(state.repos, key = { "r$it" }) { r ->
                         HubCard(r.substringAfter("://").substringBefore("/"), r) {
@@ -540,7 +587,7 @@ private fun JsTab() {
 // region Home servers
 
 @Composable
-private fun ServersTab() {
+private fun ServersTab(nav: SourcesPageNav) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val servers by HomeServers.servers.collectAsState()
@@ -549,12 +596,13 @@ private fun ServersTab() {
     var scanning by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize()) {
+        nav.Header("Home servers", "Play your own media") {
+            dev.asfakul.yumeiro.ui.components.HelpIconButton("About home servers",
+                "Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore." +
+                    "\n\nServers with self-signed HTTPS certificates aren't supported yet; use plain HTTP on your home network or a real certificate.", "hub_servers_help")
+        }
         if (scanning) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_servers"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_servers"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("about") {
-                Text("Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore.",
-                    color = TextSecondary, fontSize = 13.sp)
-            }
             item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.servers) }
             item("add") {
                 SectionTitle("Add a server")
@@ -587,7 +635,6 @@ private fun ServersTab() {
                     IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { HomeServers.remove(context, s.id) }; afterChange() } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
                 }
             }
-            note("tls", "Servers with self-signed HTTPS certificates aren't supported yet; use plain HTTP on your home network or a real certificate.")
         }
     }
     form?.let { k -> ServerForm(k, onDismiss = { form = null }) { form = null; afterChange() } }

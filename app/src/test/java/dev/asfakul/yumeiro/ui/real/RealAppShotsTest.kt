@@ -311,7 +311,11 @@ class RealAppShotsTest {
         step("02b_home_continue", 2_000) { runCatching { rule.onNodeWithTag("home_list", true).performScrollToNode(hasTestTag("home_continue_card")) } }
         step("17_settings", 3_000) { runCatching { rule.onNodeWithTag("home_list", true).performScrollToIndex(0) }; tap("topbar_settings_action") }
         step("18_sources_hub", 3_000) { runCatching { rule.onNodeWithTag("settings_home", true).performScrollToNode(hasTestTag("settings_cat_sources")) }; tap("settings_cat_sources") }
-        for (i in 1..4) step("18_sources_tab_$i", 3_000) { tap("sources_tab_$i") }
+        // GROUP D: the Source page is a page flow; open each ecosystem page and come back.
+        for (p in listOf("aniyomi", "mihon", "stremio", "js")) {
+            step("18_sources_$p", 3_000) { runCatching { rule.onNodeWithTag("src_home", true).performScrollToNode(hasTestTag("src_page_$p")) }; tap("src_page_$p") }
+            step("18_sources_home", 1_500) { back() }
+        }
     }
 
     @Test fun phoneDark() { dark = true; phoneTour("phone_dark_") }

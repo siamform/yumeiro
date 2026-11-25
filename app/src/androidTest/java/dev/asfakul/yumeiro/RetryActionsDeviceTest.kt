@@ -121,15 +121,14 @@ class RetryActionsDeviceTest {
     }
 
     /**
-     * SRC-HUB-1: repositories and add-ons are added in the page's link field (Repositories part; Browse for
-     * Stremio add-ons), no dialog. Types [url] and taps Add.
+     * SRC-HUB-1 / GROUP C / GROUP D: repositories and add-ons are added with the page header's "+" (add sheet),
+     * from any page of that ecosystem. Types [url] and taps Add. [part] is kept for the log only.
      */
     private fun addThroughField(list: String, part: String, field: String, url: String) {
         wait("$list list") { has(list) }
-        compose.onNodeWithTag("hub_part_$part", true).performClick()
+        compose.onNodeWithTag("${field}_plus", true).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(list, true).performScrollToNode(hasTestTag("${field}_field"))
-        compose.waitForIdle()
+        wait("${field}_field") { has("${field}_field") }
         compose.onNodeWithTag("${field}_field", true).performTextInput(url)
         compose.waitForIdle()
         compose.onNodeWithTag("${field}_add", true).performClick()

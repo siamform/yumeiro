@@ -640,7 +640,7 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.LIVE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.DOWNLOADS -> navigateSub(Screen.Downloads.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.EXTENSIONS -> navigateSub(Screen.Extensions.route)
-            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SOURCES -> navigateSub(Screen.SourcesHub.route(0))
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SOURCES -> navigateSub(Screen.SourcesHub.route())
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YOUTUBE -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WEBSITES -> navigateSub(Screen.WebSites.route)
@@ -833,7 +833,7 @@ fun MTPlayerApp(
                                     }
                                 },
                                 onOpenManga = { navigateSub(Screen.Manga.route) },
-                                onOpenSources = { navigateSub(Screen.SourcesHub.route(0)) },
+                                onOpenSources = { navigateSub(Screen.SourcesHub.route()) },
                                 onOpenOnlineTitle = openOnline,
                                 onOpenYouTube = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE; navigateTop(Screen.Videos.route) },
                                 onOpenHues = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
@@ -1219,8 +1219,8 @@ fun MTPlayerApp(
                         }
                     }
 
-                    page(subPad, Screen.SourcesHub.route, arguments = listOf(navArgument(Screen.SourcesHub.ARG) { type = NavType.IntType; defaultValue = 0 })) { entry ->
-                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sources.SourcesHubScreen(onBack = popSub, initialTab = entry.arguments?.getInt(Screen.SourcesHub.ARG) ?: 0) }
+                    page(subPad, Screen.SourcesHub.route, arguments = listOf(navArgument(Screen.SourcesHub.ARG) { type = NavType.IntType; defaultValue = -1 })) { entry ->
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.sources.SourcesHubScreen(onBack = popSub, initialTab = entry.arguments?.getInt(Screen.SourcesHub.ARG) ?: -1, onOpenCloudStream = { navigateSub(Screen.Extensions.route) }) }
                     }
                     page(subPad, Screen.SourceHealth.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.sources.SourceHealthScreen(onBack = popSub) }

@@ -25,7 +25,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** SRC-HUB-1 (owner list 3): each source tab is Installed / Browse / Repositories, with an in-page link field. */
+/** SRC-HUB-1 (owner list 3) + GROUP D: each ecosystem page is Installed, with Browse and Repositories as pages. */
 @RunWith(RobolectricTestRunner::class)
 @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
 @Config(sdk = [36], qualifiers = "w411dp-h1600dp")
@@ -44,31 +44,28 @@ class SourcesHubPartsTest {
         assertEquals("Browse", HubParts.label(HubPart.BROWSE, null))
     }
 
-    @Test fun javascriptTabIsSplitInThree() {
+    /** GROUP D: Installed is the page; Browse and Repositories are pages opened from it, never a tab row. */
+    @Test fun javascriptPageOpensBrowseAndRepositoriesAsPages() {
         rule.setContent { MTPlayerTheme { SourcesHubScreen(onBack = {}, initialTab = 3) } }
         rule.waitUntil(10_000) { has("hub_js") }
-        listOf("installed", "browse", "repos").forEach { assertTrue("part $it", has("hub_part_$it")) }
-        // Nothing added: it opens on Repositories; GROUP C: + opens the add sheet (field, Paste, Add).
+        assertTrue(has("src_route_js"))
+        listOf("installed", "browse", "repos").forEach { assertFalse("part tab $it", has("hub_part_$it")) }
         assertTrue(has("hub_js_add_plus"))
-        // The sheet itself (field, Paste, Add off while empty) is covered by GroupCIconsTest.
-        // Browse with no repository explains why and leads back to Repositories.
-        click("hub_part_browse")
-        assertFalse(has("hub_js_add_plus"))
+        // Browse with no repository explains why and leads to Repositories.
+        click("src_go_browse")
+        rule.waitUntil(5_000) { has("src_route_js_browse") && !has("src_route_js") }
         assertTrue(has("hub_empty"))
         click("hub_empty_action")
+        rule.waitUntil(5_000) { has("src_route_js_repos") }
+        // The + stays in the page header on every JS page.
         assertTrue(has("hub_js_add_plus"))
-        // Installed holds only installed sources.
-        click("hub_part_installed")
-        assertTrue(has("hub_empty"))
-        assertFalse(has("hub_js_add_plus"))
     }
 
-    @Test fun stremioHasNoRepositoriesPart() {
+    @Test fun stremioHasNoRepositoriesPage() {
         rule.setContent { MTPlayerTheme { SourcesHubScreen(onBack = {}, initialTab = 2) } }
         rule.waitUntil(10_000) { has("hub_stremio") }
-        assertTrue(has("hub_part_installed") && has("hub_part_browse"))
-        assertFalse(has("hub_part_repos"))
-        rule.onNodeWithTag("hub_stremio", true).performScrollToNode(hasTestTag("hub_stremio_add_plus"))
+        assertTrue(has("src_go_browse"))
+        assertFalse(has("src_go_repos"))
         assertTrue(has("hub_stremio_add_plus"))
     }
 }

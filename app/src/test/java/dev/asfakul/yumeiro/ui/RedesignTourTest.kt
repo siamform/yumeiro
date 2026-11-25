@@ -354,7 +354,7 @@ class RedesignTourTest {
         stop("extensions") {
             home(); tap("topbar_settings_action"); waitFor("settings_home")
             tap("settings_cat_sources", list = "settings_home"); waitFor("sources_hub"); snap("70_sources_hub")
-            for (i in 1..4) if (exists("sources_tab_$i")) { tap("sources_tab_$i"); settle(800); snap("71_sources_tab_$i") }
+            for (p in listOf("aniyomi", "mihon", "stremio", "js")) if (exists("src_page_$p")) { tap("src_page_$p", list = "src_home"); settle(800); snap("71_sources_$p"); back(); settle(600) }
             home()
         }
         // The "New playlist" dialog focuses a text field; its blinking cursor never lets Robolectric go idle,

@@ -70,7 +70,8 @@ sealed class Screen(val route: String) {
     /** Aniyomi / Mihon / Stremio / JavaScript / home servers. */
     data object SourcesHub : Screen("sources?tab={tab}") {
         const val ARG = "tab"
-        fun route(tab: Int = 0): String = "sources?tab=$tab"
+        /** GROUP D: -1 = the Source overview; 0 Aniyomi, 1 Mihon, 2 Stremio, 3 JavaScript, 4 Home servers, 5 Script repos. */
+        fun route(tab: Int = -1): String = "sources?tab=$tab"
     }
     data object Manga : Screen("manga")
     data object MangaTitle : Screen("manga/title?p={p}&u={u}&t={t}&i={i}") {
