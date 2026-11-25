@@ -49,6 +49,8 @@ class Anime1YumeiroAnimeTest {
         episodes = { url -> asked += url; "Mobile Suit Gundam SEED DESTINY" to videos },
     )
 
+    @org.junit.Before fun clearCaches() = YumeiroAnimeProvider.resetForTests()
+
     @Test fun onByDefaultAndOnlyOfficialChannels() {
         assertTrue(FeatureFlags.Flag.OFFICIAL_ANIME.default)
         assertEquals(6, YumeiroAnimeProvider.CHANNELS.size)
@@ -107,8 +109,8 @@ class Anime1YumeiroAnimeTest {
         val home = api.getMainPage(1, MainPageRequest(YumeiroAnimeProvider.ALL_SHELF, YumeiroAnimeProvider.ALL, false))
         val names = home.items.first().list.map { it.name }
         assertEquals(listOf("Mobile Suit Gundam SEED DESTINY"), names)
-        // Every channel without a cached answer was asked for its playlists (the cache is shared between tests).
-        assertTrue(asked.count { "/channel/" in it } >= YumeiroAnimeProvider.CHANNELS.size - 1)
+        // The caches are cleared before each test, so every channel was asked for its playlists.
+        assertEquals(YumeiroAnimeProvider.CHANNELS.size, asked.count { "/channel/" in it })
     }
 
     @Test fun hubShelvesTakeTurnsAcrossParts() {

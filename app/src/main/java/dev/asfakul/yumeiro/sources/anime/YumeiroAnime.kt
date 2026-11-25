@@ -199,6 +199,8 @@ class YumeiroAnimeProvider(
         private val cache = ConcurrentHashMap<String, Pair<Long, List<Series>>>()
         private val known = ConcurrentHashMap<String, YouTube.YtPlaylistCard>()
 
+        /** Tests: the caches live for the process, so one test's answers (or a Home test's real fetch) leaked into the next. */
+        internal fun resetForTests() { cache.clear(); known.clear() }
 
         private fun ctx(): Context = YumeiroAnime.app ?: error("Yumeiro Anime isn't started")
 
