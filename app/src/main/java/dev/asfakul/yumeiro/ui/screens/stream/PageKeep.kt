@@ -69,7 +69,9 @@ class PageKeep(val pageUrl: String) {
         val w = page
         if (w != null) {
             (w.parent as? android.view.ViewGroup)?.removeView(w)
-            w.stopLoading(); w.onPause(); w.destroy()
+            // Old WebViews (Android 7 renders pages inside the app process) could fault while a heavy page was torn
+            // down mid-load (TV api24, run 45761414933, SIGSEGV in Chrome_InProcRe): blank the page first.
+            w.stopLoading(); runCatching { w.loadUrl("about:blank") }; w.onPause(); w.removeAllViews(); w.destroy()
         }
         page = null
         synchronized(capture) { capture.reset() }

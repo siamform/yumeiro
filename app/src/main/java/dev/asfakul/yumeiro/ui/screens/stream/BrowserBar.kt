@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.RemoveModerator
@@ -90,7 +91,22 @@ internal fun BrowserBar(
         Box {
             IconButton(onClick = { menu = true }, modifier = Modifier.testTag("browser_menu")) { Icon(Icons.Default.MoreVert, "Page menu", tint = TextPrimary) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, modifier = Modifier.testTag("browser_menu_list")) {
+                // GROUP E2 (owner: "reload, back, forward, tabs, ad controls"): a Chrome-style icon row on top of the menu.
+                Row(Modifier.padding(horizontal = 8.dp).testTag("browser_menu_nav"), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { menu = false; onBack() }, enabled = canBack, modifier = Modifier.testTag("browser_menu_back")) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = if (canBack) TextPrimary else TextTertiary)
+                    }
+                    IconButton(onClick = { menu = false; onForward() }, enabled = canForward, modifier = Modifier.testTag("browser_menu_forward")) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, "Forward", tint = if (canForward) TextPrimary else TextTertiary)
+                    }
+                    IconButton(onClick = { menu = false; onReload() }, modifier = Modifier.testTag("browser_menu_reload")) { Icon(Icons.Default.Refresh, "Reload", tint = TextPrimary) }
+                }
                 DropdownMenuItem(text = { Text("Reload") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onReload() }, modifier = Modifier.testTag("browser_reload"))
+                if (onTabs != null) DropdownMenuItem(
+                    text = { Text(if (tabCount == 1) "Tabs (1 open)" else "Tabs ($tabCount open)") },
+                    leadingIcon = { Icon(Icons.Default.Tab, null) },
+                    onClick = { menu = false; onTabs() }, modifier = Modifier.testTag("browser_menu_tabs"),
+                )
                 if (onFilter != null) DropdownMenuItem(
                     text = { Text(if (filterOn) "Ad filter on for this page" else "Ad filter off for this page") },
                     leadingIcon = { Icon(if (filterOn) Icons.Default.Shield else Icons.Default.RemoveModerator, null, tint = if (filterOn) accent else TextTertiary) },

@@ -107,6 +107,7 @@ fun PlaylistMarketScreen(
     val playlists by PlaylistStore.playlists.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
+    var filterSheet by remember { mutableStateOf(false) }
     var searching by rememberSaveable { mutableStateOf(false) }
     var details by remember { mutableStateOf<PlaylistMarket.Entry?>(null) }
     var updatingAll by remember { mutableStateOf(false) }
@@ -173,6 +174,18 @@ fun PlaylistMarketScreen(
         }
     }
 
+    if (filterSheet && catalog != null) dev.asfakul.yumeiro.ui.components.FilterSheet(
+        onDismiss = { filterSheet = false }, onReset = if (filter != null) ({ filter = null }) else null, resultCount = visible.size, tag = "market_filter_sheet",
+    ) {
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Show", "market_filter_show") {
+            dev.asfakul.yumeiro.ui.components.FilterPill("All", filter == null, { filter = null })
+            if (installedBy.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterPill("Installed (${installedBy.size})", filter == FILTER_INSTALLED, { filter = FILTER_INSTALLED })
+            if (updates.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterPill("Updates (${updates.size})", filter == FILTER_UPDATES, { filter = FILTER_UPDATES })
+        }
+        if (catalog.categories.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterGroup("Category", "market_filter_category") {
+            catalog.categories.forEach { c -> dev.asfakul.yumeiro.ui.components.FilterPill(c, filter == c, { filter = if (filter == c) null else c }) }
+        }
+    }
     Column(modifier.fillMaxSize().testTag("market_screen")) {
         SubPageHeader(
             title = "Playlist market",
@@ -181,6 +194,8 @@ fun PlaylistMarketScreen(
             onBack = onBack,
         ) {
             if (ready != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(open = searching || query.isNotEmpty(), onToggle = { searching = !(searching || query.isNotEmpty()); if (!searching) query = "" }, tag = "market_search_toggle", description = "Search playlists")
+            // GROUP C catch-all: category / Installed / Updates chips moved into a filter sheet.
+            if (ready != null) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (filter != null) 1 else 0, { filterSheet = true }, "market_filter", "Filter playlists")
             val refreshing = ready?.refreshing == true || state is PlaylistMarket.State.Loading
             IconButton(onClick = { reload() }, enabled = !refreshing, modifier = Modifier.testTag("market_reload")) {
                 if (refreshing) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
@@ -223,16 +238,6 @@ fun PlaylistMarketScreen(
                             Spacer(Modifier.width(10.dp))
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                             PillButton(if (updatingAll) "Updating…" else "Update all", enabled = !updatingAll, tag = "market_update_all") { update(null) }
-                        }
-                    }
-                    item(key = "search") {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                item(key = "all") { Chip("All", filter == null) { filter = null } }
-                                if (installedBy.isNotEmpty()) item(key = "installed") { Chip("Installed (${installedBy.size})", filter == FILTER_INSTALLED) { filter = FILTER_INSTALLED } }
-                                if (updates.isNotEmpty()) item(key = "updates") { Chip("Updates (${updates.size})", filter == FILTER_UPDATES) { filter = FILTER_UPDATES } }
-                                items(s.catalog.categories, key = { "c_$it" }) { c -> Chip(c, filter == c) { filter = if (filter == c) null else c } }
-                            }
                         }
                     }
                     if (visible.isEmpty()) item(key = "none") {

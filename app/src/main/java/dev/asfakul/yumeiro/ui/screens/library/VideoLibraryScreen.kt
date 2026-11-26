@@ -118,10 +118,22 @@ fun VideoLibraryContent(
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
     val history = androidx.compose.runtime.remember(historyAll, adultOn, adultPrivate) { OnlineHistory.forFeed(historyAll, adultOn, adultPrivate) }
     var status by rememberSaveable { mutableStateOf<String?>(null) }
+    var statusSheet by remember { mutableStateOf(false) }
     // F-09: "FAV" = Favorites chip; "All" = everything saved (Favorite-only titles included).
     val shown = remember(bookmarks, status) { bookmarks.filter { status == null || (status == "FAV" && it.favorite) || it.status.name == status } }
     val openFolders = remember { androidx.compose.runtime.mutableStateListOf<String>() }
 
+    if (statusSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(
+        onDismiss = { statusSheet = false }, onReset = if (status != null) ({ status = null }) else null, resultCount = shown.size, tag = "library_mylist_sheet",
+    ) {
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Status", "library_mylist_status") {
+            dev.asfakul.yumeiro.ui.components.FilterPill("All", status == null, { status = null })
+            if (bookmarks.any { it.favorite }) dev.asfakul.yumeiro.ui.components.FilterPill("Favorites", status == "FAV", { status = if (status == "FAV") null else "FAV" })
+            OnlineBookmarks.Status.picks.filter { s -> bookmarks.any { it.status == s } }.forEach { s ->
+                dev.asfakul.yumeiro.ui.components.FilterPill(s.label, status == s.name, { status = if (status == s.name) null else s.name })
+            }
+        }
+    }
     LazyVerticalGrid(
         GridCells.Adaptive(108.dp), modifier.fillMaxSize().testTag("video_library"),
         state = dev.asfakul.yumeiro.ui.components.ScrollMemory.grid("video_library:" + (status ?: "")),
@@ -163,15 +175,13 @@ fun VideoLibraryContent(
             downloadSections(split, dev.asfakul.yumeiro.ui.screens.downloads.DownloadFilter.ALL, dlDays, openFolders, onPlayVideo)
         }
         item("mlh", span = { GridItemSpan(maxLineSpan) }) {
-            Column {
-                LibHeader("My List", subtitle = if (bookmarks.isEmpty()) null else "${bookmarks.size} saved")
-                if (bookmarks.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { OnlineChip("All", status == null, { status = null }) }
-                    if (bookmarks.any { it.favorite }) item("fav") { OnlineChip("Favorites", status == "FAV", { status = if (status == "FAV") null else "FAV" }) }
-                    items(OnlineBookmarks.Status.picks.filter { s -> bookmarks.any { it.status == s } }, key = { it.name }) { s ->
-                        OnlineChip(s.label, status == s.name, { status = if (status == s.name) null else s.name })
-                    }
+            // GROUP C catch-all: the status chips moved behind a filter icon on the My List header.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f)) {
+                    val label = when (status) { null -> null; "FAV" -> "Favorites"; else -> OnlineBookmarks.Status.picks.firstOrNull { it.name == status }?.label }
+                    LibHeader("My List", subtitle = if (bookmarks.isEmpty()) null else "${bookmarks.size} saved" + (label?.let { " · showing $it" } ?: ""))
                 }
+                if (bookmarks.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (status != null) 1 else 0, { statusSheet = true }, "library_mylist_filter", "Filter My List")
             }
         }
         if (bookmarks.isEmpty()) item("mlempty", span = { GridItemSpan(maxLineSpan) }) {

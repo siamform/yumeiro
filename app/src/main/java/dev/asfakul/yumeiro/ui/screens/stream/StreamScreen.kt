@@ -361,6 +361,7 @@ fun StreamScreen(
     var filterOpen by rememberSaveable { mutableStateOf(false) }
     var toolsOpen by rememberSaveable { mutableStateOf(false) }
     var playlistQuery by rememberSaveable { mutableStateOf("") }
+    var playlistSearchOpen by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) { PinnedPlaylists.init(app) }
     val pinIds by PinnedPlaylists.pins.collectAsState()
     // R15 Phase 3 (ADR-008): the channel lists live for the process (LiveTvMemory), and loads run
@@ -660,13 +661,12 @@ fun StreamScreen(
                         lastSync = lastSync, syncing = syncing, onMarket = onOpenMarket,
                         onAddUrl = { addingRemote = true }, onNew = { creatingLocal = true }, onSync = ::sync,
                         onRestore = { launchSafe { val n = PlaylistStore.restoreDefaults(app); toast(if (n > 0) "Restored $n default playlists" else "Default playlists enabled") } },
+                        searchOpen = if (playlists.size >= PLAYLIST_SEARCH_FROM) playlistSearchOpen || playlistQuery.isNotEmpty() else null,
+                        onToggleSearch = { if (playlistSearchOpen || playlistQuery.isNotEmpty()) { playlistSearchOpen = false; playlistQuery = "" } else playlistSearchOpen = true },
                     )
                 }
-                if (playlists.size >= PLAYLIST_SEARCH_FROM) item(key = "playlists_search") {
-                    dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                        query = playlistQuery, onQuery = { playlistQuery = it.take(60) }, hint = "Search playlists",
-                        tag = "playlists_search", modifier = Modifier.fillMaxWidth(),
-                    )
+                if (playlists.size >= PLAYLIST_SEARCH_FROM && (playlistSearchOpen || playlistQuery.isNotEmpty())) item(key = "playlists_search") {
+                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(true, playlistQuery, { playlistQuery = it.take(60) }, "Search playlists", "playlists_search", horizontalPadding = 0.dp)
                 }
                 if (channels.isNotEmpty() && openPlaylistId == null) item(key = "opened_list") {
                     OpenedListCard(name = playlistName, count = channels.size, onOpen = { onOpenPlaylist(OPENED_PLAYLIST_SLUG) }, onClose = { StreamRepository.setPlaylist(null, emptyList()) })

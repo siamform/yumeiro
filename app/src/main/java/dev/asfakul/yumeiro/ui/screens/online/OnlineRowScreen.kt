@@ -114,6 +114,7 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
     // Round 13: search inside this section (it can hold more than 1000 titles). While a search is
     // typed, pages keep loading one at a time so titles further down are found as well.
     var query by androidx.compose.runtime.saveable.rememberSaveable(api, pageData) { mutableStateOf("") }
+    var searchOpen by androidx.compose.runtime.saveable.rememberSaveable(api, pageData) { mutableStateOf(false) }
     val shown by androidx.compose.runtime.produceState<List<OnlineItem>>(items.toList(), items.size, query) {
         val snapshot = items.toList()
         value = if (query.isBlank()) snapshot else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { filterByTitle(snapshot, query) { it.name } }
@@ -123,11 +124,16 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
     }
 
     Column(Modifier.fillMaxSize().testTag("online_row_screen")) {
-        SubPageHeader(title = title, subtitle = api, onBack = onBack)
+        SubPageHeader(title = title, subtitle = api, onBack = onBack) {
+            // GROUP C catch-all: the section search is a header icon, not a box pinned over the grid.
+            if (items.isNotEmpty()) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+            }, "online_row_search_open", "Search $title")
+        }
         if (items.isNotEmpty()) {
-            dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                query = query, onQuery = { query = it.take(80) }, hint = "Search ${items.size}${if (hasNext) "+" else ""} titles in $title",
-                tag = "online_row_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            dev.asfakul.yumeiro.ui.components.HeaderSearchField(
+                searchOpen || query.isNotEmpty(), query, { query = it.take(80) },
+                "Search ${items.size}${if (hasNext) "+" else ""} titles in $title", "online_row_search",
             )
             if (query.isNotBlank()) Text(
                 "${shown.size} match${if (shown.size == 1) "" else "es"} in ${items.size} loaded" + if (loading) " · looking further…" else "",
