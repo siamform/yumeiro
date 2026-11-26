@@ -78,6 +78,7 @@ internal fun WebsiteSettingsSheet(onDismiss: () -> Unit, onImport: () -> Unit, o
     val remember by SiteHistory.on.collectAsState()
     val ads by BrowserFilters.filterAds.collectAsState()
     val links by BrowserFilters.resolveLinks.collectAsState()
+    val redirects by BrowserFilters.stopRedirects.collectAsState()
     var manage by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     if (manage) ManageAdsDialog(onDismiss = { manage = false })
@@ -87,6 +88,7 @@ internal fun WebsiteSettingsSheet(onDismiss: () -> Unit, onImport: () -> Unit, o
             SettingSwitch("Remember sites I visit", "Shown under Recently visited, on this phone only", remember, "recent_switch") { SiteHistory.setOn(context, it) }
             SettingSwitch("Block ads and pop-ups", "Ad sites never load, pop-ups and pop-unders stay closed. The shield in a page's menu turns it off there only", ads, "filter_ads_switch") { BrowserFilters.setFilterAds(context, it) }
             SettingSwitch("Open the real link behind short links", "Waits out the timers and taps Continue on link-shortener pages; a check that needs you is left to you", links, "resolve_links_switch") { BrowserFilters.setResolveLinks(context, it) }
+            SettingSwitch("Stop redirects", "A page can't send you to another site by itself; a bar lets you open it. App links never leave Yumeiro", redirects, "stop_redirects_switch") { BrowserFilters.setStopRedirects(context, it) }
             SettingLink(Icons.Default.VisibilityOff, "Manage ads", "Parts of pages you hid with Hide an element", "site_manage_ads") { manage = true }
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = p.textPrimary.copy(alpha = 0.08f))
             SettingLink(Icons.AutoMirrored.Filled.PlaylistAdd, "Add websites from a list", "Paste links, one per line", "site_import") { onDismiss(); onImport() }

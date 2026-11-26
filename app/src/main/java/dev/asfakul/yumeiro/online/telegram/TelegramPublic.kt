@@ -63,6 +63,8 @@ object TelegramPublic {
         val duration: String?,
         /** ISO date from the preview, or null. */
         val date: String?,
+        /** B10: a video sent as a file shows its size ("3.8 GB") instead of a length. */
+        val size: String? = null,
     ) {
         val link: String get() = "https://t.me/$channel/$id"
         val playable: Boolean get() = videoUrl != null
@@ -159,7 +161,9 @@ object TelegramPublic {
             val text = msg.selectFirst(".tgme_widget_message_text")?.text()?.trim()?.ifEmpty { null }
                 ?: msg.selectFirst(".tgme_widget_message_document_title")?.text()?.trim().orEmpty()
             val date = msg.selectFirst("a.tgme_widget_message_date time[datetime]")?.attr("datetime")?.takeIf { it.isNotBlank() }
-            val players = msg.select("a.tgme_widget_message_video_player")
+            // B10: round video messages have their own player; a video sent as a file has no preview player at all
+            // (the preview only names it), so it is listed without a file address and plays with the account.
+            val players = msg.select("a.tgme_widget_message_video_player, .tgme_widget_message_roundvideo_player")
             for (player in players) {
                 val id = player.attr("href").substringAfterLast('/').substringBefore('?').toIntOrNull() ?: msgId
                 posts += VideoPost(
@@ -168,9 +172,15 @@ object TelegramPublic {
                     text = text,
                     videoUrl = videoOf(player),
                     thumbUrl = thumbOf(player),
-                    duration = player.selectFirst("time.message_video_duration")?.text()?.trim()?.takeIf { it.isNotEmpty() },
+                    duration = player.selectFirst("time.message_video_duration, .tgme_widget_message_roundvideo_duration")?.text()?.trim()?.takeIf { it.isNotEmpty() },
                     date = date,
                 )
+            }
+            if (players.isEmpty()) for (doc in msg.select(".tgme_widget_message_document_wrap")) {
+                val name = doc.selectFirst(".tgme_widget_message_document_title")?.text()?.trim().orEmpty()
+                if (name.substringAfterLast('.', "").lowercase() !in VIDEO_FILE_EXT) continue
+                posts += VideoPost(channel = ch, id = msgId, text = text.ifEmpty { name }, videoUrl = null, thumbUrl = null, duration = null, date = date,
+                    size = doc.selectFirst(".tgme_widget_message_document_extra")?.text()?.trim()?.takeIf { it.isNotEmpty() })
             }
         }
         val before = doc.selectFirst("a.tme_messages_more[data-before]")?.attr("data-before")?.toIntOrNull()
@@ -186,6 +196,9 @@ object TelegramPublic {
     // EVERY preview video (a browser shows it only when it can't play the file). Treating that block as "app only"
     // made every public video open the Telegram app. Only a player with no file address (e.g. "Media is too big")
     // is app-only.
+    /** File names the preview lists as documents that are videos (played with the account, see [VideoPost.playable]). */
+    internal val VIDEO_FILE_EXT = setOf("mp4", "mkv", "webm", "mov", "avi", "m4v", "ts", "m2ts", "mts", "3gp", "flv", "wmv", "mpg", "mpeg", "ogv", "vob")
+
     private fun videoOf(player: Element): String? {
         val v = player.selectFirst("video") ?: return null
         return v.attr("src").ifBlank { v.attr("data-src") }.takeIf { it.startsWith("http") }

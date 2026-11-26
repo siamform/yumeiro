@@ -170,12 +170,14 @@ class TgLibrary(private val client: TdClient) {
 
         private val AUDIO_EXT = setOf("mp3", "m4a", "aac", "flac", "ogg", "oga", "opus", "wav", "wma", "alac", "ape")
 
-        private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "mov", "avi", "m4v", "ts", "3gp", "flv", "wmv", "mpg", "mpeg")
+        private val VIDEO_EXT = dev.asfakul.yumeiro.online.telegram.TelegramPublic.VIDEO_FILE_EXT
 
         private fun fileOf(m: JsonObject): JsonObject? {
             val c = m.obj("content") ?: return null
             return when (c.type()) {
                 "messageVideo" -> c.obj("video")?.obj("video")
+                "messageAnimation" -> c.obj("animation")?.obj("animation")
+                "messageVideoNote" -> c.obj("video_note")?.obj("video")
                 "messageDocument" -> c.obj("document")?.obj("document")
                 "messageAudio" -> c.obj("audio")?.obj("audio")
                 "messageVoiceNote" -> c.obj("voice_note")?.obj("voice")
@@ -197,6 +199,30 @@ class TgLibrary(private val client: TdClient) {
                         size = f.long("size").takeIf { it > 0 } ?: f.long("expected_size"),
                         durationSec = v.int("duration"), width = v.int("width"), height = v.int("height"),
                         date = m.long("date"), caption = caption, thumbFileId = v.obj("thumbnail")?.obj("file")?.int("id") ?: 0,
+                    )
+                }
+                // B10: GIF-style clips (sent as MP4) and round video messages are videos too.
+                "messageAnimation" -> {
+                    val a = c.obj("animation") ?: return null
+                    val f = a.obj("animation") ?: return null
+                    TgVideo(
+                        chatId = m.long("chat_id"), messageId = m.long("id"), fileId = f.int("id"),
+                        name = a.str("file_name").ifBlank { caption.lineSequence().firstOrNull().orEmpty() }.ifBlank { "Clip" },
+                        mimeType = a.str("mime_type").takeIf { it.startsWith("video/") } ?: "video/mp4",
+                        size = f.long("size").takeIf { it > 0 } ?: f.long("expected_size"),
+                        durationSec = a.int("duration"), width = a.int("width"), height = a.int("height"),
+                        date = m.long("date"), caption = caption, thumbFileId = a.obj("thumbnail")?.obj("file")?.int("id") ?: 0,
+                    )
+                }
+                "messageVideoNote" -> {
+                    val vn = c.obj("video_note") ?: return null
+                    val f = vn.obj("video") ?: return null
+                    TgVideo(
+                        chatId = m.long("chat_id"), messageId = m.long("id"), fileId = f.int("id"),
+                        name = "Video message", mimeType = "video/mp4",
+                        size = f.long("size").takeIf { it > 0 } ?: f.long("expected_size"),
+                        durationSec = vn.int("duration"), width = vn.int("length"), height = vn.int("length"),
+                        date = m.long("date"), caption = caption, thumbFileId = vn.obj("thumbnail")?.obj("file")?.int("id") ?: 0,
                     )
                 }
                 "messageDocument" -> {
@@ -247,7 +273,10 @@ class TgLibrary(private val client: TdClient) {
             "webm" -> "video/webm"
             "mov" -> "video/quicktime"
             "avi" -> "video/x-msvideo"
-            "ts" -> "video/mp2t"
+            "ts", "m2ts", "mts" -> "video/mp2t"
+            "ogv" -> "video/ogg"
+            "flv" -> "video/x-flv"
+            "vob", "mpg", "mpeg" -> "video/mpeg"
             "3gp" -> "video/3gpp"
             "mp3" -> "audio/mpeg"
             "m4a", "aac", "alac" -> "audio/mp4"

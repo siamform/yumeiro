@@ -646,6 +646,11 @@ fun PageStreamFinderDialog(
         barNote = BarNote("Pop-up blocked", if (target != null) "Open" else null, target?.let { t -> { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, t, emptyMap()) }; Unit } })
     }
 
+    /** B12: Stop redirects held the page's own jump to another site; the person can still go there. */
+    fun redirectHeld(target: String) = main.post {
+        barNote = BarNote("Redirect stopped", "Open", { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, target, emptyMap()) }; Unit })
+    }
+
     fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
 
     /** OL-3: the page switched video or page: keep only the new video's streams. */
@@ -957,8 +962,34 @@ fun PageStreamFinderDialog(
                                             else popupHeld(request.url.toString())
                                             return true
                                         }
-                                        val scheme = request?.url?.scheme?.lowercase()
-                                        return scheme != "http" && scheme != "https" // block intent:, market:, file: …
+                                        if (request == null || !request.isForMainFrame) {
+                                            val scheme = request?.url?.scheme?.lowercase()
+                                            return scheme != "http" && scheme != "https" // block intent:, market:, file: …
+                                        }
+                                        // B12: app links never leave Yumeiro (an intent's web fallback loads here), media plays in
+                                        // Yumeiro's player, and with Stop redirects a page can't move to another site by itself.
+                                        val target = request.url.toString()
+                                        return when (val nav = dev.asfakul.yumeiro.online.web.PopupPolicy.navigation(view?.url, target, request.hasGesture(),
+                                            request.isRedirect, dev.asfakul.yumeiro.online.web.BrowserFilters.stopRedirects.value, chainActiveNow.value)) {
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Allow -> false
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Block -> { android.util.Log.w("YuRedirect", "blocked app link ${target.substringBefore(':')}:"); true }
+                                            is dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.InApp -> { view?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, nav.url, emptyMap()) }; true }
+                                            is dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Hold -> {
+                                                android.util.Log.w("YuRedirect", "held a redirect to ${dev.asfakul.yumeiro.online.web.ChainDestination.hostOf(nav.url)}")
+                                                redirectHeld(nav.url); true
+                                            }
+                                            is dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Play -> {
+                                                android.util.Log.w("YuRedirect", "plays ${nav.label} link in Yumeiro's player")
+                                                val referer = view?.url
+                                                main.post {
+                                                    if (!played) {
+                                                        played = true; webViewRef?.onPause()
+                                                        onPlay(dev.asfakul.yumeiro.stream.StreamRequest(url = nav.url, title = pageTitle, referer = referer))
+                                                    }
+                                                }
+                                                true
+                                            }
+                                        }
                                     }
                                     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                                         // Built-in ad blocking: pre-rolls and pop-unders never load or get offered as "the stream".

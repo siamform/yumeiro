@@ -312,7 +312,7 @@ private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, sign
     ) {
         Box(Modifier.width(128.dp).height(72.dp).clip(RoundedCornerShape(10.dp)).background(p.accent.copy(alpha = 0.14f))) {
             post.thumbUrl?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-            post.duration?.let {
+            (post.duration ?: post.size)?.let {
                 Text(it, color = androidx.compose.ui.graphics.Color.White, fontSize = 11.sp,
                     modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(RoundedCornerShape(4.dp))
                         .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f)).padding(horizontal = 4.dp, vertical = 1.dp))
