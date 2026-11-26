@@ -291,14 +291,23 @@ class GroupEWebsitesDeviceTest {
             inst.runOnMainSync { WebsiteTab.closeAll(); BrowserFilters.setFilterAds(ctx, on) }
             assertTrue("did not return to the list after closing tabs", waitFor(10_000) { !has("browser_bar") })
             dev.asfakul.yumeiro.online.web.AdFilter.clearSeenForTest()
+            Thread.sleep(1_500) // let the closed page's renderer finish (in-process on Android 7)
             openSaved(name)
-            val loaded = waitFor(45_000) { runCatching { js(web(), "document.readyState") == "complete" }.getOrDefault(false) }
+            var loaded = waitFor(45_000) { runCatching { js(web(), "document.readyState") == "complete" }.getOrDefault(false) }
+            if (!loaded && on) { // one honest retry: a reload, as a user would press
+                log("REAL $name filter=$on did not finish loading; reloading once")
+                inst.runOnMainSync { runCatching { web().reload() } }
+                loaded = waitFor(45_000) { runCatching { js(web(), "document.readyState") == "complete" }.getOrDefault(false) }
+            }
             Thread.sleep(20_000) // ad scripts load late (lazy / timers)
             val hosts = runCatching { js(web(), "Array.from(new Set(performance.getEntriesByType('resource').map(function(e){try{return new URL(e.name).host}catch(x){return ''}}))).join(' ')") }.getOrDefault("")
             val seen = dev.asfakul.yumeiro.online.web.AdFilter.seenAds()
             log("REAL $name filter=$on loaded=$loaded adRequests=${seen.size} blocked=${seen.count { it.blocked }} adHosts=${seen.map { it.host }.distinct()} pageHosts=$hosts")
             if (!on) controlAds += seen.size
             else {
+                // No empty passes: with the filter on the page must load and its ad requests must have been seen and blocked.
+                assertTrue("$name: the page did not load with the filter on, so nothing was tested", loaded)
+                assertTrue("$name: the page made no ad-network request with the filter on (nothing was tested)", seen.isNotEmpty())
                 assertTrue("$name: an ad request got through with the filter on: ${seen.filter { !it.blocked }.map { it.host }.distinct()}", seen.none { !it.blocked })
                 // Pop-ups / new windows: three taps on the page body open no second tab and leave the page where it was.
                 val start = WebsiteTab.tab.value?.keep?.pageUrl.orEmpty()

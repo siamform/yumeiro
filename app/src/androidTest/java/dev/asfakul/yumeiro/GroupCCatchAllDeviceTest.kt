@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.OnlineBookmarks
@@ -130,6 +131,10 @@ class GroupCCatchAllDeviceTest {
         try {
             show { dev.asfakul.yumeiro.ui.screens.watch.StreamWatchPanel(currentUrl = chans[0].url, title = chans[0].title) }
             waitTag("stream_watch_panel")
+            // The "Channels" label sits below the player controls and actions; on the TV layout it is below the fold,
+            // so scroll down to it as a user would (run 45761414933).
+            rule.waitForIdle()
+            runCatching { rule.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction(), true).onFirst().performScrollToNode(androidx.compose.ui.test.hasTestTag("stream_watch_search_open")) }
             rule.waitUntil(10_000) { has("stream_watch_search_open") }
             assertFalse("Watch panel: group chip row is still on the page", has("stream_watch_group"))
             searchFlow("Watch panel", "stream_watch_search_open", "stream_watch_search")

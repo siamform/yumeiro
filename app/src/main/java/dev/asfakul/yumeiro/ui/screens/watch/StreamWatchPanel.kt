@@ -414,6 +414,14 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
         }
         WatchLightsOverlay()
     }
+    // GROUP C: the opened search field is a list item below the player controls; on a phone it could sit under
+    // the fold, so opening search brings the "Channels" label and the field to the top (run 45761412243).
+    val reduce = dev.asfakul.yumeiro.ui.components.reducedMotion()
+    androidx.compose.runtime.LaunchedEffect(searchOpen) {
+        if (!searchOpen || channels.isEmpty()) return@LaunchedEffect
+        val label = 3 + (if (base != null) 1 else 0) // controls, title, [servers], actions, then the label
+        if (reduce) listState.scrollToItem(label) else listState.animateScrollToItem(label)
+    }
     // Bring the playing channel into view when the page opens.
     androidx.compose.runtime.LaunchedEffect(currentUrl) {
         val k = list.indexOfFirst { it.value.url == currentUrl }
