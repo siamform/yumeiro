@@ -297,7 +297,8 @@ object ExtensionManager {
         val ext = extensionLookup()
         uniqueNames(all, { it.name }, { ext(it)?.installedAt ?: Long.MAX_VALUE }, { ext(it)?.repoName })
             .forEach { (api, newName) -> runCatching { api.name = newName } }
-        return all.distinctBy { it.name }
+        // F7: clone sites join after their original (and after PIN-2 names, so a clone never takes the original's).
+        return SiteClones.expand(all.distinctBy { it.name })
             .also { ProviderOverrides.apply(it) }
     }
 
@@ -339,11 +340,12 @@ object ExtensionManager {
         runCatching { APIHolder.allProviders.size }.getOrDefault(-1),
         synchronized(plugins) { plugins.size },
         ProviderOverrides.ready,
+        SiteClones.version,
     )
 
-    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int, val overrides: Boolean) {
+    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int, val overrides: Boolean, val clones: Int) {
         override fun equals(other: Any?): Boolean = other is ProviderStamp && other.engine === engine &&
-            other.hub === hub && other.apis == apis && other.plugins == plugins && other.overrides == overrides
+            other.hub === hub && other.apis == apis && other.plugins == plugins && other.overrides == overrides && other.clones == clones
         override fun hashCode(): Int = System.identityHashCode(engine) * 31 + apis * 7 + plugins
     }
 

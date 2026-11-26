@@ -34,7 +34,7 @@ internal object PrefSections {
     private fun base(file: String) = file.substringBefore("@p")
 
     /** Files that go with the sources (the extension list, servers, overrides). */
-    val sourceFiles = setOf("tachiyomi_bridge", "provider_overrides", "pinned_extensions", "home_servers")
+    val sourceFiles = setOf("tachiyomi_bridge", "provider_overrides", "pinned_extensions", "home_servers", "site_clones")
     private const val JS_SOURCE_PREFIX = "js_source_"
 
     /** Library keys inside files that also hold settings. */

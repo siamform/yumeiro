@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderOpen
@@ -466,7 +467,12 @@ private fun InstalledCard(
     var editUrl by remember { mutableStateOf<com.lagradost.cloudstream3.MainAPI?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val plugin = remember(info.loaded, ext.key) { ExtensionManager.pluginOf(ext.key) as? com.lagradost.cloudstream3.plugins.Plugin }
-    val apis = remember(info.loaded, info.providers) { ExtensionManager.providers().filter { it.name in info.providers } }
+    // F7: the extension's clone sites are listed with it (they share its file).
+    val cloneTick by dev.asfakul.yumeiro.online.SiteClones.versionFlow.collectAsState()
+    val apis = remember(info.loaded, info.providers, cloneTick) {
+        ExtensionManager.providers().filter { it.name in info.providers || dev.asfakul.yumeiro.online.SiteClones.originOf(it.name) in info.providers }
+    }
+    var cloneOf by remember { mutableStateOf<com.lagradost.cloudstream3.MainAPI?>(null) }
     LaunchedEffect(ext.fileName) { report = ExtensionManager.reportFor(context, ext) }
     var signedIn by remember(ext.key) { mutableStateOf(apis.any { a -> siteHost(a.mainUrl)?.let { dev.asfakul.yumeiro.online.web.SiteLogins.has(context, it) } == true }) }
     fun signIn(api: com.lagradost.cloudstream3.MainAPI) {
@@ -508,6 +514,16 @@ private fun InstalledCard(
                 AppMessages.success(context, if (text.isBlank()) "${api.name} uses its default address" else "${api.name} now uses ${api.mainUrl}") }
         }
     }
+    cloneOf?.let { api ->
+        InputDialog(
+            title = "Clone site", label = "Address of a site like ${api.name}", hint = "https://another-site.example", confirm = "Add clone",
+            onDismiss = { cloneOf = null },
+        ) { text, done ->
+            dev.asfakul.yumeiro.online.SiteClones.add(context, api, text)
+                .onSuccess { name -> done(null); cloneOf = null; AppMessages.success(context, "Added $name. It searches and opens like any source") }
+                .onFailure { done(it.message ?: "Couldn't add that clone") }
+        }
+    }
     Surface(
         shape = RoundedCornerShape(20.dp), color = if (isSelected) SpotifyGreen.copy(alpha = 0.16f) else GlassFill,
         modifier = Modifier.fillMaxWidth().testTag("extension_${ext.internalName}")
@@ -547,6 +563,16 @@ private fun InstalledCard(
                         if (plugin?.openSettings != null && ext.enabled) DropdownMenuItem(text = { Text("Settings") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { menu = false; openSettings() })
                         apis.forEach { api ->
                             DropdownMenuItem(text = { Text(if (apis.size > 1) "Website address · ${api.name}" else "Website address") }, leadingIcon = { Icon(Icons.Default.Language, null) }, onClick = { menu = false; editUrl = api })
+                        }
+                        // F7: a copy of a source that reads a clone site; clones themselves can be removed here.
+                        if (ext.enabled) apis.filter { api -> !dev.asfakul.yumeiro.online.SiteClones.isClone(api.name) }.forEach { api ->
+                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Clone site · ${api.name}" else "Clone site") }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
+                                onClick = { menu = false; cloneOf = api }, modifier = Modifier.testTag("extension_clone_${api.name}"))
+                        }
+                        apis.filter { api -> dev.asfakul.yumeiro.online.SiteClones.isClone(api.name) }.forEach { api ->
+                            DropdownMenuItem(text = { Text("Remove clone · ${api.name}") }, leadingIcon = { Icon(Icons.Default.Delete, null) },
+                                onClick = { menu = false; dev.asfakul.yumeiro.online.SiteClones.remove(context, api.name); AppMessages.info(context, "Removed ${api.name}") },
+                                modifier = Modifier.testTag("extension_clone_remove_${api.name}"))
                         }
                         if (update != null) DropdownMenuItem(text = { Text("Update to v${update.version}") }, leadingIcon = { Icon(Icons.Default.SystemUpdate, null) }, onClick = { menu = false; onUpdate() })
                         DropdownMenuItem(text = { Text("Check for update") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onCheckUpdate() })
