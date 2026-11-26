@@ -190,8 +190,12 @@ internal fun DiscoverShelf(shelf: Discover.Shelf, seeds: List<OnlineItem>, onOpe
 
 @Composable
 private fun rowPage(row: Discover.Row): HubDiscover.Page? {
-    val page by produceState(Discover.memory[row.key + row.query + row.shelf], row) {
-        if (value == null) row.load(1)?.let { Discover.memory[row.key + row.query + row.shelf] = it; value = it }
+    // produceState keeps its value when the key changes, so each key reads its own memory (or loads) instead of
+    // trusting the old value: a changed row never shows the previous row's titles.
+    val mem = row.key + row.query + row.shelf
+    val page by produceState(Discover.memory[mem], mem) {
+        value = Discover.memory[mem]
+        if (value == null) value = row.load(1)?.also { Discover.memory[mem] = it }
     }
     return page
 }
@@ -220,7 +224,9 @@ private fun IfYouLikeRow(seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, 
     val ref = YumeiroCatalog.refOf(seed.url) ?: return
     val key = "like_${ref.kind}_${ref.id}"
     val page by produceState(Discover.memory[key], key) {
-        if (value == null) HubDiscover.recommend(ref.kind, ref.id)?.let { Discover.memory[key] = it; value = it }
+        // A new seed: drop the old seed's titles at once, then show the new ones (cached or loaded).
+        value = Discover.memory[key]
+        if (value == null) value = HubDiscover.recommend(ref.kind, ref.id)?.also { Discover.memory[key] = it }
     }
     val items = remember(page) { page?.items.orEmpty().map { it.toOnlineItem() } }
     var menu by remember { mutableStateOf(false) }
