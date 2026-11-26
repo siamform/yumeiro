@@ -156,6 +156,11 @@ class GroupNOtherSourcesDeviceTest {
         val playing = if (d.firstFrame && s?.phase == OnlineSession.Phase.PLAYING) s.link?.url?.substringAfter(base) else null
         // A fresh player per case: the same link again must not be taken as "already playing".
         rule.runOnUiThread { OnlineSession.end(); dev.asfakul.yumeiro.player.PlaybackSession.releaseNow() }
+        // Let the player screen leave the composition, so the next case opens a new one (same link included).
+        runCatching { rule.waitUntil(10_000) { OnlineSession.state.value == null && dev.asfakul.yumeiro.player.PlaybackSession.playerForTest == null } }
+        rule.waitForIdle()
+        val until = System.currentTimeMillis() + 800
+        runCatching { rule.waitUntil(3_000) { System.currentTimeMillis() > until } }
         return Triple(playing, s?.link?.via, ms)
     }
 

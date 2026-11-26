@@ -19,6 +19,7 @@ import dev.asfakul.yumeiro.player.PlaybackDiagnostics
 import dev.asfakul.yumeiro.player.PlaybackSession
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performScrollTo
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -142,7 +143,8 @@ class GroupNCompressorDeviceTest {
         assertTrue("saved: ${prefs.all}", prefs.getString("preset", null) == "CUSTOM" && prefs.getFloat("threshold", 0f) == -40f && prefs.getFloat("makeup", 0f) == 10f)
         FirstRun.shot("groupn_drc_custom")
 
-        tap("drc_reset")
+        // Reset sits below the sliders in the scrolling Audio dialog.
+        rule.onAllNodesWithTag("drc_reset", true)[0].performScrollTo().performClick()
         rule.waitForIdle()
         val night = DynamicRangeCompressor.Preset.NIGHT.settings!!
         log("F15 after reset active=${DynamicRangeCompressor.active} label=${text("drc_threshold_value")}")
