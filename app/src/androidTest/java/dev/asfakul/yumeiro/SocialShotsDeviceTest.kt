@@ -122,10 +122,13 @@ class SocialShotsDeviceTest {
         // 4 Settings search finds Telegram.
         step("settings_search") {
             settingsHome()
+            // GROUP C: the search field opens from the header magnifier.
+            if (!has("settings_search")) { rule.onAllNodesWithTag("settings_search_open", true)[0].performClick(); pause(600) }
             rule.onAllNodesWithTag("settings_search", true)[0].performTextReplacement("telegram")
             pause(1_500)
             snap("settings_search", has("settings_cat_telegram") || FirstRun.onScreen(rule).contains("Telegram"))
             rule.onAllNodesWithTag("settings_search", true)[0].performTextReplacement("")
+            rule.onAllNodesWithTag("settings_search_open", true)[0].performClick()
             pause(800)
         }
 

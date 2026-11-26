@@ -115,6 +115,7 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
     val showTips by DownloadSettings.showTips.collectAsState()
     val split = remember(all) { DownloadGroups.split(all) }
     var filter by rememberSaveable { mutableStateOf(DownloadFilter.ALL) }
+    var filterSheet by remember { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     val open = remember { mutableStateListOf<String>() }
     val used = remember(all) { all.filter { it.status == OnlineDownloads.Status.DONE }.sumOf { it.bytes } }
@@ -128,6 +129,16 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
     if (askVault) VaultUnlock(onDismiss = { askVault = false }, onOpen = { askVault = false; vaultOpen = true })
     if (vaultOpen) { PrivateVault(days, onBack = { vaultOpen = false }, onPlayVideo = onPlayVideo); return }
 
+    if (filterSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(
+        onDismiss = { filterSheet = false }, onReset = if (filter != DownloadFilter.ALL) ({ filter = DownloadFilter.ALL }) else null, resultCount = null, tag = "downloads_filter_sheet",
+    ) {
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Show", "downloads_filter_group") {
+            DownloadFilter.entries.forEach { f ->
+                val n = when (f) { DownloadFilter.ALL -> all.size; DownloadFilter.OFFLINE -> split.offlineCount; DownloadFilter.PERMANENT -> split.permanentCount; DownloadFilter.ACTIVE -> split.active.size }
+                dev.asfakul.yumeiro.ui.components.FilterPill("${f.label} $n", filter == f, { filter = f }, testTag = "downloads_filter_${f.name.lowercase()}")
+            }
+        }
+    }
     Column(Modifier.fillMaxSize().testTag("downloads_screen")) {
         SubPageHeader(
             "Downloads", onBack,
@@ -141,6 +152,8 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
             if (vaultOn && !stealth) IconButton(onClick = { askVault = true }, modifier = Modifier.testTag("downloads_private")) {
                 Icon(Icons.Default.Lock, "Private (locked)", tint = TextPrimary)
             }
+            // GROUP C catch-all: the All/Offline/Permanent/Active chips moved behind a filter icon.
+            if (!split.isEmpty) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (filter != DownloadFilter.ALL) 1 else 0, { filterSheet = true }, "downloads_filter", "Filter downloads")
             IconButton(onClick = { settingsOpen = !settingsOpen }, modifier = Modifier.testTag("downloads_settings")) {
                 Icon(Icons.Default.Settings, "Offline settings", tint = if (settingsOpen) SpotifyGreen else TextPrimary)
             }
@@ -160,15 +173,6 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
                 }
             }
             if (showTips) item("tips") { TipsCard(onClose = { DownloadSettings.setShowTips(context, false) }) }
-            if (!split.isEmpty) item("filters") {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(DownloadFilter.entries.size) { i ->
-                        val f = DownloadFilter.entries[i]
-                        val n = when (f) { DownloadFilter.ALL -> all.size; DownloadFilter.OFFLINE -> split.offlineCount; DownloadFilter.PERMANENT -> split.permanentCount; DownloadFilter.ACTIVE -> split.active.size }
-                        OnlineChip("${f.label} $n", filter == f, { filter = f }, Modifier.testTag("downloads_filter_${f.name.lowercase()}"))
-                    }
-                }
-            }
             if (split.isEmpty) item("empty") { EmptyDownloads(onBrowse) }
             downloadSections(split, filter, days, open, onPlayVideo)
         }

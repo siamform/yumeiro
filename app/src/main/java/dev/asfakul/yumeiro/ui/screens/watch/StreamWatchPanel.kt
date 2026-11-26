@@ -275,6 +275,8 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
     val groups = remember(channels) { channels.mapNotNull { it.group?.takeIf(String::isNotBlank) }.distinct() }
     var group by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var groupSheet by remember { mutableStateOf(false) }
     val list = remember(channels, group, query) { StreamWatch.filter(channels, group, query).take(600) }
     val alternatives = remember(channels, currentUrl) { StreamWatch.alternatives(channels, currentUrl) }
     val p = LocalMtPalette.current
@@ -291,6 +293,14 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
         while (true) { kotlinx.coroutines.delay(60_000L - System.currentTimeMillis() % 60_000L); value = System.currentTimeMillis() / 60_000L }
     }
 
+    if (groupSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(
+        onDismiss = { groupSheet = false }, onReset = if (group != null) ({ group = null }) else null, resultCount = list.size, tag = "stream_watch_filter_sheet",
+    ) {
+        dev.asfakul.yumeiro.ui.components.FilterGroup("Group", "stream_watch_groups") {
+            dev.asfakul.yumeiro.ui.components.FilterPill("All", group == null, { group = null })
+            groups.take(80).forEach { g -> dev.asfakul.yumeiro.ui.components.FilterPill(g, group == g, { group = g }) }
+        }
+    }
     Box(modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().testTag("stream_watch_panel"), state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
             item(key = "controls") {
@@ -376,16 +386,15 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                             Text(if (inPlaylist) "Up next on this list" else "Up next from ${queue?.label.orEmpty()}", color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("${channels.size}", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        // GROUP C catch-all: search and the group filter are icons; the field and the group list open on demand.
+                        dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                            if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+                        }, "stream_watch_search_open", if (inPlaylist) "Find a channel" else "Find a video")
+                        if (groups.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (group != null) 1 else 0, { groupSheet = true }, "stream_watch_filter", "Filter by group")
                     }
                 }
-                item(key = "search") {
-                    WatchSearchField(query, { query = it }, if (inPlaylist) "Find a channel" else "Find a video", "stream_watch_search", Modifier.fillMaxWidth().padding(horizontal = 12.dp))
-                }
-                if (groups.size > 1) item(key = "groups") {
-                    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)) {
-                        item { GroupChip("All", group == null) { group = null } }
-                        items(groups.take(80), key = { it }) { g -> GroupChip(g, group == g) { group = g } }
-                    }
+                if (searchOpen || query.isNotEmpty()) item(key = "search") {
+                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(true, query, { query = it }, if (inPlaylist) "Find a channel" else "Find a video", "stream_watch_search", horizontalPadding = 12.dp)
                 }
                 if (list.isEmpty()) item(key = "none") {
                     Text("No channel matches \"$query\".", color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
@@ -408,20 +417,9 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
     // Bring the playing channel into view when the page opens.
     androidx.compose.runtime.LaunchedEffect(currentUrl) {
         val k = list.indexOfFirst { it.value.url == currentUrl }
-        val fixed = 4 + (if (base != null) 1 else 0) + (if (groups.size > 1) 1 else 0)
+        val fixed = 3 + (if (base != null) 1 else 0) + (if (searchOpen || query.isNotEmpty()) 1 else 0)
         if (k > 3) listState.scrollToItem(fixed + k - 2)
     }
-}
-
-@Composable
-private fun GroupChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    val p = LocalMtPalette.current
-    Text(
-        label, maxLines = 1, overflow = TextOverflow.Ellipsis,
-        color = if (selected) p.onAccent else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.clip(CircleShape).background(if (selected) p.accent else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.08f))
-            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 7.dp).testTag("stream_watch_group"),
-    )
 }
 
 /** Channel row: number, logo, name; the playing one gets an accent bar and play icon. */

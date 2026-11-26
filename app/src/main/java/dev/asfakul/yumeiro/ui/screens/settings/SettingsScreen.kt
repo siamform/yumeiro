@@ -251,21 +251,27 @@ private fun rememberStatuses(): Map<Category, Status> {
 private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
     BackHandler(onBack = onBack)
     var query by rememberSaveable { mutableStateOf("") }
+    // GROUP C catch-all: search is a header icon; the field slides in under the header only when asked for.
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     val statuses = rememberStatuses()
     val results = remember(query) { SettingsCatalog.search(query) }
 
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Settings", onBack = onBack, subtitle = "Yumeiro ${BuildConfig.VERSION_NAME}", handleBack = false, modifier = Modifier.testTag("settings_back_button")) {
+            dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+            }, "settings_search_open", "Search settings")
             IconButton(onClick = { onOpen(Category.GUIDE) }, modifier = Modifier.testTag("open_user_guide")) {
                 Icon(Icons.AutoMirrored.Filled.MenuBook, "User guide", tint = BrandGold)
             }
         }
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search settings", "settings_search")
         LazyColumn(
             Modifier.fillMaxSize().testTag("settings_home"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("settings_home"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            item("hero") { SettingsHero(query = query, onQuery = { query = it }) }
+            item("hero") { SettingsHero() }
 
             if (query.isNotBlank()) {
                 item("results") {
@@ -297,7 +303,7 @@ private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
  * hidden search toggle was easy to miss).
  */
 @Composable
-private fun SettingsHero(query: String, onQuery: (String) -> Unit) {
+private fun SettingsHero() {
     val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     val shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeLg
     Column(
@@ -314,8 +320,6 @@ private fun SettingsHero(query: String, onQuery: (String) -> Unit) {
                 Text("Make Yumeiro yours", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             }
         }
-        Spacer(Modifier.height(12.dp))
-        dev.asfakul.yumeiro.ui.components.YuSearchField(query = query, onQuery = onQuery, placeholder = "Search settings", tag = "settings_search")
     }
 }
 

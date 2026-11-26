@@ -70,6 +70,8 @@ val SpotifyGreen: Color @Composable @ReadOnlyComposable get() = LocalMtPalette.c
 /** Amber for warnings; darker on light surfaces so the text keeps its contrast. */
 /** Errors and destructive actions: light coral on dark themes, deep red on light ones (≥4.5:1). */
 val DangerTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E)
+/** Healthy / working state (status dots): soft green on dark themes, deep green on light ones (≥3:1 for icons). */
+val SuccessTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFF81C784) else Color(0xFF2E7D32)
 /** Amber for warnings: bright on dark, deep enough on light paper to pass 3:1 for icons. */
 val WarningTone: Color @Composable @ReadOnlyComposable get() = if (LocalMtPalette.current.isDark) Color(0xFFFFB74D) else Color(0xFF9A5B00)
 /** Rating star: the bright gold washes out on light surfaces, so light themes get a deeper amber. */

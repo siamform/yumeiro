@@ -129,6 +129,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
     }
     // OWN-16: search and filters built from the loaded list (genres, channel countries, days), behind a filter icon.
     var query by rememberSaveable { mutableStateOf("") }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     var channel by rememberSaveable { mutableStateOf<String?>(null) }
     var dayText by rememberSaveable { mutableStateOf<String?>(null) }
     var sheet by rememberSaveable { mutableStateOf<String?>(null) }
@@ -140,11 +141,16 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
         UpcomingFilter.scheduleCountries(java.util.Locale.getDefault().country, TvmazeSchedule.COUNTRIES, options.countries, TvmazeSchedule.STREAMING)
     }.let { all -> if (kind == Upcoming.Kind.MOVIES) all.filter { it != TvmazeSchedule.STREAMING } else all }
     Column(Modifier.fillMaxSize().testTag("upcoming_screen")) {
-        SubPageHeader(title = "Upcoming", subtitle = "Next two weeks · ${kind.label}", onBack = onBack)
+        SubPageHeader(title = "Upcoming", subtitle = "Next two weeks · ${kind.label}", onBack = onBack) {
+            // GROUP C catch-all: search is an icon; the field opens under the header only when asked for.
+            dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+            }, "upcoming_search_open", "Search upcoming")
+        }
         // UP-FILTER-1 (owner list R21, item 16B): search, then three filter buttons (Category, Country, Date) that
         // open their own sheets. Every choice comes from what is loaded (genres, channel countries, days) or from
         // the platform's country list for TVmaze schedules; a button shows what is on.
-        dev.asfakul.yumeiro.ui.components.YuSearchField(query, { query = it }, "Search ${kind.label.lowercase()} in the next two weeks", "upcoming_search", Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search ${kind.label.lowercase()} in the next two weeks", "upcoming_search")
         val v = UpcomingFilter.valid(choice, options)
         val scheduleOn = byCountry && (kind == Upcoming.Kind.SERIES || kind == Upcoming.Kind.MOVIES)
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
