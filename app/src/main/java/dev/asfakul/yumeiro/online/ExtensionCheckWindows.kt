@@ -245,6 +245,15 @@ object ExtensionCheckWindows {
         }
     }
 
+    /**
+     * B4: Yumeiro's own silent check could not pass [host] (an interactive widget). Same quiet card as an extension's
+     * window ([handOff]), at most once per site per [HAND_OFF_NOTE_MS], only while the app is on screen.
+     */
+    fun askToVerify(ctx: android.content.Context, host: String, url: String) {
+        if (!VerificationCenter.mayAsk(host) || VerificationCenter.isBlocked(host)) return
+        main.post { handOff(ctx, host, host, url) }
+    }
+
     /** Pure → unit-tested. */
     fun handOffText(extName: String, host: String) = "$extName needs a quick check on $host. Tap Verify when you're ready."
 

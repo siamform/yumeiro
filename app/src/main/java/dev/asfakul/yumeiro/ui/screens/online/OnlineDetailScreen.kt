@@ -123,6 +123,13 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
     var state by remember(api, url) { mutableStateOf<DetailState>(DetailState.Loading) }
     var attempt by remember { mutableIntStateOf(0) }
     var refreshing by remember { mutableStateOf(false) }
+    // B4 (Group M): the title page failed on the site's check; once the check is passed it loads again by itself.
+    LaunchedEffect(api) {
+        dev.asfakul.yumeiro.online.web.VerificationCenter.passed.collect { host ->
+            val site = runCatching { ExtensionManager.provider(api)?.mainUrl }.getOrNull()
+            if (state is DetailState.Failed && dev.asfakul.yumeiro.online.web.SitePass.matches(site ?: url, host)) attempt++
+        }
+    }
     LaunchedEffect(api, url, engine.ready, engine.generation, attempt) {
         if (!engine.ready) return@LaunchedEffect
         val provider = ExtensionManager.provider(api)

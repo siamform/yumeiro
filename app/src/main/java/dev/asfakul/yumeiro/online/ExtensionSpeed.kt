@@ -49,6 +49,14 @@ object ExtensionSpeed {
         save()
     }
 
+    /** B4: the site's check was passed; earlier failures were the check, not the site. Keeps the measured speed. */
+    fun forgive(name: String) {
+        val s = stats[name] ?: return
+        if (s.fails == 0) return
+        stats[name] = s.copy(fails = 0, lastFailAt = 0L)
+        save()
+    }
+
     /** Pure: the new stat after one fetch (moving average 70/30, failures counted in a row). */
     fun next(prev: Stat?, ms: Long, ok: Boolean, now: Long): Stat {
         val t = ms.coerceIn(0, 120_000)

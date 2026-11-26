@@ -171,6 +171,30 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         }
     }
 
+    // B4 (Group M): a site's check was just passed; its sources that failed or found nothing for these words (the
+    // check page parsed as "no titles") are asked again. Before, they kept the old failure until Retry, and Retry
+    // inside 2 minutes got the remembered failure back.
+    LaunchedEffect(submitted) {
+        if (submitted.isBlank()) return@LaunchedEffect
+        val q = submitted
+        dev.asfakul.yumeiro.online.web.VerificationCenter.passed.collect { host ->
+            val again = latestProviders.value.filter { api ->
+                dev.asfakul.yumeiro.online.web.SitePass.matches(runCatching { api.mainUrl }.getOrNull(), host) &&
+                    results[api.name].let { it is ProviderResult.Failed || (it is ProviderResult.Done && it.items.isEmpty()) }
+            }
+            if (again.isEmpty()) return@collect
+            android.util.Log.i("YuSearch", "check passed on $host: searching ${again.map { it.name }} again")
+            again.forEach { results[it.name] = ProviderResult.Searching }
+            launch {
+                OnlineRepository.search(q, again, retry = true).collect { u ->
+                    if (submitted != q) return@collect
+                    results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
+                        else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
+                }
+            }
+        }
+    }
+
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {
         SubPageHeader(title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}")
         OutlinedTextField(

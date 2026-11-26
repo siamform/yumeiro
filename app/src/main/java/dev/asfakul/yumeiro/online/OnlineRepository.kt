@@ -473,7 +473,40 @@ object OnlineRepository {
     /** VERIFY-2: see BrowserCheck.warm. Never waits; never shows a page. */
     private fun warmCheck(api: MainAPI) {
         val url = runCatching { api.mainUrl }.getOrNull()?.takeIf { it.startsWith("http") } ?: return
+        noteSite(api.name, url)
         warmScope.launch { runCatching { dev.asfakul.yumeiro.online.web.BrowserCheck.warm(url) } }
+    }
+
+    /** B4: the site address of every extension asked so far (to find the ones a passed check belongs to). */
+    private val siteOf = ConcurrentHashMap<String, String>()
+
+    private fun noteSite(name: String, url: String) { if (siteOf.size < 1024 || name in siteOf) siteOf[name] = url }
+
+    /** B4: names of the extensions asked so far whose site is [host]. Pure on the map; unit-tested. */
+    internal fun extensionsOf(host: String): Set<String> =
+        siteOf.entries.filter { dev.asfakul.yumeiro.online.web.SitePass.matches(it.value, host) }.mapTo(HashSet()) { it.key }
+
+    /**
+     * B4 (Group M): [host]'s check was just passed. What the failed attempt left in memory for its extensions goes:
+     * the 2-minute search failure memory (FE-S3 answered every search with the old failure), empty search answers
+     * and home / title pages, and the failure count that quarantined it (E4: a quarantined site got the shortest
+     * search timeout and went last), so the reload that follows asks the site again with the pass. Cheap: maps only.
+     */
+    fun onSitePassed(host: String) {
+        val names = extensionsOf(host)
+        if (names.isEmpty()) return
+        fun mine(key: String) = names.any { key == it || key.startsWith("$it|") }
+        searchFails.keys.removeAll(::mine)
+        val emptyAnswers = searchCache.entries.filter { mine(it.key) && it.value.value.isEmpty() }.map { it.key }
+        emptyAnswers.forEach { k ->
+            searchCache.remove(k)
+            val name = k.substringBefore('|'); val q = k.substringAfter('|')
+            // The phone's copy too (same key as diskKey(api, "search", q)); DataCache writes off this thread.
+            siteOf[name]?.let { site -> runCatching { dev.asfakul.yumeiro.cache.DataCache.remove("search", "search|$name|$site|$q") } }
+        }
+        homeCache.keys.removeAll(::mine)
+        detailCache.keys.removeAll(::mine)
+        names.forEach { ExtensionSpeed.forgive(it); ExtensionSpeed.forgive(searchKey(it)) }
     }
 
     /** Live search of [api]; the caller already checked [cachedSearch] (FE-S1: the second disk read on a miss is gone). */
@@ -481,12 +514,15 @@ object OnlineRepository {
         warmCheck(api)
         val key = "${api.name}|${q.lowercase()}"
         val dk = diskKey(api, "search", q.lowercase())
+        val asked = System.currentTimeMillis()
         val results = try {
             api.search(q, 1)?.items
         } catch (e: NotImplementedError) { null } ?: api.search(q).orEmpty()
         val items = results.mapNotNull { runCatching { it.toItem(api.name) }.getOrNull() }.distinctBy { it.url }
         // FE-S1 (SpeedDeviceTest run 44883372732: a repeated search took 15.1 s): empty answers are kept as well
         // (memory 10 min, phone 1 h like any search); errors and timeouts are not, so Retry still asks again.
+        // B4: an empty answer made while the site showed its check page is the check page, not "nothing found".
+        if (items.isEmpty() && dev.asfakul.yumeiro.online.web.BrowserCheck.challengedSince(runCatching { api.mainUrl }.getOrNull(), asked)) return items
         if (searchCache.size > 64) searchCache.clear()
         searchCache[key] = Timed(System.currentTimeMillis(), items)
         dev.asfakul.yumeiro.cache.DataCache.write("search", dk, dev.asfakul.yumeiro.cache.OnlineCodec.items(items))
@@ -505,6 +541,7 @@ object OnlineRepository {
     private val loadScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
 
     suspend fun load(api: MainAPI, url: String, force: Boolean = false): OnlineDetail {
+        runCatching { api.mainUrl }.getOrNull()?.let { noteSite(api.name, it) }
         if (force || !dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FAST_TITLE_OPEN)) return loadOnce(api, url, force)
         val key = "${api.name}|$url"
         detailCache[key]?.takeIf { System.currentTimeMillis() - it.at < CACHE_MS }?.let { return it.value }

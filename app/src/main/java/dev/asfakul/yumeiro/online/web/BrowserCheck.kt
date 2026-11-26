@@ -163,6 +163,24 @@ object BrowserCheck {
 
     fun forget(host: String) { cleared.remove(host) }
 
+    private val challengedAt = ConcurrentHashMap<String, Long>()
+
+    /** B4: [host] answered with a check page now (an extension request met it). */
+    fun noteChallenge(host: String, now: Long = System.currentTimeMillis()) {
+        if (challengedAt.size > 256) challengedAt.clear()
+        challengedAt[VerificationCenter.normalize(host)] = now
+    }
+
+    /**
+     * B4: did [mainUrl]'s site answer with a check page at or after [since]? An extension that met the check page
+     * parses it as "no titles" without an error, and that empty answer was saved (search: 1 h on the phone), so the
+     * site stayed empty after the user passed its check. Answers made under a check are not saved.
+     */
+    fun challengedSince(mainUrl: String?, since: Long): Boolean {
+        if (challengedAt.isEmpty()) return false
+        return challengedAt.entries.any { (h, at) -> at >= since && SitePass.matches(mainUrl, h) }
+    }
+
     internal fun rememberForTest(host: String, c: Clearance) { cleared[host] = c }
 
     /** What a refused response is. */
@@ -318,6 +336,9 @@ object BrowserCheck {
             // silent pass can't clear now just fails this source and playback moves to the next.
             declined[host] = System.currentTimeMillis()
             if (centerOn()) VerificationCenter.report(host, VerificationCenter.Outcome.FAILED)
+            // B4: the silent pass could not clear it (the site wants a tap). One quiet card with Verify, which opens
+            // the check page; the extensions of the site reload by themselves once it is passed.
+            if (interactive && centerOn()) appContext?.let { ctx -> runCatching { dev.asfakul.yumeiro.online.ExtensionCheckWindows.askToVerify(ctx, host, page) } }
             null
         }
     }
@@ -601,7 +622,7 @@ object BrowserCheck {
                     Log.i(TAG, "$host asked to slow down (rate limit) — no note")
                     return response
                 }
-                Verdict.CHALLENGE -> Unit
+                Verdict.CHALLENGE -> noteChallenge(host)
             }
             if (onMainThread()) return response
             if (clearanceFor(host) != null) forget(host)

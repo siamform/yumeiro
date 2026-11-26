@@ -357,6 +357,20 @@ fun OnlineHomeScreen(
         if ((homes[pick] !is ProviderHome.Ready || waitingLive.containsKey(pick)) && inflight[pick]?.isActive != true) runCatching { loadOne(api, false) }
     }
 
+    // B4 (Group M): a site's check was passed (Yumeiro's check page, silently, or in an extension's window). Its
+    // extensions that failed or came back empty reload now; before, they stayed on "Couldn't load" after the pass.
+    val passProviders by androidx.compose.runtime.rememberUpdatedState(providers)
+    LaunchedEffect(Unit) {
+        dev.asfakul.yumeiro.online.web.VerificationCenter.passed.collect { host ->
+            val again = passProviders.filter { api ->
+                dev.asfakul.yumeiro.online.web.SitePass.matches(runCatching { api.mainUrl }.getOrNull(), host) &&
+                    homes[api.name].let { it !is ProviderHome.Ready || it.rows.isEmpty() }
+            }
+            if (again.isNotEmpty()) android.util.Log.i("YuYumix", "check passed on $host: reloading ${again.map { it.name }}")
+            again.forEach { api -> launch { runCatching { loadOne(api, force = true) } } }
+        }
+    }
+
     LaunchedEffect(Unit) { OnlineHistory.ensureLoaded(context) }
     val historyAll by OnlineHistory.entries.collectAsState()
     val history = remember(historyAll, adultOn, adultPrivate) { OnlineHistory.forFeed(historyAll, adultOn, adultPrivate) }

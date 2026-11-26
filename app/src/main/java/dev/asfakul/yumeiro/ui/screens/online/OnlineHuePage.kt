@@ -244,7 +244,11 @@ internal fun HuePage(
                 val fix = errorFix
                 val second: Pair<String, () -> Unit>? = when (fix?.kind) {
                     dev.asfakul.yumeiro.online.EmptyHome.Kind.BROWSER_CHECK -> "Open site" to {
-                        scope.launch { dev.asfakul.yumeiro.online.web.BrowserCheck.solve(fix.site); onRetry() }; Unit
+                        // B4: this ran only the silent check, which cannot pass a site that wants a tap (that is why
+                        // the home failed), so nothing opened and Retry met the same check. It opens the site's check
+                        // page now; once passed, the extension reloads by itself (VerificationCenter.passed) and here.
+                        val site = fix.site.let { if (it.startsWith("http")) it.trimEnd('/') + "/" else "https://$it/" }
+                        dev.asfakul.yumeiro.online.web.BrowserCheck.openSite(site) { ok -> if (ok) onRetry() }
                     }
                     dev.asfakul.yumeiro.online.EmptyHome.Kind.MOVED -> if (api != null && fix.movedTo != null) ("Use new address" to {
                         dev.asfakul.yumeiro.online.ProviderOverrides.setMainUrl(api, fix.movedTo); onRetry()
