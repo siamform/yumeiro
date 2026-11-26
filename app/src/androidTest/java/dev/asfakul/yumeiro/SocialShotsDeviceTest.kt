@@ -113,6 +113,14 @@ class SocialShotsDeviceTest {
             snap("home", has("home_screen_root"))
         }
 
+        // 2b GROUP Z: Library tab (mockup set).
+        step("library") {
+            FirstRun.tapVisible(rule, FirstRun.navTag(rule, "nav_tab_library"))
+            waitTag("library_screen_root"); pause(3_000); FirstRun.dismissPrompts(rule)
+            snap("library", has("library_screen_root"))
+            FirstRun.tapVisible(rule, FirstRun.navTag(rule, "nav_tab_home")); pause(1_500)
+        }
+
         // 3 Settings home: the new subject groups.
         step("settings_home") {
             settingsHome(); pause(1_500)
