@@ -171,29 +171,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         }
     }
 
-    // B4 (Group M): a site's check was just passed; its sources that failed or found nothing for these words (the
-    // check page parsed as "no titles") are asked again. Before, they kept the old failure until Retry, and Retry
-    // inside 2 minutes got the remembered failure back.
-    LaunchedEffect(submitted) {
-        if (submitted.isBlank()) return@LaunchedEffect
-        val q = submitted
-        dev.asfakul.yumeiro.online.web.VerificationCenter.passed.collect { host ->
-            val again = latestProviders.value.filter { api ->
-                dev.asfakul.yumeiro.online.web.SitePass.matches(runCatching { api.mainUrl }.getOrNull(), host) &&
-                    results[api.name].let { it is ProviderResult.Failed || (it is ProviderResult.Done && it.items.isEmpty()) }
-            }
-            if (again.isEmpty()) return@collect
-            android.util.Log.i("YuSearch", "check passed on $host: searching ${again.map { it.name }} again")
-            again.forEach { results[it.name] = ProviderResult.Searching }
-            launch {
-                OnlineRepository.search(q, again, retry = true).collect { u ->
-                    if (submitted != q) return@collect
-                    results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
-                        else ProviderResult.Done(if (adultOn) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
-                }
-            }
-        }
-    }
+    SearchAgainAfterPass(submitted, { latestProviders.value }, results, adultOn) { submitted }
 
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {
         SubPageHeader(title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}")
@@ -266,66 +244,118 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 Icons.Default.Extension, "No sources to search", "Install or turn on an extension first.",
                 primary = "Extensions" to onOpenExtensions, testTag = "online_search_no_sources",
             )
-            submitted.isBlank() -> LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp)) {
-                if (history.isNotEmpty()) item {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Recent searches", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { SearchHistory.clear(context); history.clear() }) { Text("Clear", color = TextTertiary) }
-                    }
-                }
-                items(history, key = { it }) { h -> SearchHistoryRow(h) { text = h; submitted = h } }
+            submitted.isBlank() -> RecentSearches(history, onClear = { SearchHistory.clear(context); history.clear() }) { h -> text = h; submitted = h }
+            else -> SearchResultsBody(
+                results = results, all = all, rankingBehind = rankingBehind, filter = filter, onFilter = { filter = it },
+                searching = searching, ways = ways, submitted = submitted, onRetry = { attempt++ }, onOpenTitle = onOpenTitle,
+            )
             }
-            else -> {
-                val names = results.keys.sorted()
-                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { OnlineChip("All (${all.size})", filter == null, { filter = null }) }
-                    items(names, key = { it }) { n ->
-                        val label = when (val r = results[n]) {
-                            ProviderResult.Searching -> "$n …"
-                            is ProviderResult.Done -> "$n (${r.items.size})"
-                            is ProviderResult.Failed -> "$n (!)"
-                            null -> n
-                        }
-                        OnlineChip(label, filter == n, { filter = if (filter == n) null else n }, Modifier.testTag("online_search_source_$n"))
-                    }
+        }
+    }
+}
+
+// B4 (Group M): a site's check was just passed; its sources that failed or found nothing for these words (the
+// check page parsed as "no titles") are asked again. Before, they kept the old failure until Retry, and Retry
+// inside 2 minutes got the remembered failure back.
+@Composable
+private fun SearchAgainAfterPass(
+    submitted: String, providers: () -> List<com.lagradost.cloudstream3.MainAPI>,
+    results: androidx.compose.runtime.snapshots.SnapshotStateMap<String, ProviderResult>, adultOn: Boolean, current: () -> String,
+) {
+    val adult by androidx.compose.runtime.rememberUpdatedState(adultOn)
+    LaunchedEffect(submitted) {
+        if (submitted.isBlank()) return@LaunchedEffect
+        val q = submitted
+        dev.asfakul.yumeiro.online.web.VerificationCenter.passed.collect { host ->
+            val again = providers().filter { api ->
+                dev.asfakul.yumeiro.online.web.SitePass.matches(runCatching { api.mainUrl }.getOrNull(), host) &&
+                    results[api.name].let { it is ProviderResult.Failed || (it is ProviderResult.Done && it.items.isEmpty()) }
+            }
+            if (again.isEmpty()) return@collect
+            android.util.Log.i("YuSearch", "check passed on $host: searching ${again.map { it.name }} again")
+            again.forEach { results[it.name] = ProviderResult.Searching }
+            launch {
+                OnlineRepository.search(q, again, retry = true).collect { u ->
+                    if (current() != q) return@collect
+                    results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
+                        else ProviderResult.Done(if (adult) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
                 }
-                val shown = if (filter == null) all else all.filter { it.api == filter }
-                val failed = (results[filter] as? ProviderResult.Failed)?.message
-                val way = filter?.let { ways[it] } ?: dev.asfakul.yumeiro.online.SearchAdapters.Way.NATIVE
-                val summary = if (filter != null) null else dev.asfakul.yumeiro.online.SearchAdapters.summary(
-                    searching = searching,
-                    withResults = results.values.count { it is ProviderResult.Done && it.items.isNotEmpty() },
-                    empty = results.values.count { it is ProviderResult.Done && it.items.isEmpty() },
-                    failed = results.values.count { it is ProviderResult.Failed },
-                )
-                val note = filter?.let { dev.asfakul.yumeiro.online.SearchAdapters.note(way, it) }
-                if (names.size > 1 && summary != null) Text(summary, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 6.dp).testTag("online_search_summary"))
-                if (note != null) Text(note, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("online_search_way"))
-                when {
-                    shown.isEmpty() && (rankingBehind || searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
-                        Column(Modifier.fillMaxWidth()) {
-                            if (searching > 0) Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
-                            PosterGridSkeleton(rows = 3)
-                        }
-                    failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,
-                        primary = "Retry" to { attempt++ }, testTag = "online_search_failed")
-                    shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”",
-                        dev.asfakul.yumeiro.online.SearchAdapters.emptyReason(way, filter!!, submitted), testTag = "online_search_empty")
-                    shown.isEmpty() -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”", "Try another spelling or a shorter title.", testTag = "online_search_empty")
-                    else -> {
-                        if (searching > 0) Text("Still searching $searching source${if (searching == 1) "" else "s"}…", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(gridColumns()),
-                            contentPadding = PaddingValues(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier.fillMaxSize().testTag("online_search_results"),
-                        ) {
-                            items(shown, key = { it.key }) { item ->
-                                PosterCard(item, onClick = { OnlineRepository.previews[item.key] = item; onOpenTitle(item) }, modifier = Modifier.fillMaxWidth(), showSource = filter == null && names.size > 1)
-                            }
-                        }
-                    }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentSearches(history: List<String>, onClear: () -> Unit, onPick: (String) -> Unit) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp)) {
+        if (history.isNotEmpty()) item {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Recent searches", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                TextButton(onClick = onClear) { Text("Clear", color = TextTertiary) }
+            }
+        }
+        items(history, key = { it }) { h -> SearchHistoryRow(h) { onPick(h) } }
+    }
+}
+
+/**
+ * TV-API24-JIT (Group L/M, probe run 45861134577): Android 7's JIT crashed (SIGSEGV in the register allocator,
+ * UsePosition::Dup recursion on the "Jit thread pool") while compiling OnlineSearchScreen as one very large method.
+ * The results part is its own composable now, so no single method is that large.
+ */
+@Composable
+private fun SearchResultsBody(
+    results: Map<String, ProviderResult>, all: List<OnlineItem>, rankingBehind: Boolean, filter: String?, onFilter: (String?) -> Unit,
+    searching: Int, ways: Map<String, dev.asfakul.yumeiro.online.SearchAdapters.Way>, submitted: String, onRetry: () -> Unit,
+    onOpenTitle: (OnlineItem) -> Unit,
+) {
+    val names = results.keys.sorted()
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { OnlineChip("All (${all.size})", filter == null, { onFilter(null) }) }
+        items(names, key = { it }) { n ->
+            val label = when (val r = results[n]) {
+                ProviderResult.Searching -> "$n …"
+                is ProviderResult.Done -> "$n (${r.items.size})"
+                is ProviderResult.Failed -> "$n (!)"
+                null -> n
+            }
+            OnlineChip(label, filter == n, { onFilter(if (filter == n) null else n) }, Modifier.testTag("online_search_source_$n"))
+        }
+    }
+    val shown = if (filter == null) all else all.filter { it.api == filter }
+    val failed = (results[filter] as? ProviderResult.Failed)?.message
+    val way = filter?.let { ways[it] } ?: dev.asfakul.yumeiro.online.SearchAdapters.Way.NATIVE
+    val summary = if (filter != null) null else dev.asfakul.yumeiro.online.SearchAdapters.summary(
+        searching = searching,
+        withResults = results.values.count { it is ProviderResult.Done && it.items.isNotEmpty() },
+        empty = results.values.count { it is ProviderResult.Done && it.items.isEmpty() },
+        failed = results.values.count { it is ProviderResult.Failed },
+    )
+    val note = filter?.let { dev.asfakul.yumeiro.online.SearchAdapters.note(way, it) }
+    if (names.size > 1 && summary != null) Text(summary, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 6.dp).testTag("online_search_summary"))
+    if (note != null) Text(note, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("online_search_way"))
+    when {
+        shown.isEmpty() && (rankingBehind || searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
+            Column(Modifier.fillMaxWidth()) {
+                if (searching > 0) Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                PosterGridSkeleton(rows = 3)
+            }
+        failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,
+            primary = "Retry" to onRetry, testTag = "online_search_failed")
+        shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”",
+            dev.asfakul.yumeiro.online.SearchAdapters.emptyReason(way, filter!!, submitted), testTag = "online_search_empty")
+        shown.isEmpty() -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”", "Try another spelling or a shorter title.", testTag = "online_search_empty")
+        else -> {
+            if (searching > 0) Text("Still searching $searching source${if (searching == 1) "" else "s"}…", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(gridColumns()),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize().testTag("online_search_results"),
+            ) {
+                items(shown, key = { it.key }) { item ->
+                    PosterCard(item, onClick = { OnlineRepository.previews[item.key] = item; onOpenTitle(item) }, modifier = Modifier.fillMaxWidth(), showSource = filter == null && names.size > 1)
                 }
             }
         }
