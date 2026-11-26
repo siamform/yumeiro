@@ -154,7 +154,8 @@ class GroupNOtherSourcesDeviceTest {
         log("GN_CASE B17 $case phase=${s?.phase} via=${s?.link?.via} url=${s?.link?.url} firstFrame=${d.firstFrame} ms=$ms " +
             "links=${s?.links?.map { (it.via ?: "own") + ":" + it.url.substringAfter(base) }} others=${s?.others} message=${s?.message} paths=$seen")
         val playing = if (d.firstFrame && s?.phase == OnlineSession.Phase.PLAYING) s.link?.url?.substringAfter(base) else null
-        rule.runOnUiThread { OnlineSession.end() }
+        // A fresh player per case: the same link again must not be taken as "already playing".
+        rule.runOnUiThread { OnlineSession.end(); dev.asfakul.yumeiro.player.PlaybackSession.releaseNow() }
         return Triple(playing, s?.link?.via, ms)
     }
 

@@ -329,7 +329,8 @@ fun AudioTrackDialog(
             }
         },
         text = {
-          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          // F15: scrolls, so the compressor controls fit a landscape phone too.
+          Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (audioTracks.isEmpty()) {
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer).padding(14.dp),
@@ -344,7 +345,7 @@ fun AudioTrackDialog(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     trackGroupItems("audio_track", audioTracks.map { it.language }, audioTracks.indexOfFirst { it.isSelected }, audioToggled, audioPages) { index ->
@@ -404,6 +405,8 @@ fun AudioTrackDialog(
             }
             // H-1: the dynamic range compressor, changed live while the video plays.
             dev.asfakul.yumeiro.ui.screens.video.DrcPresetRow()
+            // F15: its controls too, live while the video plays.
+            dev.asfakul.yumeiro.ui.screens.video.DrcCustomSliders()
           }
         },
         confirmButton = {

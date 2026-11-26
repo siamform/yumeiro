@@ -90,18 +90,40 @@ object DynamicRangeCompressor {
         refresh()
     }
 
-    fun setCustom(context: Context, settings: Settings) {
+    /**
+     * F15: own values. Takes effect on the next audio buffer (live). [persist] false while a slider is dragged (no
+     * disk write per frame); the drag's end saves. Values equal to a preset select that preset, as a person expects.
+     */
+    fun setCustom(context: Context, settings: Settings, persist: Boolean = true) {
         load(context)
         val s = settings.clamped()
         _custom.value = s
-        _preset.value = Preset.CUSTOM
+        val named = Preset.entries.firstOrNull { it.settings == s }
+        _preset.value = named ?: Preset.CUSTOM
+        refresh()
+        if (!persist) return
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString("preset", Preset.CUSTOM.name)
+            .putString("preset", _preset.value.name)
             .putFloat("threshold", s.thresholdDb).putFloat("ratio", s.ratio).putFloat("knee", s.kneeDb)
             .putFloat("attack", s.attackMs).putFloat("release", s.releaseMs).putFloat("makeup", s.makeupDb)
             .apply()
-        refresh()
     }
+
+    /** F15: what the compressor uses now (the preset's values, or the person's own); null when Off. */
+    fun current(): Settings? = when (val p = _preset.value) {
+        Preset.OFF -> null
+        Preset.CUSTOM -> _custom.value
+        else -> p.settings
+    }
+
+    /** F15: back to the recommended sound (Night) and its values, saved. */
+    fun reset(context: Context) = setCustom(context, DEFAULT)
+
+    /** The recommended values Reset returns to. */
+    val DEFAULT: Settings get() = Preset.NIGHT.settings!!
+
+    /** For tests: read the saved choice again, as after an app restart. */
+    internal fun reloadForTest(context: Context) { loaded = false; load(context) }
 
     private fun refresh() {
         active = when (val p = _preset.value) {
@@ -120,7 +142,7 @@ object DynamicRangeCompressor {
     internal fun setActiveForTest(s: Settings?) { active = s }
 
     fun summary(): String = when (val p = _preset.value) {
-        Preset.CUSTOM -> custom.value.let { "Custom · ${it.thresholdDb.roundToInt()} dB, ${fmt(it.ratio)}:1" }
+        Preset.CUSTOM -> custom.value.let { "Custom · ${it.thresholdDb.roundToInt()} dB, ${fmt(it.ratio)}:1, +${it.makeupDb.roundToInt()} dB" }
         else -> p.label
     }
 
