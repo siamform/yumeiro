@@ -9,6 +9,9 @@ import dev.asfakul.yumeiro.online.upcoming.Upcoming
 import dev.asfakul.yumeiro.online.upcoming.UpcomingHub
 import dev.asfakul.yumeiro.online.upcoming.TvmazeSchedule
 import dev.asfakul.yumeiro.sources.hub.HubDiscover
+import dev.asfakul.yumeiro.ui.screens.online.Discover
+import dev.asfakul.yumeiro.online.meta.TitleFacts
+import dev.asfakul.yumeiro.online.SearchGroups
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -84,15 +87,15 @@ class GroupODiscoverTest {
     // F5 / F6 / F9: the section bar swaps the shelves; every section has real content, Discover has all the kinds.
     @Test fun sectionsAndShelves() {
         val d = dev.asfakul.yumeiro.ui.screens.online.Discover
-        val disc = d.shelves(d.Section.DISCOVER)
+        val disc = d.shelves(Discover.Section.DISCOVER)
         assertTrue(disc.any { it is dev.asfakul.yumeiro.ui.screens.online.Discover.IfYouLike })
         assertTrue(disc.any { it is dev.asfakul.yumeiro.ui.screens.online.Discover.Services })
         assertTrue(disc.any { it is dev.asfakul.yumeiro.ui.screens.online.Discover.Genres })
         assertEquals("hot_today", (disc.first() as dev.asfakul.yumeiro.ui.screens.online.Discover.Row).shelf)
-        d.Section.entries.forEach { s -> assertTrue(s.name, d.shelves(s).isNotEmpty()); assertEquals(s.name, d.shelves(s).size, d.shelves(s).map { it.key }.distinct().size) }
-        val anime = d.shelves(d.Section.ANIME).filterIsInstance<dev.asfakul.yumeiro.ui.screens.online.Discover.Row>()
+        Discover.Section.entries.forEach { s -> assertTrue(s.name, d.shelves(s).isNotEmpty()); assertEquals(s.name, d.shelves(s).size, d.shelves(s).map { it.key }.distinct().size) }
+        val anime = d.shelves(Discover.Section.ANIME).filterIsInstance<dev.asfakul.yumeiro.ui.screens.online.Discover.Row>()
         assertTrue(anime.all { it.query?.anime == true })
-        assertEquals(listOf("Discover", "Movies", "TV Shows", "Anime", "Top Rated", "Hot Right Now"), d.Section.entries.map { it.label })
+        assertEquals(listOf("Discover", "Movies", "TV Shows", "Anime", "Top Rated", "Hot Right Now"), Discover.Section.entries.map { it.label })
     }
 
     @Test fun seedsAreCatalogTitlesWatchedFirst() {
@@ -106,12 +109,12 @@ class GroupODiscoverTest {
     // F8: only real scores, each named by its provider.
     @Test fun ratingChipsAreRealOnly() {
         val tf = dev.asfakul.yumeiro.online.meta.TitleFacts
-        val facts = tf.Facts(rating = 8.7, votes = 2_100_000, ratings = listOf(tf.Rating("Simkl", 8.4, 10, 900)))
+        val facts = TitleFacts.Facts(rating = 8.7, votes = 2_100_000, ratings = listOf(TitleFacts.Rating("Simkl", 8.4, 10, 900)))
         val chips = tf.ratingChips(8.2, "TMDB", facts)
         assertEquals(listOf("TMDB", "IMDb", "Simkl"), chips.map { it.source })
         assertEquals(2_100_000L, chips[1].votes)
-        assertEquals(emptyList<String>(), tf.ratingChips(0.0, "X", tf.Facts()).map { it.source })
-        assertEquals(listOf("IMDb"), tf.ratingChips(null, "X", tf.Facts(rating = 7.0)).map { it.source })
+        assertEquals(emptyList<String>(), tf.ratingChips(0.0, "X", TitleFacts.Facts()).map { it.source })
+        assertEquals(listOf("IMDb"), tf.ratingChips(null, "X", TitleFacts.Facts(rating = 7.0)).map { it.source })
         val simkl = tf.parseSimkl("""{"title":"A","ratings":{"imdb":{"rating":8.1,"votes":10},"simkl":{"rating":7.9,"votes":55},"mal":{"rating":8.9},"rt":{"rating":0}}}""")!!
         assertEquals(listOf("Simkl", "MyAnimeList"), simkl.ratings.map { it.source })
         assertEquals(8.1, simkl.rating!!, 0.0001)
@@ -122,11 +125,11 @@ class GroupODiscoverTest {
         val g = dev.asfakul.yumeiro.online.SearchGroups
         fun it(api: String, n: Int) = dev.asfakul.yumeiro.online.OnlineItem("T$n", "u$api$n", api, null)
         val ranked = listOf(it("B", 1), it("A", 2), it("A", 3), it("C", 4), it("A", 5), it("C", 6))
-        val st = mapOf("A" to g.State.DONE, "B" to g.State.DONE, "C" to g.State.DONE, "D" to g.State.DONE, "E" to g.State.FAILED, "F" to g.State.SEARCHING)
-        assertEquals(listOf("B", "A", "C"), g.plan(ranked, st, g.Sort.BEST).groups.map { it.name })
-        assertEquals(listOf("A", "C", "B"), g.plan(ranked, st, g.Sort.MOST).groups.map { it.name })
-        assertEquals(listOf("A", "B", "C"), g.plan(ranked, st, g.Sort.AZ).groups.map { it.name })
-        val p = g.plan(ranked, st, g.Sort.BEST)
+        val st = mapOf("A" to SearchGroups.State.DONE, "B" to SearchGroups.State.DONE, "C" to SearchGroups.State.DONE, "D" to SearchGroups.State.DONE, "E" to SearchGroups.State.FAILED, "F" to SearchGroups.State.SEARCHING)
+        assertEquals(listOf("B", "A", "C"), g.plan(ranked, st, SearchGroups.Sort.BEST).groups.map { it.name })
+        assertEquals(listOf("A", "C", "B"), g.plan(ranked, st, SearchGroups.Sort.MOST).groups.map { it.name })
+        assertEquals(listOf("A", "B", "C"), g.plan(ranked, st, SearchGroups.Sort.AZ).groups.map { it.name })
+        val p = g.plan(ranked, st, SearchGroups.Sort.BEST)
         assertEquals(listOf("T2", "T3", "T5"), p.groups[1].items.map { it.name })
         assertEquals(listOf("D"), p.empty); assertEquals(listOf("E"), p.failed); assertEquals(listOf("F"), p.searching)
     }
