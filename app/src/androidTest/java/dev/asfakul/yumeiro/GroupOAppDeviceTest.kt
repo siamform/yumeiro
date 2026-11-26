@@ -118,7 +118,8 @@ class GroupOAppDeviceTest {
     }
 
     @Test fun e_discoverInYumixAndHome() {
-        val hubOn = dev.asfakul.yumeiro.sources.hub.YumeiroHub.catalogOn()
+        // The catalog part is published when the hub finishes loading after start; wait for it (as the screen does).
+        val hubOn = runCatching { rule.waitUntil(60_000) { dev.asfakul.yumeiro.sources.hub.YumeiroHub.catalogOn() }; true }.getOrDefault(false)
         log("GROUPO_F5 e catalogOn=$hubOn")
         assertTrue("the Yumeiro catalog part is on for a fresh install", hubOn)
         openYumix()

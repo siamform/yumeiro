@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -189,7 +190,9 @@ class GroupOScreensDeviceTest {
         assertTrue("If you like asks for the first seed", hub.requests.any { it.startsWith("/v1/hub/recommend") && "id=111" in it })
         tap("discover_seed")
         rule.waitUntil(5_000) { count("discover_seed_option") >= 2 }
-        rule.onAllNodesWithTag("discover_seed_option", true)[1].performClick(); rule.waitForIdle()
+        log("GROUPO_F6 options=${under("discover_seed_option").take(4)}")
+        rule.onAllNodesWithTag("discover_seed_option", true)[1].performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick); rule.waitForIdle()
+        log("GROUPO_F6 seed now=${under("discover_seed")} reqs=${hub.requests.filter { "recommend" in it }}")
         rule.waitUntil(10_000) { hub.requests.any { it.startsWith("/v1/hub/recommend") && "id=222" in it } }
         scrollTo("discover_services")
         rule.waitUntil(20_000) { count("discover_service_8") > 0 }
