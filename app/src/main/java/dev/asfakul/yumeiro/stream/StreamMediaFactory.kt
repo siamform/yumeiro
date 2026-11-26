@@ -58,6 +58,14 @@ object StreamMediaFactory {
     }
 
     /** Media buffer budget for a heap of [memoryClassMb]: ~1/6 of it, kept between 16 and 64 MB. */
+    /** Network streams start once this much is buffered: a quick first frame. */
+    const val START_AFTER_MS = 1_500
+    /**
+     * B15: after a stall, wait for this much before playing again. 3 s refilled just enough to stall again on a
+     * jittery link (play, stall, play: the "stutter"); 5 s rides out typical jitter (VyseTV's player waits 5 s too).
+     */
+    const val RESUME_AFTER_REBUFFER_MS = 5_000
+
     fun bufferBudgetBytes(memoryClassMb: Int): Int = (memoryClassMb / 6).coerceIn(16, 64) * 1024 * 1024
 
     /** Players that ever ran GPU effects: never reused for another video (the effect pipeline stays). */
@@ -144,8 +152,8 @@ object StreamMediaFactory {
                     .setBufferDurationsMs(
                         /* minBufferMs = */ 20_000,
                         /* maxBufferMs = */ dev.asfakul.yumeiro.Edition.maxBufferMs,
-                        /* bufferForPlaybackMs = */ 1_500,
-                        /* bufferForPlaybackAfterRebufferMs = */ 3_000,
+                        /* bufferForPlaybackMs = */ START_AFTER_MS,
+                        /* bufferForPlaybackAfterRebufferMs = */ RESUME_AFTER_REBUFFER_MS,
                     )
                     .setTargetBufferBytes(bufferBudgetBytes(memoryClass))
                     .setPrioritizeTimeOverSizeThresholds(false)

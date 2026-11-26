@@ -93,12 +93,17 @@ class GroupNPlayerSmoothnessDeviceTest {
         runCatching { rule.waitUntil(3_000) { has("video_more_btn") } }
         UiLiveness.pump(rule, 500)
         content.set(0); bar.set(0); all.clear()
+        fun counters(): Pair<Int, Int> { var r = 0 to 0; rule.runOnUiThread { PlaybackSession.playerForTest?.videoDecoderCounters?.let { it.ensureUpdated(); r = it.droppedBufferCount to it.renderedOutputBufferCount } }; return r }
+        val (drop0, rend0) = counters()
         val t0 = UiLiveness.timeLabels(rule)
         counting = true
         UiLiveness.pump(rule, 2_000)
         counting = false
         val t1 = UiLiveness.timeLabels(rule)
         val c = content.get(); val b = bar.get()
+        val (drop1, rend1) = counters()
+        val dropped = drop1 - drop0; val rendered = rend1 - rend0
+        log("GN_CASE B15 frames rendered=$rendered dropped=$dropped (2 s, controls up)")
         FirstRun.shot("gn_b15_ticks")
         log("GN_CASE B15 ticks time='$t0'→'$t1' contentRecompositions=$c bottomBarRecompositions=$b controls=${has("video_more_btn")} " +
             "state=${PlaybackDiagnostics.state.value.state} maxLagMs=${watch.maxLag.get()} total=${all.values.sum()}")
@@ -107,6 +112,8 @@ class GroupNPlayerSmoothnessDeviceTest {
         assertTrue("B15: the time label did not move ('$t0' → '$t1'), nothing was measured", t0.isNotBlank() && t0 != t1)
         assertTrue("B15: the seek bar never updated (bottom bar recompositions $b)", b > 0)
         assertTrue("B15: the whole player recomposed $c times in 2 s of position ticks (seek bar $b)", c <= 1)
+        assertTrue("B15: frames are rendered while the controls are up ($rendered)", rendered > 0)
+        assertTrue("B15: $dropped of ${rendered + dropped} frames dropped in 2 s with the controls up", dropped * 10 <= rendered + dropped)
         log("GN_RESULT PASS B15 ticks")
     }
 
