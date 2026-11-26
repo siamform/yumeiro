@@ -53,7 +53,12 @@ internal object PrefSections {
 
     /** History a "Clear watch and search history" reset removes, as file → key test. */
     fun isHistory(file: String, key: String): Boolean = when (base(file)) {
-        "play_counts", "search_recent", "yt_history", "online", "yu_last_played", "activity_log" -> true
+        "play_counts", "search_recent", "yt_history", "yu_last_played", "activity_log", "episode_seen" -> true
+        // B9: only the searches in "online" (it also holds how results are shown), and the history parts of the rest.
+        "online" -> key == "online_search_history"
+        "mt_streams" -> key == "history" || key == "live_history"
+        "live_tv" -> key == "country_recent"
+        "yu_sites_recent" -> key == "visits"
         "mt_player_video_prefs" -> key.startsWith("pos_") || key.startsWith("watched_")
         "mt_player_music_prefs" -> key == "recently_played_ids" || key == "play_counts_json"
         else -> false

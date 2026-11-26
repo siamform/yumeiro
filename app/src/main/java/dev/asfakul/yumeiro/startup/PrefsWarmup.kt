@@ -64,7 +64,13 @@ object PrefsWarmup {
             // getSharedPreferences() starts each file's load on its own thread, so asking for all
             // of them first loads them side by side; the main thread then finds most ready instead
             // of waiting for a file far down a one-by-one list (R16: 3rd entry still read on main).
-            val all = FIRST_FRAME.mapNotNull { runCatching { app.getSharedPreferences(it, Context.MODE_PRIVATE) }.getOrNull() }
+            // B19 (GH-47): files kept per profile are warmed under the open profile's name.
+            val all = FIRST_FRAME.mapNotNull { n ->
+                runCatching {
+                    val name = if (n in dev.asfakul.yumeiro.profiles.Profiles.SCOPED_PREFS) dev.asfakul.yumeiro.profiles.Profiles.prefsName(app, n) else n
+                    app.getSharedPreferences(name, Context.MODE_PRIVATE)
+                }.getOrNull()
+            }
             // contains() waits for the load, so any parse cost lands here, not on the main thread.
             for (p in all) runCatching { p.contains("") }
             // FF-LOAD: the flag map is built here so the first isOn on the main thread finds it ready.

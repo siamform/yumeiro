@@ -147,7 +147,7 @@ object SearchHistoryCodec {
 /** Recent searches per search box ("library", "hues", "youtube", "ytmusic"), kept on the device. */
 object RecentSearches {
     private const val PREFS = "search_recent"
-    private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(c: Context) = c.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(c, PREFS), Context.MODE_PRIVATE)
     fun load(c: Context, scope: String): List<String> = SearchHistoryCodec.decode(prefs(c).getString(scope, ""))
     fun add(c: Context, scope: String, q: String) {
         val t = SearchHistoryCodec.clean(q).takeIf { it.length >= 2 } ?: return

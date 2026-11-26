@@ -464,7 +464,8 @@ internal fun SearchHistoryRow(h: String, onClick: () -> Unit) {
 /** Last searches, kept on the device. */
 internal object SearchHistory {
     private const val KEY = "online_search_history"
-    private fun prefs(c: Context) = c.getSharedPreferences("online", Context.MODE_PRIVATE)
+    // B19 (GH-47): each profile keeps its own searches ("online" for the default profile, "online@p<id>" otherwise).
+    private fun prefs(c: Context) = c.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(c, "online"), Context.MODE_PRIVATE)
     // SEARCH-ML-1: kept as a JSON array, so a search with line breaks stays one search (see SearchHistoryCodec).
     fun load(c: Context): List<String> = dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.decode(prefs(c).getString(KEY, ""))
     fun add(c: Context, q: String) {

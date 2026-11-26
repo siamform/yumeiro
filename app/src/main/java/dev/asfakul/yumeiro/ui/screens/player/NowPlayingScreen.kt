@@ -705,6 +705,9 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
     }
     val d = details
     val q = quick
+    // B13: a streamed song waits for its stream facts, not for a file read.
+    val waiting = q == null && (d == null || dev.asfakul.yumeiro.player.SongFacts.streamed(track.uri))
+    val sizeBytes = dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, q?.second ?: d?.sizeBytes)
     val rows = buildList {
         add("Title" to track.title)
         add("Artist" to track.artist)
@@ -716,7 +719,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         d?.trackNumber?.let { add("Track" to it) }
         d?.discNumber?.let { add("Disc" to it) }
         // H-8: the file's own duration (then the player's) when the library row has none.
-        add("Duration" to (dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, q?.first ?: d?.durationMs, playerDurationMs)?.let(::formatDuration) ?: if (d == null && q == null) "\u2026" else "Unknown"))
+        add("Duration" to (dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, q?.first ?: d?.durationMs, playerDurationMs)?.let(::formatDuration) ?: if (waiting) "\u2026" else "Unknown"))
         d?.format?.let { add("Format" to it) }
         // Live from the decoder first (works for online songs too), the file's tags otherwise.
         codec?.codecName?.let { add("Codec" to (if (codec.lossless) "$it (lossless)" else it)) }
@@ -727,7 +730,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         codec?.channelsLabel?.let { add("Channels" to it) }
         codec?.decoder?.let { add("Decoder" to "${codec.decoderKind} · $it") }
         // H-8: always shown (it used to vanish when the library row had 0).
-        add("File size" to dev.asfakul.yumeiro.player.SongFacts.sizeLabel(dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, q?.second ?: d?.sizeBytes), track.uri, ::formatFileSize).let { if (d == null && q == null && it == "Unknown") "\u2026" else it })
+        add("File size" to if (waiting && sizeBytes == null) "\u2026" else dev.asfakul.yumeiro.player.SongFacts.sizeLabel(sizeBytes, track.uri, ::formatFileSize))
         if (track.playCount > 0) add("Plays" to track.playCount.toString())
         add("Folder" to track.folderName)
         d?.path?.let { add("Path" to it) }

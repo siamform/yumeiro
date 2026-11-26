@@ -13,6 +13,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import dev.asfakul.yumeiro.profiles.Profiles
 import androidx.work.workDataOf
 import dev.asfakul.yumeiro.online.OnlineDetail
 import dev.asfakul.yumeiro.online.OnlineEpisode
@@ -107,8 +108,18 @@ object OnlineDownloads {
         val active: Boolean get() = status == Status.QUEUED || status == Status.RUNNING
     }
 
+    /** Every profile's downloads (workers and the list file use this one). */
+    private val _all = MutableStateFlow<List<Item>>(emptyList())
     private val _items = MutableStateFlow<List<Item>>(emptyList())
+    /**
+     * B19 (GH-47): the open profile's downloads. Every list, count and "already downloaded" check reads this, so
+     * one profile never sees another's. Switching profile restarts the app, so [owner] is fixed for the process.
+     */
     val items: StateFlow<List<Item>> = _items.asStateFlow()
+    @Volatile private var owner: String = Profiles.DEFAULT
+    private fun publish() { _items.value = _all.value.filter { it.profile == owner } }
+    /** B19: ids of another profile's downloads carry "@p<id>", so the same episode in two profiles is two downloads. */
+    private fun own(id: String) = if (owner == Profiles.DEFAULT) id else "$id@p$owner"
     @Volatile private var loaded = false
     private var file: File? = null
 
@@ -116,6 +127,12 @@ object OnlineDownloads {
         File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir, "Downloads").apply { mkdirs() }
 
     fun folderDir(context: Context, folder: String): File = if (folder.isBlank()) dir(context) else File(dir(context), folder)
+
+    /** B19: a non-default profile's downloads live under `Downloads/.profiles/<id>/` (the default profile's stay where they were). */
+    internal fun profileRoot(context: Context, profile: String): File = File(dir(context), ".profiles/$profile")
+    private fun ownerDir(context: Context, item: Item): File =
+        if (item.profile == Profiles.DEFAULT) folderDir(context, item.folder)
+        else profileRoot(context, item.profile).let { if (item.folder.isBlank()) it else File(it, item.folder) }
 
     /** Free space where downloads are saved (bytes, -1 when unknown). */
     fun freeBytes(context: Context): Long = runCatching { android.os.StatFs(dir(context).path).availableBytes }.getOrDefault(-1L)
@@ -131,7 +148,7 @@ object OnlineDownloads {
 
     fun fileOf(context: Context, item: Item): File =
         if (item.hidden) File(PrivateDownloads.vaultDir(context, item.profile).apply { mkdirs() }, item.fileName)
-        else File(folderDir(context, item.folder).apply { mkdirs() }, item.fileName)
+        else File(ownerDir(context, item).apply { mkdirs() }, item.fileName)
 
     /** DL-H: replaces one item and saves the list. */
     internal fun replace(id: String, change: (Item) -> Item) = set(id, true, change)
@@ -141,18 +158,20 @@ object OnlineDownloads {
         item.status == Status.DONE && (item.publicUri != null || (item.fileName.isNotBlank() && fileOf(context, item).exists()))
 
     fun episodeId(api: String, titleUrl: String, version: String?, data: String) =
-        ("ep|" + api + "|" + titleUrl + "|" + (version ?: "") + "|" + data).hashCode().toUInt().toString(16)
+        own(("ep|" + api + "|" + titleUrl + "|" + (version ?: "") + "|" + data).hashCode().toUInt().toString(16))
 
     @Synchronized
     fun ensureLoaded(context: Context) {
         if (loaded) return
         loaded = true
+        owner = Profiles.currentId(context)
         val f = File(context.applicationContext.filesDir, "online_downloads.json").also { file = it }
         // R16 (G5): an unreadable file is kept as .bad and a leftover .tmp is used (SafeJsonFile).
         val a = dev.asfakul.yumeiro.data.SafeJsonFile.read(f) { JSONObject(it).getJSONArray("items") }.value ?: return
-        _items.value = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::from) }
+        _all.value = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::from) }
             // A download that was running when the app died continues as queued.
             .map { if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED) else it }
+        publish()
     }
 
     /** Tests / previews only: replaces the in-memory list without touching disk. */
@@ -160,10 +179,10 @@ object OnlineDownloads {
     internal fun setItemsForTest(context: Context, list: List<Item>) {
         ensureLoaded(context)
         // Each Robolectric test has its own files dir; the list was loaded once for the first one.
-        synchronized(this) { file = File(context.applicationContext.filesDir, "online_downloads.json"); _items.value = list }
+        synchronized(this) { file = File(context.applicationContext.filesDir, "online_downloads.json"); _all.value = list; publish() }
     }
 
-    fun get(id: String): Item? = _items.value.firstOrNull { it.id == id }
+    fun get(id: String): Item? = _all.value.firstOrNull { it.id == id }
 
     /** Downloads what's playing now (current source of the online session). */
     fun downloadCurrent(context: Context, keep: Boolean? = null): String? {
@@ -196,14 +215,14 @@ object OnlineDownloads {
     ): String? {
         ensureLoaded(context)
         // R15 forced download: DASH and split video/audio sources are saved too (ForceGrab).
-        val id = (api + "|" + titleUrl + "|" + (episodeLabel ?: "")).hashCode().toUInt().toString(16)
+        val id = own((api + "|" + titleUrl + "|" + (episodeLabel ?: "")).hashCode().toUInt().toString(16))
         get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
         val ext = DownloadNaming.extensionFor(link)
         val name = safeName(listOfNotNull(title.takeIf { it.isNotBlank() }, link.qualityLabel.takeIf { it.isNotBlank() }).joinToString(" ")) + "-" + id + "." + ext
         val item = Item(id, title, api, titleUrl, episodeLabel, posterUrl, posterHeaders, link.url, link.isHls, headersFor(link), name,
             folder = folder, version = version, keep = keep ?: DownloadSettings.keepByDefault.value, quality = link.qualityLabel.ifBlank { null },
             isDash = link.isDash, audioUrl = link.audioTracks.firstOrNull()?.first,
-            maxHeight = pick?.maxHeight ?: -1, audioPref = pick?.audio, subsPref = pick?.subtitles ?: DownloadTracks.SUBS_NONE, subs = subs)
+            maxHeight = pick?.maxHeight ?: -1, audioPref = pick?.audio, subsPref = pick?.subtitles ?: DownloadTracks.SUBS_NONE, subs = subs, profile = owner)
         update { list -> listOf(item) + list.filterNot { it.id == id } }
         start(context, id)
         return null
@@ -235,7 +254,7 @@ object OnlineDownloads {
                 createdAt = now + index, kind = Kind.EPISODE, folder = folder, version = version.ifBlank { null },
                 data = ep.data, order = index, keep = keep ?: DownloadSettings.keepByDefault.value,
                 baseName = DownloadNaming.episodeBase(ep.season, ep.episode, ep.name, index),
-                maxHeight = maxHeight, subsPref = subsPref,
+                maxHeight = maxHeight, subsPref = subsPref, profile = owner,
             )
         }
         if (added.isEmpty()) return 0
@@ -248,7 +267,7 @@ object OnlineDownloads {
     /** Queues a YouTube video or song in [choice] quality. Returns an error text, or null when queued. */
     fun enqueueYouTube(context: Context, ytId: String, title: String, channel: String?, thumbnail: String?, music: Boolean, choice: YtDownloadOptions.Choice, keep: Boolean = true): String? {
         ensureLoaded(context); DownloadSettings.init(context)
-        val id = ("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16)
+        val id = own(("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16))
         get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
         val item = ytItem(ytId, title, channel, thumbnail, music, choice, keep)
         update { list -> listOf(item) + list.filterNot { it.id == id } }
@@ -274,7 +293,7 @@ object OnlineDownloads {
     }
 
     private fun ytItem(ytId: String, title: String, channel: String?, thumbnail: String?, music: Boolean, choice: YtDownloadOptions.Choice, keep: Boolean): Item {
-        val id = ("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16)
+        val id = own(("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16))
         val base = DownloadNaming.clean(title.ifBlank { ytId }, 90)
         val suffix = if (choice.audioOnly) "" else " (" + choice.label + ")"
         return Item(
@@ -284,7 +303,7 @@ object OnlineDownloads {
             kind = if (choice.audioOnly) Kind.YT_AUDIO else Kind.YT_VIDEO,
             folder = youTubeFolder(choice.audioOnly, music),
             ytId = ytId, videoItag = choice.videoItag, audioItag = choice.audioItag, container = choice.container,
-            quality = choice.label, keep = keep,
+            quality = choice.label, keep = keep, profile = owner,
         )
     }
 
@@ -299,7 +318,7 @@ object OnlineDownloads {
     fun cleanup(context: Context, now: Long = System.currentTimeMillis()): Int {
         ensureLoaded(context); DownloadSettings.init(context)
         val days = DownloadSettings.autoDeleteDays.value
-        val old = _items.value.filter { it.status == Status.DONE && !it.hidden && DownloadNaming.expired(it.finishedAt, it.keep, days, now) }
+        val old = _all.value.filter { it.status == Status.DONE && !it.hidden && DownloadNaming.expired(it.finishedAt, it.keep, days, now) }
         old.forEach { delete(context, it.id) }
         // Empty series folders go too.
         runCatching { dir(context).listFiles()?.filter { it.isDirectory && it.list().isNullOrEmpty() }?.forEach { it.delete() } }
@@ -392,7 +411,7 @@ object OnlineDownloads {
     /** Resumes queued downloads after a restart. */
     fun resumeQueued(context: Context) {
         ensureLoaded(context)
-        _items.value.filter { it.status == Status.QUEUED }.forEach { start(context, it.id) }
+        _all.value.filter { it.status == Status.QUEUED }.forEach { start(context, it.id) }
     }
 
     // R16 (G8): a progress tick that lands after the user paused keeps PAUSED (device run 43741091128:
@@ -409,12 +428,12 @@ object OnlineDownloads {
     internal fun stopped(id: String) = set(id) { if (it.status == Status.RUNNING) it.copy(status = Status.QUEUED) else it }
 
     private fun set(id: String, persist: Boolean = true, change: (Item) -> Item) {
-        synchronized(this) { _items.value = _items.value.map { if (it.id == id) change(it) else it } }
+        synchronized(this) { _all.value = _all.value.map { if (it.id == id) change(it) else it }; publish() }
         if (persist) write()
     }
 
     private fun update(change: (List<Item>) -> List<Item>) {
-        synchronized(this) { _items.value = change(_items.value) }
+        synchronized(this) { _all.value = change(_all.value); publish() }
         write()
     }
 
@@ -454,7 +473,7 @@ object OnlineDownloads {
         val f = file ?: return
         synchronized(writeLock) {
             lastWrite = System.currentTimeMillis()
-            val o = JSONObject().put("version", 2).put("items", JSONArray().apply { _items.value.forEach { put(json(it)) } })
+            val o = JSONObject().put("version", 2).put("items", JSONArray().apply { _all.value.forEach { put(json(it)) } })
             runCatching { dev.asfakul.yumeiro.data.SafeJsonFile.write(f, o.toString()) }.onFailure { Log.w(TAG, "save", it) }
         }
     }
@@ -501,5 +520,19 @@ object OnlineDownloads {
     }
 
     /** For tests: forget the loaded state, so the next call reads the file again. */
-    @Synchronized internal fun unloadForTests() { _items.value = emptyList(); loaded = false; file = null }
+    @Synchronized internal fun unloadForTests() { _all.value = emptyList(); _items.value = emptyList(); loaded = false; file = null }
+
+    /** B19: deletes every download of profile [profile] (list entries and files), when that profile is removed. */
+    fun removeProfile(context: Context, profile: String) {
+        ensureLoaded(context)
+        if (profile == Profiles.DEFAULT) return
+        val gone = _all.value.filter { it.profile == profile }
+        gone.forEach { item ->
+            if (item.fileName.isNotBlank()) runCatching { removeFiles(fileOf(context, item)) }
+            item.publicUri?.let { u -> runCatching { context.contentResolver.delete(android.net.Uri.parse(u), null, null) } }
+            runCatching { WorkManager.getInstance(context.applicationContext).cancelUniqueWork("dl_${item.id}") }
+        }
+        if (gone.isNotEmpty()) update { list -> list.filterNot { it.profile == profile } }
+        runCatching { profileRoot(context, profile).deleteRecursively() }
+    }
 }

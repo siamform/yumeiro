@@ -209,11 +209,11 @@ internal object LiveCountryRecent {
     private const val MAX = 5
 
     fun read(ctx: android.content.Context): List<String> =
-        ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getString(KEY, null)
+        ctx.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(ctx, PREFS), android.content.Context.MODE_PRIVATE).getString(KEY, null)
             ?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
 
     fun add(ctx: android.content.Context, key: String) {
         val next = (listOf(key) + read(ctx).filterNot { it.equals(key, ignoreCase = true) }).take(MAX)
-        ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putString(KEY, next.joinToString("\n")).apply()
+        ctx.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(ctx, PREFS), android.content.Context.MODE_PRIVATE).edit().putString(KEY, next.joinToString("\n")).apply()
     }
 }

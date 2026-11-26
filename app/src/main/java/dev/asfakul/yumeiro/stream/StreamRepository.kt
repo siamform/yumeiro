@@ -124,7 +124,7 @@ object StreamRepository {
     private fun saveLive(context: Context) =
         prefs(context).edit().putString(KEY_LIVE, StreamRequest.listToJson(_liveHistory.value)).apply()
 
-    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(context: Context) = context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE)
 
     /** Loads an M3U channel list from a URL (using [base] headers) or a content:// document. */
     suspend fun loadPlaylist(context: Context, source: String, base: StreamRequest? = null): List<StreamRequest> =

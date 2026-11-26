@@ -1546,7 +1546,8 @@ fun SongDetailsDialog(
     val quick by androidx.compose.runtime.produceState<Pair<Long?, Long?>?>(null, track.uri) {
         value = runCatching { dev.asfakul.yumeiro.lyrics.TrackDetailsRepository.quickFacts(ctx, track.uri) }.getOrNull() ?: (null to null)
     }
-    val reading = quick == null && details == null && !dev.asfakul.yumeiro.player.SongFacts.streamed(track.uri)
+    // B13: a streamed song waits for its stream facts (quick), not for the file read (nothing to read).
+    val reading = quick == null && (details == null || dev.asfakul.yumeiro.player.SongFacts.streamed(track.uri))
     val durationMs = dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, quick?.first ?: details?.durationMs, 0L)
     val sizeBytes = dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, quick?.second ?: details?.sizeBytes)
     TsukiDialog(

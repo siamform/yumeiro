@@ -43,6 +43,8 @@ class NovelEngine(
     @Volatile private var failure: String? = null
     @Volatile var site: String = plugin.site
         private set
+    /** B7: the plugin's own cover-image headers (`imageRequestInit.headers`), empty when it gives none. */
+    @Volatile private var imageInit: Map<String, String> = emptyMap()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun runtime(): QuickJs {
@@ -60,7 +62,9 @@ class NovelEngine(
         q.evaluate<Any?>("__loadPlugin(${JsonPrimitive(plugin.id)}, ${JsonPrimitive(code)})", "plugin.js", false)
         runCatching { q.evaluate<String>("__pluginInfo(${JsonPrimitive(plugin.id)})", "info.js", false) }.getOrNull()?.let { info ->
             runCatching { JSONObject(info).optString("site") }.getOrNull()?.takeIf { it.startsWith("http") }?.let { site = it }
+            runCatching { NovelImageHeaders.fromInfo(JSONObject(info)) }.getOrNull()?.let { imageInit = it }
         }
+        NovelImageHeaders.remember(plugin.id, NovelImageHeaders.forCovers(site, imageInit))
         q.evaluationTimeoutMillis = CALL_TIMEOUT_MS
         js = q
         return q

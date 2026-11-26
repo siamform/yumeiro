@@ -293,7 +293,7 @@ private fun SearchAllResults(query: String, onOpen: (NovelItem) -> Unit) {
 private fun NovelCover(n: NovelItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, onClick: (NovelItem) -> Unit) {
     Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable(onClickLabel = "Open ${n.name}") { onClick(n) }.testTag("novel_cover")) {
         Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
-            dev.asfakul.yumeiro.ui.screens.online.PosterImage(n.cover, emptyMap(), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook)
+            dev.asfakul.yumeiro.ui.screens.online.PosterImage(n.cover, dev.asfakul.yumeiro.sources.novel.NovelImageHeaders.of(n.pluginId), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook)
         }
         Spacer(Modifier.height(6.dp))
         Text(n.name, color = TextPrimary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
@@ -459,7 +459,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
             item("head") {
                 Row {
                     Box(Modifier.width(108.dp).aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill)) {
-                        dev.asfakul.yumeiro.ui.screens.online.PosterImage(d.cover, emptyMap(), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook)
+                        dev.asfakul.yumeiro.ui.screens.online.PosterImage(d.cover, dev.asfakul.yumeiro.sources.novel.NovelImageHeaders.of(d.pluginId), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook)
                     }
                     Column(Modifier.padding(start = 14.dp)) {
                         d.author?.let { Text(it, color = TextSecondary, fontSize = 13.sp, maxLines = 2) }
@@ -641,13 +641,13 @@ internal object NovelBanner {
         if (reading != null) {
             val it = NovelItem(reading.pluginId, reading.name, reading.path, reading.cover)
             out += Slide(it, dev.asfakul.yumeiro.ui.screens.home.HeroSlide(
-                key = "read:" + reading.key, name = reading.name, poster = reading.cover, headers = emptyMap(), badge = "Continue reading",
+                key = "read:" + reading.key, name = reading.name, poster = reading.cover, headers = dev.asfakul.yumeiro.sources.novel.NovelImageHeaders.of(reading.pluginId), badge = "Continue reading",
                 fresh = false, line = reading.chapterName, meta = NovelSources.plugin(reading.pluginId)?.name.orEmpty(), cta = "Continue",
             ))
         }
         items.asSequence().filter { !it.cover.isNullOrBlank() && (reading == null || it.path != reading.path) }.take(PICKS).forEach {
             out += Slide(it, dev.asfakul.yumeiro.ui.screens.home.HeroSlide(
-                key = "pick:" + it.path, name = it.name, poster = it.cover, headers = emptyMap(), badge = if (latest) "Latest" else "Popular",
+                key = "pick:" + it.path, name = it.name, poster = it.cover, headers = dev.asfakul.yumeiro.sources.novel.NovelImageHeaders.of(it.pluginId), badge = if (latest) "Latest" else "Popular",
                 fresh = latest, line = null, meta = source, cta = "Read",
             ))
         }

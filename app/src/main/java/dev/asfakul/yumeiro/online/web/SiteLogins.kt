@@ -25,7 +25,7 @@ object SiteLogins {
         if (loaded || ctx == null) return
         synchronized(this) {
             if (loaded) return
-            cache += ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet(KEY, emptySet()).orEmpty()
+            cache += ctx.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(ctx, PREFS), Context.MODE_PRIVATE).getStringSet(KEY, emptySet()).orEmpty()
             loaded = true
         }
     }
@@ -77,6 +77,6 @@ object SiteLogins {
 
     private fun save(ctx: Context?) {
         ctx ?: return
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet(KEY, cache.toSet()).apply()
+        ctx.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(ctx, PREFS), Context.MODE_PRIVATE).edit().putStringSet(KEY, cache.toSet()).apply()
     }
 }

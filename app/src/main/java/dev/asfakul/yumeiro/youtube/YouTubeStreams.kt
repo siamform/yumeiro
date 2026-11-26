@@ -183,6 +183,30 @@ object YouTubeStreams {
         return File(dir, "${id}_${itag.id}.mpd").apply { writeText(xml) }
     }
 
+    /** B13: what Song info can say about a streamed song: its length and the size of the audio it plays. */
+    data class AudioFacts(val durationMs: Long?, val bytes: Long?, val exact: Boolean)
+    private val facts = java.util.concurrent.ConcurrentHashMap<String, AudioFacts>()
+
+    /** The facts already worked out for [id] (no network), or null. */
+    fun cachedFacts(id: String): AudioFacts? = facts[id]
+
+    /**
+     * B13: Song info showed "Unknown" length and "Streamed (no file)" for YouTube Music songs. The stream YouTube
+     * gives has both: the length, and the byte count of the audio format the player picks (`contentLength`), or
+     * failing that its bitrate times the length (then marked as an estimate). Blocking (may ask YouTube): call
+     * off the main thread.
+     */
+    fun audioFactsBlocking(id: String): AudioFacts? {
+        facts[id]?.let { return it }
+        val info = runCatching { YouTube.infoBlocking(id, false) }.getOrNull() ?: return null
+        val durationMs = info.duration.takeIf { it > 0 }?.times(1000L)
+        val audio = pickAudio(info, dev.asfakul.yumeiro.player.AudioQuality.current()) ?: info.audioStreams.firstOrNull()
+        val exact = audio?.let { a -> runCatching { a.itagItem?.contentLength }.getOrNull()?.takeIf { it > 0 } }
+        val kbps = audio?.averageBitrate?.takeIf { it > 0 } ?: audio?.bitrate?.takeIf { it > 0 }?.let { it / 1000 }
+        val estimate = if (exact == null && kbps != null && durationMs != null) kbps * 1000L / 8L * (durationMs / 1000L) else null
+        return AudioFacts(durationMs, exact ?: estimate, exact != null).also { facts[id] = it }
+    }
+
     /**
      * Fresh audio URL + headers for music playback (blocking: called on ExoPlayer loader threads).
      * [force] skips the cache after a 403 / expiry.

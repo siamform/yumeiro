@@ -21,15 +21,15 @@ object TelegramSeen {
     fun newIds(lastSeen: Int?, ids: Collection<Int>): Set<Int> = if (lastSeen == null) emptySet() else ids.filter { it > lastSeen }.toSet()
 
     fun get(context: Context, channel: String): Int? =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(key(channel), -1).takeIf { it >= 0 }
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).getInt(key(channel), -1).takeIf { it >= 0 }
 
     /** Remembers [newest] (never moves back, e.g. after a search shows only older posts). */
     fun mark(context: Context, channel: String, newest: Int) {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE)
         if (newest > prefs.getInt(key(channel), -1)) prefs.edit().putInt(key(channel), newest).apply()
     }
 
     fun forget(context: Context, channel: String) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(key(channel)).apply()
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().remove(key(channel)).apply()
     }
 }

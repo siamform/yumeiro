@@ -321,7 +321,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
         SettingsActionRow("Clear watch history", "Continue watching, resume points and watched marks (device, online and YouTube)", "privacy_clear_watch") {
             pending = ClearAction("Clear watch history?", "Continue watching, resume positions and watched marks are removed everywhere.", "Watch history cleared") {
                 onClearWatchHistory()
-                io { dev.asfakul.yumeiro.online.OnlineHistory.clear(context); dev.asfakul.yumeiro.youtube.YtHistory.clear(context); WatchHistoryClear.streams(context) }
+                io { dev.asfakul.yumeiro.online.OnlineHistory.clear(context); dev.asfakul.yumeiro.youtube.YtHistory.clear(context); WatchHistoryClear.streams(context); dev.asfakul.yumeiro.backup.HistoryWipe.watchExtras(context) }
             }
         }
         if (adultOn) {
@@ -336,12 +336,13 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
         SettingsActionRow("Clear listening history", "Recently played songs and play counts", "privacy_clear_listening") {
             pending = ClearAction("Clear listening history?", "Recently played and play counts are reset. Playlists and favourites stay.", "Listening history cleared") {
                 onClearListeningHistory()
+                io { dev.asfakul.yumeiro.backup.HistoryWipe.listeningExtras(context) } // B9: Jump back in and the saved queue too
             }
         }
         SettingsDivider()
         SettingsActionRow("Clear search history", "Recent searches in every search box", "privacy_clear_search") {
             pending = ClearAction("Clear search history?", "All recent searches are forgotten.", "Search history cleared") {
-                io { dev.asfakul.yumeiro.ui.components.RecentSearches.clearAll(context); dev.asfakul.yumeiro.ui.screens.online.SearchHistory.clear(context) }
+                io { dev.asfakul.yumeiro.ui.components.RecentSearches.clearAll(context); dev.asfakul.yumeiro.ui.screens.online.SearchHistory.clear(context); dev.asfakul.yumeiro.backup.HistoryWipe.dropSearchCaches(context) }
             }
         }
         SettingsDivider()

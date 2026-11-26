@@ -294,13 +294,11 @@ private fun RegisterStep(s: TgSession, st: TgAuthState.WaitRegistration) {
 /** Signed in: chats (filtered on the phone), then a chat's videos (searched by Telegram). */
 @Composable
 private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
-    val p = LocalMtPalette.current
     val library = remember(s) { TgLibrary(s.client) }
     val scope = rememberCoroutineScope()
     val chats = remember(s) { mutableStateListOf<TgChat>() }
     var loading by remember(s) { mutableStateOf(true) }
     var error by remember(s) { mutableStateOf<String?>(null) }
-    var filter by rememberSaveable { mutableStateOf("") }
     var openChat by remember { mutableStateOf<TgChat?>(null) }
     var confirmLogout by remember { mutableStateOf(false) }
 
@@ -337,63 +335,12 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
         dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
     )
 
-    val shown = remember(chats.toList(), filter) {
-        val f = filter.trim()
-        if (f.isEmpty()) chats.toList() else chats.filter { it.title.contains(f, ignoreCase = true) }
-    }
-    BackHandler { if (filter.isNotEmpty()) filter = "" else onBack() }
-    Column(Modifier.fillMaxSize()) {
-        // GROUP F: sign out and the bot switch live behind the Telegram page's user button now.
-        SubPageHeader(title = "Your Telegram", subtitle = if (chats.isNotEmpty()) "${chats.size} chats" else "Chats", onBack = onBack)
-        me?.let { (m, photo) ->
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(18.dp))
-                    .background(p.surfaceContainerHigh).padding(12.dp).semantics(mergeDescendants = true) {}.testTag("tg_me"),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TelegramAvatar(photo, m.name, size = 48.dp)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(m.name, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(if (m.username.isNotBlank()) "@${m.username} · signed in" else "Signed in", color = p.textSecondary, fontSize = 12.sp, maxLines = 1)
-                }
-            }
-        }
-        OutlinedTextField(
-            value = filter, onValueChange = { filter = it }, singleLine = true,
-            label = { Text("Find a chat") },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("tg_chat_filter"),
-        )
-        LazyColumn(
-            Modifier.fillMaxSize().testTag("tg_chats"),
-            contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 140.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(shown, key = { it.id }) { chat ->
-                // TG-AVATAR-1 (owner list 8A): each chat with its own photo (TDLib's small copy, fetched as it scrolls in).
-                val photo by produceState<String?>(null, chat.photoFileId) { value = library.smallFile(chat.photoFileId) }
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceContainerHigh)
-                        .clickable { openChat = chat }.heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 10.dp).testTag("tg_chat_${chat.id}"),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TelegramAvatar(photo, chat.title, size = 44.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(chat.title.ifBlank { "Untitled chat" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(when (chat.kind) { TgChat.Kind.CHANNEL -> "Channel"; TgChat.Kind.GROUP -> "Group"; TgChat.Kind.PRIVATE -> "Chat" }, color = p.textSecondary, fontSize = 12.sp)
-                    }
-                }
-            }
-            if (!loading && shown.isEmpty()) item("empty") {
-                Text(error ?: if (filter.isNotBlank()) "No chat matches \"$filter\"." else "No chats yet.", color = p.textSecondary, modifier = Modifier.padding(16.dp).testTag("tg_chats_empty"))
-                if (error != null) TextButton(onClick = { load() }, modifier = Modifier.testTag("tg_chats_retry")) { Text("Try again") }
-            }
-            if (loading) item("loading") {
-                dev.asfakul.yumeiro.ui.components.SkeletonList(rows = if (shown.isEmpty()) 7 else 1, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("tg_chats_loading")) // SKELETON-2
-            }
-        }
-    }
+    // B8 (beta chapter): account and search moved into the header as icons (TelegramChatsPage).
+    TelegramChatsPage(
+        chats = chats.toList(), me = me, loading = loading, error = error,
+        photo = { library.smallFile(it) }, onOpen = { openChat = it }, onRetry = { load() },
+        onSignOut = { confirmLogout = true }, onBack = onBack,
+    )
 }
 
 @Composable
@@ -440,19 +387,17 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
                 if (!loading && next != 0L && pages < 5 && last != null && last >= total - 2) { pages++; load(next) }
             }
     }
-    BackHandler { if (query.isNotEmpty()) { input = ""; search("") } else onBack() }
+    var searchOpen by rememberSaveable(chat.id) { mutableStateOf(false) }
 
     // TG-COUNT-1 (owner list 8B): what the chat holds, from Telegram's own counts.
     val counts by produceState<TgCounts?>(null, chat.id) { value = runCatching { library.counts(chat.id) }.getOrNull() }
     Column(Modifier.fillMaxSize().testTag("tg_chat_videos")) {
-        SubPageHeader(title = chat.title.ifBlank { "Chat" }, subtitle = counts?.label()?.ifBlank { null } ?: "Videos and audio", onBack = onBack)
-        OutlinedTextField(
-            value = input, onValueChange = { input = it }, singleLine = true,
-            label = { Text("Search this chat") },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { search(input) }),
-            trailingIcon = { IconButton(onClick = { search(input) }, modifier = Modifier.testTag("tg_video_search_go")) { Icon(Icons.Default.Search, "Search") } },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("tg_video_search"),
+        // B8: the chat's search sits behind the header's search icon too.
+        TgSearchHeader(
+            title = chat.title.ifBlank { "Chat" }, subtitle = counts?.label()?.ifBlank { null } ?: "Videos and audio",
+            searching = searchOpen, onSearching = { searchOpen = it },
+            query = input, onQuery = { input = it }, placeholder = "Search this chat",
+            onBack = onBack, onSubmit = { search(it) },
         )
         // TG-GRID-1 (owner list 8C): a gallery. Each video shows its own preview frame with the length on it; tap plays
         // (no autoplay, so no data is spent on previews beyond Telegram's small thumbnail).

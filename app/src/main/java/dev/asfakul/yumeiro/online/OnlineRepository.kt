@@ -216,6 +216,9 @@ object OnlineRepository {
     /** Search results the user tapped, so details can show a title + poster instantly. */
     val previews = ConcurrentHashMap<String, OnlineItem>()
 
+    /** B9: searches kept for a quick reopen (memory and the phone's copies) go with the search history. */
+    fun clearSearchCache() { searchCache.clear(); searchFails.clear(); runCatching { dev.asfakul.yumeiro.cache.DataCache.dropNamespace("search") } }
+
     /** Forgets loaded pages (memory and the copy saved on the phone): settings or extensions changed. */
     fun clearCaches() { homeCache.clear(); detailCache.clear(); searchCache.clear(); runCatching { dev.asfakul.yumeiro.cache.DataCache.invalidateAll() } }
 
