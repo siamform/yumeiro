@@ -130,3 +130,16 @@ class GroupLShellTest {
         Entrance.resetForTest()
     }
 }
+
+/** B1: the in-app splash plays once per process, never again on reopening. */
+class GroupLSplashGateTest {
+    @org.junit.Test fun playsOncePerProcess() {
+        val g = dev.asfakul.yumeiro.ui.screens.splash.SplashGate
+        g.resetForTest()
+        org.junit.Assert.assertTrue(g.shouldShow(true))
+        g.markPlayed()
+        org.junit.Assert.assertFalse("reopened while in memory", g.shouldShow(true))
+        g.resetForTest()
+        org.junit.Assert.assertFalse("right after Who's watching", g.shouldShow(false))
+    }
+}

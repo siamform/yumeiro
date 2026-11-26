@@ -163,7 +163,7 @@ fun MTPlayerApp(
     // Splash is an overlay instead of a navigation destination, so the back stack always
     // starts at Home and can never be left in a broken state after navigation.
     // OWN-15: no second logo right after "Who's watching?" (ProfileSession.showLogo).
-    var showSplash by rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.showLogo()) }
+    var showSplash by rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.ui.screens.splash.SplashGate.shouldShow(dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.showLogo())) }
     // ST-18: on a cold start the opaque splash covers Home for at least 900 ms. Home's content then
     // joins one frame later, so the first frame is the splash and the app shell instead of the whole
     // Home page (traces 44185180596: frame 1 4.2–4.5 s, most of it the RenderThread's first flush of
@@ -1850,7 +1850,7 @@ fun MTPlayerApp(
             enter = fadeIn(tween(0)),
             exit = fadeOut(tween(250))
         ) {
-            SplashScreen(onSplashFinished = { showSplash = false })
+            SplashScreen(onSplashFinished = { dev.asfakul.yumeiro.ui.screens.splash.SplashGate.markPlayed(); showSplash = false })
         }
 
         // Double back press to exit. Only active on the Home root when no overlay (player,

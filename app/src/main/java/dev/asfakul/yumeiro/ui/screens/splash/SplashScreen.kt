@@ -63,6 +63,18 @@ object SplashTiming {
         if (reduced) HOLD_REDUCED_MS else if (startsFromSystemMark(sdk)) HOLD_PRESS_MS else HOLD_MS
 }
 
+/**
+ * B1 (Beta): the in-app splash plays once per process. Reopening the app while it is still in
+ * memory (back-exit then launcher, recents, a new activity) used to replay the whole splash about
+ * two seconds after the system splash had already gone, so the logo appeared again after the splash.
+ */
+object SplashGate {
+    @Volatile private var played = false
+    fun shouldShow(wanted: Boolean): Boolean = wanted && !played
+    fun markPlayed() { played = true }
+    fun resetForTest() { played = false }
+}
+
 @Composable
 fun SplashScreen(
     onSplashFinished: () -> Unit,
