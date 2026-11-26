@@ -154,7 +154,9 @@ class GroupNOtherSourcesDeviceTest {
         log("GN_CASE B17 $case phase=${s?.phase} via=${s?.link?.via} url=${s?.link?.url} firstFrame=${d.firstFrame} ms=$ms " +
             "links=${s?.links?.map { (it.via ?: "own") + ":" + it.url.substringAfter(base) }} others=${s?.others} message=${s?.message} paths=$seen")
         val playing = if (d.firstFrame && s?.phase == OnlineSession.Phase.PLAYING) s.link?.url?.substringAfter(base) else null
-        // A fresh player per case: the same link again must not be taken as "already playing".
+        // Close the player as a person does (Back, then close the floating player): OnlineSession.end() alone
+        // leaves the player screen on its video, and the same link again would not reload (logcat of 45877623072).
+        log("GN_CLOSE $case ${UiLiveness.leaveAndClose(rule).second}")
         rule.runOnUiThread { OnlineSession.end(); dev.asfakul.yumeiro.player.PlaybackSession.releaseNow() }
         // Let the player screen leave the composition, so the next case opens a new one (same link included).
         runCatching { rule.waitUntil(10_000) { OnlineSession.state.value == null && dev.asfakul.yumeiro.player.PlaybackSession.playerForTest == null } }
