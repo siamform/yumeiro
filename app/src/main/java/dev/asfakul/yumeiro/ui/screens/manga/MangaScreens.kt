@@ -156,6 +156,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
     var feed by rememberSaveable { mutableStateOf(Feed.POPULAR) }
     var savedOnly by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     var submitted by rememberSaveable { mutableStateOf("") }
     var showSources by remember { mutableStateOf(false) }
     val library by MangaLibrary.entries.collectAsState()
@@ -171,7 +172,18 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
     val barHide = remember { dev.asfakul.yumeiro.ui.components.HideOnScroll() }
 
     Column(Modifier.fillMaxSize().testTag("manga_home")) {
-        SubPageHeader(title = "Manga", onBack = onBack, subtitle = if (providers.isEmpty()) "Add a source to start reading" else provider?.name) {
+        SubPageHeader(
+            title = "Manga", onBack = onBack,
+            subtitle = if (providers.isEmpty()) "Add a source to start reading"
+                else (provider?.name.orEmpty() + (provider?.lang?.takeIf { it.isNotBlank() && it != "all" }?.let { " · ${it.uppercase()}" } ?: "")),
+        ) {
+            // GROUP C catch-all (same pattern as the Novel home): search and the source choice are header icons.
+            if (providers.isNotEmpty()) {
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
+                    if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
+                }, "manga_search_open", "Search ${provider?.name.orEmpty()}")
+                if (providers.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { showSources = true }, "manga_source_pick", "Change source")
+            }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("manga_manage_sources")) { Icon(Icons.Default.Extension, "Manage sources", tint = TextPrimary) }
         }
         if (providers.isEmpty()) {
@@ -189,32 +201,8 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                 exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
             ) {
                 Column {
-                    // Source strip (same shape as Yumix's extension bar).
-                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp).testTag("manga_source_bar"), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            dev.asfakul.yumeiro.ui.components.Kana.overline("漫画", "${providers.size} source${if (providers.size == 1) "" else "s"}", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
-                            style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, maxLines = 1,
-                            modifier = Modifier.padding(vertical = 12.dp),
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Row(
-                            Modifier.clip(RoundedCornerShape(50)).background(pal.accent.copy(alpha = 0.14f))
-                                .clickable(onClickLabel = "Change source") { showSources = true }
-                                .padding(horizontal = 12.dp, vertical = 7.dp).testTag("manga_source_pick"),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Default.FilterList, null, tint = pal.accent, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                (provider?.name ?: "Pick a source") + (provider?.lang?.takeIf { it.isNotBlank() && it != "all" }?.let { " · ${it.uppercase()}" } ?: ""),
-                                color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.widthIn(max = 180.dp),
-                            )
-                        }
-                    }
-                    dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                        query = query, onQuery = { query = it.take(80) }, hint = "Search ${provider?.name.orEmpty()}",
-                        tag = "manga_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(
+                        searchOpen || query.isNotEmpty(), query, { query = it.take(80) }, "Search ${provider?.name.orEmpty()}", "manga_search",
                     )
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (feed == Feed.SEARCH) item("f_search") { FilterPill("Results for \"${dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.oneLine(submitted)}\"", true, {}) }

@@ -44,7 +44,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -157,7 +156,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
             items(apis, key = { it.name }) { a ->
                 val h = results[a.name]
                 HubCard(a.name, h?.let { "${it.detail} · ${it.ms} ms" } ?: "Not checked", badge = SourceHub.ecosystemOf(a).label) {
-                    Box(Modifier.size(12.dp).background(when { h == null -> TextTertiary.copy(alpha = 0.4f); h.ok -> Color(0xFF4CAF50); else -> Color(0xFFE57373) }, CircleShape))
+                    Box(Modifier.size(12.dp).background(when { h == null -> TextTertiary.copy(alpha = 0.4f); h.ok -> dev.asfakul.yumeiro.ui.theme.SuccessTone; else -> dev.asfakul.yumeiro.ui.theme.DangerTone }, CircleShape))
                 }
             }
         }

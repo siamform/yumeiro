@@ -962,7 +962,11 @@ fun PageStreamFinderDialog(
                                     }
                                     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                                         // Built-in ad blocking: pre-rolls and pop-unders never load or get offered as "the stream".
-                                        if (request != null && dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(view) && dev.asfakul.yumeiro.online.web.AdFilter.isAd(request.url.toString())) return dev.asfakul.yumeiro.online.web.AdFilter.blocked()
+                                        if (request != null && dev.asfakul.yumeiro.online.web.AdFilter.isAd(request.url.toString())) {
+                                            val on = dev.asfakul.yumeiro.online.web.BrowserFilters.pageOn(view)
+                                            dev.asfakul.yumeiro.online.web.AdFilter.note(request.url.toString(), blocked = on)
+                                            if (on) return dev.asfakul.yumeiro.online.web.AdFilter.blocked()
+                                        }
                                         request?.let { record(it.url.toString(), it.method ?: "GET", it.requestHeaders.orEmpty()) }
                                         // TB-LOGIN: device evidence of the sign-in calls (method and path only; never the query, body or cookies).
                                         request?.url?.takeIf { teraShare != null && it.host.orEmpty().contains("terabox") && (it.path.orEmpty().startsWith("/passport") || it.path.orEmpty().startsWith("/api/check")) }

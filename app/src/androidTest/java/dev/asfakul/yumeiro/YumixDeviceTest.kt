@@ -178,6 +178,9 @@ class YumixDeviceTest {
         runCatching { rule.waitUntil(60_000) { rule.onAllNodesWithTag("online_row_grid", true).fetchSemanticsNodes().isNotEmpty() } }
         org.junit.Assume.assumeTrue("See all showed no grid · ${FirstRun.onScreen(rule)}", rule.onAllNodesWithTag("online_row_grid", true).fetchSemanticsNodes().isNotEmpty())
         // A one-letter section search keeps loading pages (one at a time) next to the scroll trigger.
+        // GROUP C: the section search opens from its header icon.
+        rule.onAllNodesWithTag("online_row_search_open", true).onFirst().performClick()
+        rule.waitUntil(5_000) { rule.onAllNodesWithTag("online_row_search", true).fetchSemanticsNodes().isNotEmpty() }
         rule.onAllNodesWithTag("online_row_search", true).onFirst().performTextInput("e")
         fun loaded(): Int? = rule.onAllNodesWithTag("online_row_search_count", true).fetchSemanticsNodes().firstOrNull()
             ?.config?.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }?.joinToString { it.text }

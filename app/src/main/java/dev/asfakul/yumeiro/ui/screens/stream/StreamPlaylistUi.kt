@@ -205,6 +205,9 @@ internal fun PlaylistsHeader(
     onNew: () -> Unit,
     onSync: () -> Unit,
     onRestore: () -> Unit,
+    /** GROUP C: null = no search (few playlists); otherwise the magnifier's open state. */
+    searchOpen: Boolean? = null,
+    onToggleSearch: () -> Unit = {},
 ) {
     var menu by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -215,6 +218,7 @@ internal fun PlaylistsHeader(
                 Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Defaults update daily", color = TextTertiary, fontSize = 11.sp)
             }
+            if (searchOpen != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, onToggleSearch, "playlists_search_open", "Search playlists")
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlists_more")) { Icon(Icons.Default.MoreVert, "More playlist actions", tint = TextSecondary) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = DarkSurface) {

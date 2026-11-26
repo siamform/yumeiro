@@ -113,6 +113,14 @@ class SocialShotsDeviceTest {
             snap("home", has("home_screen_root"))
         }
 
+        // 2b GROUP Z: Library tab (mockup set).
+        step("library") {
+            FirstRun.tapVisible(rule, FirstRun.navTag(rule, "nav_tab_library"))
+            waitTag("library_screen_root"); pause(3_000); FirstRun.dismissPrompts(rule)
+            snap("library", has("library_screen_root"))
+            FirstRun.tapVisible(rule, FirstRun.navTag(rule, "nav_tab_home")); pause(1_500)
+        }
+
         // 3 Settings home: the new subject groups.
         step("settings_home") {
             settingsHome(); pause(1_500)
@@ -122,10 +130,13 @@ class SocialShotsDeviceTest {
         // 4 Settings search finds Telegram.
         step("settings_search") {
             settingsHome()
+            // GROUP C: the search field opens from the header magnifier.
+            if (!has("settings_search")) { rule.onAllNodesWithTag("settings_search_open", true)[0].performClick(); pause(600) }
             rule.onAllNodesWithTag("settings_search", true)[0].performTextReplacement("telegram")
             pause(1_500)
             snap("settings_search", has("settings_cat_telegram") || FirstRun.onScreen(rule).contains("Telegram"))
             rule.onAllNodesWithTag("settings_search", true)[0].performTextReplacement("")
+            rule.onAllNodesWithTag("settings_search_open", true)[0].performClick()
             pause(800)
         }
 
