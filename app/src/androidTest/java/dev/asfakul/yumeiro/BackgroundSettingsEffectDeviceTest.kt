@@ -85,9 +85,9 @@ class BackgroundSettingsEffectDeviceTest {
         // A year ahead every reminder kind is past its wait, so one is due when the switch is on.
         Reminders.state(ctx) // records the install time now (not a year ahead, which would be inside its grace)
         val later = System.currentTimeMillis() + 365L * 24 * 3_600_000
-        val on = Reminders.due(ctx, later)
+        val on = Reminders.due(ctx, later, Reminders.SESSION_WARMUP_MS)
         set(Key.REMINDERS, false)
-        val off = Reminders.due(ctx, later)
+        val off = Reminders.due(ctx, later, Reminders.SESSION_WARMUP_MS)
         log("BGFX_CASE c reminders on=$on off=$off")
         assertNull("off must never offer a reminder", off)
         assertTrue("on: a reminder should be due a year later (got null)", on != null)

@@ -119,11 +119,11 @@ object Reminders {
 
     /** One card per process session at most (reset when the process starts). */
     @Volatile private var sessionShown = false
-    /** [sessionMs]: how long the app has been on screen in this visit (ReminderHost measures it). */
+    /** [sessionMs]: how long the app has been on screen in this visit (ReminderHost feeds [Visit]). */
     fun due(
         c: Context,
         now: Long = System.currentTimeMillis(),
-        sessionMs: Long = SESSION_WARMUP_MS,
+        sessionMs: Long = Visit.onScreen(android.os.SystemClock.elapsedRealtime()),
     ): Kind? {
         if (!NotifySettings.get(c, NotifySettings.Key.REMINDERS)) return null
         return next(state(c, now), now, sessionMs)

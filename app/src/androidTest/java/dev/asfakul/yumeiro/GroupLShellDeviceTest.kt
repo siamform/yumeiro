@@ -60,6 +60,10 @@ class GroupLShellDeviceTest {
         ctx.getSharedPreferences("reminders", Context.MODE_PRIVATE).edit().clear()
             .putLong("installed_at", System.currentTimeMillis() - 400L * 24 * 3_600_000).apply()
         FirstRun.toTabs(rule)
+        // The app is open and on Home: is a card due for this launch?
+        val atLaunch = dev.asfakul.yumeiro.notify.Reminders.due(ctx)
+        log("B5 due at launch: $atLaunch")
+        assertTrue("B5: a reminder ($atLaunch) is due right at launch", atLaunch == null)
         val until = SystemClock.uptimeMillis() + 45_000
         var seen = false
         while (SystemClock.uptimeMillis() < until && !seen) {
@@ -149,19 +153,45 @@ class GroupLSplashDeviceTest {
         }
     }
 
-    /** True when the in-app splash ("Yumeiro is opening") shows at any point in 5 s. */
+    /**
+     * Share of the screen's middle that is the mark's amber (the crescent and triangle); the app's
+     * pages never fill the centre with it. Works while the UI is busy, unlike a tree query.
+     */
+    private fun markShare(b: Bitmap): Float {
+        val cx = b.width / 2; val cy = b.height / 2; val r = minOf(b.width, b.height) / 6
+        var n = 0; var amber = 0
+        var y = cy - r
+        while (y < cy + r) {
+            var x = cx - r
+            while (x < cx + r) {
+                val c = b.getPixel(x, y)
+                val red = (c shr 16) and 0xff; val g = (c shr 8) and 0xff; val bl = c and 0xff
+                if (red > 200 && g in 120..215 && bl < 140 && red - bl > 90) amber++
+                n++; x += 4
+            }
+            y += 4
+        }
+        return if (n == 0) 0f else amber.toFloat() / n
+    }
+
+    /** True when the logo splash shows at any point in 7 s after the system's own splash. */
     private fun splashSeen(label: String): Boolean {
         val t0 = SystemClock.uptimeMillis()
         var i = 0
         var seen = false
-        while (SystemClock.uptimeMillis() - t0 < 5_000) {
+        while (SystemClock.uptimeMillis() - t0 < 7_000) {
             val at = SystemClock.uptimeMillis() - t0
-            val s = device.findObject(By.desc("Yumeiro is opening")) != null
-            if (s || i % 6 == 0) inst.uiAutomation.takeScreenshot()?.let { save("b1_${label}_${"%02d".format(i)}_${at}ms", it) }
-            if (s) log("B1 $label in-app splash at ${at}ms")
+            val shot = inst.uiAutomation.takeScreenshot()
+            val share = shot?.let { markShare(it) } ?: 0f
+            // The system splash window (Android 12+) or the app's starting window comes first;
+            // only the app's own window counts.
+            val sysSplash = FirstRun.shell("dumpsys window windows").lines().any { it.contains("Window{") && (it.contains("Splash Screen") || it.contains("Starting ")) }
+            val s = !sysSplash && share > 0.12f
+            if (shot != null && (s || i % 4 == 0)) save("b1_${label}_${"%02d".format(i)}_${at}ms", shot)
+            log("B1 $label t=${at}ms mark=${"%.3f".format(share)} systemSplash=$sysSplash")
             seen = seen || s
             i++
-            SystemClock.sleep(150)
+            SystemClock.sleep(100)
         }
         return seen
     }
