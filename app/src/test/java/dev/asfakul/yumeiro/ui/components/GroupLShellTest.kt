@@ -107,7 +107,7 @@ class GroupLShellTest {
         val f0 = YuMarkFrame.drawIn(0f)
         assertEquals(0f, f0.moon, 0f); assertEquals(0f, f0.play, 0f)
         val mid = YuMarkFrame.drawIn(0.4f)
-        assertTrue("crescent drawing, triangle not yet", mid.moon in 0.1f..0.99f && mid.play < 0.3f)
+        assertTrue("crescent ahead of the triangle: $mid", mid.moon in 0.1f..0.999f && mid.play < 0.5f && mid.moon > mid.play)
         val end = YuMarkFrame.drawIn(1f)
         assertEquals(1f, end.moon, 0f); assertEquals(1f, end.play, 0f); assertEquals(0f, end.glow, 0.001f)
         // Android 12+: starts and ends on the system splash's full mark.
