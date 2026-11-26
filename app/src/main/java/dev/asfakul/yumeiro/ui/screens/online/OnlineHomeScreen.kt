@@ -221,7 +221,7 @@ fun OnlineHomeScreen(
     }
     // B18: set when the saved extension is gone (disabled or uninstalled); the page shows All but keeps the pick,
     // and goes back to it if the extension returns (Zangetsu-style "re-apply when valid again").
-    val openedOn = rememberSaveable { selected }
+    val openedOn = rememberSaveable { mutableStateOf(selected) }.value
     var autoCleared by remember { mutableStateOf<String?>(null) }
     // GROUP G2: the top bar hides its magnifier while one extension is picked (the page has its own search box).
     LaunchedEffect(selected) {
