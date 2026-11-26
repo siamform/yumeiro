@@ -99,6 +99,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     val keyboard = LocalSoftwareKeyboardController.current
     val engine by ExtensionManager.state.collectAsState()
     LaunchedEffect(Unit) { ExtensionManager.start(context) }
+    LaunchedEffect(Unit) { SearchView.load(context) }
     // 18+ off: adult-only extensions that are still installed (18+ was on earlier) are not searched,
     // and NSFW-typed items from mixed sources are dropped. With 18+ on (private or not) search finds them.
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
@@ -344,7 +345,12 @@ private fun SearchResultsBody(
         shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”",
             dev.asfakul.yumeiro.online.SearchAdapters.emptyReason(way, filter!!, submitted), testTag = "online_search_empty")
         shown.isEmpty() -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”", "Try another spelling or a shorter title.", testTag = "online_search_empty")
+        filter == null && names.size > 1 && SearchView.grouped -> {
+            SearchViewBar()
+            GroupedResults(results, all, onFilter, onRetry, onOpenTitle)
+        }
         else -> {
+            if (filter == null && names.size > 1) SearchViewBar()
             if (searching > 0) Text("Still searching $searching source${if (searching == 1) "" else "s"}…", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(gridColumns()),
@@ -360,6 +366,84 @@ private fun SearchResultsBody(
         }
     }
 }
+
+/** F13: how results are shown (grouped by extension or one mixed grid) and how groups are sorted; kept on the device. */
+internal object SearchView {
+    private const val PREFS = "online"
+    var grouped by mutableStateOf(true)
+    var sort by mutableStateOf(dev.asfakul.yumeiro.online.SearchGroups.Sort.BEST)
+    private var loaded = false
+    /** Reads the saved choice off the main thread (first prefs read is disk I/O). */
+    suspend fun load(c: Context) {
+        if (loaded) return
+        loaded = true
+        val (g, s) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            p.getBoolean("search_grouped", true) to p.getString("search_sort", null)
+        }
+        grouped = g
+        sort = runCatching { dev.asfakul.yumeiro.online.SearchGroups.Sort.valueOf(s ?: "BEST") }.getOrDefault(dev.asfakul.yumeiro.online.SearchGroups.Sort.BEST)
+    }
+    fun save(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("search_grouped", grouped).putString("search_sort", sort.name).apply()
+    /** Tests only. */
+    internal fun resetForTest() { loaded = false; grouped = true; sort = dev.asfakul.yumeiro.online.SearchGroups.Sort.BEST }
+}
+
+@Composable
+private fun SearchViewBar() {
+    val c = androidx.compose.ui.platform.LocalContext.current
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("online_search_view")) {
+        item { OnlineChip("Grouped", SearchView.grouped, { SearchView.grouped = true; SearchView.save(c) }, Modifier.testTag("online_search_mode_grouped")) }
+        item { OnlineChip("Mixed", !SearchView.grouped, { SearchView.grouped = false; SearchView.save(c) }, Modifier.testTag("online_search_mode_mixed")) }
+        if (SearchView.grouped) items(dev.asfakul.yumeiro.online.SearchGroups.Sort.entries, key = { it.name }) { s ->
+            OnlineChip(s.label, SearchView.sort == s, { SearchView.sort = s; SearchView.save(c) }, Modifier.testTag("online_search_sort_${s.name.lowercase()}"))
+        }
+    }
+}
+
+/** F13: one row per extension (name, count, See all), the ones with nothing folded into summary lines. */
+@Composable
+private fun GroupedResults(
+    results: Map<String, ProviderResult>, all: List<OnlineItem>, onFilter: (String?) -> Unit, onRetry: () -> Unit, onOpenTitle: (OnlineItem) -> Unit,
+) {
+    val states = results.mapValues { (_, r) ->
+        when (r) {
+            ProviderResult.Searching -> dev.asfakul.yumeiro.online.SearchGroups.State.SEARCHING
+            is ProviderResult.Done -> dev.asfakul.yumeiro.online.SearchGroups.State.DONE
+            is ProviderResult.Failed -> dev.asfakul.yumeiro.online.SearchGroups.State.FAILED
+        }
+    }
+    val sort = SearchView.sort
+    val plan = remember(all, states, sort) { dev.asfakul.yumeiro.online.SearchGroups.plan(all, states, sort) }
+    LazyColumn(Modifier.fillMaxSize().testTag("online_search_groups"), contentPadding = PaddingValues(bottom = 32.dp)) {
+        items(plan.groups, key = { "g_" + it.name }, contentType = { "group" }) { g ->
+            Column(Modifier.testTag("online_search_group_${g.name}")) {
+                SectionHeader(g.name, subtitle = "${g.items.size} result${if (g.items.size == 1) "" else "s"}") {
+                    TextButton(onClick = { onFilter(g.name) }, modifier = Modifier.testTag("online_search_group_all_${g.name}")) { Text("See all", color = SpotifyGreen, fontSize = 13.sp) }
+                }
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(g.items.take(GROUP_ROW_MAX), key = { it.key }) { item ->
+                        PosterCard(item, onClick = { OnlineRepository.previews[item.key] = item; onOpenTitle(item) }, width = 112.dp)
+                    }
+                }
+            }
+        }
+        if (plan.searching.isNotEmpty()) item("g_searching") {
+            Text("Still searching: " + plan.searching.joinToString(", "), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_search_group_searching"))
+        }
+        if (plan.empty.isNotEmpty()) item("g_empty") {
+            Text("Nothing found in: " + plan.empty.joinToString(", "), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_search_group_none"))
+        }
+        if (plan.failed.isNotEmpty()) item("g_failed") {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("online_search_group_failed"), verticalAlignment = Alignment.CenterVertically) {
+                Text("Couldn't search: " + plan.failed.joinToString(", "), color = WarnColor, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                TextButton(onClick = onRetry, modifier = Modifier.testTag("online_search_group_retry")) { Text("Retry", color = SpotifyGreen) }
+            }
+        }
+    }
+}
+
+private const val GROUP_ROW_MAX = 30
 
 /** One recent search. SEARCH-ML-1: shown whole (every line), at least one row high. */
 @Composable

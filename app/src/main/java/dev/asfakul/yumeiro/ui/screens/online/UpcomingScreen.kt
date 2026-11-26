@@ -111,19 +111,29 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
     var failed by remember(kind, source) { mutableStateOf(false) }
     var loading by remember(kind, source) { mutableStateOf(true) }
     var retry by remember { mutableStateOf(0) }
+    // B14: where the shown list came from (credit line and empty-state text follow it).
+    var from by remember(kind, source) { mutableStateOf<dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From?>(null) }
     LaunchedEffect(kind, source, retry, kindLoaded) {
         if (!kindLoaded) return@LaunchedEffect
         loading = true; failed = false
-        val movies = kind == Upcoming.Kind.MOVIES
-        val cached = withContext(Dispatchers.IO) { when { source == null -> Upcoming.cached(context, kind, today); movies -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.cached(context, source, today); else -> TvmazeSchedule.cached(context, source, today) } }
-        if (cached != null) list = cached
-        if (cached == null || retry > 0 || !withContext(Dispatchers.IO) { when { source == null -> Upcoming.isFresh(context, kind); movies -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.isFresh(context, source); else -> TvmazeSchedule.isFresh(context, source) } }) {
-            val fresh = withContext(Dispatchers.IO) {
-                val client = dev.asfakul.yumeiro.network.NetworkClient.get(context)
-                runCatching { when { source == null -> Upcoming.refresh(context, client, kind, today, zone); movies -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.refresh(context, client, source, today); else -> TvmazeSchedule.refresh(context, client, source, today, zone) } }
-                    .onFailure { android.util.Log.i("YuUpcoming", "${kind.name} ${source ?: "all"}: ${it.javaClass.simpleName}") }.getOrNull()
+        val plan = dev.asfakul.yumeiro.online.upcoming.UpcomingHub.plan(kind, source, dev.asfakul.yumeiro.sources.hub.HubDiscover.available())
+        // Cached first (the first source in the plan that has a cache), then fresh when stale.
+        val cached = withContext(Dispatchers.IO) { plan.firstNotNullOfOrNull { f -> upcomingCached(context, f, kind, source, today)?.takeIf { it.isNotEmpty() || f == plan.last() }?.let { f to it } } }
+        if (cached != null) { list = cached.second; from = cached.first }
+        val stale = cached == null || retry > 0 || !withContext(Dispatchers.IO) { upcomingFresh(context, cached.first, kind, source) }
+        if (stale) {
+            // B14: a source that fails or has nothing hands over to the next one; the last one's answer stands.
+            var got: Pair<dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From, List<Upcoming.Entry>>? = null
+            for (f in plan) {
+                val r = withContext(Dispatchers.IO) {
+                    runCatching { upcomingRefresh(context, f, kind, source, today, zone) }
+                        .onFailure { android.util.Log.i("YuUpcoming", "${kind.name} ${source ?: "all"} ${f.name}: ${it.javaClass.simpleName}") }.getOrNull()
+                }
+                android.util.Log.i("YuUpcoming", "B14 ${kind.name} ${source ?: "all"} ${f.name} -> ${r?.size ?: "failed"}")
+                if (r != null && (r.isNotEmpty() || got == null)) got = f to r
+                if (r != null && r.isNotEmpty()) break
             }
-            if (fresh != null) list = fresh else failed = true
+            if (got != null) { list = got.second; from = got.first } else failed = true
         }
         loading = false
     }
@@ -141,7 +151,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
         UpcomingFilter.scheduleCountries(java.util.Locale.getDefault().country, TvmazeSchedule.COUNTRIES, options.countries, TvmazeSchedule.STREAMING)
     }.let { all -> if (kind == Upcoming.Kind.MOVIES) all.filter { it != TvmazeSchedule.STREAMING } else all }
     Column(Modifier.fillMaxSize().testTag("upcoming_screen")) {
-        SubPageHeader(title = "Upcoming", subtitle = "Next two weeks · ${kind.label}", onBack = onBack) {
+        SubPageHeader(title = "Upcoming", subtitle = "${if (from == dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB) "Next two months" else "Next two weeks"} · ${kind.label}", onBack = onBack) {
             // GROUP C catch-all: search is an icon; the field opens under the header only when asked for.
             dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
                 if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
@@ -222,7 +232,8 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 val name = UpcomingCountries.label(source)
                 val movies = kind == Upcoming.Kind.MOVIES
                 Text(
-                    if (movies) "Wikidata lists no films from $name in the next two weeks." else "TVmaze lists no TV episodes for $name in the next two weeks. Many of its shows are on streaming services.",
+                    if (from == dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB) "No ${if (movies) "films" else "new series"} from $name are listed for the next two months."
+                    else if (movies) "Wikidata lists no films from $name in the next two weeks." else "TVmaze lists no TV episodes for $name in the next two weeks. Many of its shows are on streaming services.",
                     color = TextSecondary, fontSize = 14.sp,
                 )
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -237,7 +248,15 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
             // off screen. It stays above the list now.
             else -> Column(Modifier.fillMaxSize()) {
                 if (failed) Text("Offline — showing the last saved calendar.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("upcoming_stale"))
+                // F10 (Group O): the most-awaited titles of what is shown, as a multi-browse carousel on top.
+                val highlights = remember(shown, kind) { dev.asfakul.yumeiro.online.upcoming.UpcomingSoon.picks(mapOf(kind to shown), today, days = 400, max = 12) }
                 LazyColumn(Modifier.fillMaxSize().testTag("upcoming_list"), contentPadding = PaddingValues(bottom = 24.dp)) {
+                if (highlights.size >= 3) item("highlights", contentType = "carousel") {
+                    Column(Modifier.padding(top = 8.dp)) {
+                        Text("Most awaited", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp).semantics { heading() })
+                        UpcomingCarousel(highlights, today, tag = "upcoming_highlight") { onSearch(it.entry.title) }
+                    }
+                }
                 days.forEach { (day, entries) ->
                     item("h_$day") {
                         Text(if (sections) Upcoming.dayHeader(day, today, kind) else Upcoming.dayLabel(day, today), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp,
@@ -246,8 +265,12 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     items(entries, key = { "e_${it.simklId}_${it.day}_${it.season}" }) { e -> UpcomingRow(e, showTime = sections) { onSearch(e.title) } }
                 }
                 item("credit") {
-                    Text(if (source != null && kind == Upcoming.Kind.MOVIES) "Release data: Wikidata (wikidata.org), CC0. Tap a title to look for it in your sources." else if (source != null) "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources." else "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.", color = TextTertiary, fontSize = 11.sp,
-                        modifier = Modifier.padding(16.dp).navigationBarsPadding())
+                    Text(when (from) {
+                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB -> "Release data: TMDB (themoviedb.org) through Yumeiro Cloud. This product uses the TMDB API but is not endorsed or certified by TMDB. Tap a title to look for it in your sources."
+                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.WIKIDATA -> "Release data: Wikidata (wikidata.org), CC0. Tap a title to look for it in your sources."
+                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.TVMAZE -> "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources."
+                        else -> "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources."
+                    }, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(16.dp).navigationBarsPadding().testTag("upcoming_credit"))
                 }
             }
             }
@@ -328,4 +351,30 @@ internal object UpcomingPrefs {
     fun setCountry(c: android.content.Context, v: String?) { prefs(c).edit().putString("country", v).apply() }
     fun genre(c: android.content.Context): String? = prefs(c).getString("genre", null)
     fun setGenre(c: android.content.Context, v: String?) { prefs(c).edit().putString("genre", v).apply() }
+}
+
+// B14: one place that knows every Upcoming source (Simkl worldwide, TMDB by country through the hub, TVmaze
+// schedules, Wikidata films). Disk and network: call on Dispatchers.IO.
+private fun upcomingCached(c: android.content.Context, f: dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From, kind: Upcoming.Kind, source: String?, today: LocalDate): List<Upcoming.Entry>? = when (f) {
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.SIMKL -> Upcoming.cached(c, kind, today)
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB -> dev.asfakul.yumeiro.online.upcoming.UpcomingHub.cached(c, kind, source!!, today)
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.WIKIDATA -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.cached(c, source!!, today)
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.TVMAZE -> TvmazeSchedule.cached(c, source!!, today)
+}
+
+private fun upcomingFresh(c: android.content.Context, f: dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From, kind: Upcoming.Kind, source: String?): Boolean = when (f) {
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.SIMKL -> Upcoming.isFresh(c, kind)
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB -> dev.asfakul.yumeiro.online.upcoming.UpcomingHub.isFresh(c, kind, source!!)
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.WIKIDATA -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.isFresh(c, source!!)
+    dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.TVMAZE -> TvmazeSchedule.isFresh(c, source!!)
+}
+
+private suspend fun upcomingRefresh(c: android.content.Context, f: dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From, kind: Upcoming.Kind, source: String?, today: LocalDate, zone: ZoneId): List<Upcoming.Entry> {
+    val client = dev.asfakul.yumeiro.network.NetworkClient.get(c)
+    return when (f) {
+        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.SIMKL -> Upcoming.refresh(c, client, kind, today, zone)
+        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB -> dev.asfakul.yumeiro.online.upcoming.UpcomingHub.refresh(c, kind, source!!, today)
+        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.WIKIDATA -> dev.asfakul.yumeiro.online.upcoming.MovieReleases.refresh(c, client, source!!, today)
+        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.TVMAZE -> TvmazeSchedule.refresh(c, client, source!!, today, zone)
+    }
 }

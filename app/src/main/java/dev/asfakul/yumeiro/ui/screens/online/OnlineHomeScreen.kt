@@ -214,9 +214,22 @@ fun OnlineHomeScreen(
         providers.filter { it.name in keep }
     }
     androidx.compose.runtime.SideEffect { yumixMixNow = mixProviders.map { it.name } }
-    var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    // B18: Yumix opens on the extension picked last time (saved per profile), on its own page with its own title.
+    var selected by rememberSaveable {
+        mutableStateOf(dev.asfakul.yumeiro.online.YumixDefaults.openOn(
+            dev.asfakul.yumeiro.online.YumixDefaults.picked.value, providers.map { it.name }, engine.ready, defaultNames))
+    }
+    // B18: set when the saved extension is gone (disabled or uninstalled); the page shows All but keeps the pick,
+    // and goes back to it if the extension returns (Zangetsu-style "re-apply when valid again").
+    val openedOn = rememberSaveable { selected }
+    var autoCleared by remember { mutableStateOf<String?>(null) }
     // GROUP G2: the top bar hides its magnifier while one extension is picked (the page has its own search box).
-    LaunchedEffect(selected) { YumixPick.selected.value = selected }
+    LaunchedEffect(selected) {
+        YumixPick.selected.value = selected
+        if (selected == null && autoCleared != null) return@LaunchedEffect
+        autoCleared = null
+        dev.asfakul.yumeiro.online.YumixDefaults.setPicked(context, selected)
+    }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { YumixPick.selected.value = null } }
     var showFilter by rememberSaveable { mutableStateOf(false) }
     // One seed per visit: "More to explore" is shuffled, but stays put while you scroll.
@@ -343,7 +356,11 @@ fun OnlineHomeScreen(
         }
         inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
         waitingLive.keys.retainAll(providerNames)
-        if (selected != null && providers.none { it.name == selected }) selected = null
+        if (engine.ready) {
+            val sel = selected
+            if (sel != null && sel !in providerNames) { autoCleared = sel; selected = null }
+            else if (sel == null && autoCleared != null && autoCleared in providerNames) selected = autoCleared
+        }
         loadAll(false)
     }
     // H-5: new defaults load the extensions that were not part of the mix before.
@@ -441,6 +458,8 @@ fun OnlineHomeScreen(
             defaults = defaultNames,
             onSaveDefaults = { picked ->
                 dev.asfakul.yumeiro.online.YumixDefaults.set(context, picked)
+                // B18: a changed default takes effect now: one default opens on its own page, several open the mix.
+                selected = picked.singleOrNull()
                 android.util.Log.i("YuYumix", "default extensions: ${if (picked.isEmpty()) "every extension" else picked.sorted().joinToString()}")
                 dev.asfakul.yumeiro.ui.components.AppMessages.success(context, if (picked.isEmpty()) "Yumix will mix every extension" else "Yumix will open with ${picked.size} extension${if (picked.size == 1) "" else "s"}")
             },
@@ -501,7 +520,9 @@ fun OnlineHomeScreen(
                 }
                 // Round 8: "All" ⇄ extension page used to be a bare if/else (one-frame cut). It now
                 // slides in the direction of the tapped channel and Back returns to "All".
-                androidx.activity.compose.BackHandler(enabled = selected != null) { selected = null }
+                // B18: Back undoes this visit's change only. Yumix that opened on the saved extension leaves on Back
+                // (it used to drop the pick, so the default never stayed).
+                androidx.activity.compose.BackHandler(enabled = selected != openedOn && (openedOn == null || openedOn in providerNames)) { selected = openedOn }
                 dev.asfakul.yumeiro.ui.components.TabSwap(selected, { n -> if (n == null) -1 else channelNames.indexOf(n) }, Modifier.fillMaxSize(), label = "yumix_channel") { sel ->
                 val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (sel ?: ""))
                 if (sel == null) {
@@ -607,6 +628,11 @@ fun OnlineHomeScreen(
                     // content crashed with ConcurrentModificationException when prefetch ran the
                     // content in another snapshot while a page was being appended (run 43664241241).
                     val exploreSnap = exploreItems.toList()
+                    // Group O: Discover needs the catalog part (its cards open as catalog titles).
+                    val hubPublished = providers.any { it.name == dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME }
+                    val discoverOn = hubPublished && dev.asfakul.yumeiro.sources.hub.YumeiroHub.catalogOn() && dev.asfakul.yumeiro.sources.hub.HubDiscover.available()
+                    val discoverSeeds = remember(continueItems) { continueItems.map { it.toItem() } }
+                    Discover.grid?.let { g -> if (discoverOn) DiscoverGrid(g, onOpen = openInfo, onClose = { Discover.grid = null }) }
                     val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
@@ -627,6 +653,15 @@ fun OnlineHomeScreen(
                         }
                         if (continueItems.isNotEmpty()) st.item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
+                        }
+                        // Group O (F5, F6, F9): Discover (section bar, then that section's shelves, one list item each).
+                        if (discoverOn) {
+                            st.item("discover_bar") { DiscoverBar(Discover.section, onPick = { Discover.section = it }) }
+                            Discover.shelves(Discover.section).forEach { sh ->
+                                st.item("discover_${Discover.section.name}_${sh.key}", contentType = "discover") {
+                                    DiscoverShelf(sh, discoverSeeds, onOpen = openInfo, onGrid = { Discover.grid = it })
+                                }
+                            }
                         }
                         val saved = bookmarks.filter { b -> providers.any { it.name == b.api } }.distinctBy { it.api + "|" + it.url }
                         // F-09: My List holds listed titles; Favorites get their own shelf (a Favorite can be in both).

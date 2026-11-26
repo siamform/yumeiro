@@ -6,12 +6,12 @@
 // E1-A: Yumeiro Hub catalog (pure helpers + the handler with a fake TMDB).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { item, plan, shape, title, SHELVES } from "../src/hub.ts";
+import { item, plan, shape, title, providers, plusDays, SHELVES } from "../src/hub.ts";
 import worker, { type Env } from "../src/index.ts";
 
 test("item keeps movies and series, drops adult, people and broken rows", () => {
   assert.deepEqual(item({ media_type: "movie", id: 603, title: "The Matrix", release_date: "1999-03-30", poster_path: "/p.jpg", original_language: "en" }), {
-    id: "movie:603", type: "movie", title: "The Matrix", year: 1999, poster: "https://image.tmdb.org/t/p/w342/p.jpg", lang: "en",
+    id: "movie:603", type: "movie", title: "The Matrix", year: 1999, poster: "https://image.tmdb.org/t/p/w342/p.jpg", lang: "en", date: "1999-03-30",
   });
   assert.equal(item({ media_type: "person", id: 1, name: "X" }), null);
   assert.equal(item({ media_type: "movie", id: 2, title: "A", adult: true }), null);
@@ -23,7 +23,7 @@ test("item keeps movies and series, drops adult, people and broken rows", () => 
 
 test("title maps details, imdb id and real seasons only", () => {
   const t = title({ id: 1396, name: "Breaking Bad", first_air_date: "2008-01-20", overview: "o", genres: [{ id: 18, name: "Drama" }],
-    external_ids: { imdb_id: "tt0903747" }, vote_average: 8.91, episode_run_time: [47],
+    external_ids: { imdb_id: "tt0903747" }, vote_average: 8.91, vote_count: 15000, episode_run_time: [47],
     seasons: [{ season_number: 0, episode_count: 9 }, { season_number: 1, episode_count: 7, name: "Season 1" }, { season_number: 2, episode_count: 0 }] }, "tv");
   assert.equal(t?.imdb, "tt0903747"); assert.equal(t?.tmdb, 1396); assert.equal(t?.rating, 8.9); assert.equal(t?.runtime, 47);
   assert.deepEqual(t?.genres, ["Drama"]);
@@ -74,4 +74,78 @@ test("handler: off without the token, then serves TMDB with the token as a beare
   } finally {
     globalThis.fetch = real;
   }
+});
+
+// ---- Group O (B14, F5, F6, F8, F9) ----
+
+test("Group O: discover whitelists every parameter and builds the TMDB call", () => {
+  const today = "2026-11-27";
+  const up = plan("/v1/hub/discover", new URLSearchParams("type=tv&sort=upcoming&origin=IN"), today);
+  assert.ok(!("error" in up));
+  if (!("error" in up)) {
+    const q = new URLSearchParams(up.tmdb.split("?")[1]);
+    assert.match(up.tmdb, /^\/discover\/tv\?/);
+    assert.equal(q.get("with_origin_country"), "IN");
+    assert.equal(q.get("first_air_date.gte"), today);
+    assert.equal(q.get("first_air_date.lte"), "2027-01-26");
+    assert.equal(q.get("include_adult"), "false");
+    assert.equal(up.kind, "tv");
+  }
+  const mv = plan("/v1/hub/discover", new URLSearchParams("type=movie&sort=upcoming&origin=IN"), today);
+  assert.ok(!("error" in mv) && mv.tmdb.includes("primary_release_date.gte=2026-11-27"));
+  const top = plan("/v1/hub/discover", new URLSearchParams("type=movie&sort=top&genre=28,12,35,18"), today);
+  assert.ok(!("error" in top));
+  if (!("error" in top)) {
+    const q = new URLSearchParams(top.tmdb.split("?")[1]);
+    assert.equal(q.get("with_genres"), "28,12,35", "at most 3 genres");
+    assert.equal(q.get("sort_by"), "vote_average.desc");
+    assert.equal(q.get("vote_count.gte"), "300");
+  }
+  const sv = plan("/v1/hub/discover", new URLSearchParams("type=movie&provider=8&region=IN"), today);
+  assert.ok(!("error" in sv));
+  if (!("error" in sv)) { const q = new URLSearchParams(sv.tmdb.split("?")[1]); assert.equal(q.get("with_watch_providers"), "8"); assert.equal(q.get("watch_region"), "IN"); }
+  const an = plan("/v1/hub/discover", new URLSearchParams("type=tv&anime=1"), today);
+  assert.ok(!("error" in an) && an.tmdb.includes("with_genres=16") && an.tmdb.includes("with_original_language=ja"));
+  // Junk never reaches TMDB.
+  const junk = plan("/v1/hub/discover", new URLSearchParams("type=movie&origin=india&region=x&lang=EN1&genre=abc&with_cast=1"), today);
+  assert.ok(!("error" in junk));
+  if (!("error" in junk)) for (const k of ["with_origin_country", "watch_region", "with_original_language", "with_genres", "with_cast"]) assert.ok(!junk.tmdb.includes(k + "="), k);
+  assert.deepEqual(plan("/v1/hub/discover", new URLSearchParams("type=person")), { error: "bad_type" });
+  assert.deepEqual(plan("/v1/hub/discover", new URLSearchParams("type=movie&sort=random")), { error: "bad_sort" });
+  assert.equal(plusDays("2026-12-31", 1), "2027-01-01");
+});
+
+test("Group O: recommend and providers plans", () => {
+  const r = plan("/v1/hub/recommend", new URLSearchParams("type=tv&id=1396"));
+  assert.ok(!("error" in r) && r.tmdb.startsWith("/tv/1396/recommendations?"));
+  assert.deepEqual(plan("/v1/hub/recommend", new URLSearchParams("type=tv&id=0")), { error: "bad_title" });
+  const p = plan("/v1/hub/providers", new URLSearchParams("region=IN"));
+  assert.ok(!("error" in p) && p.tmdb.includes("watch_region=IN"));
+  const d = plan("/v1/hub/providers", new URLSearchParams("region=../"));
+  assert.ok(!("error" in d) && d.tmdb.includes("watch_region=US"));
+});
+
+test("Group O: providers ordered by the region's priority, logos sized", () => {
+  const out = providers({ results: [
+    { provider_id: 8, provider_name: "Netflix", logo_path: "/n.jpg", display_priorities: { IN: 2, US: 1 } },
+    { provider_id: 2336, provider_name: "JioHotstar", logo_path: "/j.jpg", display_priorities: { IN: 1 } },
+    { provider_id: 0, provider_name: "Broken" },
+  ] }, "IN");
+  assert.deepEqual(out.map((p) => p.name), ["JioHotstar", "Netflix"]);
+  assert.equal(out[0].logo, "https://image.tmdb.org/t/p/w154/j.jpg");
+});
+
+test("Group O: items carry the release day, real scores only (10+ votes) and genre names", () => {
+  const a = item({ id: 1, title: "A", release_date: "2026-12-04", vote_average: 7.46, vote_count: 120, genre_ids: [28, 18, 999] }, "movie");
+  assert.equal(a?.date, "2026-12-04"); assert.equal(a?.rating, 7.5); assert.equal(a?.votes, 120);
+  assert.deepEqual(a?.genres, ["Action", "Drama"]);
+  const b = item({ id: 2, title: "B", vote_average: 10, vote_count: 2 }, "movie");
+  assert.equal(b?.rating, undefined, "two votes is not a rating");
+});
+
+test("Group O: title lists where it streams in the asked region", () => {
+  const body = { id: 1, title: "A", genres: [], "watch/providers": { results: { IN: { flatrate: [{ provider_name: "JioHotstar" }, { provider_name: "JioHotstar" }] }, US: { flatrate: [{ provider_name: "Max" }] } } } };
+  assert.deepEqual((shape("/v1/hub/title", body, "movie", "IN") as { streaming?: string[] }).streaming, ["JioHotstar"]);
+  assert.deepEqual((shape("/v1/hub/title", body, "movie") as { streaming?: string[] }).streaming, ["Max"]);
+  assert.ok(SHELVES.hot_today && SHELVES.top_movies);
 });

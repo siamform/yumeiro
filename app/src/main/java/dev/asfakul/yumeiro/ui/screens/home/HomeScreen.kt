@@ -153,6 +153,7 @@ import dev.asfakul.yumeiro.ui.screens.extras.SetupGuide
 import dev.asfakul.yumeiro.ui.screens.extras.tourTarget
 import dev.asfakul.yumeiro.ui.screens.extras.rememberSetupStatus
 import dev.asfakul.yumeiro.ui.screens.online.PosterCard
+import dev.asfakul.yumeiro.ui.screens.online.discoverBleed
 import dev.asfakul.yumeiro.ui.screens.online.PosterImage
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.SectionTitleStyle
@@ -455,6 +456,15 @@ fun HomeScreen(
         LaunchedEffect(nearEnd, random.groups.size) {
             if (nearEnd && "random" !in hidden && channels.isNotEmpty() && !random.finished) random.more(channels, feed.providers)
         }
+        // Group O: Discover needs the Yumeiro catalog part on (its cards open as catalog titles).
+        val hubOn by dev.asfakul.yumeiro.sources.hub.YumeiroHub.enabled.collectAsState()
+        val discoverOn = hubOn && dev.asfakul.yumeiro.sources.hub.YumeiroHub.catalogOn() && dev.asfakul.yumeiro.sources.hub.HubDiscover.available()
+        LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(context) }
+        val discoverHistory by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
+        val discoverSeeds = remember(discoverHistory) { discoverHistory.take(20).map { it.toItem() } }
+        dev.asfakul.yumeiro.ui.screens.online.Discover.grid?.let { g ->
+            if (discoverOn) dev.asfakul.yumeiro.ui.screens.online.DiscoverGrid(g, onOpen = onOpenOnlineTitle, onClose = { dev.asfakul.yumeiro.ui.screens.online.Discover.grid = null })
+        }
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().testTag("home_list"),
@@ -632,6 +642,20 @@ fun HomeScreen(
                     onPlay = onPlayYouTube, online = isOnline, onOffline = onNavigateToMusic,
                     channels = channels, onOpenTitle = onOpenOnlineTitle,
                 )
+            }
+
+            // ---- 発見 Discover (Group O F5/F6/F9; Yumeiro Cloud, opens as catalog titles) --------------
+            if ("discover" !in hidden && discoverOn) {
+                item(key = "discover_bar", contentType = "discover_bar") {
+                    dev.asfakul.yumeiro.ui.screens.online.DiscoverBar(dev.asfakul.yumeiro.ui.screens.online.Discover.section, onPick = { dev.asfakul.yumeiro.ui.screens.online.Discover.section = it }, modifier = Modifier.discoverBleed(Gutter))
+                }
+                dev.asfakul.yumeiro.ui.screens.online.Discover.shelves(dev.asfakul.yumeiro.ui.screens.online.Discover.section).forEach { sh ->
+                    item(key = "discover_${dev.asfakul.yumeiro.ui.screens.online.Discover.section.name}_${sh.key}", contentType = "discover") {
+                        Box(Modifier.discoverBleed(Gutter)) {
+                            dev.asfakul.yumeiro.ui.screens.online.DiscoverShelf(sh, discoverSeeds, onOpen = onOpenOnlineTitle, onGrid = { dev.asfakul.yumeiro.ui.screens.online.Discover.grid = it })
+                        }
+                    }
+                }
             }
 
             // ---- 新作 New arrivals (from extensions) -------------------------------------------------

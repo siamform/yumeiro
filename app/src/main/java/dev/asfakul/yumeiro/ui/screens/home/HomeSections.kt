@@ -95,6 +95,7 @@ object HomeLayout {
         "episodes" to "New episodes",
         "spaces" to "Your spaces",
         "moods" to "Mood of the hour",
+        "discover" to "Discover",
         "new" to "New arrivals",
         "most" to "Most played",
         "yt" to "On YouTube for you",

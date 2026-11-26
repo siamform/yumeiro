@@ -63,6 +63,9 @@ object YumeiroHub {
     /** E1-A: the catalog part (Yumeiro Cloud shelves + play through the user's installed sources). First, so Home opens full. */
     @Synchronized fun setCatalog(api: MainAPI?) { catalog = api; publish() }
 
+    /** Group O (F5/F6/F9): discovery cards open as catalog titles, so they are shown only while the catalog part is on. */
+    fun catalogOn(): Boolean = catalog != null
+
     /** E1-C: official parts that can also play a catalog title (public-domain films from the Internet Archive). */
     @Synchronized fun resolvers(): List<MainAPI> = listOfNotNull(classics)
 

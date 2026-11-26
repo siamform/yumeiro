@@ -42,6 +42,7 @@ object RegexWarmup {
     val CLASSES: List<String> = listOf(
         "dev.asfakul.yumeiro.online.TitleDedupe",
         "dev.asfakul.yumeiro.online.OtherSources",
+        "dev.asfakul.yumeiro.sources.hub.HubDiscover",
         "dev.asfakul.yumeiro.sources.novel.NovelSiteCheck",
         "dev.asfakul.yumeiro.sources.manga.MangaChapterOrder",
         "dev.asfakul.yumeiro.adchain.AdChainPages",

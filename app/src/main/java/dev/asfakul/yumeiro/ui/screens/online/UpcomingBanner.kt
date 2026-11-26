@@ -98,21 +98,8 @@ internal fun UpcomingBanner(onOpenUpcoming: () -> Unit, onSearch: (String) -> Un
     val list = picks
     if (list.isNullOrEmpty()) { UpcomingEntryCard(onOpenUpcoming); return }
     val p = LocalMtPalette.current
-    val pager = rememberPagerState { list.size }
-    var held by remember { mutableStateOf(false) }
-    var focused by remember { mutableStateOf(false) }
-    val reduced = remember { dev.asfakul.yumeiro.ui.components.isReducedMotion(context) }
-    val started = dev.asfakul.yumeiro.ui.components.rememberIsStarted()
-    LaunchedEffect(list.size, held, focused, reduced, started) {
-        if (list.size < 2 || !started || held || focused || reduced) return@LaunchedEffect
-        while (true) {
-            delay(ROTATE_MS)
-            if (!pager.isScrollInProgress && dev.asfakul.yumeiro.player.HeatGuard.allowDecorativeMotion())
-                pager.animateScrollToPage((pager.currentPage + 1) % list.size)
-        }
-    }
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testTag("upcoming_banner")) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("upcoming_banner")) {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.DateRange, null, tint = p.accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text("Coming up", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
@@ -125,54 +112,50 @@ internal fun UpcomingBanner(onOpenUpcoming: () -> Unit, onSearch: (String) -> Un
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = p.accent, modifier = Modifier.size(18.dp))
             }
         }
-        HorizontalPager(
-            pager,
-            Modifier.fillMaxWidth().height(BANNER_HEIGHT).clip(RoundedCornerShape(20.dp))
-                .onFocusChanged { if (focused != it.hasFocus) focused = it.hasFocus }
-                .pointerInput(Unit) {
-                    awaitEachGesture { awaitFirstDown(requireUnconsumed = false); held = true; waitForUpOrCancellation(); held = false }
-                },
-            key = { i -> "up_" + list[i].entry.simklId + "_" + list[i].entry.day },
-        ) { i -> UpcomingSlide(list[i], today) { onSearch(list[i].entry.title) } }
-        if (list.size > 1) Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
-            repeat(list.size) { i ->
-                val on = pager.currentPage == i
-                Box(Modifier.padding(horizontal = 3.dp).size(width = if (on) 16.dp else 6.dp, height = 6.dp).clip(CircleShape).background(if (on) p.accent else TextTertiary.copy(alpha = 0.5f)))
-            }
-        }
+        UpcomingCarousel(list, today, tag = "upcoming_banner_slide") { onSearch(it.entry.title) }
     }
 }
 
+/**
+ * F10 (Group O): the Upcoming redesign, an M3 multi-browse carousel (one large card, medium and small ones peeking).
+ * Parameters as the spec asks: preferred item 186 dp, 8 dp apart, 16 dp side padding, 205 dp tall, masks clipped
+ * to the extra-large shape, posters cropped. Used by Yumix's "Coming up" card and at the top of the Upcoming page.
+ * Profiled with the jank bench (lane go-f10). No auto-rotation: a carousel already shows several titles.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun UpcomingSlide(pick: UpcomingSoon.Pick, today: LocalDate, onClick: () -> Unit) {
-    val e = pick.entry
-    val whenText = UpcomingSoon.whenLabel(e.day, today)
-    val sub = listOfNotNull(Upcoming.timeLabel(e), e.episodeLabel).joinToString(" • ")
-    Box(
-        Modifier.fillMaxSize().background(GlassFill).clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = "${e.title}, ${pick.kind.label}, $whenText. Search your sources" }
-            .testTag("upcoming_banner_slide"),
-    ) {
-        // The poster, cropped wide and darkened, behind the text; the full poster on the right.
-        PosterImage(e.posterUrl, emptyMap(), Modifier.fillMaxSize())
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.92f), Color.Black.copy(alpha = 0.72f), Color.Black.copy(alpha = 0.25f)))))
-        Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "${whenText.uppercase()}  ·  ${pick.kind.label.uppercase()}", color = LocalMtPalette.current.accent,
-                    fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(e.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (sub.isNotEmpty()) Text(sub, color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(6.dp))
-                Text("Tap to find it in your sources", color = Color.White.copy(alpha = 0.65f), fontSize = 11.sp, maxLines = 1)
+internal fun UpcomingCarousel(list: List<UpcomingSoon.Pick>, today: LocalDate, tag: String, onClick: (UpcomingSoon.Pick) -> Unit) {
+    val state = androidx.compose.material3.carousel.rememberCarouselState { list.size }
+    androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel(
+        state = state,
+        preferredItemWidth = CAROUSEL_ITEM_WIDTH,
+        itemSpacing = 8.dp,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth().height(CAROUSEL_HEIGHT).testTag(tag + "_carousel"),
+    ) { i ->
+        val pick = list[i]
+        val e = pick.entry
+        val whenText = UpcomingSoon.whenLabel(e.day, today)
+        Box(
+            Modifier.fillMaxSize()
+                .maskClip(androidx.compose.material3.MaterialTheme.shapes.extraLarge)
+                .background(GlassFill)
+                .clickable(role = Role.Button) { onClick(pick) }
+                .semantics { contentDescription = "${e.title}, ${pick.kind.label}, $whenText. Search your sources" }
+                .testTag(tag),
+        ) {
+            PosterImage(e.posterUrl, emptyMap(), Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.88f))))
+            Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
+                Text("${whenText.uppercase()} · ${pick.kind.label.uppercase()}", color = LocalMtPalette.current.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(e.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp)
+                val sub = listOfNotNull(Upcoming.timeLabel(e), e.episodeLabel).joinToString(" • ")
+                if (sub.isNotEmpty()) Text(sub, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Spacer(Modifier.width(12.dp))
-            PosterImage(e.posterUrl, emptyMap(), Modifier.width(76.dp).height(112.dp).clip(RoundedCornerShape(10.dp)))
         }
     }
 }
 
-private const val ROTATE_MS = 5_000L
-private val BANNER_HEIGHT = 140.dp
+internal val CAROUSEL_ITEM_WIDTH = 186.dp
+internal val CAROUSEL_HEIGHT = 205.dp
+

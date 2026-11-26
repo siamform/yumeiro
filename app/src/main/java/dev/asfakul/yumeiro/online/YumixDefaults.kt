@@ -23,10 +23,38 @@ object YumixDefaults {
     private val _names = MutableStateFlow<Set<String>>(emptySet())
     val names: StateFlow<Set<String>> = _names.asStateFlow()
 
+    /**
+     * B18: the extension picked in "Show videos from" (null = All). It is saved per profile on every change and
+     * Yumix opens on it next time, on that extension's own page; picking another one makes that the new default.
+     */
+    private const val PICK_KEY = "picked"
+    private val _picked = MutableStateFlow<String?>(null)
+    val picked: StateFlow<String?> = _picked.asStateFlow()
+
     fun init(context: Context) {
         if (prefs != null) return
         val p = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, "yumix_defaults"), Context.MODE_PRIVATE).also { prefs = it }
         _names.value = decode(p.getString(KEY, null))
+        _picked.value = p.getString(PICK_KEY, null)?.takeIf { it.isNotBlank() }
+    }
+
+    /** B18: saves the single pick (null = All). Same value twice writes nothing. */
+    fun setPicked(context: Context, name: String?) {
+        init(context)
+        if (_picked.value == name) return
+        _picked.value = name
+        prefs?.edit()?.apply { if (name == null) remove(PICK_KEY) else putString(PICK_KEY, name) }?.apply()
+    }
+
+    /**
+     * Pure (B18): what Yumix opens on. The saved pick while that extension is installed; when the engine has
+     * not finished loading yet ([ready] false) the saved pick is kept, so a slow start never drops it. With no
+     * pick and exactly one default extension, that one opens on its own page.
+     */
+    fun openOn(saved: String?, installed: Collection<String>, ready: Boolean, defaults: Set<String>): String? {
+        if (saved != null && (!ready || saved in installed)) return saved
+        if (saved == null) defaults.singleOrNull()?.let { one -> if (!ready || one in installed) return one }
+        return null
     }
 
     /** Saves [picked] (empty = every extension again). */
@@ -50,5 +78,5 @@ object YumixDefaults {
     internal fun decode(s: String?): Set<String> = s.orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
 
     /** Tests only. */
-    internal fun resetForTest() { prefs = null; _names.value = emptySet() }
+    internal fun resetForTest() { prefs = null; _names.value = emptySet(); _picked.value = null }
 }

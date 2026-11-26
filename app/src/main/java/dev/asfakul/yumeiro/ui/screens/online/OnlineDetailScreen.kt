@@ -263,21 +263,11 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                             year?.let { Pill("$it", TextSecondary) }
                             runtime?.let { Pill(if (it >= 60) "${it / 60}h ${it % 60}m" else "${it}m", TextSecondary) }
                             (d.contentRating ?: facts.certification)?.let { Pill(it, TextSecondary) }
-                            d.score?.takeIf { it > 0 }?.let {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(14.dp))
-                                    Text(String.format(java.util.Locale.US, " %.1f", it), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
                         }
-                        facts.rating?.let { r ->
-                            Row(Modifier.padding(top = 6.dp).testTag("online_detail_imdb"), verticalAlignment = Alignment.CenterVertically) {
-                                Text("IMDb", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
-                                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF5C518)).padding(horizontal = 5.dp, vertical = 1.dp))
-                                Text(String.format(java.util.Locale.US, " %.1f", r), color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                facts.votes?.let { Text(" · " + dev.asfakul.yumeiro.online.meta.TitleFacts.votesText(it), color = TextSecondary, fontSize = 12.sp) }
-                            }
-                        }
+                        // F8 (Group O): every real score, each named by who gives it.
+                        val ownSource = if (dev.asfakul.yumeiro.sources.hub.YumeiroCatalog.refOf(d.url) != null) "TMDB" else d.api
+                        val ratings = remember(d.score, ownSource, facts) { dev.asfakul.yumeiro.online.meta.TitleFacts.ratingChips(d.score, ownSource, facts) }
+                        if (ratings.isNotEmpty()) RatingChips(ratings)
                         Text(d.api, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
@@ -518,6 +508,31 @@ private fun MyListButton(d: OnlineDetail) {
             modifier = Modifier.height(46.dp).testTag("online_detail_favorite").semantics { contentDescription = if (fav) "Remove from Favorites" else "Add to Favorites" },
         ) {
             Icon(if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (fav) Color(0xFFFF6B8B) else TextPrimary)
+        }
+    }
+}
+
+/** F8: one chip per provider score ("IMDb 8.7 · 2.1M votes", "TMDB 8.2", "MyAnimeList 8.9"). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun RatingChips(list: List<dev.asfakul.yumeiro.online.meta.TitleFacts.Rating>) {
+    FlowRow(Modifier.padding(top = 6.dp).testTag("online_detail_ratings"), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        list.forEach { r ->
+            val imdb = r.source == "IMDb"
+            Row(
+                Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.08f)).padding(horizontal = 6.dp, vertical = 3.dp)
+                    .testTag(if (imdb) "online_detail_imdb" else "online_detail_rating"),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (imdb) Text("IMDb", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF5C518)).padding(horizontal = 5.dp, vertical = 1.dp))
+                else {
+                    Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(13.dp))
+                    Text(" " + r.source.take(24), color = TextSecondary, fontSize = 11.sp, maxLines = 1)
+                }
+                Text(String.format(java.util.Locale.US, " %.1f", r.value) + if (r.max != 10) "/${r.max}" else "", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                r.votes?.let { Text(" · " + dev.asfakul.yumeiro.online.meta.TitleFacts.votesText(it), color = TextTertiary, fontSize = 11.sp) }
+            }
         }
     }
 }

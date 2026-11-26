@@ -43,6 +43,8 @@ import java.util.Locale
 object TitleFacts {
     @Serializable data class Person(val name: String, val role: String? = null, val image: String? = null)
     @Serializable data class Trailer(val name: String, val url: String)
+    /** F8 (Group O): a score exactly as a provider gives it (out of [max]) with its vote count when it has one. */
+    @Serializable data class Rating(val source: String, val value: Double, val max: Int = 10, val votes: Long? = null)
 
     @Serializable data class Facts(
         val released: String? = null,
@@ -58,6 +60,8 @@ object TitleFacts {
         val network: String? = null,
         val cast: List<Person> = emptyList(),
         val trailers: List<Trailer> = emptyList(),
+        /** F8: other providers' own scores (Simkl's community score, MyAnimeList for anime); IMDb stays in [rating]. */
+        val ratings: List<Rating> = emptyList(),
     ) {
         /** [this] first, [other] for anything [this] lacks. */
         fun or(other: Facts) = Facts(
@@ -67,6 +71,7 @@ object TitleFacts {
             countries.ifEmpty { other.countries }, languages.ifEmpty { other.languages },
             directors.ifEmpty { other.directors }, writers.ifEmpty { other.writers }, companies.ifEmpty { other.companies },
             network ?: other.network, cast.ifEmpty { other.cast }, trailers.ifEmpty { other.trailers },
+            (ratings + other.ratings).distinctBy { it.source },
         )
         val isEmpty get() = this == Facts()
     }
@@ -235,7 +240,29 @@ object TitleFacts {
             directors = o.list("director"),
             network = o.s("network"),
             trailers = trailers,
+            ratings = otherRatings(o["ratings"] as? JsonObject),
         )
+    }
+
+    /** F8: Simkl's `ratings` object minus IMDb (kept in [Facts.rating]); only real, positive scores. */
+    private fun otherRatings(r: JsonObject?): List<Rating> = r.orEmpty().mapNotNull { (key, v) ->
+        if (key == "imdb") return@mapNotNull null
+        val o = v as? JsonObject ?: return@mapNotNull null
+        val value = o.s("rating")?.toDoubleOrNull()?.takeIf { it > 0 && it <= 10 } ?: return@mapNotNull null
+        val name = when (key) { "simkl" -> "Simkl"; "mal" -> "MyAnimeList"; else -> return@mapNotNull null }
+        Rating(name, value, 10, o.s("votes")?.toLongOrNull()?.takeIf { it > 0 })
+    }
+
+    /**
+     * F8: every real score for the title page, each with who gives it: the source's own (TMDB for a Yumeiro catalog
+     * title, else the extension by name), IMDb, then the others. Nothing invented, nothing rounded to look better.
+     */
+    fun ratingChips(ownScore: Double?, ownSource: String, facts: Facts): List<Rating> {
+        val out = ArrayList<Rating>()
+        ownScore?.takeIf { it > 0 && it <= 10 }?.let { out += Rating(ownSource, it) }
+        facts.rating?.takeIf { it > 0 }?.let { out += Rating("IMDb", it, 10, facts.votes) }
+        out += facts.ratings
+        return out.distinctBy { it.source }
     }
 
     fun parseWikidata(text: String): Facts? {
