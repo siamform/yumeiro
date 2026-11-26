@@ -14,6 +14,9 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
@@ -164,6 +167,20 @@ class GroupOScreensDeviceTest {
         val cards = count("upcoming_highlight")
         log("GROUPO_F10 carousel height=${dp}dp cards=$cards")
         FirstRun.shot("groupo_f10_carousel")
+        // F10 profile: frames while the carousel is swiped (gfxinfo of this process; emulators render in software, so
+        // the gate is loose and the numbers go to the audit).
+        FirstRun.shell("dumpsys gfxinfo ${ctx.packageName} reset")
+        repeat(6) { i ->
+            rule.onAllNodesWithTag("upcoming_highlight_carousel", true)[0].performTouchInput { if (i < 4) swipeLeft() else swipeRight() }
+            rule.waitForIdle()
+        }
+        val gfx = FirstRun.shell("dumpsys gfxinfo ${ctx.packageName}")
+        val total = Regex("Total frames rendered: (\\d+)").find(gfx)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val janky = Regex("Janky frames: (\\d+)").find(gfx)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val p90 = Regex("90th percentile: (\\d+)ms").find(gfx)?.groupValues?.get(1)
+        log("GROUPO_F10 profile frames=$total janky=$janky p90=${p90}ms")
+        assertTrue("F10: the carousel drew frames while swiped", total > 0)
+        assertTrue("F10: under half the frames janky ($janky of $total)", janky * 2 < total)
         assertEquals("F10: carousel 205 dp tall", 205f, dp, 2f)
         assertTrue("F10: several cards shown at once ($cards)", cards >= 2)
         tap("upcoming_highlight")
