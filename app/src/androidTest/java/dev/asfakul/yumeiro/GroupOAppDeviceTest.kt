@@ -159,14 +159,19 @@ class GroupOAppDeviceTest {
         // Submit through the field's IME action (a key event can land on the suggestions list instead).
         rule.onAllNodesWithTag("online_search_input", true).onFirst().performImeAction()
         rule.waitForIdle()
-        val grouped = waitTag("online_search_group_$A", 60_000)
-        runCatching { rule.waitUntil(30_000) { has("online_search_group_$B") } }
+        // A row may sit below the fold on a short (TV, landscape) screen: scroll the list to it while waiting.
+        fun seen(tag: String, ms: Long) = runCatching { rule.waitUntil(ms) {
+            runCatching { rule.onAllNodesWithTag("online_search_groups", true).onFirst().performScrollToNode(androidx.compose.ui.test.hasTestTag(tag)) }
+            has(tag)
+        }; true }.getOrDefault(false)
+        val grouped = seen("online_search_group_$A", 60_000)
+        seen("online_search_group_$B", 30_000)
         FirstRun.shot("groupo_f13_grouped")
-        val rows = listOf(A, B).map { n("online_search_group_$it") }
+        val rows = listOf(A, B).map { if (seen("online_search_group_$it", 5_000)) n("online_search_group_$it") else 0 }
         log("GROUPO_F13 f grouped=$grouped groups=$rows")
         assertTrue("F13: one row for $A · ${FirstRun.onScreen(rule).take(400)}", grouped)
         assertTrue("F13: one row for $B", rows[1] > 0)
-        assertTrue("F13: no row for the empty $C", !has("online_search_group_$C"))
+        assertTrue("F13: no row for the empty $C", !seen("online_search_group_$C", 3_000))
         // The summary lines sit under the rows; bring them into view (a LazyColumn composes only what is shown).
         runCatching { rule.waitUntil(60_000) {
             runCatching { rule.onAllNodesWithTag("online_search_groups", true).onFirst().performScrollToNode(androidx.compose.ui.test.hasTestTag("online_search_group_failed")) }
