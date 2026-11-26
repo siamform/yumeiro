@@ -47,7 +47,7 @@ internal object PrefSections {
 
     private fun sectionOfBase(file: String, key: String): Backup.Section = when {
         file in libraryFiles || mixedLibraryKey(file, key) -> Backup.Section.LIBRARY
-        file in sourceFiles || file.startsWith(JS_SOURCE_PREFIX) -> Backup.Section.SOURCES
+        file in sourceFiles || file.startsWith(JS_SOURCE_PREFIX) || file.startsWith("script_kv_") -> Backup.Section.SOURCES // B16: script plugins' own storage
         else -> Backup.Section.SETTINGS
     }
 

@@ -109,7 +109,32 @@ object EcosystemRegistry {
         if (started) return
         started = true
         app = context.applicationContext
-        scope.launch { runCatching { ensureLoaded(app); publish(app) }.onFailure { Log.e(TAG, "start", it) } }
+        scope.launch {
+            runCatching { ensureLoaded(app); publish(app) }.onFailure { Log.e(TAG, "start", it) }
+            runCatching { downloadMissing(app) }.onFailure { Log.w(TAG, "downloadMissing: ${it.message}") }
+        }
+    }
+
+    /**
+     * B16: plugins on the list whose files are all gone (a backup restored without extension files,
+     * or cleared storage) are downloaded again from their repository. Files that are present but
+     * changed stay refused (that is the tamper check, not a missing download).
+     */
+    internal fun missingFiles(context: Context, list: List<Installed>): List<Installed> =
+        list.filter { p -> p.hashes.isNotEmpty() && p.hashes.keys.none { File(dirOf(context, p), it).isFile } }
+
+    suspend fun downloadMissing(context: Context): Int = withContext(Dispatchers.IO) {
+        ensureLoaded(context)
+        val missing = missingFiles(context, _state.value.installed)
+        if (missing.isEmpty()) return@withContext 0
+        val offer = available(context)
+        var n = 0
+        for (p in missing) {
+            val hit = offer.firstOrNull { (r, e) -> r.url == p.repoUrl && RepoFormats.safeId(e.id) == p.id } ?: continue
+            install(context, hit.first, hit.second).onSuccess { n++ }.onFailure { Log.w(TAG, "re-download ${p.name}: ${it.message}") }
+        }
+        Log.i(TAG, "B16 downloaded again: $n of ${missing.size}")
+        n
     }
 
     private fun root(c: Context) = File(c.filesDir, "scripts").apply { mkdirs() }
