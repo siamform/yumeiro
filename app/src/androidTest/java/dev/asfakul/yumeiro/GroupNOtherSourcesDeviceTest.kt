@@ -157,6 +157,10 @@ class GroupNOtherSourcesDeviceTest {
         // Close the player as a person does (Back, then close the floating player): OnlineSession.end() alone
         // leaves the player screen on its video, and the same link again would not reload (logcat of 45877623072).
         log("GN_CLOSE $case ${UiLiveness.leaveAndClose(rule).second}")
+        rule.runOnUiThread {
+            // What the player's close button does (the screen may already be gone above): no active video left.
+            androidx.lifecycle.ViewModelProvider(rule.activity)[dev.asfakul.yumeiro.ui.viewmodel.MainViewModel::class.java].closeVideoPlayer()
+        }
         rule.runOnUiThread { OnlineSession.end(); dev.asfakul.yumeiro.player.PlaybackSession.releaseNow() }
         // Let the player screen leave the composition, so the next case opens a new one (same link included).
         runCatching { rule.waitUntil(10_000) { OnlineSession.state.value == null && dev.asfakul.yumeiro.player.PlaybackSession.playerForTest == null } }
