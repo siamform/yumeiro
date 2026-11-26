@@ -69,6 +69,10 @@ class GroupOScreensDeviceTest {
     }
     private val inGrid = androidx.compose.ui.test.hasTestTag("online_poster") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("discover_grid"))
     private fun gridPosters() = rule.onAllNodes(inGrid, true).fetchSemanticsNodes().size
+    /** Every text inside the node tagged [tag] (a clickable row keeps its texts in child nodes). */
+    private fun under(tag: String): List<String> = rule.onAllNodes(
+        androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag(tag)) and androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.Text), true,
+    ).fetchSemanticsNodes().flatMap { node -> node.config[androidx.compose.ui.semantics.SemanticsProperties.Text].map { it.text } }
     private fun scrollToTop(list: String) { runCatching { rule.onAllNodesWithTag(list, true)[0].performScrollToIndex(0) }; rule.waitForIdle() }
 
     @Before fun setUp() {
@@ -118,7 +122,9 @@ class GroupOScreensDeviceTest {
         FirstRun.shot("groupo_b14_series_in")
         assertTrue("B14: Series + India is empty · ${allText().take(400)}", n > 0)
         assertTrue("asked the hub for India series", hub.requests.any { it.startsWith("/v1/hub/discover") && "type=tv" in it && "origin=IN" in it && "sort=upcoming" in it })
+        scrollTo("upcoming_credit")
         assertTrue("TMDB credited: ${texts("upcoming_credit")}", texts("upcoming_credit").any { "TMDB" in it })
+        scrollToTop("upcoming_list")
         // The genre filter works on these titles too.
         tap("upcoming_category_button")
         rule.waitUntil(5_000) { count("upcoming_genre_drama") > 0 }
@@ -140,7 +146,7 @@ class GroupOScreensDeviceTest {
         FirstRun.shot("groupo_b14_movies_in")
         assertTrue("B14: Movies + India is empty · ${allText().take(400)}", n > 0)
         assertTrue("asked the hub for India films", hub.requests.any { it.startsWith("/v1/hub/discover") && "type=movie" in it && "origin=IN" in it })
-        tap("upcoming_category_button")
+        tap("upcoming_date_button")
         val days = runCatching { rule.waitUntil(5_000) { rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("day chip") { n -> n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)?.startsWith("upcoming_day_") == true }, true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
         log("GROUPO_B14 b day chips=$days")
         assertTrue("B14: the day filter has the films' days", days)
@@ -178,7 +184,7 @@ class GroupOScreensDeviceTest {
             }
         }
         rule.waitUntil(20_000) { count("discover_row_hot") > 0 }
-        rule.waitUntil(20_000) { count("discover_if_you_like") > 0 && texts("discover_seed").isNotEmpty() }
+        rule.waitUntil(20_000) { count("discover_if_you_like") > 0 && under("discover_seed").isNotEmpty() }
         log("GROUPO_F6 hot=${count("discover_row_hot")} like=${count("discover_if_you_like")} reqs=${hub.requests.take(6)}")
         assertTrue("If you like asks for the first seed", hub.requests.any { it.startsWith("/v1/hub/recommend") && "id=111" in it })
         tap("discover_seed")

@@ -151,8 +151,13 @@ class GroupOAppDeviceTest {
         rule.onAllNodesWithTag("online_search_input", true).onFirst().performTextReplacement("yuo")
         FirstRun.shell("input keyevent 66")
         val grouped = waitTag("online_search_group_$A", 60_000)
-        runCatching { rule.waitUntil(60_000) { has("online_search_group_failed") && has("online_search_group_none") } }
         FirstRun.shell("input keyevent 111"); rule.waitForIdle()
+        // The summary lines sit under the rows; bring them into view (a LazyColumn composes only what is shown).
+        runCatching { rule.waitUntil(60_000) {
+            runCatching { rule.onAllNodesWithTag("online_search_groups", true).onFirst().performScrollToNode(androidx.compose.ui.test.hasTestTag("online_search_group_failed")) }
+            has("online_search_group_failed")
+        } }
+        log("GROUPO_F13 f searching=${under("online_search_group_searching")} failed=${under("online_search_group_failed")}")
         log("GROUPO_F13 f grouped=$grouped groups=${listOf(A, B).map { n("online_search_group_$it") }} none=${texts("online_search_group_none")} failed=${n("online_search_group_failed")}")
         FirstRun.shot("groupo_f13_grouped")
         assertTrue("F13: one row for $A · ${FirstRun.onScreen(rule).take(400)}", grouped)
