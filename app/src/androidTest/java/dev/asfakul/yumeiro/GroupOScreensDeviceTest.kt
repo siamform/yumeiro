@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
@@ -18,7 +19,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.online.OnlineItem
-import dev.asfakul.yumeiro.online.upcoming.UpcomingPrefs
+import dev.asfakul.yumeiro.ui.screens.online.UpcomingPrefs
 import dev.asfakul.yumeiro.sources.hub.HubDiscover
 import dev.asfakul.yumeiro.ui.screens.online.Discover
 import dev.asfakul.yumeiro.ui.screens.online.DiscoverBar
