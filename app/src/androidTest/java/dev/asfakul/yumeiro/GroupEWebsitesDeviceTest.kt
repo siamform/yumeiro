@@ -198,6 +198,7 @@ class GroupEWebsitesDeviceTest {
         assertTrue("site A never loaded; requests=$paths", waitFor(20_000) { runCatching { js(web(), "document.title") == "Yu A" }.getOrDefault(false) })
         val wa = web()
         val marker = js(wa, "window.yuMarker")
+        val trimsBefore = WebsiteTab.lowMemoryReleases
         tapElement(wa, "l")
         assertTrue("no second tab after tapping a link to another site; requests=$paths tabs=${WebsiteTab.tabs.value.map { it.keep.pageUrl }}", waitFor(15_000) { WebsiteTab.tabs.value.size == 2 })
         assertTrue("the new tab is not site B", waitFor(15_000) { WebsiteTab.tab.value?.keep?.pageUrl?.contains("127.0.0.1") == true })
@@ -208,7 +209,12 @@ class GroupEWebsitesDeviceTest {
         assertEquals(2, count("browser_tab_row"))
         compose.onAllNodesWithTag("browser_tab_row", true)[0].performClick(); compose.waitForIdle()
         assertTrue("switching did not bring site A back", waitFor(10_000) { WebsiteTab.tab.value?.keep?.pageUrl?.contains("localhost") == true && has("browser_bar") })
-        assertEquals("site A reloaded when switched back", marker, js(web(), "window.yuMarker"))
+        if (WebsiteTab.lowMemoryReleases == trimsBefore) assertEquals("site A reloaded when switched back", marker, js(web(), "window.yuMarker"))
+        else {
+            // Memory ran critically low meanwhile (2 GB phone): hidden pages are given back by design and reload when shown.
+            log("GROUPE_C low memory released the hidden page; checking that it reloads")
+            assertTrue("site A did not reload after a low-memory release", waitFor(20_000) { runCatching { js(web(), "document.title") == "Yu A" }.getOrDefault(false) })
+        }
         click("browser_menu"); click("browser_close_tab")
         assertTrue("Close tab did not leave one tab", waitFor(10_000) { WebsiteTab.tabs.value.size == 1 })
         log("GROUPE_C PASS tv=$tv")

@@ -133,8 +133,14 @@ object WebsiteTab {
     /** Low memory: hidden tabs give their page back (the address is kept and reloads when shown). */
     fun trim(level: Int) {
         if (level < ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL) return
-        _tabs.value.forEach { t -> if (!(t.visible && t.id == _tab.value?.id)) t.keep.release() }
+        val hidden = _tabs.value.filter { t -> !(t.visible && t.id == _tab.value?.id) && t.keep.alive }
+        hidden.forEach { it.keep.release() }
+        if (hidden.isNotEmpty()) { lowMemoryReleases += hidden.size; android.util.Log.i("YuWebTabs", "low memory (level $level): ${hidden.size} hidden page(s) given back; they reload when shown") }
     }
+
+    /** Hidden pages given back because memory ran critically low (device tests read it). */
+    @Volatile var lowMemoryReleases: Int = 0
+        private set
 
     private fun watchMemory(context: Context) {
         if (callbacks != null) return
