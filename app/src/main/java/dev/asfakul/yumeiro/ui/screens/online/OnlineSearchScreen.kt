@@ -249,7 +249,6 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 results = results, all = all, rankingBehind = rankingBehind, filter = filter, onFilter = { filter = it },
                 searching = searching, ways = ways, submitted = submitted, onRetry = { attempt++ }, onOpenTitle = onOpenTitle,
             )
-            }
         }
     }
 }

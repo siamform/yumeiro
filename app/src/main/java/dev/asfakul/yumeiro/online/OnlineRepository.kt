@@ -480,7 +480,7 @@ object OnlineRepository {
     /** B4: the site address of every extension asked so far (to find the ones a passed check belongs to). */
     private val siteOf = ConcurrentHashMap<String, String>()
 
-    private fun noteSite(name: String, url: String) { if (siteOf.size < 1024 || name in siteOf) siteOf[name] = url }
+    private fun noteSite(name: String, url: String) { if (siteOf.size < 1024 || siteOf.containsKey(name)) siteOf[name] = url }
 
     /** B4: names of the extensions asked so far whose site is [host]. Pure on the map; unit-tested. */
     internal fun extensionsOf(host: String): Set<String> =

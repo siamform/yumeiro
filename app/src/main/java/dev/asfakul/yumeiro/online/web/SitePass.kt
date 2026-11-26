@@ -17,13 +17,13 @@ object SitePass {
         val u = url?.trim().orEmpty()
         if (u.isEmpty()) return null
         val withScheme = if ("://" in u) u else "https://$u"
-        return runCatching { java.net.URI(withScheme).host }.getOrNull()?.let(VerificationCenter::normalize)?.takeIf { it.isNotBlank() }
+        return runCatching { java.net.URI(withScheme).host }.getOrNull()?.let(VerificationPolicy::normalize)?.takeIf { it.isNotBlank() }
     }
 
     /** True when a pass on [passedHost] lets the extension at [mainUrl] through. */
     fun matches(mainUrl: String?, passedHost: String?): Boolean {
         val a = hostOf(mainUrl) ?: return false
-        val b = passedHost?.let(VerificationCenter::normalize)?.takeIf { it.isNotBlank() } ?: return false
+        val b = passedHost?.let(VerificationPolicy::normalize)?.takeIf { it.isNotBlank() } ?: return false
         return a == b || a.endsWith(".$b") || b.endsWith(".$a")
     }
 }

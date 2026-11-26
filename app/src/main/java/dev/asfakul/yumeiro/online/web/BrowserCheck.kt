@@ -168,7 +168,7 @@ object BrowserCheck {
     /** B4: [host] answered with a check page now (an extension request met it). */
     fun noteChallenge(host: String, now: Long = System.currentTimeMillis()) {
         if (challengedAt.size > 256) challengedAt.clear()
-        challengedAt[VerificationCenter.normalize(host)] = now
+        challengedAt[VerificationPolicy.normalize(host)] = now
     }
 
     /**
