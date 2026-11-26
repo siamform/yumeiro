@@ -31,6 +31,8 @@ case "$TEST_FILTER" in *TvJitProbeDeviceTest*)
     adb shell stop; sleep 2; adb shell start
     for i in $(seq 1 60); do sleep 3; [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && adb shell pm path android > /dev/null 2>&1 && break; done
     sleep 20; adb logcat -G 16M || true
+    # adb root restarted adbd, which ended the background logcat above: start it again.
+    (adb logcat -v time >> logcat.txt &) ; sleep 1
   fi;;
 esac
 echo "YuGateEnv hw_timeout_multiplier='$(adb shell getprop ro.hw_timeout_multiplier | tr -d '\r')' sdk=$SDK"
