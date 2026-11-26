@@ -263,6 +263,16 @@ fun MTPlayerApp(
             }
         }
     }
+    // B3 (Beta chapter): while a page slides in, its cards appear with it instead of each running its
+    // own entrance animation on top of the page motion (Entrance.quiet).
+    androidx.compose.runtime.DisposableEffect(navController) {
+        val l = androidx.navigation.NavController.OnDestinationChangedListener { _, _, _ -> dev.asfakul.yumeiro.ui.components.Entrance.quiet() }
+        navController.addOnDestinationChangedListener(l)
+        onDispose { navController.removeOnDestinationChangedListener(l) }
+    }
+    LaunchedEffect(tabPager) {
+        androidx.compose.runtime.snapshotFlow { tabPager.targetPage }.collect { dev.asfakul.yumeiro.ui.components.Entrance.quiet() }
+    }
     // Tap on an online title: movies play straight away; series open their episode list.
     val openOnline: (dev.asfakul.yumeiro.online.OnlineItem) -> Unit = remember(navigateSub) {
         { item -> dev.asfakul.yumeiro.online.OnlineSession.open(context, item) { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) } }
@@ -1068,8 +1078,8 @@ fun MTPlayerApp(
                     // read as two pages mixed together): a sub-page comes in from the right over the
                     // page below, which drifts a little to the left; Back reverses it. Switching
                     // tabs happens inside the pager, so it never runs these.
-                    // Round 8: shared push / pop motion (PageMotion). 420 ms emphasized push with the page
-                    // underneath drifting and dimming a little; Back is the same motion reversed (OWN-14).
+                    // Round 8: shared push / pop motion (PageMotion). 360 ms emphasized push (B3) with the page
+                    // underneath drifting a little (no dim layer since B3); Back is the same motion reversed (OWN-14).
                     enterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.push(reducedMotionOn) },
                     exitTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.pushExit(reducedMotionOn) },
                     popEnterTransition = { dev.asfakul.yumeiro.ui.components.PageMotion.popEnter(reducedMotionOn) },

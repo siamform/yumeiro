@@ -6,16 +6,8 @@
 package dev.asfakul.yumeiro.ui.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.outlined.LiveTv
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.LibraryMusic
-import androidx.compose.material.icons.outlined.MusicNote
-import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(val route: String) {
@@ -117,29 +109,29 @@ val bottomNavItems = listOf(
     BottomNavItem(
         route = Screen.Home.route,
         label = "Home",
-        selectedIcon = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home,
+        selectedIcon = NavIcons.HomeFilled,
+        unselectedIcon = NavIcons.HomeOutline,
         testTag = "nav_tab_home"
     ),
     BottomNavItem(
         route = Screen.Music.route,
         label = "Music",
-        selectedIcon = Icons.Filled.MusicNote,
-        unselectedIcon = Icons.Outlined.MusicNote,
+        selectedIcon = NavIcons.MusicFilled,
+        unselectedIcon = NavIcons.MusicOutline,
         testTag = "nav_tab_music"
     ),
     BottomNavItem(
         route = Screen.Videos.route,
         label = "Videos",
-        selectedIcon = Icons.Filled.VideoLibrary,
-        unselectedIcon = Icons.Outlined.VideoLibrary,
+        selectedIcon = NavIcons.VideosFilled,
+        unselectedIcon = NavIcons.VideosOutline,
         testTag = "nav_tab_videos"
     ),
     BottomNavItem(
         route = Screen.Library.route,
         label = "Library",
-        selectedIcon = Icons.Filled.LibraryMusic,
-        unselectedIcon = Icons.Outlined.LibraryMusic,
+        selectedIcon = NavIcons.LibraryFilled,
+        unselectedIcon = NavIcons.LibraryOutline,
         testTag = "nav_tab_library"
     )
 )

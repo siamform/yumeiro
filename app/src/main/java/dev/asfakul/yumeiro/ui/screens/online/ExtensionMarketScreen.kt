@@ -202,6 +202,8 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
             open = tab != MarketTab.REPOS && (searchOpen || query.isNotEmpty()), query = query, onQuery = { query = it },
             placeholder = "Name, site, author or repository", tag = "market_search",
         )
+        // B2: the tab switch and the applied-filter chips slide away on scroll down, back on scroll up.
+        dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = tab, header = {
         // Tabs
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(22.dp)).background(GlassFill).padding(4.dp)) {
             MarketTab.entries.forEach { t ->
@@ -242,7 +244,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                 Text(it, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-
+        }) {
         when {
             data == null && error == null -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { repeat(6) { SkeletonRow(trailing = true) } }
             data == null || (data?.items?.isEmpty() == true && error != null && tab != MarketTab.REPOS) -> StateMessage(
@@ -307,6 +309,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     }
                 }
             }
+        }
         }
     }
 

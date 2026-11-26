@@ -169,7 +169,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
         kotlinx.coroutines.delay(650)
         submitted = q; feed = Feed.SEARCH; savedOnly = false
     }
-    val barHide = remember { dev.asfakul.yumeiro.ui.components.HideOnScroll() }
+    val barHide = dev.asfakul.yumeiro.ui.components.rememberHideOnScrollState()
 
     Column(Modifier.fillMaxSize().testTag("manga_home")) {
         SubPageHeader(
@@ -194,12 +194,8 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
         }
         val online by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()
         if (!online) dev.asfakul.yumeiro.ui.components.OfflineNotice("Reading from manga sources", tag = "offline_notice_manga")
-        Column(Modifier.fillMaxSize().nestedScroll(barHide)) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = barHide.visible || query.isNotEmpty(),
-                enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-            ) {
+        // B2/B3: the search field and filter chips move with the scroll (no expand/shrink layout animation).
+        dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(Modifier.fillMaxSize(), state = barHide, enabled = query.isEmpty(), showKey = feed to savedOnly, header = {
                 Column {
                     dev.asfakul.yumeiro.ui.components.HeaderSearchField(
                         searchOpen || query.isNotEmpty(), query, { query = it.take(80) }, "Search ${provider?.name.orEmpty()}", "manga_search",
@@ -211,7 +207,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                         item("f_saved") { FilterPill("Saved", savedOnly, { query = ""; savedOnly = true }) }
                     }
                 }
-            }
+            }) {
             if (showSources) MangaSourceSheet(providers, provider?.id, onPick = {
                 selectedId = it; prefs.edit().putString("source", it).apply(); showSources = false
                 if (feed == Feed.SEARCH && submitted.isBlank()) feed = Feed.POPULAR

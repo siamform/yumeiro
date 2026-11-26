@@ -370,17 +370,13 @@ fun OnlineHomeScreen(
     val openItem: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) }
     val openInfo: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenInfo(it) }
 
-    // Round 13: the extension bar slides away while scrolling down and comes back on a small
-    // scroll up (like YouTube's bottom navigation), so the feed gets the whole screen.
-    val barHide = remember { dev.asfakul.yumeiro.ui.components.HideOnScroll() }
-    Column(modifier.fillMaxSize().nestedScroll(barHide).testTag("online_home")) {
+    // Round 13 made the extension bar slide away while scrolling down; B2/B3 (Beta chapter): it now
+    // moves with the scroll in the draw/placement phase (HideOnScrollColumn) instead of an
+    // expand/shrink layout animation of the whole page, and the category bar below follows it.
+    val barHide = dev.asfakul.yumeiro.ui.components.rememberHideOnScrollState()
+    dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(modifier.fillMaxSize().testTag("online_home"), state = barHide, enabled = !showFilter, header = {
         // Search lives in the top bar (one magnifier per tab); this slim strip only says what feeds the
         // page and keeps the market / extension manager one tap away.
-        androidx.compose.animation.AnimatedVisibility(
-            visible = barHide.visible || showFilter,
-            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
-        ) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp).testTag("online_extension_bar"), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} source${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
@@ -406,7 +402,7 @@ fun OnlineHomeScreen(
             }
             }
         }
-        }
+        }) {
         // R15 Phase 5: favourite extensions come first in "Show videos from" (only those that are on).
         // PIN-1 (2.1.0, owner's master list): the extra row of pinned chips on the feed is gone; pins
         // order the filter sheet and the feed, the sheet is the one place to pick an extension.
@@ -600,11 +596,13 @@ fun OnlineHomeScreen(
                     val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
+                    // B2: the category bar stays at the top and slides away on scroll down, back on scroll up
+                    // (it used to be the list's first row, gone for good once scrolled past).
+                    dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = cat, header = {
+                        if (cats.isNotEmpty()) CategoryBar(cats, cat, onPick = { cat = it })
+                    }) {
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                         val st = dev.asfakul.yumeiro.ui.components.StagedList(this, staged.intValue, late)
-                        if (cats.isNotEmpty()) st.item("categories") {
-                            CategoryBar(cats, cat, onPick = { cat = it })
-                        }
                         if (catItems != null) {
                             st.items(categoryGridRows(catItems), key = { r -> "cat_" + cat + "_" + r.first().key }) { r -> CategoryGridRow(r, openInfo) }
                         } else {
@@ -687,6 +685,7 @@ fun OnlineHomeScreen(
                             SearchOnlyCard(YumixFeed.searchOnlyLabel(searchOnly.map { it.name }), onOpenSearch)
                         }
                         }
+                    }
                     }
                 } else {
                     val name: String = sel

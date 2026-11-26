@@ -43,17 +43,25 @@ import androidx.compose.ui.Modifier
  * Exits are shorter than entrances (about 60 %), as the M3 duration tokens recommend.
  */
 object PageMotion {
-    /** Sub-page push (NavHost). Long enough to read as a slide, decelerating, never front-loaded. */
-    const val PUSH_MS = 420
+    /**
+     * Sub-page push (NavHost). Long enough to read as a slide, decelerating, never front-loaded.
+     * B3 (Beta chapter): 420 → 360 ms; the old length read as lag on phones that drop frames.
+     */
+    const val PUSH_MS = 360
     /**
      * OWN-14: Back mirrors the push exactly (same length, same curve, same distances, played in
      * reverse). It used to be 320 ms with an accelerating curve on the top page and a different
      * curve on the page below, so the two pages ran out of step and closing looked unlike opening.
      */
     const val POP_MS = PUSH_MS
-    /** How far the page underneath drifts (a third of the width) and how dim it gets. */
+    /**
+     * How far the page underneath drifts (a third of the width). B3: it no longer fades to 55 %:
+     * a fading full page is drawn into an offscreen layer every frame (on top of the page sliding
+     * over it), the most expensive thing in a push on low-end phones and TV. The page above is opaque,
+     * so the dim was barely visible anyway. [UNDER_ALPHA] stays 1 for the predictive-back pair too.
+     */
     const val UNDER_SHIFT_DIV = 3
-    const val UNDER_ALPHA = 0.55f
+    const val UNDER_ALPHA = 1f
     const val TAB_ENTER_MS = 300
     const val TAB_EXIT_MS = 180
     const val FADE_IN_MS = 240
@@ -85,13 +93,11 @@ object PageMotion {
 
     fun pushExit(reduced: Boolean): ExitTransition =
         if (reduced) fadeOut(tween(REDUCED_MS))
-        else slideOutHorizontally(tween(PUSH_MS, easing = YuMotion.Emphasized)) { -it / UNDER_SHIFT_DIV } +
-            fadeOut(tween(PUSH_MS, easing = YuMotion.Standard), targetAlpha = UNDER_ALPHA)
+        else slideOutHorizontally(tween(PUSH_MS, easing = YuMotion.Emphasized)) { -it / UNDER_SHIFT_DIV }
 
     fun popEnter(reduced: Boolean): EnterTransition =
         if (reduced) fadeIn(tween(REDUCED_MS))
-        else slideInHorizontally(tween(POP_MS, easing = YuMotion.Emphasized)) { -it / UNDER_SHIFT_DIV } +
-            fadeIn(tween(POP_MS, easing = YuMotion.Standard), initialAlpha = UNDER_ALPHA)
+        else slideInHorizontally(tween(POP_MS, easing = YuMotion.Emphasized)) { -it / UNDER_SHIFT_DIV }
 
     fun popExit(reduced: Boolean): ExitTransition =
         if (reduced) fadeOut(tween(REDUCED_MS)) else slideOutHorizontally(tween(POP_MS, easing = YuMotion.Emphasized)) { it }
@@ -105,8 +111,7 @@ object PageMotion {
     // system's progress is already eased, and the emphasized curve would jump the page ahead of the finger.
     fun predictivePopEnter(reduced: Boolean): EnterTransition =
         if (reduced) fadeIn(tween(REDUCED_MS, easing = LinearEasing))
-        else slideInHorizontally(tween(POP_MS, easing = LinearEasing)) { -it / UNDER_SHIFT_DIV } +
-            fadeIn(tween(POP_MS, easing = LinearEasing), initialAlpha = UNDER_ALPHA)
+        else slideInHorizontally(tween(POP_MS, easing = LinearEasing)) { -it / UNDER_SHIFT_DIV }
 
     fun predictivePopExit(reduced: Boolean): ExitTransition =
         if (reduced) fadeOut(tween(REDUCED_MS, easing = LinearEasing))

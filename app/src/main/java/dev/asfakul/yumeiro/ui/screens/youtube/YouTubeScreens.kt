@@ -428,6 +428,8 @@ private fun YtBrowse(
         }
 
         // Chip row: For you · every planned feed · + Topic. Long-press a topic chip to remove it.
+        // B2: it slides away on scroll down and comes back on scroll up (YouTube's chip bar).
+        dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = chip, header = {
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.testTag("youtube_chips"),
@@ -443,6 +445,7 @@ private fun YtBrowse(
             item("c_add") { YtChip("Topic", false, leading = Icons.Default.Add, modifier = Modifier.testTag("youtube_add_topic")) { addingTopic = true } }
             if (!music && topics.isNotEmpty()) item("c_edit") { YtChip("Edit topics", false, modifier = Modifier.testTag("youtube_edit_topics_chip")) { editingTopics = true } }
         }
+        }) {
 
         val selected = feeds.firstOrNull { it.id == chip }
         if (chip != FOR_YOU && selected != null) {
@@ -596,6 +599,7 @@ private fun YtBrowse(
                     color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
                 )
             }
+        }
         }
             }
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(2f)) {

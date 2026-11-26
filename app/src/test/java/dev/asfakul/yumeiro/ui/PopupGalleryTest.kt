@@ -88,8 +88,8 @@ class PopupGalleryTest {
 
     @Test fun reminderLight() = gallery(false, 1) { ReminderCard(Icons.Default.Star, "r", "Enjoying Yumeiro?", "A star on GitHub helps more people find it.", "Star on GitHub", {}, {}) }
     @Test fun reminderDark() = gallery(true, 1) { ReminderCard(Icons.Default.Star, "r", "Enjoying Yumeiro?", "A star on GitHub helps more people find it.", "Star on GitHub", {}, {}) }
-    @Test fun followLight() = gallery(false, 2) { FollowCard {} }
-    @Test fun followDark() = gallery(true, 2) { FollowCard {} }
+    @Test fun followLight() = gallery(false, 2) { FollowCard(onClose = {}) }
+    @Test fun followDark() = gallery(true, 2) { FollowCard(onClose = {}) }
     @Test fun dialogLight() = gallery(false, 3) {
         TsukiDialog(onDismissRequest = {}, confirmButton = { TextButton({}) { Text("Delete") } }, dismissButton = { TextButton({}) { Text("Cancel") } },
             title = { Text("Delete playlist?") }, text = { Text("This removes the playlist and its channels from this device.") })

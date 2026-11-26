@@ -351,10 +351,12 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
             val barOpen = asked == key || query.isNotEmpty() || submitted != null
             Column(Modifier.fillMaxSize().padding(top = if (submitted != null) YT_SEARCH_BAR_H else 0.dp)) {
             val sub = submitted
-            if (sub != null) {
+            // B2: the filter / category chips slide away on scroll down and come back on scroll up.
+            if (sub != null) dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = sub to filter, header = {
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("ytmusic_search_filters")) {
                     itemsIndexed(YtMusicApi.Filter.entries, key = { _, f -> f.name }) { _, f -> YtChip(f.label, f == filter) { if (f != filter) search(sub, f) } }
                 }
+            }) {
                 val state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_results:" + sub + ":" + filter.name)
                 YtEndlessTrigger(state, results.canLoadMore) { moreResults() }
                 LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_results"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
@@ -362,9 +364,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                     val p = results.page
                     if (p != null && p.shelves.isEmpty() && !results.loading) item("none") { YtProblem("No results for “$sub”.", null) }
                 }
-                return@Column
-            }
-
+            } else dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = chip, header = {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("ytmusic_chips")) {
                 item("c_home") { YtChip("Home", chip == CHIP_HOME, modifier = Modifier.testTag("ytmusic_chip_home")) { chip = CHIP_HOME } }
                 item("c_explore") { YtChip("Explore", chip == CHIP_EXPLORE, modifier = Modifier.testTag("ytmusic_chip_explore")) { chip = CHIP_EXPLORE } }
@@ -372,6 +372,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                     YtChip(c.title, chip == c.browse.params) { chip = c.browse.params ?: CHIP_HOME }
                 }
             }
+            }) {
             val state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_home:" + chip)
             YtEndlessTrigger(state, home.canLoadMore || endlessOpen) { moreHome() }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_music_list"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
@@ -390,6 +391,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                         Text("Use simple discovery instead", color = SpotifyGreen)
                     }
                 }
+            }
             }
                     }
             Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(2f)) {
