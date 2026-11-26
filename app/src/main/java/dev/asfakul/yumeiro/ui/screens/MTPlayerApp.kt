@@ -435,11 +435,11 @@ fun MTPlayerApp(
     suspend fun backgroundUpdates() {
         val o = dev.asfakul.yumeiro.online.BackgroundUpdates.run(context.applicationContext) ?: return
         if (o.extensions.installed.isNotEmpty() || o.extensions.updated.isNotEmpty()) dev.asfakul.yumeiro.online.OnlineRepository.refreshAfterExtensionChange()
+        // B11: successful updates are filed quietly in the inbox; only a refused or repeatedly failing update speaks up.
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.online.BackgroundUpdates.fileQuietly(context.applicationContext, o) }
         val lines = dev.asfakul.yumeiro.online.BackgroundUpdates.messages(o)
         if (lines.isEmpty()) return
-        val text = lines.joinToString(". ")
-        if (o.extensions.heldBack.isEmpty()) dev.asfakul.yumeiro.ui.components.AppMessages.success(context, text)
-        else dev.asfakul.yumeiro.ui.components.AppMessages.info(context, text)
+        dev.asfakul.yumeiro.ui.components.AppMessages.info(context, lines.joinToString(". "))
     }
     var firstChecksDone by remember { mutableStateOf(false) }
     var startTick by remember { mutableIntStateOf(0) }

@@ -159,9 +159,11 @@ fun StreamScreen(
     val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("stream")
     LaunchedEffect(Unit) {
         runCatching { PlaylistStore.init(context.applicationContext) }
-        // Background market check (at most every 6 h, silent unless something was updated).
+        // Background market check (at most every 6 h). B11: silent; what it updated goes to the inbox, already read.
         val r = runCatching { PlaylistStore.autoUpdateMarket(context.applicationContext) }.getOrNull()
-        if (r != null && r.updated.isNotEmpty()) AppMessages.success(context, "Updated ${r.updated.joinToString()}")
+        if (r != null && r.updated.isNotEmpty()) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            dev.asfakul.yumeiro.online.BackgroundUpdates.fileQuietly(context.applicationContext, dev.asfakul.yumeiro.online.BackgroundUpdates.Outcome(playlistsUpdated = r.updated))
+        }
     }
 
     var url by rememberSaveable { mutableStateOf("") }

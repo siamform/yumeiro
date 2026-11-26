@@ -690,7 +690,8 @@ object ExtensionManager {
             runCatching { install(context, remote, ExtensionReview.Mode.AUTO) }.onSuccess { updated += it.name }.onFailure {
                 // NBUG-16 NB16-6: a refused update used to vanish into `failed`, which nothing showed.
                 // Reported once per extension version per app run; the Update button stays.
-                if (it is HeldBack) { if (heldBackTold.add(remote.key + "@" + remote.version)) heldBack += ext.name } else failed += ext.name
+                // B11: told once per extension version, also across app restarts (it was once per run).
+                if (it is HeldBack) { if (heldBackFirstTime(context, remote.key + "@" + remote.version)) heldBack += ext.name } else failed += ext.name
             }
         }
         mutex.withLock { _state.update { it.copy(lastSync = now) }; writeState(context) }
@@ -707,6 +708,16 @@ object ExtensionManager {
         val heldBack: List<String> = emptyList(),
     )
     private val heldBackTold = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /** B11: true the first time a refused update of this extension version is seen on this phone (sync runs on IO). */
+    private fun heldBackFirstTime(context: Context, id: String): Boolean {
+        if (!heldBackTold.add(id)) return false
+        val p = context.getSharedPreferences("yu_ext_heldback_told", Context.MODE_PRIVATE)
+        val seen = p.getStringSet("ids", emptySet()).orEmpty()
+        if (id in seen) return false
+        p.edit().putStringSet("ids", (seen.toList().takeLast(199) + id).toSet()).apply()
+        return true
+    }
 
     // endregion
 
