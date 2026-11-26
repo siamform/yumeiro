@@ -41,6 +41,7 @@ object RegexWarmup {
     /** JVM names of the classes whose static initialiser compiles patterns. */
     val CLASSES: List<String> = listOf(
         "dev.asfakul.yumeiro.online.TitleDedupe",
+        "dev.asfakul.yumeiro.online.OtherSources",
         "dev.asfakul.yumeiro.sources.novel.NovelSiteCheck",
         "dev.asfakul.yumeiro.sources.manga.MangaChapterOrder",
         "dev.asfakul.yumeiro.adchain.AdChainPages",

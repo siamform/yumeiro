@@ -98,7 +98,9 @@ object OtherSources {
                 val t = runCatching { a.supportedTypes }.getOrDefault(emptySet())
                 if (TvType.NSFW in t && !adult) return@filter false
                 if (t.isEmpty()) return@filter true
-                if (t.none { it in VIDEO }) return@filter false
+                // An 18+ source lists only NSFW: for an 18+ title that is a video source (films and series alike).
+                if (t.none { it in VIDEO || it == TvType.NSFW }) return@filter false
+                if (TvType.NSFW in t) return@filter true
                 when (series) {
                     true -> t.any { it != TvType.Movie && it != TvType.AnimeMovie && it in VIDEO }
                     false -> t.any { it == TvType.Movie || it == TvType.AnimeMovie || it == TvType.Others || it == TvType.Anime }
