@@ -299,6 +299,12 @@ class GroupEWebsitesDeviceTest {
         var stalled = false
         rounds@ for ((_, name) in pages) for (on in listOf(true, false)) {
             if (stalled) break@rounds
+            if (!on && name == "ABT" && android.os.Build.VERSION.SDK_INT < 26) {
+                // Android 7 stock WebView 53: this unfiltered page stalls the in-app renderer and Chromium then aborts the
+                // process (runs 45764062656, 45767499640, 45772867628). Recorded once; not re-run here. Manual E-TV-OLDWEBVIEW.
+                log("REAL ABT control skipped on Android ${android.os.Build.VERSION.RELEASE} (in-app WebView renderer; see E-TV-OLDWEBVIEW)")
+                continue
+            }
             inst.runOnMainSync { WebsiteTab.closeAll(); BrowserFilters.setFilterAds(ctx, on) }
             assertTrue("did not return to the list after closing tabs", waitFor(10_000) { !has("browser_bar") })
             dev.asfakul.yumeiro.online.web.AdFilter.clearSeenForTest()
