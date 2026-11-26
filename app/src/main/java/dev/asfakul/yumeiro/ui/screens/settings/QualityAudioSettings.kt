@@ -120,6 +120,11 @@ fun QualityAndAudioCard() {
         ChoiceRow("Default speed", "qa_speed", VideoPrefs.SPEEDS, speed, { if (it == 1f) "Normal (1x)" else "${it}x" }) { VideoPrefs.setSpeed(context, it) }
         SettingsDivider()
         SettingsToggleRow("Resume playback", "Continue where you left off. Off: every video starts from the beginning", resume, { VideoPrefs.setResume(context, it) }, "qa_resume")
+        SettingsDivider()
+        // B17: search the other installed extensions for the same title and play the first working source.
+        remember(context) { dev.asfakul.yumeiro.online.OtherSources.init(context); true }
+        val others by dev.asfakul.yumeiro.online.OtherSources.mode.collectAsState()
+        ChoiceRow("Other extensions", "qa_other_sources", dev.asfakul.yumeiro.online.OtherSources.Mode.entries, others, { it.label }, { it.detail }) { dev.asfakul.yumeiro.online.OtherSources.setMode(context, it) }
     }
     GroupLabel("Picture")
     SettingsCard {

@@ -149,6 +149,8 @@ data class OnlineLink(
     val raw: ExtractorLink? = null,
     /** Separate audio files that play together with this video (url → headers). */
     val audioTracks: List<Pair<String, Map<String, String>>> = emptyList(),
+    /** B17: the other extension this link came from (null = the title's own extension). Not compared. */
+    val via: String? = null,
 ) {
     override fun equals(other: Any?): Boolean = other is OnlineLink && other.url == url && other.name == name && other.source == source &&
         other.referer == referer && other.quality == quality && other.isHls == isHls && other.isDash == isDash && other.headers == headers

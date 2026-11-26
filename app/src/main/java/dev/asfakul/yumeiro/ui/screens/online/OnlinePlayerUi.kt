@@ -355,7 +355,7 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
                 Column(Modifier.weight(1f)) {
                     Text(l.name.ifBlank { l.source }, color = ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val facts = remember(l) { dev.asfakul.yumeiro.online.SourceFacts.of(l, state.version) }
-                    Text(listOf(facts.line, l.source.takeIf { it != l.name }.orEmpty(), if (failed) "didn't work" else "").filter { it.isNotBlank() }.joinToString(" · "),
+                    Text(listOf(facts.line, l.source.takeIf { it != l.name }.orEmpty(), l.via?.let { "from $it" }.orEmpty(), if (failed) "didn't work" else "").filter { it.isNotBlank() }.joinToString(" · "),
                         color = when { failed -> errInk; facts.low -> dev.asfakul.yumeiro.ui.theme.WarnTone; else -> ink.copy(alpha = 0.55f) }, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.testTag("online_player_source_detail"))
                 }
@@ -629,7 +629,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                                 val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 40) it.take(39) + "…" else it }
                                 // Round 12: quality, release, format, size and audio under every source.
                                 val facts = dev.asfakul.yumeiro.online.SourceFacts.of(l, v)
-                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server", detail = facts.line, low = facts.low) { OnlineSession.switchSource(context, i, pos()) }
+                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server", detail = listOfNotNull(facts.line.ifBlank { null }, l.via?.let { "from $it" }).joinToString(" · "), low = facts.low) { OnlineSession.switchSource(context, i, pos()) }
                             },
                             filterKey = if (groups.size > 1) g.key else null,
                         )
