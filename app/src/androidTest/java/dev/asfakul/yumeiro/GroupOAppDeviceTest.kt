@@ -13,6 +13,9 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -132,8 +135,11 @@ class GroupOAppDeviceTest {
         FirstRun.shot("groupo_f5_yumix_discover")
         assertTrue("F5/F6: Yumix All has the Discover bar · ${FirstRun.onScreen(rule).take(300)}", bar)
         assertTrue("F6: Hot right now from the hub", hot && hub.requests.any { "shelf=hot_today" in it })
-        FirstRun.tapVisible(rule, "discover_section_movies")
-        assertTrue("F6: Movies section", run { scrollTo("discover_row_m_pop"); waitTag("discover_row_m_pop", 30_000) })
+        rule.onAllNodesWithTag("discover_section_movies", true).onFirst().performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        rule.waitForIdle()
+        val movies = run { scrollTo("discover_row_m_pop"); waitTag("discover_row_m_pop", 30_000) }
+        log("GROUPO_F6 e section=${dev.asfakul.yumeiro.ui.screens.online.Discover.section} movies=$movies reqs=${hub.requests.filter { "discover" in it }.take(4)} rows=${FirstRun.onScreen(rule).take(300)}")
+        assertTrue("F6: Movies section", movies)
         // Home too.
         FirstRun.tapVisible(rule, "nav_tab_home"); rule.waitForIdle()
         waitTag("home_list", 30_000)
@@ -150,22 +156,26 @@ class GroupOAppDeviceTest {
         FirstRun.tapVisible(rule, "topbar_search_action")
         assertTrue("search did not open", waitTag("online_search_input"))
         rule.onAllNodesWithTag("online_search_input", true).onFirst().performTextReplacement("yuo")
-        FirstRun.shell("input keyevent 66")
+        // Submit through the field's IME action (a key event can land on the suggestions list instead).
+        rule.onAllNodesWithTag("online_search_input", true).onFirst().performImeAction()
+        rule.waitForIdle()
         val grouped = waitTag("online_search_group_$A", 60_000)
-        FirstRun.shell("input keyevent 111"); rule.waitForIdle()
+        runCatching { rule.waitUntil(30_000) { has("online_search_group_$B") } }
+        FirstRun.shot("groupo_f13_grouped")
+        val rows = listOf(A, B).map { n("online_search_group_$it") }
+        log("GROUPO_F13 f grouped=$grouped groups=$rows")
+        assertTrue("F13: one row for $A · ${FirstRun.onScreen(rule).take(400)}", grouped)
+        assertTrue("F13: one row for $B", rows[1] > 0)
+        assertTrue("F13: no row for the empty $C", !has("online_search_group_$C"))
         // The summary lines sit under the rows; bring them into view (a LazyColumn composes only what is shown).
         runCatching { rule.waitUntil(60_000) {
             runCatching { rule.onAllNodesWithTag("online_search_groups", true).onFirst().performScrollToNode(androidx.compose.ui.test.hasTestTag("online_search_group_failed")) }
             has("online_search_group_failed")
         } }
-        log("GROUPO_F13 f searching=${under("online_search_group_searching")} failed=${under("online_search_group_failed")}")
-        log("GROUPO_F13 f grouped=$grouped groups=${listOf(A, B).map { n("online_search_group_$it") }} none=${texts("online_search_group_none")} failed=${n("online_search_group_failed")}")
-        FirstRun.shot("groupo_f13_grouped")
-        assertTrue("F13: one row for $A · ${FirstRun.onScreen(rule).take(400)}", grouped)
-        assertTrue("F13: one row for $B", has("online_search_group_$B"))
-        assertTrue("F13: no row for the empty $C", !has("online_search_group_$C"))
+        log("GROUPO_F13 f searching=${under("online_search_group_searching")} none=${under("online_search_group_none")} failed=${under("online_search_group_failed")}")
         assertTrue("F13: '$C' folded into 'Nothing found in'", texts("online_search_group_none").any { C in it } || under("online_search_group_none").any { C in it })
         assertTrue("F13: failed '$D' folded with Retry", has("online_search_group_failed") && has("online_search_group_retry"))
+        runCatching { rule.onAllNodesWithTag("online_search_groups", true).onFirst().performScrollToIndex(0) }; rule.waitForIdle()
         // Best match: B's exact "YuO" first; Most results: A (3) first.
         fun firstGroup(): String? = rule.onAllNodes(androidx.compose.ui.test.SemanticsMatcher("group") { node ->
             node.config.getOrNull(SemanticsProperties.TestTag)?.let { it.startsWith("online_search_group_") && it.removePrefix("online_search_group_") in setOf(A, B) } == true
