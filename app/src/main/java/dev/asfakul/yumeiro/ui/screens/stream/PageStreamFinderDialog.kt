@@ -921,13 +921,13 @@ fun PageStreamFinderDialog(
                                                 helper.webViewClient = object : android.webkit.WebViewClient() {
                                                     override fun shouldOverrideUrlLoading(h: WebView?, r: WebResourceRequest?): Boolean {
                                                         r?.url?.toString()?.takeIf { it.startsWith("http") }?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(v, it, emptyMap()) }
-                                                        main.post { dev.asfakul.yumeiro.online.web.SafeWebView.dispose(helper) }
+                                                        main.post { runCatching { helper.destroy() } }
                                                         return true
                                                     }
                                                 }
                                                 val msg = resultMsg
                                                 val transport = msg?.obj as? WebView.WebViewTransport
-                                                if (msg != null && transport != null) { transport.webView = helper; msg.sendToTarget(); true } else { dev.asfakul.yumeiro.online.web.SafeWebView.dispose(helper); false }
+                                                if (msg != null && transport != null) { transport.webView = helper; msg.sendToTarget(); true } else { helper.destroy(); false }
                                             }
                                             dev.asfakul.yumeiro.online.web.PopupPolicy.Decision.BLOCK -> { if (isUserGesture) popupHeld(target); false }
                                         }

@@ -172,7 +172,7 @@ object CloudRecapture {
                 }.copy(title = old.title.ifBlank { title }, logoUrl = old.logoUrl, group = old.group)
             }
         } finally {
-            dev.asfakul.yumeiro.online.web.SafeWebView.dispose(web)
+            runCatching { web.stopLoading(); web.onPause(); web.destroy() }
         }
     }
 }
