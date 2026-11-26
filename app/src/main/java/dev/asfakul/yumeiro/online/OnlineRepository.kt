@@ -354,8 +354,9 @@ object OnlineRepository {
                         }.onFailure { Log.w(TAG, "home ${api.name}/${page.name}", it); if (it !is kotlinx.coroutines.CancellationException || it is kotlinx.coroutines.TimeoutCancellationException) failures?.add(it) }.getOrNull()?.let { pageRows(api, page, it) }
                     }?.also { rows ->
                         if (onRows != null && rows.isNotEmpty()) {
-                            val soFar = synchronized(landed) { landed[i] = rows; landed.values.flatten() }
-                            runCatching { onRows(soFar) }
+                            // Snapshot and hand-over under one lock: two rows landing together can't hand an older,
+                            // shorter list after the newer one (CI 45902671041 saw [Fast, Slow 1, Slow 3] last).
+                            synchronized(landed) { landed[i] = rows; runCatching { onRows(landed.values.flatten()) } }
                         }
                     }
                 }

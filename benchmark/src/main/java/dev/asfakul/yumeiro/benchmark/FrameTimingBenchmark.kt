@@ -36,9 +36,12 @@ class FrameTimingBenchmark {
 
     @Test fun settingsPagesBaselineProfile() = settings(CompilationMode.Partial(BaselineProfileMode.Require))
 
+    // JANK-L: frame times on the CI emulators drift by up to 40 % (see PERF-A1 below), so the settings journey also
+    // counts the work (recompositions, layouts) to compare against the baseline commit.
+    @OptIn(ExperimentalMetricApi::class)
     private fun settings(mode: CompilationMode) = rule.measureRepeated(
         packageName = TARGET,
-        metrics = listOf(FrameTimingMetric()),
+        metrics = listOf(FrameTimingMetric()) + workMetrics(),
         compilationMode = mode,
         // No startupMode: COLD kills the process after setupBlock (run 45337558852 measured the launcher). A fresh
         // process per iteration instead: kill here, start, open Settings home, then measure only the sub-pages.
