@@ -254,4 +254,64 @@ class GroupEWebsitesDeviceTest {
         assertFalse("the tap went to the ad; requests=$paths", paths.any { it.endsWith("/ad") })
         log("GROUPE_E PASS stats=$stats tv=$tv")
     }
+
+    /** GROUP E2 re-audit: the three-dot menu itself offers back, forward, reload and tabs (owner list), not only the bar. */
+    @Test fun f_menuHasBackForwardTabs() {
+        inst.runOnMainSync { SavedSites.add(ctx, "$local/a", "YuSiteA") }
+        show()
+        openSaved("YuSiteA")
+        assertTrue(waitFor(20_000) { paths.count { it.endsWith("/a") } >= 1 })
+        click("browser_menu")
+        assertTrue("menu did not open", waitFor(5_000) { has("browser_reload") })
+        for (t in listOf("browser_menu_back", "browser_menu_forward", "browser_menu_reload", "browser_menu_tabs", "browser_menu_filter", "browser_manage_ads"))
+            assertTrue("menu has $t", has(t))
+        val loads = paths.count { it.endsWith("/a") }
+        click("browser_menu_reload")
+        assertTrue("menu reload icon did not reload", waitFor(15_000) { paths.count { it.endsWith("/a") } > loads })
+        click("browser_menu"); click("browser_menu_tabs")
+        assertTrue("Tabs in the menu did not open the switcher", waitFor(5_000) { has("browser_tabs_sheet") })
+        FirstRun.shot("groupe_menu_tabs")
+        log("GROUPE_F PASS tv=$tv")
+    }
+
+    /**
+     * GROUP E3 on REAL pages (owner: "Test against real pages"). Two public ad-block test sites are opened in the
+     * website page twice: ad filter off (control: the page really asks third-party ad networks) and on (every one
+     * of those requests is blocked, nothing gets through, and taps on the page open no pop-up tab). Hosts only are
+     * logged. Skipped (not passed) when the emulator has no internet.
+     */
+    @Test fun g_realAdTestPages() {
+        val pages = listOf("https://canyoublockit.com/extreme-test/" to "CYBI", "https://adblock-tester.com/" to "ABT")
+        val online = runCatching { java.net.URL("https://canyoublockit.com/").openConnection().apply { connectTimeout = 8_000; readTimeout = 8_000 }.getInputStream().close(); true }.getOrDefault(false)
+        org.junit.Assume.assumeTrue("no internet on this emulator", online)
+        inst.runOnMainSync { pages.forEach { (u, n) -> SavedSites.add(ctx, u, n) } }
+        var controlAds = 0
+        show() // setContent once; each round closes the tabs and goes back to the saved list
+        for ((_, name) in pages) for (on in listOf(false, true)) {
+            inst.runOnMainSync { WebsiteTab.closeAll(); BrowserFilters.setFilterAds(ctx, on) }
+            assertTrue("did not return to the list after closing tabs", waitFor(10_000) { !has("browser_bar") })
+            dev.asfakul.yumeiro.online.web.AdFilter.clearSeenForTest()
+            openSaved(name)
+            val loaded = waitFor(45_000) { runCatching { js(web(), "document.readyState") == "complete" }.getOrDefault(false) }
+            Thread.sleep(20_000) // ad scripts load late (lazy / timers)
+            val hosts = runCatching { js(web(), "Array.from(new Set(performance.getEntriesByType('resource').map(function(e){try{return new URL(e.name).host}catch(x){return ''}}))).join(' ')") }.getOrDefault("")
+            val seen = dev.asfakul.yumeiro.online.web.AdFilter.seenAds()
+            log("REAL $name filter=$on loaded=$loaded adRequests=${seen.size} blocked=${seen.count { it.blocked }} adHosts=${seen.map { it.host }.distinct()} pageHosts=$hosts")
+            if (!on) controlAds += seen.size
+            else {
+                assertTrue("$name: an ad request got through with the filter on: ${seen.filter { !it.blocked }.map { it.host }.distinct()}", seen.none { !it.blocked })
+                // Pop-ups / new windows: three taps on the page body open no second tab and leave the page where it was.
+                val start = WebsiteTab.tab.value?.keep?.pageUrl.orEmpty()
+                val x = IntArray(2); inst.runOnMainSync { web().getLocationOnScreen(x) }
+                repeat(3) { FirstRun.shell("input tap ${x[0] + 180 + it * 60} ${x[1] + 500}"); Thread.sleep(1_500) }
+                assertEquals("$name: a tap opened a pop-up tab: ${WebsiteTab.tabs.value.map { it.keep.pageUrl }}", 1, WebsiteTab.tabs.value.size)
+                val now = WebsiteTab.tab.value?.keep?.pageUrl.orEmpty()
+                assertFalse("$name: a tap redirected to an ad network ($now)", dev.asfakul.yumeiro.online.web.AdFilter.isAd(now))
+                log("REAL $name taps: start=${start.substringBefore('?')} now=${now.substringBefore('?')} tabs=${WebsiteTab.tabs.value.size}")
+                FirstRun.shot("groupe_real_${name.lowercase()}")
+            }
+        }
+        assertTrue("control: neither real test page asked a known ad network with the filter off (page changed or list out of date)", controlAds > 0)
+        log("GROUPE_G PASS controlAds=$controlAds tv=$tv")
+    }
 }

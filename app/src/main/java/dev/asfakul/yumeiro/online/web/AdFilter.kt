@@ -57,6 +57,20 @@ object AdFilter {
     private fun hostOf(url: String): String? = url.substringAfter("://", "").substringBefore('/').substringBefore('?')
         .substringAfterLast('@').substringBefore(':').takeIf { it.isNotBlank() }
 
+    /**
+     * GROUP E3 device evidence: the last ad-network requests a page browser saw, host only (never the path,
+     * query or cookies), and whether they were blocked. Read by the real-page device test; capped at 300.
+     */
+    data class Seen(val host: String, val blocked: Boolean)
+    private val seen = java.util.concurrent.ConcurrentLinkedDeque<Seen>()
+    fun note(url: String, blocked: Boolean) {
+        val h = hostOf(url.trim()) ?: return
+        seen.addFirst(Seen(h.lowercase(), blocked))
+        while (seen.size > 300) seen.pollLast()
+    }
+    fun seenAds(): List<Seen> = seen.toList()
+    internal fun clearSeenForTest() = seen.clear()
+
     /** Empty 204-style answer for a blocked request. */
     fun blocked(): WebResourceResponse = WebResourceResponse("text/plain", "utf-8", 204, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
 }

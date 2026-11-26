@@ -41,7 +41,6 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -288,10 +287,8 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             }
             if (!telegramPage) {
                 IconButton(onClick = { settings = true }, modifier = Modifier.testTag("site_settings")) { Icon(Icons.Default.Settings, "Website settings", tint = p.textSecondary) }
-            } else {
-                IconButton(onClick = { importing = true }, modifier = Modifier.testTag("site_import")) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Add channels from a list", tint = p.textSecondary) }
-                if (sites.isNotEmpty()) IconButton(onClick = { exportList() }, modifier = Modifier.testTag("site_export")) { Icon(Icons.Default.Share, "Share channel list", tint = p.textSecondary) }
             }
+            // GROUP E1: no Share button on the website page (the Telegram page is TelegramHome; it returns above).
             IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, if (telegramPage) "How Telegram works" else "How websites work", tint = p.textSecondary) }
         }
         val addCard: @Composable () -> Unit = {
