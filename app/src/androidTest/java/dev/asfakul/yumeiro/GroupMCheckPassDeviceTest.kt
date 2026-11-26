@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -215,9 +216,17 @@ class GroupMCheckPassDeviceTest {
         val api = CheckSite(base, "YuGroupM Page")
         openYumixWith(api)
         FirstRun.tapVisible(rule, "online_filter")
-        val row = runCatching { rule.waitUntil(10_000) { rule.onAllNodesWithText(api.name, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
+        // TV api24 lists many real extensions: the row can be below the fold; the sheet's own search finds it.
+        val rowTag = "online_filter_${api.name}"
+        fun listed() = rule.onAllNodesWithTag(rowTag, true).fetchSemanticsNodes().isNotEmpty()
+        var row = runCatching { rule.waitUntil(5_000) { listed() }; true }.getOrDefault(false)
+        if (!row && rule.onAllNodesWithTag("online_filter-search-open", true).fetchSemanticsNodes().isNotEmpty()) {
+            rule.onAllNodesWithTag("online_filter-search-open", true)[0].performClick(); rule.waitForIdle()
+            rule.onAllNodesWithTag("online_filter_search", true)[0].performTextInput("YuGroupM Page"); rule.waitForIdle()
+            row = runCatching { rule.waitUntil(10_000) { listed() }; true }.getOrDefault(false)
+        }
         assertTrue("the filter sheet does not list ${api.name} · ${FirstRun.onScreen(rule)}", row)
-        rule.onAllNodesWithText(api.name, useUnmergedTree = true)[0].performClick()
+        rule.onAllNodesWithTag(rowTag, true)[0].performClick()
         rule.waitForIdle()
         val fix = runCatching { rule.waitUntil(60_000) { rule.onAllNodesWithTag("online_provider_fix", true).fetchSemanticsNodes().isNotEmpty() }; true }.getOrDefault(false)
         FirstRun.shot("groupm_page_failed")
