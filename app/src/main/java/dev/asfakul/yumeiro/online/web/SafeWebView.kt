@@ -75,13 +75,36 @@ object SafeWebView {
         } else null
     }.getOrNull()
 
-    /** Detaches and destroys a WebView whose renderer is gone. Never throws. */
+    /**
+     * Detaches and destroys a WebView. Never throws.
+     *
+     * Android 7.x (API 24–25) renders every page on one renderer thread inside the app. Destroying a page at once,
+     * while its ad frames and scripts are still running, left that thread stuck: the next page never started and the
+     * renderer then aborted the app ~90 s later (TV api24, runs 45761414933 and 45764062656: SIGSEGV 0xfbadbeef in
+     * Chrome_InProcRe after adblock-tester.com was closed). There the page's scripts are switched off and it is blanked
+     * first, and it is destroyed only once the blank page has replaced it (or after [RETIRE_MS]).
+     */
     fun dispose(view: WebView?) {
         view ?: return
         runCatching { (view.parent as? ViewGroup)?.removeView(view) }
         runCatching { view.stopLoading() }
-        runCatching { view.destroy() }
+        if (android.os.Build.VERSION.SDK_INT >= 26) { runCatching { view.destroy() }; return }
+        var done = false
+        val finish = Runnable { if (!done) { done = true; runCatching { view.removeAllViews(); view.destroy() } } }
+        runCatching {
+            view.onPause()
+            view.settings.javaScriptEnabled = false
+            view.webChromeClient = null
+            view.webViewClient = object : android.webkit.WebViewClient() {
+                override fun onPageFinished(v: WebView?, url: String?) { if (url == "about:blank") view.post(finish) }
+            }
+            view.loadUrl("about:blank")
+        }.onFailure { finish.run(); return }
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(finish, RETIRE_MS)
     }
+
+    /** Longest wait for the blank page before an old (in-app renderer) WebView is destroyed anyway. */
+    const val RETIRE_MS = 1_500L
 
     /** Logs the renderer crash, disposes the view and keeps the app alive. */
     fun handleRenderGone(view: WebView, detail: RenderProcessGoneDetail?): Boolean {
