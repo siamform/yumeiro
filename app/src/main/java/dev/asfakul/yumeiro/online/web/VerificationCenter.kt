@@ -147,7 +147,7 @@ object VerificationCenter {
         val h = VerificationPolicy.normalize(host)
         sites.computeIfPresent(h) { _, s -> s.copy(until = 0L) }
         publish()
-        BrowserCheck.openSite("https://$h/")
+        BrowserCheck.openSite(BrowserCheck.checkPageFor(h))
     }
 
     private fun publish() {

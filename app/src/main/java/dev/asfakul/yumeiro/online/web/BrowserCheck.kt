@@ -166,10 +166,29 @@ object BrowserCheck {
     private val challengedAt = ConcurrentHashMap<String, Long>()
 
     /** B4: [host] answered with a check page now (an extension request met it). */
-    fun noteChallenge(host: String, now: Long = System.currentTimeMillis()) {
+    fun noteChallenge(host: String, now: Long = System.currentTimeMillis(), url: String? = null) {
         if (challengedAt.size > 256) challengedAt.clear()
-        challengedAt[VerificationPolicy.normalize(host)] = now
+        val h = VerificationPolicy.normalize(host)
+        challengedAt[h] = now
+        rootOf(url)?.let { if (siteRoot.size > 256) siteRoot.clear(); siteRoot[h] = it }
     }
+
+    private val siteRoot = ConcurrentHashMap<String, String>()
+
+    /**
+     * B4: the address to open for [host]'s check: the scheme and port its check page came from (a site on
+     * http or another port opened as https://host/ before, so its check page never loaded).
+     */
+    fun checkPageFor(host: String): String = siteRoot[VerificationPolicy.normalize(host)] ?: "https://${VerificationPolicy.normalize(host)}/"
+
+    /** "scheme://host[:port]/" of [url], or null. Pure. */
+    internal fun rootOf(url: String?): String? = runCatching {
+        val u = java.net.URI(url ?: return null)
+        val scheme = u.scheme?.lowercase()?.takeIf { it == "http" || it == "https" } ?: return null
+        val host = u.host?.takeIf { it.isNotBlank() } ?: return null
+        val port = if (u.port == -1 || (scheme == "https" && u.port == 443) || (scheme == "http" && u.port == 80)) "" else ":${u.port}"
+        "$scheme://$host$port/"
+    }.getOrNull()
 
     /**
      * B4: did [mainUrl]'s site answer with a check page at or after [since]? An extension that met the check page
@@ -622,7 +641,7 @@ object BrowserCheck {
                     Log.i(TAG, "$host asked to slow down (rate limit) — no note")
                     return response
                 }
-                Verdict.CHALLENGE -> noteChallenge(host)
+                Verdict.CHALLENGE -> noteChallenge(host, url = request.url.toString())
             }
             if (onMainThread()) return response
             if (clearanceFor(host) != null) forget(host)

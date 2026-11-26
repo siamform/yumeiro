@@ -49,4 +49,14 @@ class GroupMSitePassTest {
         assertFalse(ExtensionSpeed.quarantined(s, now))
         assertEquals(0, s.fails)
     }
+
+    /** B4: Check now opens the check page where it came from (scheme and port kept). */
+    @Test fun checkNowOpensThePageTheCheckCameFrom() {
+        assertEquals("http://127.0.0.1:8123/", BrowserCheck.rootOf("http://127.0.0.1:8123/search?q=a"))
+        assertEquals("https://site.to/", BrowserCheck.rootOf("https://site.to:443/x"))
+        assertEquals(null, BrowserCheck.rootOf("ftp://site.to/"))
+        BrowserCheck.noteChallenge("groupm-root.example", url = "http://groupm-root.example:8080/latest")
+        assertEquals("http://groupm-root.example:8080/", BrowserCheck.checkPageFor("groupm-root.example"))
+        assertEquals("https://groupm-unknown.example/", BrowserCheck.checkPageFor("www.groupm-unknown.example"))
+    }
 }
