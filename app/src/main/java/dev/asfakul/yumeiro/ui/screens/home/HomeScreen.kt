@@ -77,6 +77,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -341,15 +344,20 @@ fun HomeScreen(
     val videoPlays by PlayCounts.entries.collectAsState()
     // NBUG-11 (ADR-023): the 18+ check depends on which extensions are loaded, so Most played is
     // worked out again when they change (it ran once, before they had loaded, and let 18+ through).
-    val engine by dev.asfakul.yumeiro.online.ExtensionManager.state.collectAsState()
     // FREEZE-1: the 18+ map is worked out off the main thread; until it is known, unknown plays stay out.
+    // B20-PERF-EXT: the extension state is followed in an effect, not read while composing, so a state change
+    // (one per installed or loaded extension) no longer recomposes the whole Home screen.
     var adultLoaded by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
-    LaunchedEffect(engine.ready, engine.generation) {
-        if (engine.ready) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val loaded = dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis()
-            PlayCounts.learnAdult(context) { e -> dev.asfakul.yumeiro.online.AdultContent.knownAdult(e.api, e.url, loaded) }
-            adultLoaded = loaded
-        }
+    LaunchedEffect(Unit) {
+        dev.asfakul.yumeiro.online.ExtensionManager.state
+            .map { it.ready to it.generation }.distinctUntilChanged()
+            .collectLatest { (ready, _) ->
+                if (ready) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val loaded = dev.asfakul.yumeiro.online.AdultContent.loadedAdultApis()
+                    PlayCounts.learnAdult(context) { e -> dev.asfakul.yumeiro.online.AdultContent.knownAdult(e.api, e.url, loaded) }
+                    adultLoaded = loaded
+                }
+            }
     }
     val played = remember(mostPlayed, videoPlays, recentVideos, adultOn, adultPrivate, adultLoaded) {
         val byId = recentVideos.associateBy { it.id }
