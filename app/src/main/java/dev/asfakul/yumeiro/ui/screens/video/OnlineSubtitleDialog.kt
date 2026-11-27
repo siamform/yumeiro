@@ -73,6 +73,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Search & download subtitles from OpenSubtitles (title + file-hash matching). */
 @Composable
@@ -200,7 +201,7 @@ fun OnlineSubtitleDialog(
 @Composable
 private fun SubtitleResultRow(sub: OnlineSubtitle, downloading: Boolean, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = yuRound(12),
         color = DarkSurfaceContainerHigh,
         border = if (sub.hashMatch) BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.7f)) else null,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),

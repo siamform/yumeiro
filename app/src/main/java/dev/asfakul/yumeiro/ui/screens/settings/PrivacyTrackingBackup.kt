@@ -82,13 +82,14 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 private fun Section(title: String, hint: String? = null, content: @Composable () -> Unit) {
     Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(top = 14.dp))
     if (hint != null) Text(hint, color = TextTertiary, fontSize = 12.sp)
     Spacer(Modifier.height(8.dp))
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
+    Card(Modifier.fillMaxWidth(), shape = yuRound(14), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) { content() }
     }
 }
@@ -442,8 +443,8 @@ private fun TrackerCard(
     GlassGroup(Modifier.testTag("tracker_$tag")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(13.dp)).background(tint.copy(alpha = 0.22f))
-                    .border(1.dp, tint.copy(alpha = 0.45f), RoundedCornerShape(13.dp)),
+                Modifier.size(40.dp).clip(yuRound(13)).background(tint.copy(alpha = 0.22f))
+                    .border(1.dp, tint.copy(alpha = 0.45f), yuRound(13)),
                 contentAlignment = Alignment.Center,
             ) { Text(name.take(1), color = tint, fontWeight = FontWeight.Black, fontSize = 18.sp) }
             Spacer(Modifier.width(12.dp))
@@ -459,12 +460,12 @@ private fun TrackerCard(
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
             if (onSetUp != null && user == null) {
                 if (configured) TextButton(onClick = onSetUp, modifier = Modifier.testTag("tracker_${tag}_change")) { Text("Change key", color = TextSecondary) }
-                else Button(onClick = onSetUp, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                else Button(onClick = onSetUp, shape = yuRound(18), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                     modifier = Modifier.testTag("tracker_${tag}_setup")) { Text("Set up") }
             }
             when {
-                user != null -> OutlinedButton(onClick = onSignOut, shape = RoundedCornerShape(18.dp), modifier = Modifier.testTag("tracker_${tag}_signout")) { Text("Sign out") }
-                configured -> Button(onClick = onSignIn, shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                user != null -> OutlinedButton(onClick = onSignOut, shape = yuRound(18), modifier = Modifier.testTag("tracker_${tag}_signout")) { Text("Sign out") }
+                configured -> Button(onClick = onSignIn, shape = yuRound(18), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                     modifier = Modifier.testTag("tracker_${tag}_signin")) { Text("Sign in") }
             }
         }

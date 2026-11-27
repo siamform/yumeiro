@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.OverlineStyle
 import dev.asfakul.yumeiro.ui.theme.SectionTitleStyle
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Header magnifier: toggles a [HeaderSearchField] instead of pinning a wide box to the page. */
 @Composable
@@ -112,7 +113,7 @@ fun HeaderSearchField(
         val focus = remember { FocusRequester() }
         val focusManager = LocalFocusManager.current
         LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-        val shape = RoundedCornerShape(22.dp)
+        val shape = yuRound(22)
         Row(
             Modifier.fillMaxWidth().padding(horizontal = horizontalPadding, vertical = 4.dp).height(44.dp).clip(shape)
                 .background(p.textPrimary.copy(alpha = if (p.isDark) 0.07f else 0.05f))
@@ -145,7 +146,7 @@ fun HeaderSearchField(
 fun YuSearchField(query: String, onQuery: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier) {
     val p = LocalMtPalette.current
     val focusManager = LocalFocusManager.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = yuRound(22)
     Row(
         modifier.fillMaxWidth().height(44.dp).clip(shape)
             .background(p.textPrimary.copy(alpha = if (p.isDark) 0.07f else 0.05f))
@@ -197,7 +198,7 @@ fun FilterSheet(
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
-                shape = RoundedCornerShape(24.dp),
+                shape = yuRound(24),
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(48.dp).testTag(tag + "_done"),
             ) { Text(if (resultCount != null) "Show $resultCount result${if (resultCount == 1) "" else "s"}" else "Done", fontWeight = FontWeight.Bold) }
         }

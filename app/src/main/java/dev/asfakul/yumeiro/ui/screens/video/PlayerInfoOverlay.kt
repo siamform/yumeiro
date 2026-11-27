@@ -40,6 +40,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import dev.asfakul.yumeiro.player.VideoPrefs
 import dev.asfakul.yumeiro.player.VideoPrefs.InfoField
 import kotlinx.coroutines.delay
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Round 13: Settings → Player → Player info overlay. A "Stats for nerds" style card shown with
@@ -102,7 +103,7 @@ fun PlayerInfoOverlay(player: ExoPlayer, title: String, modifier: Modifier = Mod
 internal fun PlayerInfoPanel(rows: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     if (rows.isEmpty()) return
     Column(
-        modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.62f))
+        modifier.widthIn(max = 320.dp).clip(yuRound(10)).background(Color.Black.copy(alpha = 0.62f))
             .padding(horizontal = 10.dp, vertical = 8.dp).testTag("player_info_overlay"),
     ) {
         rows.forEach { (k, v) ->

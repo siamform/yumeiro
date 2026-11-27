@@ -89,6 +89,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_MUSICSCREEN_1 = Regex("^/storage/emulated/\\d+/?")
@@ -190,7 +191,7 @@ fun MusicScreen(
                     Box {
                         Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(yuRound(12))
                                 .background(GlassFill)
                                 .clickable { showSortMenu = true }
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -362,12 +363,12 @@ fun MusicScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(20.dp))
+                                    .clip(yuRound(20))
                                     .clickable {
                                         expandedAlbumId = if (isExpanded) null else album.id
                                     }
                                     .testTag("album_card_${album.id}"),
-                                shape = RoundedCornerShape(20.dp),
+                                shape = yuRound(20),
                                 colors = CardDefaults.cardColors(containerColor = GlassFill),
                                 border = null
                             ) {
@@ -376,7 +377,7 @@ fun MusicScreen(
                                         Box(
                                             modifier = Modifier
                                                 .size(54.dp)
-                                                .clip(RoundedCornerShape(14.dp))
+                                                .clip(yuRound(14))
                                                 .background(dev.asfakul.yumeiro.ui.theme.rememberArtBrush(album.name)),
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -435,7 +436,7 @@ fun MusicScreen(
                                                         }
                                                     },
                                                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
-                                                    shape = RoundedCornerShape(16.dp),
+                                                    shape = yuRound(16),
                                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                                 ) {
                                                     Icon(
@@ -495,12 +496,12 @@ fun MusicScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(20.dp))
+                                    .clip(yuRound(20))
                                     .clickable {
                                         expandedArtistName = if (isExpanded) null else artist.name
                                     }
                                     .testTag("artist_card_${artist.name}"),
-                                shape = RoundedCornerShape(20.dp),
+                                shape = yuRound(20),
                                 colors = CardDefaults.cardColors(containerColor = GlassFill),
                                 border = null
                             ) {
@@ -557,7 +558,7 @@ fun MusicScreen(
                                                         }
                                                     },
                                                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
-                                                    shape = RoundedCornerShape(16.dp),
+                                                    shape = yuRound(16),
                                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                                 ) {
                                                     Icon(
@@ -617,12 +618,12 @@ fun MusicScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(20.dp))
+                                    .clip(yuRound(20))
                                     .clickable {
                                         expandedFolderPath = if (isExpanded) null else folder.path
                                     }
                                     .testTag("folder_card_${folder.name}"),
-                                shape = RoundedCornerShape(20.dp),
+                                shape = yuRound(20),
                                 colors = CardDefaults.cardColors(containerColor = GlassFill),
                                 border = null
                             ) {
@@ -631,7 +632,7 @@ fun MusicScreen(
                                         Box(
                                             modifier = Modifier
                                                 .size(46.dp)
-                                                .clip(RoundedCornerShape(12.dp))
+                                                .clip(yuRound(12))
                                                 .background(SpotifyGreen.copy(alpha = 0.15f)),
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -687,7 +688,7 @@ fun MusicScreen(
                                                         }
                                                     },
                                                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
-                                                    shape = RoundedCornerShape(16.dp),
+                                                    shape = yuRound(16),
                                                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                                                 ) {
                                                     Icon(

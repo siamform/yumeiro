@@ -107,6 +107,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private sealed interface Load<out T> {
     data object Loading : Load<Nothing>
@@ -414,7 +415,7 @@ private fun YtBrowse(
                         }
                     }
                 }
-                if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
+                if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), yuRound(22)) }
                 if (res.items.isEmpty() && !res.loading && res.error == null) item("none") { YtProblem("No results for “$sub”.", null) }
                 if (rcols > 1) itemsIndexed(res.items.chunked(rcols), key = { _, r -> "rr_${r.first().id}" }) { _, row ->
                     YtVideoRow(row, rcols, openChannel) { item -> onPlay(item, res.items) }
@@ -462,7 +463,7 @@ private fun YtBrowse(
                         canPin = selected.kind == YtFeed.Kind.QUERY,
                     )
                 }
-                if (page.items.isEmpty() && (page.loading || !page.started) && page.error == null) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
+                if (page.items.isEmpty() && (page.loading || !page.started) && page.error == null) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), yuRound(22)) }
                 if (fcols > 1) itemsIndexed(page.items.chunked(fcols), key = { _, r -> "fr_${r.first().id}" }) { _, row ->
                     YtVideoRow(row, fcols, openChannel) { item -> onPlay(item, page.items) }
                 } else itemsIndexed(page.items, key = { _, it -> "fi_${it.id}" }) { _, item ->
@@ -506,7 +507,7 @@ private fun YtBrowse(
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 if (videos.isEmpty() && anyLoading && netOnline) itemsIndexed(List(4) { it }, key = { i, _ -> "hsk$i" }) { _, _ ->
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        SkeletonBlock(null, 200.dp, shape = RoundedCornerShape(18.dp))
+                        SkeletonBlock(null, 200.dp, shape = yuRound(18))
                         Row(Modifier.padding(top = 10.dp)) {
                             SkeletonBlock(36.dp, 36.dp, shape = CircleShape); Spacer(Modifier.width(12.dp))
                             Column { SkeletonBlock(220.dp, 14.dp); Spacer(Modifier.height(6.dp)); SkeletonBlock(140.dp, 12.dp) }
@@ -575,7 +576,7 @@ private fun YtBrowse(
             // Featured: the first planned feed as quick picks (music) or big cards (video).
             val featured = feeds.firstOrNull()
             if (featured != null) when (val l = shelves[featured.id] ?: Load.Loading) {
-                Load.Loading -> if (netOnline) item("feat_load") { SkeletonBlock(null, 230.dp, Modifier.padding(16.dp), RoundedCornerShape(24.dp)) }
+                Load.Loading -> if (netOnline) item("feat_load") { SkeletonBlock(null, 230.dp, Modifier.padding(16.dp), yuRound(24)) }
                 is Load.Failed -> item("feat_err") { YtProblem(l.message) { loadShelves(true) } }
                 is Load.Ready -> {
                     item("feat_label") { YtLabel(featured.title, featured.overline) }
@@ -586,7 +587,7 @@ private fun YtBrowse(
             feeds.drop(1).forEach { f ->
                 item("shelf_${f.id}") {
                     when (val l = shelves[f.id] ?: Load.Loading) {
-                        Load.Loading -> if (netOnline) Column { YtLabel(f.title, f.overline); Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(3) { SkeletonBlock(if (music) 140.dp else 220.dp, if (music) 140.dp else 124.dp, shape = RoundedCornerShape(18.dp)) } } }
+                        Load.Loading -> if (netOnline) Column { YtLabel(f.title, f.overline); Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(3) { SkeletonBlock(if (music) 140.dp else 220.dp, if (music) 140.dp else 124.dp, shape = yuRound(18)) } } }
                         is Load.Failed -> Unit
                         is Load.Ready -> YtShelfRow(f.title, f.overline, if (music) Icons.Default.MusicNote else Icons.Default.SmartDisplay, l.value, music,
                             onSeeAll = { chip = f.id; openFeed(f) }) { onPlay(it, l.value) }
@@ -726,9 +727,9 @@ internal fun YtSearchBar(query: String, placeholder: String, music: Boolean, aut
     LaunchedEffect(autoFocus) { if (autoFocus) runCatching { focus.requestFocus() } }
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(50.dp)
-            .then(if (floating) Modifier.shadow(10.dp, RoundedCornerShape(25.dp), ambientColor = Color.Black.copy(alpha = 0.4f), spotColor = Color.Black.copy(alpha = 0.4f)) else Modifier)
-            .clip(RoundedCornerShape(25.dp))
-            .background(if (floating) pal.surfaceContainerHigh else GlassFill).border(1.dp, border, RoundedCornerShape(25.dp)).padding(horizontal = 16.dp),
+            .then(if (floating) Modifier.shadow(10.dp, yuRound(25), ambientColor = Color.Black.copy(alpha = 0.4f), spotColor = Color.Black.copy(alpha = 0.4f)) else Modifier)
+            .clip(yuRound(25))
+            .background(if (floating) pal.surfaceContainerHigh else GlassFill).border(1.dp, border, yuRound(25)).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(if (music) Icons.Default.MusicNote else Icons.Default.SmartDisplay, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
@@ -827,7 +828,7 @@ internal fun YtVideoCard(item: YtItem, wide: Boolean, showChannel: Boolean = tru
             PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
             val badge = when { item.live -> "LIVE"; item.durationSec > 0 -> formatYtDuration(item.durationSec); else -> null }
             if (badge != null) Surface(
-                shape = RoundedCornerShape(6.dp), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.78f),
+                shape = yuRound(6), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.78f),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
             ) { Text(badge, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)) }
         }
@@ -856,7 +857,7 @@ internal fun YtVideoCard(item: YtItem, wide: Boolean, showChannel: Boolean = tru
 @Composable
 private fun SquareCard(item: YtItem, size: Dp, onClick: () -> Unit) {
     Column(Modifier.width(size).clickable(onClick = onClick)) {
-        Box(Modifier.size(size).clip(RoundedCornerShape(18.dp))) {
+        Box(Modifier.size(size).clip(yuRound(18))) {
             PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
             Box(Modifier.align(Alignment.BottomEnd).padding(8.dp).size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -871,7 +872,7 @@ private fun SquareCard(item: YtItem, size: Dp, onClick: () -> Unit) {
 @Composable
 private fun SongRow(item: YtItem, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 7.dp).testTag("youtube_song"), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(54.dp).clip(RoundedCornerShape(12.dp))) { PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote) }
+        Box(Modifier.size(54.dp).clip(yuRound(12))) { PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(item.title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -887,7 +888,7 @@ private fun SongRow(item: YtItem, onClick: () -> Unit) {
 @Composable
 internal fun SongRowSkeleton() {
     Row(Modifier.padding(horizontal = 16.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        SkeletonBlock(54.dp, 54.dp, shape = RoundedCornerShape(12.dp))
+        SkeletonBlock(54.dp, 54.dp, shape = yuRound(12))
         Spacer(Modifier.width(12.dp))
         Column { SkeletonBlock(180.dp, 14.dp); Spacer(Modifier.height(6.dp)); SkeletonBlock(110.dp, 12.dp) }
     }
@@ -895,7 +896,7 @@ internal fun SongRowSkeleton() {
 
 @Composable
 internal fun YtProblem(message: String, onRetry: (() -> Unit)?) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.WifiOff, null, tint = TextSecondary)
             Spacer(Modifier.width(12.dp))

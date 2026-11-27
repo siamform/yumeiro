@@ -70,6 +70,7 @@ import dev.asfakul.yumeiro.online.telegram.td.TgChat
 import dev.asfakul.yumeiro.online.telegram.td.TgMe
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * B8 (beta chapter): the Telegram chats page kept a "who is signed in" card and a search field fixed on top of the
@@ -160,7 +161,7 @@ fun TgSearchHeader(
                         focusedContainerColor = p.surfaceContainerHigh, unfocusedContainerColor = p.surfaceContainerHigh,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
                     ),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = yuRound(24),
                     modifier = Modifier.weight(1f).padding(end = 8.dp).focusRequester(focus).testTag("tg_search_field"),
                 )
             }
@@ -218,7 +219,7 @@ fun TelegramChatsPage(
                 // TG-AVATAR-1 (owner list 8A): each chat with its own photo (TDLib's small copy, fetched as it scrolls in).
                 val pic by produceState<String?>(null, chat.photoFileId) { value = photo(chat.photoFileId) }
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.surfaceContainerHigh)
+                    Modifier.fillMaxWidth().clip(yuRound(14)).background(p.surfaceContainerHigh)
                         .clickable { onOpen(chat) }.heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 10.dp).testTag("tg_chat_${chat.id}"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

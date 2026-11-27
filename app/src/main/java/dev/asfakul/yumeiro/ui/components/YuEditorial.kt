@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.OverlineStyle
 import dev.asfakul.yumeiro.ui.theme.SectionTitleStyle
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /*
  * "夢色 editorial" — the R5 signature layer on top of the Tsuki no Michi tokens. Yumeiro's identity
@@ -120,7 +121,7 @@ fun KanjiMark(text: String, modifier: Modifier = Modifier, size: TextUnit = 64.s
 @Composable
 fun Hanko(text: String = "新", modifier: Modifier = Modifier, contentDescription: String = "New") {
     Box(
-        modifier.size(22.dp).rotate(-8f).clip(RoundedCornerShape(5.dp)).background(HankoRed)
+        modifier.size(22.dp).rotate(-8f).clip(yuRound(5)).background(HankoRed)
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) { Text(text, color = Color.White, fontSize = 12.sp, lineHeight = 12.sp, fontWeight = FontWeight.Black) }

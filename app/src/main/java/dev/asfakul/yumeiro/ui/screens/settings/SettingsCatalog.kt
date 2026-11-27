@@ -54,7 +54,7 @@ object SettingsCatalog {
             listOf("stats", "streak", "activity", "totals", "milestones", "insights", "wrapped", "top artists"), route = "stats"),
         APPEARANCE(Group.YOU, "Look & feel", "Theme, accent colour, time-of-day colours, pure black, backdrop",
             listOf("theme", "dark", "light", "amoled", "colour", "color", "accent", "ambient", "appearance"),
-            settings = listOf("Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents", "Backdrop", "Your photo", "Intensity")),
+            settings = listOf("Pure black (AMOLED)", "Ambient colour from artwork", "Compact text and corners", "Japanese accents", "Backdrop", "Your photo", "Intensity")),
         NAVIGATION(Group.YOU, "Navigation bar", "Choose the tabs and add up to two shortcuts",
             listOf("bottom bar", "tabs", "taskbar", "nav", "shortcut", "menu", "dock"),
             settings = listOf("Reset to default")),

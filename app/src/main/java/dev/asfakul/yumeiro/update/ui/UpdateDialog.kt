@@ -95,6 +95,7 @@ import dev.asfakul.yumeiro.update.ReleaseInfo
 import dev.asfakul.yumeiro.update.UpdateSource
 import dev.asfakul.yumeiro.update.UpdateState
 import dev.asfakul.yumeiro.update.UpdateStatusText
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private val ErrorRed: Color @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.DangerTone
 
@@ -165,7 +166,7 @@ internal fun UpdateDialogCard(
             .widthIn(max = 440.dp)
             .fillMaxWidth()
             .testTag("update_dialog"),
-        shape = RoundedCornerShape(28.dp),
+        shape = yuRound(28),
         color = DarkSurface,
         border = BorderStroke(0.5.dp, DarkOutline),
         shadowElevation = 12.dp,
@@ -331,7 +332,7 @@ private fun ReadyContent(
         )
         if (needsPermission) {
             Spacer(Modifier.height(14.dp))
-            Surface(shape = RoundedCornerShape(14.dp), color = DarkSurfaceContainerHigh) {
+            Surface(shape = yuRound(14), color = DarkSurfaceContainerHigh) {
                 Text(
                     "Android will ask you to allow Yumeiro to install updates. This is needed only once.",
                     modifier = Modifier.padding(12.dp),
@@ -485,7 +486,7 @@ fun ReleaseNotes(markdown: String, modifier: Modifier = Modifier) {
     val lines = remember(markdown) { parseNotes(markdown) }
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = yuRound(16),
         color = DarkSurfaceContainerHigh,
         border = BorderStroke(0.5.dp, DarkOutline),
     ) {

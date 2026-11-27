@@ -58,6 +58,7 @@ import androidx.compose.ui.window.DialogProperties
 import dev.asfakul.yumeiro.ui.theme.BrandGold
 import dev.asfakul.yumeiro.ui.theme.LocalAmbientColor
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Round 9: how much a popup matters. The tone colours the icon seal, the top stroke, the border
@@ -109,7 +110,7 @@ fun DialogConfirmButton(text: String, onClick: () -> Unit, modifier: Modifier = 
     val on = if (c.luminance() > 0.45f) Color(0xFF15110C) else Color.White
     androidx.compose.material3.Button(
         onClick = onClick, enabled = enabled, modifier = modifier.heightIn(min = 44.dp),
-        shape = RoundedCornerShape(22.dp),
+        shape = yuRound(22),
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = c, contentColor = on, disabledContainerColor = c.copy(alpha = 0.3f)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 10.dp),
     ) { androidx.compose.material3.Text(text, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
@@ -134,7 +135,7 @@ fun TsukiDialog(
     icon: @Composable (() -> Unit)? = null,
     title: @Composable (() -> Unit)? = null,
     text: @Composable (() -> Unit)? = null,
-    shape: Shape = RoundedCornerShape(28.dp),
+    shape: Shape = yuRound(28),
     containerColor: Color = Color.Unspecified,
     iconContentColor: Color = Color.Unspecified,
     titleContentColor: Color = Color.Unspecified,
@@ -196,9 +197,9 @@ fun TsukiDialog(
                         if (shownIcon != null) {
                             Box(
                                 contentAlignment = Alignment.Center,
-                                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                                modifier = Modifier.size(44.dp).clip(yuRound(14))
                                     .background(Brush.linearGradient(listOf(glow.copy(alpha = if (p.isDark) 0.30f else 0.16f), seal.copy(alpha = 0.10f))))
-                                    .border(1.dp, seal.copy(alpha = 0.45f), RoundedCornerShape(14.dp)),
+                                    .border(1.dp, seal.copy(alpha = 0.45f), yuRound(14)),
                             ) {
                                 // Light themes: BrandGold on cream is too faint, use the deeper accent.
                                 val sealInk = if (tone != DialogTone.NEUTRAL) toneColor else if (p.isDark) BrandGold else p.accent

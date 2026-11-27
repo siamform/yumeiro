@@ -65,6 +65,7 @@ import dev.asfakul.yumeiro.online.web.SiteHistory
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import dev.asfakul.yumeiro.ui.components.sheetDragHandle
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * GROUP E1: the Websites page's settings, behind the gear in its header (they used to sit at the bottom of the
@@ -101,7 +102,7 @@ internal fun WebsiteSettingsSheet(onDismiss: () -> Unit, onImport: () -> Unit, o
 internal fun SettingSwitch(title: String, line: String, on: Boolean, tag: String, onChange: (Boolean) -> Unit) {
     val p = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).toggleable(value = on, role = Role.Switch, onValueChange = onChange)
+        Modifier.fillMaxWidth().clip(yuRound(14)).toggleable(value = on, role = Role.Switch, onValueChange = onChange)
             .heightIn(min = 56.dp).padding(horizontal = 4.dp, vertical = 6.dp).testTag(tag + "_row"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -118,7 +119,7 @@ internal fun SettingSwitch(title: String, line: String, on: Boolean, tag: String
 internal fun SettingLink(icon: ImageVector, title: String, line: String, tag: String, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = title, onClick = onClick)
+        Modifier.fillMaxWidth().clip(yuRound(14)).clickable(onClickLabel = title, onClick = onClick)
             .heightIn(min = 56.dp).padding(horizontal = 4.dp, vertical = 6.dp).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -226,7 +227,7 @@ internal fun WebsiteTabsSheet(onDismiss: () -> Unit) {
             tabs.forEach { t ->
                 val isFront = t.id == front?.id
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                    Modifier.fillMaxWidth().clip(yuRound(16))
                         .background(if (isFront) p.accent.copy(alpha = 0.16f) else p.textPrimary.copy(alpha = 0.05f))
                         .clickable(onClickLabel = "Show ${t.name}") { onDismiss(); WebsiteTab.switchTo(t.id) }
                         .heightIn(min = 56.dp).padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp).testTag("browser_tab_row"),

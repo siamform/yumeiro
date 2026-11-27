@@ -53,6 +53,7 @@ import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Round 2, order 9: "Keep notifications on time". Live checklist of the Android settings (each
@@ -109,7 +110,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
             }
             Spacer(Modifier.height(16.dp))
             Button(
-                onClick = onClose, shape = RoundedCornerShape(16.dp),
+                onClick = onClose, shape = yuRound(16),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                 modifier = Modifier.fillMaxWidth().height(48.dp).testTag("guide_close"),
             ) { Text(if (status.allGood) "All set" else "Close", fontWeight = FontWeight.Bold) }

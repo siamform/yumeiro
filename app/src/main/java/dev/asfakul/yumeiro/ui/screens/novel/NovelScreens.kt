@@ -101,6 +101,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /*
  * NOVEL-1 (owner item 26): the novel pages — Novels (library, browse, search across sources), Novel sources
@@ -292,7 +293,7 @@ private fun SearchAllResults(query: String, onOpen: (NovelItem) -> Unit) {
 @Composable
 private fun NovelCover(n: NovelItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, onClick: (NovelItem) -> Unit) {
     Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable(onClickLabel = "Open ${n.name}") { onClick(n) }.testTag("novel_cover")) {
-        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(yuRound(12)).background(GlassFill), contentAlignment = Alignment.Center) {
             dev.asfakul.yumeiro.ui.screens.online.PosterImage(n.cover, dev.asfakul.yumeiro.sources.novel.NovelImageHeaders.of(n.pluginId), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook)
         }
         Spacer(Modifier.height(6.dp))
@@ -402,8 +403,8 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
 
 @Composable
 private fun PluginRow(p: NovelPlugin, installed: Boolean, busy: Boolean, update: Boolean, onInstall: () -> Unit, onRemove: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(GlassFill).padding(horizontal = 12.dp, vertical = 8.dp).testTag("novel_plugin_${p.id}"), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))) { dev.asfakul.yumeiro.ui.screens.online.PosterImage(p.iconUrl, emptyMap(), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook) }
+    Row(Modifier.fillMaxWidth().clip(yuRound(12)).background(GlassFill).padding(horizontal = 12.dp, vertical = 8.dp).testTag("novel_plugin_${p.id}"), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(36.dp).clip(yuRound(8))) { dev.asfakul.yumeiro.ui.screens.online.PosterImage(p.iconUrl, emptyMap(), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook) }
         Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text(p.name, color = TextPrimary, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("${p.language} · v${p.version}", color = TextTertiary, fontSize = 12.sp, maxLines = 1)
@@ -458,7 +459,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
         LazyColumn(Modifier.fillMaxSize().testTag("novel_chapters"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp)) {
             item("head") {
                 Row {
-                    Box(Modifier.width(108.dp).aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill)) {
+                    Box(Modifier.width(108.dp).aspectRatio(0.7f).clip(yuRound(12)).background(GlassFill)) {
                         dev.asfakul.yumeiro.ui.screens.online.PosterImage(d.cover, dev.asfakul.yumeiro.sources.novel.NovelImageHeaders.of(d.pluginId), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook)
                     }
                     Column(Modifier.padding(start = 14.dp)) {

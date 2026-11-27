@@ -95,6 +95,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * GROUP F: the Telegram page, on its own (it used to be a mode of the Websites screen).
@@ -263,7 +264,7 @@ fun TelegramHome(onBack: () -> Unit) {
                     value = query, onValueChange = { query = it }, singleLine = true,
                     placeholder = { Text("Search your channels") },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = yuRound(16),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                     modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("tg_home_search"),
                 )
@@ -295,7 +296,7 @@ private fun TelegramEmpty(signInOffered: Boolean, onAdd: () -> Unit, onSignIn: (
     val p = LocalMtPalette.current
     Column(Modifier.fillMaxWidth().padding(vertical = 28.dp).testTag("tg_empty"), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier.size(64.dp).clip(RoundedCornerShape(20.dp))
+            Modifier.size(64.dp).clip(yuRound(20))
                 .background(Brush.linearGradient(listOf(p.accent.copy(alpha = 0.30f), p.accent2.copy(alpha = 0.18f)))),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.AutoMirrored.Filled.Send, null, tint = p.accentBright, modifier = Modifier.size(30.dp)) }

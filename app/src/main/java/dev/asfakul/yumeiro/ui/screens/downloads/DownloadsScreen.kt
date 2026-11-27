@@ -95,6 +95,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 enum class DownloadFilter(val label: String) { ALL("All"), OFFLINE("Offline"), PERMANENT("Permanent"), ACTIVE("In progress") }
 
@@ -244,8 +245,8 @@ private fun SectionHead(icon: ImageVector, title: String, subtitle: String, acti
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, parallel: Int, onSettings: () -> Unit, onLongPress: (() -> Unit)? = null) {
-    Surface(shape = RoundedCornerShape(16.dp), color = DarkSurfaceContainer, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
-        .then(if (onLongPress != null) Modifier.clip(RoundedCornerShape(16.dp)).combinedClickable(onClickLabel = null, onLongClickLabel = null, onLongClick = onLongPress, onClick = {}) else Modifier)) {
+    Surface(shape = yuRound(16), color = DarkSurfaceContainer, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+        .then(if (onLongPress != null) Modifier.clip(yuRound(16)).combinedClickable(onClickLabel = null, onLongClickLabel = null, onLongClick = onLongPress, onClick = {}) else Modifier)) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.DownloadForOffline, null, tint = SpotifyGreen)
@@ -268,7 +269,7 @@ private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, paralle
 
 @Composable
 private fun TipsCard(onClose: () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("downloads_tips")) {
+    Surface(shape = yuRound(16), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("downloads_tips")) {
         Column(Modifier.padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Lightbulb, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
@@ -290,7 +291,7 @@ private fun TipsCard(onClose: () -> Unit) {
 
 @Composable
 private fun EmptyDownloads(onBrowse: () -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(DarkSurfaceContainer).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth().clip(yuRound(16)).background(DarkSurfaceContainer).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Default.DownloadForOffline, null, tint = SpotifyGreen, modifier = Modifier.size(36.dp))
         Spacer(Modifier.height(8.dp))
         Text("No downloads yet", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -298,7 +299,7 @@ private fun EmptyDownloads(onBrowse: () -> Unit) {
         Text("Save episodes, movies, YouTube videos and music to watch or listen without internet.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
         Text("Find something to save", color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-            modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(SpotifyGreen).clickable(onClick = onBrowse).padding(horizontal = 18.dp, vertical = 8.dp))
+            modifier = Modifier.clip(yuRound(20)).background(SpotifyGreen).clickable(onClick = onBrowse).padding(horizontal = 18.dp, vertical = 8.dp))
     }
 }
 
@@ -310,11 +311,11 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
     val hideOn = remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS) }
     val canHide = done && hideOn
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer)
+        Modifier.fillMaxWidth().clip(yuRound(14)).background(DarkSurfaceContainer)
             .clickable(enabled = done) { scope.launch { play(context, d, onPlayVideo) } }.padding(10.dp).testTag("library_download"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))) {
+        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(yuRound(8))) {
             PosterImage(d.posterUrl, d.posterHeaders, Modifier.fillMaxSize())
             // DL-H: the play mark sits on the poster, so a finished row has room for Hide.
             if (done) Icon(Icons.Default.PlayArrow, "Play", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(26.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0x66000000)).padding(3.dp))
@@ -411,10 +412,10 @@ internal fun DownloadFolderRow(f: DownloadGroups.Folder, days: Int, expanded: Bo
     var confirm by remember { mutableStateOf(false) }
     val realFolder = list.firstOrNull()?.folder.orEmpty()
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer).clickable(onClick = onToggle).padding(10.dp).testTag("library_download_folder"),
+        Modifier.fillMaxWidth().clip(yuRound(14)).background(DarkSurfaceContainer).clickable(onClick = onToggle).padding(10.dp).testTag("library_download_folder"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(8.dp))) {
+        Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(yuRound(8))) {
             PosterImage(list.firstOrNull { it.posterUrl != null }?.posterUrl, list.firstOrNull()?.posterHeaders.orEmpty(), Modifier.fillMaxSize())
             Icon(Icons.Default.Folder, null, tint = Color.White, modifier = Modifier.align(Alignment.BottomEnd).padding(3.dp).size(16.dp))
         }

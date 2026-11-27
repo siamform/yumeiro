@@ -67,6 +67,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.glass
 import java.util.Calendar
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Time-aware greeting used as the Home headline ("Good evening"). */
 fun greetingForNow(): String = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
@@ -188,7 +189,7 @@ fun MTTopBar(
                     },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge,
-                    shape = RoundedCornerShape(26.dp),
+                    shape = yuRound(26),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = GlassFill,
                         unfocusedContainerColor = GlassFill,
@@ -366,7 +367,7 @@ private fun SourceTitle(title: String, style: androidx.compose.ui.text.TextStyle
     val reduced = reducedMotion()
     val turn by androidx.compose.animation.core.animateFloatAsState(if (expanded) 180f else 0f, YuMotion.move(reduced, 250), label = "chevron")
     Row(
-        Modifier.clip(RoundedCornerShape(14.dp))
+        Modifier.clip(yuRound(14))
             .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
             .semantics { contentDescription = "Source: $title. ${if (expanded) "Menu open" else "Tap to change"}" }
             .then(if (tag != null) Modifier.testTag(tag) else Modifier)

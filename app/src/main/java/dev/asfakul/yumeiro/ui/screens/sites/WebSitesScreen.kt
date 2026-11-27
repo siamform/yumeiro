@@ -85,6 +85,7 @@ import dev.asfakul.yumeiro.ui.screens.settings.GuideCard
 import dev.asfakul.yumeiro.ui.screens.settings.SetupGuides
 import dev.asfakul.yumeiro.ui.screens.stream.PageStreamFinderDialog
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Websites: sites the user saved to watch through Yumeiro's player. A site opens in the page
@@ -293,8 +294,8 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         }
         val addCard: @Composable () -> Unit = {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
-                        .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
+                    Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh)
+                        .border(1.dp, p.textPrimary.copy(alpha = 0.06f), yuRound(22)).padding(14.dp),
                 ) {
                     Text(when (only) { SavedSites.Kind.TELEGRAM -> "Add a public Telegram channel"; SavedSites.Kind.WEBSITE -> "Add a website"; null -> "Add a website or Telegram channel" }, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Spacer(Modifier.height(8.dp))
@@ -305,13 +306,13 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                             leadingIcon = { Icon(Icons.Default.Public, null, tint = p.textSecondary) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { add() }),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = yuRound(16),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                             modifier = Modifier.weight(1f).testTag("site_add_field"),
                         )
                         Spacer(Modifier.width(10.dp))
                         Box(
-                            Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(p.accent)
+                            Modifier.size(52.dp).clip(yuRound(16)).background(p.accent)
                                 .combinedClickable(onClickLabel = if (telegramPage) "Add channel" else "Add website", onClick = { add() }).testTag("site_add"),
                             contentAlignment = Alignment.Center,
                         ) { Icon(Icons.Default.Add, if (telegramPage) "Add channel" else "Add website", tint = p.onAccent) }
@@ -328,7 +329,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             tab?.takeIf { tabs && !it.visible }?.let { t ->
                 item("website_tab_card") {
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                        Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh)
                             .clickable { WebsiteTab.resume() }.heightIn(min = 56.dp).padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("website_tab_card"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -348,7 +349,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             if (telegramPage) item("add") { addCard() }
             if (accountEnabled) item("tg_account_card") {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                    Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh)
                         .clickable(onClickLabel = if (signedIn) "Open your chats" else "Sign in to Telegram") { account = true }
                         .heightIn(min = 56.dp).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp).testTag("tg_account_card"),
                     verticalAlignment = Alignment.CenterVertically,
@@ -374,7 +375,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 }
             } else if (telegramPage && accountUnavailable != null) item("tg_account_unavailable") {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh).padding(16.dp).testTag("tg_account_unavailable"),
+                    Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh).padding(16.dp).testTag("tg_account_unavailable"),
                 ) {
                     Text("Sign-in isn't available here", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
                     Text(accountUnavailable, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
@@ -392,14 +393,14 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                         keyboardActions = KeyboardActions(onGo = { SiteGo.target(query)?.let { (url, name) -> openUnsaved(url, name) } }),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = yuRound(16),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                         modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("site_search"),
                     )
                     SiteGo.target(query)?.let { (url, name) ->
                         val web = SiteGo.isSearch(url)
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceContainerHigh)
+                            Modifier.fillMaxWidth().clip(yuRound(16)).background(p.surfaceContainerHigh)
                                 .combinedClickable(onClickLabel = if (web) "Search the web" else "Open", onClick = { openUnsaved(url, name) })
                                 .padding(horizontal = 14.dp, vertical = 12.dp).testTag(if (web) "site_web_search" else "site_go"),
                             verticalAlignment = Alignment.CenterVertically,
@@ -416,7 +417,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     value = query, onValueChange = { query = it }, singleLine = true,
                     placeholder = { Text(if (telegramPage) "Search your channels" else "Search your websites") },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = yuRound(16),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                     modifier = Modifier.fillMaxWidth().testTag("site_search"),
                 )
@@ -427,7 +428,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             if (sites.isEmpty()) item("empty") {
                 Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
-                        Modifier.size(64.dp).clip(RoundedCornerShape(20.dp))
+                        Modifier.size(64.dp).clip(yuRound(20))
                             .background(Brush.linearGradient(listOf(p.accent.copy(alpha = 0.30f), p.accent2.copy(alpha = 0.18f)))),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(30.dp)) }
@@ -472,7 +473,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             // saved sites stay the focus of the page.
             if (telegramPage) item("help_hint") {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).combinedClickable(onClickLabel = "How it works", onClick = { help = true })
+                    Modifier.fillMaxWidth().clip(yuRound(14)).combinedClickable(onClickLabel = "How it works", onClick = { help = true })
                         .padding(vertical = 10.dp).testTag("site_help_hint"),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -494,7 +495,7 @@ internal fun SiteRow(
     val p = LocalMtPalette.current
     var menu by remember { mutableStateOf(false) }
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh)
+        modifier.fillMaxWidth().clip(yuRound(18)).background(p.surfaceContainerHigh)
             .combinedClickable(onClickLabel = "Open ${site.name}", onLongClick = { menu = true }, onClick = onOpen)
             .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp).testTag("site_row"),
         verticalAlignment = Alignment.CenterVertically,
@@ -508,11 +509,11 @@ internal fun SiteRow(
                 dev.asfakul.yumeiro.online.telegram.TelegramAvatars.get(context, channel)?.let { value = it }
             }
             TelegramAvatar(photo, site.name, size = 44.dp, modifier = Modifier.testTag("site_avatar"))
-        } else Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        } else Box(Modifier.size(44.dp).clip(yuRound(14)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(site.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             AsyncImage(
                 model = site.iconUrl ?: "https://www.google.com/s2/favicons?domain=${site.host}&sz=64", contentDescription = null,
-                modifier = Modifier.size(26.dp).clip(RoundedCornerShape(6.dp)),
+                modifier = Modifier.size(26.dp).clip(yuRound(6)),
             )
         }
         Spacer(Modifier.width(12.dp))
@@ -558,14 +559,14 @@ private fun RecentRow(v: dev.asfakul.yumeiro.online.web.SiteHistory.Visit, onOpe
     val p = LocalMtPalette.current
     val host = remember(v.url) { SavedSites.hostOf(v.url) ?: v.url }
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh.copy(alpha = 0.6f))
+        modifier.fillMaxWidth().clip(yuRound(18)).background(p.surfaceContainerHigh.copy(alpha = 0.6f))
             .combinedClickable(onClickLabel = "Open ${v.name}", onLongClick = onForget, onClick = onOpen)
             .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("recent_row"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(36.dp).clip(yuRound(12)).background(p.accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
             Text(v.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.Bold)
-            AsyncImage(model = v.iconUrl ?: "https://www.google.com/s2/favicons?domain=$host&sz=64", contentDescription = null, modifier = Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)))
+            AsyncImage(model = v.iconUrl ?: "https://www.google.com/s2/favicons?domain=$host&sz=64", contentDescription = null, modifier = Modifier.size(22.dp).clip(yuRound(5)))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {

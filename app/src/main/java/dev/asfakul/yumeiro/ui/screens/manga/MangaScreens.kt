@@ -132,6 +132,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private enum class Feed { POPULAR, LATEST, SEARCH }
 
@@ -276,7 +277,7 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
                     val sel = p.id == selected
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-                            .background(if (sel) pal.accent.copy(alpha = 0.14f) else Color.Transparent, RoundedCornerShape(16.dp))
+                            .background(if (sel) pal.accent.copy(alpha = 0.14f) else Color.Transparent, yuRound(16))
                             .clickable { onPick(p.id) }.padding(horizontal = 10.dp, vertical = 8.dp).testTag("manga_source_${p.id}"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -357,7 +358,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
 @Composable
 private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, onClick: (MangaItem) -> Unit) {
     Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable { onClick(m) }) {
-        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(yuRound(12)).background(GlassFill), contentAlignment = Alignment.Center) {
             MangaCoverImage(m.providerId, m.cover, Modifier.fillMaxSize())
         }
         Spacer(Modifier.height(6.dp))
@@ -427,7 +428,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             item("head") {
                 Row {
-                    Box(Modifier.width(112.dp).aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+                    Box(Modifier.width(112.dp).aspectRatio(0.7f).clip(yuRound(14)).background(GlassFill), contentAlignment = Alignment.Center) {
                         MangaCoverImage(providerId, item.cover, Modifier.fillMaxSize())
                     }
                     Spacer(Modifier.width(14.dp))
@@ -439,7 +440,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                         val resume = entry?.lastChapterUrl?.let { u -> chapters?.firstOrNull { it.url == u } }
                         val first = chapters?.lastOrNull()
                         (resume ?: first)?.let { ch ->
-                            Button(onClick = { onRead(item, ch) }, shape = RoundedCornerShape(20.dp),
+                            Button(onClick = { onRead(item, ch) }, shape = yuRound(20),
                                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("manga_read")) {
                                 Text(if (resume != null) "Continue · ${ch.name}" else "Start reading", maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
@@ -468,7 +469,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                 }
                 items(list, key = { it.url }) { ch ->
                     val read = entry?.readChapters?.contains(ch.url) == true
-                    Surface(shape = RoundedCornerShape(12.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable { onRead(item, ch) }) {
+                    Surface(shape = yuRound(12), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable { onRead(item, ch) }) {
                       Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 10.dp)) {
                             Text(ch.name, color = if (read) TextTertiary else TextPrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -690,12 +691,12 @@ private fun MangaReaderChapter(
         val total = pages?.size ?: 0
         if (total > 0) AnimatedVisibility(chrome, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
             Text("${current + 1} / $total", color = Color.White, fontSize = 12.sp,
-                modifier = Modifier.navigationBarsPadding().padding(12.dp).background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp))
+                modifier = Modifier.navigationBarsPadding().padding(12.dp).background(Color.Black.copy(alpha = 0.6f), yuRound(12)).padding(horizontal = 10.dp, vertical = 4.dp))
         }
         tlStatus?.let { msg ->
             Text(msg, color = Color.White, fontSize = 12.sp,
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 44.dp)
-                    .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(12.dp)).clickable { if (tlEff.from == tlEff.dst) tlSheet = true else tlTry++ }
+                    .background(Color.Black.copy(alpha = 0.75f), yuRound(12)).clickable { if (tlEff.from == tlEff.dst) tlSheet = true else tlTry++ }
                     .padding(horizontal = 12.dp, vertical = 6.dp).testTag("tl_status"))
         }
         if (tlSheet) TranslateSheet(tl, MangaTlPlan.fromProvider(provider?.lang), onChange = { tl = it; MangaTranslate.save(context, it) }, onDismiss = { tlSheet = false })
@@ -708,7 +709,7 @@ private fun MangaReaderChapter(
 private fun SavedEndCard() {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
-            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp)).padding(20.dp).testTag("reader_saved_end"),
+            .background(Color.White.copy(alpha = 0.08f), yuRound(16)).padding(20.dp).testTag("reader_saved_end"),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("End of your saved chapters", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -722,7 +723,7 @@ private fun SavedEndCard() {
 private fun NextChapterCard(next: MangaChapter, onClick: () -> Unit) {
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp)
-            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.08f), yuRound(16))
             .clickable(onClick = onClick).padding(20.dp).testTag("reader_next_card"),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -748,7 +749,7 @@ private fun TranslateSheet(s: MangaTranslate.Settings, sourceLang: String?, onCh
     LaunchedEffect(packsTry) { packs = MangaTranslate.packs(context) }
     @Composable fun Chip(label: String, on: Boolean, tag: String, click: () -> Unit) {
         Text(label, color = if (on) OnAccent else TextPrimary, fontSize = 13.sp,
-            modifier = Modifier.padding(end = 6.dp, bottom = 6.dp).background(if (on) SpotifyGreen else Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            modifier = Modifier.padding(end = 6.dp, bottom = 6.dp).background(if (on) SpotifyGreen else Color.White.copy(alpha = 0.08f), yuRound(16))
                 .clickable(onClick = click).padding(horizontal = 12.dp, vertical = 7.dp).testTag(tag)
                 .semantics { selected = on })
     }
@@ -819,7 +820,7 @@ private fun TlPill(state: TlPage, pageIndex: Int, modifier: Modifier, onRetry: (
         else -> return
     }
     Text(text, color = Color.White, fontSize = 11.sp,
-        modifier = modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+        modifier = modifier.padding(8.dp).background(Color.Black.copy(alpha = 0.7f), yuRound(10))
             .then(if (state == TlPage.Failed) Modifier.clickable(onClick = onRetry) else Modifier)
             .padding(horizontal = 8.dp, vertical = 4.dp).testTag("tl_page_${pageIndex}_state"))
 }
@@ -837,7 +838,7 @@ private fun TlOverlay(bubbles: List<MangaTlPlan.Bubble>, pageIndex: Int, w: Int,
             Box(
                 Modifier.offset { androidx.compose.ui.unit.IntOffset((dx + l * k).toInt(), (dy + t * k).toInt()) }
                     .size(with(density) { ((r - l) * k).toDp() }, with(density) { ((bt - t) * k).toDp() })
-                    .background(Color.White.copy(alpha = 0.94f), RoundedCornerShape(6.dp))
+                    .background(Color.White.copy(alpha = 0.94f), yuRound(6))
                     .pointerInput(b) { detectTapGestures(onLongPress = { hidden = hidden + i }) }
                     .semantics { contentDescription = b.text }
                     .testTag("tl_box_${pageIndex}_$i"),

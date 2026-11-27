@@ -62,6 +62,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 private fun keyState(k: Key) = NotifySettings.flow(k).collectAsState()
@@ -73,7 +74,7 @@ internal fun SettingsActionRow(
     status: String? = null, ok: Boolean? = null, danger: Boolean = false, onClick: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 8.dp).testTag(testTag),
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(yuRound(12)).clickable(onClick = onClick).padding(vertical = 8.dp).testTag(testTag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -406,7 +407,7 @@ internal fun SocialLinkRow(links: List<dev.asfakul.yumeiro.notify.SocialLinks.Li
     ) {
         links.forEach { l ->
             Column(
-                Modifier.width(72.dp).clip(RoundedCornerShape(12.dp))
+                Modifier.width(72.dp).clip(yuRound(12))
                     .clickable(onClickLabel = "Open ${l.label}") { Links.open(context, l.url) }
                     .padding(vertical = 6.dp).testTag(prefix + l.id),
                 horizontalAlignment = Alignment.CenterHorizontally,

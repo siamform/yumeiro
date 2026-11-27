@@ -68,6 +68,7 @@ import androidx.compose.ui.window.Dialog
 import dev.asfakul.yumeiro.online.download.DownloadSettings
 import dev.asfakul.yumeiro.online.download.DownloadTracks
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * OL-6: the download popup, redesigned. Users said the old dialog was a wall of text (tips, paths and two big
@@ -150,7 +151,7 @@ internal fun DownloadSheetHost(
         ) { content() }
     } else {
         Dialog(onDismissRequest = { DownloadPrompt.dismiss() }) {
-            Surface(shape = RoundedCornerShape(28.dp), color = p.surface, modifier = Modifier.widthIn(max = 560.dp)) {
+            Surface(shape = yuRound(28), color = p.surface, modifier = Modifier.widthIn(max = 560.dp)) {
                 Box(Modifier.padding(top = 20.dp)) { content() }
             }
         }
@@ -291,7 +292,7 @@ internal fun DownloadSheetContent(
         // 5. One wide button that stays in view.
         Spacer(Modifier.height(10.dp))
         Button(
-            onClick = onStart, shape = RoundedCornerShape(16.dp),
+            onClick = onStart, shape = yuRound(16),
             colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
             modifier = Modifier.fillMaxWidth().height(52.dp).testTag("download_confirm_start"),
         ) {
@@ -318,7 +319,7 @@ private fun DownloadFacts(facts: List<String>) {
     ) {
         facts.forEach { f ->
             Text(f, color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
-                modifier = Modifier.background(p.accent.copy(alpha = 0.14f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 3.dp))
+                modifier = Modifier.background(p.accent.copy(alpha = 0.14f), yuRound(8)).padding(horizontal = 8.dp, vertical = 3.dp))
         }
     }
 }

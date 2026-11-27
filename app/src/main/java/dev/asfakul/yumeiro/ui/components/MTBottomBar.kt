@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import dev.asfakul.yumeiro.ui.navigation.bottomNavItems
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.Yume
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // ---- Floating bottom dock metrics -----------------------------------------------------------
 val DockHorizontalPadding = 14.dp
@@ -175,14 +176,14 @@ fun MTBottomBar(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(yuRound(16))
                             .clickable(
                                 interactionSource = tabSource,
                                 indication = androidx.compose.material3.ripple(bounded = true, color = activeTint),
                                 role = Role.Tab,
                                 onClickLabel = item.label,
                             ) { if (!isSelected) { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.SegmentTick); onNavigateToRoute(item.route) } }
-                            .then(if (tabFocused) Modifier.border(2.dp, activeTint, RoundedCornerShape(16.dp)) else Modifier)
+                            .then(if (tabFocused) Modifier.border(2.dp, activeTint, yuRound(16)) else Modifier)
                             .semantics { selected = isSelected; contentDescription = item.label }
                             .testTag(item.testTag)
                             .tourTarget(item.testTag),

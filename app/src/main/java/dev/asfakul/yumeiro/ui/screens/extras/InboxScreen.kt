@@ -77,6 +77,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.ui.theme.pageBackground
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** The bell page: everything Yumeiro told the user, newest first. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -171,7 +172,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
 
 @Composable
 private fun BlockedBanner(block: AppNotifier.Block, onFix: () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth().testTag("inbox_blocked")) {
+    Surface(shape = yuRound(16), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth().testTag("inbox_blocked")) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.NotificationsOff, null, tint = SpotifyGreen)
             Spacer(Modifier.width(12.dp))
@@ -198,7 +199,7 @@ private fun iconFor(kind: Inbox.Kind): ImageVector = when (kind) {
 @Composable
 private fun InboxRow(item: Inbox.Item, onClick: () -> Unit, onRemove: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = yuRound(16),
         color = if (item.read) GlassFill else SpotifyGreen.copy(alpha = 0.10f),
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("inbox_item"),
     ) {

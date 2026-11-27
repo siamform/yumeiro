@@ -60,6 +60,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // region Navigation bar
 
@@ -161,8 +162,8 @@ private fun ruleMessage(size: Int, adding: Boolean) =
 private fun NavPreview(items: List<Pair<String, androidx.compose.ui.graphics.vector.ImageVector>>) {
     val p = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.navBar)
-            .border(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline(), RoundedCornerShape(22.dp))
+        Modifier.fillMaxWidth().clip(yuRound(22)).background(p.navBar)
+            .border(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline(), yuRound(22))
             .padding(horizontal = 6.dp, vertical = 8.dp).testTag("nav_settings_preview"),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
@@ -241,8 +242,8 @@ private fun NetTab(title: String, value: String, icon: androidx.compose.ui.graph
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (selected) p.accent.copy(alpha = if (p.isDark) 0.18f else 0.14f) else p.surfaceContainerHigh.copy(alpha = 0.45f), label = "net_tab")
     Row(
-        modifier.clip(RoundedCornerShape(16.dp)).background(bg)
-            .border(1.dp, if (selected) p.accent.copy(alpha = 0.55f) else Color.Transparent, RoundedCornerShape(16.dp))
+        modifier.clip(yuRound(16)).background(bg)
+            .border(1.dp, if (selected) p.accent.copy(alpha = 0.55f) else Color.Transparent, yuRound(16))
             .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -260,13 +261,13 @@ private fun TierRow(t: AudioQuality.Tier, selected: Boolean, onClick: () -> Unit
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (selected) p.accent.copy(alpha = if (p.isDark) 0.12f else 0.10f) else Color.Transparent, label = "tier_bg")
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(14.dp)).background(bg)
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(yuRound(14)).background(bg)
             .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp).testTag("audio_quality_${t.name.lowercase()}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Kanji seal for the tier (極 · 高 · 盤 ...) — the Japanese voice of the app, not decoration.
         Box(
-            Modifier.size(36.dp).clip(RoundedCornerShape(11.dp))
+            Modifier.size(36.dp).clip(yuRound(11))
                 .background(if (t.lossless || t == AudioQuality.Tier.ATMOS) BrandGold.copy(alpha = 0.16f) else p.surfaceContainerHigh.copy(alpha = 0.6f)),
             contentAlignment = Alignment.Center,
         ) { Text(t.kana, color = if (t.lossless || t == AudioQuality.Tier.ATMOS) BrandGold else TextSecondary, fontSize = if (t.kana.length > 1) 13.sp else 16.sp, fontWeight = FontWeight.Bold) }

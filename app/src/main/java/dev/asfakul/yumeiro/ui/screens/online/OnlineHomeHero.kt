@@ -80,6 +80,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_ONLINEHOMEHERO_1 = Regex("(?i)\\bE(?:p(?:isode)?)?\\.?\\s*(\\d+)")
@@ -152,7 +153,7 @@ internal fun HeroCarousel(
             Box(
                 Modifier.fillMaxSize()
                     .graphicsLayer { val sc = 0.92f + 0.08f * k; scaleX = sc; scaleY = sc; alpha = 0.55f + 0.45f * k }
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(yuRound(24))
                     .background(Color.Black)
                     .clickable(onClickLabel = "Details") { onInfo(item) }
                     .testTag("online_hero_card"),
@@ -199,7 +200,7 @@ internal fun HeroCarousel(
                         }
                     }
                     Spacer(Modifier.width(14.dp))
-                    Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.08f))) {
+                    Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(yuRound(16)).background(Color.White.copy(alpha = 0.08f))) {
                         PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
                     }
                 }
@@ -227,7 +228,7 @@ internal val HERO_HEIGHT = 212.dp
 private fun ResumeSlide(e: OnlineHistory.Entry, modifier: Modifier, offset: Float, onResume: () -> Unit) {
     val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     Box(
-        modifier.clip(RoundedCornerShape(24.dp)).background(Color.Black)
+        modifier.clip(yuRound(24)).background(Color.Black)
             .clickable(onClickLabel = "Resume") { onResume() }
             .testTag("online_hero_resume"),
     ) {
@@ -309,7 +310,7 @@ internal fun TopTenRow(title: String, items: List<OnlineItem>, onClick: (OnlineI
                             modifier = Modifier.offset(x = 10.dp, y = 14.dp),
                         )
                     }
-                    Box(Modifier.width(104.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(12.dp))) {
+                    Box(Modifier.width(104.dp).aspectRatio(2f / 3f).clip(yuRound(12))) {
                         PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
                         PosterMark(mark, Modifier.align(Alignment.BottomEnd))
                     }
@@ -332,9 +333,9 @@ internal fun ContinueRow(entries: List<OnlineHistory.Entry>, onClick: (OnlineIte
                 var sheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
                 val asItem = remember(e) { e.toItem() }
                 if (actions && sheet) PosterActionsSheet(asItem) { sheet = false }
-                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).posterPress({ onClick(asItem) }, if (actions) ({ sheet = true }) else null)
+                Column(Modifier.width(200.dp).clip(yuRound(14)).posterPress({ onClick(asItem) }, if (actions) ({ sheet = true }) else null)
                     .testTag("online_continue_card").padding(bottom = 10.dp)) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp))) {
+                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(14))) {
                         PosterImage(e.posterUrl, e.posterHeaders, Modifier.fillMaxSize())
                         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))))
                         Box(Modifier.align(Alignment.Center).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {

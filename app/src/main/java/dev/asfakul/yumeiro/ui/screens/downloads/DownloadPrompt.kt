@@ -67,6 +67,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Opens the Downloads page from anywhere (snackbar action, notification, Home, Library). */
 object DownloadsNav {
@@ -316,7 +317,7 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
 
         // Tips
         Spacer(Modifier.height(12.dp))
-        Surface(shape = RoundedCornerShape(12.dp), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
+        Surface(shape = yuRound(12), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Lightbulb, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
@@ -360,7 +361,7 @@ private fun InfoLine(icon: ImageVector, text: String, small: Boolean = false) {
 @Composable
 private fun KeepOption(selected: Boolean, icon: ImageVector, title: String, body: String, tag: String, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(14.dp), color = if (selected) SpotifyGreen.copy(alpha = 0.12f) else GlassFill,
+        shape = yuRound(14), color = if (selected) SpotifyGreen.copy(alpha = 0.12f) else GlassFill,
         border = if (selected) BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)) else null,
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable(onClick = onClick).testTag(tag),
     ) {

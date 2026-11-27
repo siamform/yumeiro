@@ -61,6 +61,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * F-02 (ADR-042): a saved public Telegram channel. Lists the channel's video posts from Telegram's
@@ -229,7 +230,7 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
             header?.takeIf { query.isEmpty() }?.let { h -> item(key = "header") { TelegramChannelHeader(h) } }
             appOnly?.let { post ->
                 item(key = "app_only") {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)).padding(12.dp).testTag("tg_app_only")) {
+                    Column(Modifier.fillMaxWidth().clip(yuRound(12)).background(p.accent.copy(alpha = 0.10f)).padding(12.dp).testTag("tg_app_only")) {
                         Text(appOnlyText, color = p.textPrimary, fontSize = 13.sp, modifier = Modifier.testTag("tg_app_only_text"))
                         Row {
                             if (onSignIn != null) {
@@ -305,16 +306,16 @@ private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, sign
     val p = LocalMtPalette.current
     val label = post.text.lineSequence().firstOrNull()?.ifBlank { null } ?: "Video ${post.id}"
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceContainerHigh)
+        Modifier.fillMaxWidth().clip(yuRound(16)).background(p.surfaceContainerHigh)
             .clickable(onClickLabel = if (post.playable || signedIn) "Play" else "Sign in to play", role = Role.Button, onClick = onClick)
             .padding(10.dp).testTag("tg_post_${post.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(128.dp).height(72.dp).clip(RoundedCornerShape(10.dp)).background(p.accent.copy(alpha = 0.14f))) {
+        Box(Modifier.width(128.dp).height(72.dp).clip(yuRound(10)).background(p.accent.copy(alpha = 0.14f))) {
             post.thumbUrl?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
             (post.duration ?: post.size)?.let {
                 Text(it, color = androidx.compose.ui.graphics.Color.White, fontSize = 11.sp,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(RoundedCornerShape(4.dp))
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(yuRound(4))
                         .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f)).padding(horizontal = 4.dp, vertical = 1.dp))
             }
         }

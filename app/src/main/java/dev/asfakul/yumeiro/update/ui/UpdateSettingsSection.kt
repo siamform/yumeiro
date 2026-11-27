@@ -62,6 +62,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.update.UpdateManager
 import dev.asfakul.yumeiro.update.UpdateState
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** "App updates" card for the Settings screen. */
 @Composable
@@ -74,7 +75,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
 
     Card(
         modifier = modifier.fillMaxWidth().testTag("settings_updates_card"),
-        shape = RoundedCornerShape(14.dp),
+        shape = yuRound(14),
         colors = CardDefaults.cardColors(containerColor = DarkSurfaceContainerHigh),
         border = BorderStroke(0.5.dp, DarkOutline),
     ) {
@@ -116,7 +117,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
 
             // Check for updates row with live status
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                Modifier.fillMaxWidth().clip(yuRound(8))
                     .clickable(enabled = state !is UpdateState.Checking) { manager.checkForUpdates(userInitiated = true) }
                     .padding(vertical = 8.dp)
                     .testTag("setting_check_updates"),
@@ -136,7 +137,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                 Spacer(Modifier.height(6.dp))
                 LinearProgressIndicator(
                     progress = { downloading.progress },
-                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(yuRound(3)),
                     color = SpotifyGreen, trackColor = DarkSurfaceVariant, strokeCap = StrokeCap.Round,
                 )
             }
@@ -171,7 +172,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
             Divider()
 
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                Modifier.fillMaxWidth().clip(yuRound(8))
                     .clickable {
                         runCatching {
                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(manager.releasesPageUrl)))

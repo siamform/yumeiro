@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One Library shortcut: label, icon, its own two-tone hue and the action. */
 internal data class LibraryShortcut(
@@ -90,9 +91,9 @@ private fun ShortcutTile(s: LibraryShortcut, modifier: Modifier) {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.88f else 1f, spring(dampingRatio = 0.45f, stiffness = 600f), label = "sc_scale")
-    val shape = RoundedCornerShape(17.dp)
+    val shape = yuRound(17)
     Column(
-        modifier.clip(RoundedCornerShape(16.dp))
+        modifier.clip(yuRound(16))
             .clickable(interactionSource = source, indication = null, enabled = s.enabled && !s.busy, role = Role.Button, onClickLabel = s.label, onClick = s.onClick)
             .padding(vertical = 4.dp)
             .testTag(s.testTag),

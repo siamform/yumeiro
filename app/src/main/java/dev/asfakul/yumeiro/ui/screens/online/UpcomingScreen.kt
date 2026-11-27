@@ -61,6 +61,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** What a search started from another page should type in (consumed once by [OnlineSearchScreen]). */
 internal object OnlineSearchPending {
@@ -285,7 +286,7 @@ private fun UpcomingFilterButton(
 ) {
     val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     Row(
-        modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(16.dp))
+        modifier.heightIn(min = 52.dp).clip(yuRound(16))
             .background(if (on) p.accent.copy(alpha = 0.16f) else GlassFill)
             .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .semantics(mergeDescendants = true) { contentDescription = "$title: $value. Change" }
@@ -323,11 +324,11 @@ internal object UpcomingCountries {
 @Composable
 private fun UpcomingRow(e: Upcoming.Entry, showTime: Boolean = false, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(GlassFill)
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(yuRound(14)).background(GlassFill)
             .clickable(onClick = onClick).padding(8.dp).testTag("upcoming_entry"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        PosterImage(e.posterUrl, emptyMap(), Modifier.width(48.dp).height(72.dp).clip(RoundedCornerShape(8.dp)))
+        PosterImage(e.posterUrl, emptyMap(), Modifier.width(48.dp).height(72.dp).clip(yuRound(8)))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(e.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)

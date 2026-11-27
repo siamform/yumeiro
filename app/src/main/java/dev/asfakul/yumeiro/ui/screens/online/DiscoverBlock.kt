@@ -75,6 +75,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Group O (F5, F6, F9): discovery in Yumix "All" and on Home, from Yumeiro Cloud's TMDB metadata.
@@ -162,7 +163,7 @@ internal fun Modifier.discoverBleed(gutter: androidx.compose.ui.unit.Dp): Modifi
 }
 
 private val Chip = RoundedCornerShape(50)
-private val Tile = RoundedCornerShape(16.dp)
+private val Tile = yuRound(16)
 
 /** The section bar (one row of chips). */
 @Composable

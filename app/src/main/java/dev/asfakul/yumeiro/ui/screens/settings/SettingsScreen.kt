@@ -108,6 +108,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.update.ui.UpdateSettingsCard
 import dev.asfakul.yumeiro.youtube.YtAccount
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Settings home: a search box, a quick health strip and five groups of categories. Each category
@@ -343,9 +344,9 @@ private fun HealthStrip(statuses: Map<Category, Status>, onOpen: (Category) -> U
             val warn = s?.ok == false
             val warnColor = dev.asfakul.yumeiro.ui.theme.WarnTone
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
+                Modifier.weight(1f).clip(yuRound(18))
                     .background(Brush.verticalGradient(listOf(look.tint.copy(alpha = if (warn) 0.10f else 0.16f), GlassFill)))
-                    .border(1.dp, if (warn) warnColor.copy(alpha = 0.55f) else BrandGold.copy(alpha = 0.22f), RoundedCornerShape(18.dp))
+                    .border(1.dp, if (warn) warnColor.copy(alpha = 0.55f) else BrandGold.copy(alpha = 0.22f), yuRound(18))
                     .clickable { onOpen(c) }.padding(12.dp).testTag("settings_health_${c.name.lowercase()}"),
             ) {
                 Icon(look.icon, null, tint = if (warn) warnColor else look.tint.legibleOnTheme(), modifier = Modifier.size(20.dp))
@@ -484,7 +485,7 @@ fun SettingsToggleRow(
     enabled: Boolean = true,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp))
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(yuRound(12))
             .clickable(enabled = enabled) { onCheckedChange(!checked) }.padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

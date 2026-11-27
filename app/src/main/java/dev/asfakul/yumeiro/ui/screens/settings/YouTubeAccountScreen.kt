@@ -87,6 +87,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.youtube.YtAccount
 import java.text.DateFormat
 import java.util.Date
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private val YouTubeRed = Color(0xFFFF4E45)
 
@@ -166,7 +167,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
             GlassGroup {
                 YtAccount.Mode.entries.forEach { m ->
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable { YtAccount.setMode(context, m) }
+                        Modifier.fillMaxWidth().clip(yuRound(14)).clickable { YtAccount.setMode(context, m) }
                             .padding(horizontal = 8.dp, vertical = 6.dp).testTag("yt_mode_${m.name.lowercase()}"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -229,7 +230,7 @@ private fun GoogleSignInPage(onDone: (Boolean) -> Unit) {
             Text("The sign-in page stopped responding. Go back and try again.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
             return@Column
         }
-        Surface(Modifier.fillMaxSize().padding(8.dp).border(1.dp, goldHairline(), RoundedCornerShape(18.dp)), shape = RoundedCornerShape(18.dp), color = Color.White) {
+        Surface(Modifier.fillMaxSize().padding(8.dp).border(1.dp, goldHairline(), yuRound(18)), shape = yuRound(18), color = Color.White) {
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { ctx ->

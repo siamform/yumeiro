@@ -56,6 +56,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.MtPalette
 import dev.asfakul.yumeiro.ui.theme.buildScene
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** A small live preview of a theme's 夢色 scene (same renderer as the page backdrop). */
 fun Modifier.dreamScenePreview(p: MtPalette, intensity: Float = 1f, scene: Boolean = true): Modifier = drawWithCache {
@@ -93,7 +94,7 @@ fun BackdropSettingsSection() {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
         BackdropStyle.entries.filter { it != BackdropStyle.CALM }.forEach { s ->
             val sel = style == s
-            val shape = RoundedCornerShape(16.dp)
+            val shape = yuRound(16)
             Column(
                 Modifier.weight(1f).clip(shape)
                     .clickable(role = Role.RadioButton) {

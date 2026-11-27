@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * GROUP C (owner master prompt): page tools are small icons instead of wide boxes and paragraphs.
@@ -190,7 +191,7 @@ fun AddLinkSheet(
             }
             Button(
                 onClick = { submit() }, enabled = !busy && text.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent), shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent), shape = yuRound(24),
                 modifier = Modifier.fillMaxWidth().height(48.dp).testTag(tag + "_add"),
             ) { Text(if (busy) "Adding…" else "Add", fontWeight = FontWeight.Bold) }
             extra?.invoke(this)

@@ -92,6 +92,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreenBright
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 fun LibraryScreen(
@@ -378,7 +379,7 @@ fun LibraryScreen(
                                 playlistTracks.firstOrNull()?.let { onTrackClick(it, playlistTracks) }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = yuRound(20),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = OnAccent)
@@ -394,7 +395,7 @@ fun LibraryScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = yuRound(20),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = SpotifyGreen)
@@ -420,7 +421,7 @@ fun LibraryScreen(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp)),
+                            .clip(yuRound(10)),
                         color = if (currentPlayingTrack?.id == track.id) SpotifyGreen.copy(alpha = 0.15f) else GlassFill
                     ) {
                         Row(
@@ -541,7 +542,7 @@ fun LibraryCategoryCard(
 ) {
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(yuRound(20))
             .clickable { onClick() }
             .testTag(testTag),
         color = GlassFill,
@@ -554,7 +555,7 @@ fun LibraryCategoryCard(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(yuRound(12))
                     .background(iconTint.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {

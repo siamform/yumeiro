@@ -55,6 +55,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.ui.theme.pageBackground
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Public payment details for supporting the developer (shown in-app; nothing is sent anywhere). */
 object SupportInfo {
@@ -101,7 +102,7 @@ fun SupportScreen(onBack: () -> Unit) {
                 SupportYumeiroCard(full = true, showCoffee = false)
                 Text("Tap a detail to copy it. Any amount helps, and so does a kind word.", color = TextSecondary, fontSize = 12.sp)
                 SupportInfo.groups.forEach { g -> GroupCard(g) { e -> copy(context, e.label, e.value) } }
-                Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Other ways to help", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Spacer(Modifier.height(4.dp))
@@ -126,7 +127,7 @@ fun SupportScreen(onBack: () -> Unit) {
 
 @Composable
 private fun GroupCard(g: SupportInfo.Group, onCopy: (SupportInfo.Entry) -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("support_group")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("support_group")) {
         Column(Modifier.padding(vertical = 10.dp)) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(g.icon, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))

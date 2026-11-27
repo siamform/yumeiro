@@ -57,6 +57,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import kotlin.math.abs
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Slim vertical level bar (like the phone's own volume slider): percentage on top, a thin rounded
@@ -89,10 +90,10 @@ private fun VerticalLevelBar(
         )
         Spacer(Modifier.height(8.dp))
         Box(
-            Modifier.weight(1f).width(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.28f)),
+            Modifier.weight(1f).width(3.dp).clip(yuRound(2)).background(Color.White.copy(alpha = 0.28f)),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            Box(Modifier.fillMaxWidth().fillMaxHeight(animated).clip(RoundedCornerShape(2.dp)).background(accent))
+            Box(Modifier.fillMaxWidth().fillMaxHeight(animated).clip(yuRound(2)).background(accent))
         }
         Spacer(Modifier.height(8.dp))
         Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -142,7 +143,7 @@ fun VolumeHUD(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "Loud: protect your hearing", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xCC8A2A12)).padding(horizontal = 8.dp, vertical = 4.dp).testTag("volume_boost_warning"),
+                    modifier = Modifier.padding(end = 6.dp).clip(yuRound(8)).background(Color(0xCC8A2A12)).padding(horizontal = 8.dp, vertical = 4.dp).testTag("volume_boost_warning"),
                 )
                 VerticalLevelBar(boost, icon, "Volume boost", "volume_hud", number = dev.asfakul.yumeiro.player.VolumeBoost.percent(volumeLevel, maxVolume, boost), fill = Color(0xFFFF8A3D))
             }
@@ -171,7 +172,7 @@ fun ScrubSeekHUD(
         val formattedDelta = "$deltaSign${formatDuration(abs(deltaMs))}"
 
         Surface(
-            shape = RoundedCornerShape(18.dp),
+            shape = yuRound(18),
             color = Color.Black.copy(alpha = 0.85f),
             tonalElevation = 8.dp,
             modifier = Modifier.testTag("scrub_seek_hud")
@@ -209,7 +210,7 @@ fun ScrubSeekHUD(
                     modifier = Modifier
                         .width(130.dp)
                         .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp)),
+                        .clip(yuRound(3)),
                     color = SpotifyGreen,
                     trackColor = Color.White.copy(alpha = 0.25f),
                 )
@@ -273,7 +274,7 @@ fun ToastHUD(
         modifier = modifier
     ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = yuRound(24),
             color = Color.Black.copy(alpha = 0.85f),
             tonalElevation = 6.dp,
             modifier = Modifier.testTag("toast_hud")
@@ -297,7 +298,7 @@ fun ResumePill(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = yuRound(24),
         color = androidx.compose.ui.graphics.Color(0xFF2C2452),
         shadowElevation = 10.dp,
         modifier = modifier.testTag("video_resume_pill")

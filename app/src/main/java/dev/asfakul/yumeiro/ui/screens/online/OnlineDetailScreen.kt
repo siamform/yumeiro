@@ -102,6 +102,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private sealed interface DetailState {
     data object Loading : DetailState
@@ -245,13 +246,13 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
                     }
                     Spacer(Modifier.width(8.dp))
-                    Column(Modifier.clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha = 0.35f)).padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    Column(Modifier.clip(yuRound(14)).background(Color.Black.copy(alpha = 0.35f)).padding(horizontal = 12.dp, vertical = 6.dp)) {
                         dev.asfakul.yumeiro.ui.components.YumeiroMark(light = true)
                         Text(d.api, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                     }
                 }
                 Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 170.dp), verticalAlignment = Alignment.Bottom) {
-                    Box(Modifier.width(110.dp).aspectRatio(2f / 3f).clip(RoundedCornerShape(14.dp))) {
+                    Box(Modifier.width(110.dp).aspectRatio(2f / 3f).clip(yuRound(14))) {
                         PosterImage(d.posterUrl, d.posterHeaders, Modifier.fillMaxSize())
                     }
                     Spacer(Modifier.width(14.dp))
@@ -286,7 +287,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                     val resumeText = resume?.takeIf { it.positionMs > 15_000 }?.let { r -> " · " + formatClock(r.positionMs) + " left of " + formatClock(r.durationMs) }
                     Button(
                         onClick = { if (targetEp != null) onPlay(version, target) else onPlay(version, -1) },
-                        shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
+                        shape = yuRound(24), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.fillMaxWidth().height(50.dp).testTag("online_detail_play"),
                     ) {
                         Icon(Icons.Default.PlayArrow, null)
@@ -383,9 +384,9 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
 
 @Composable
 private fun EpisodeRow(e: OnlineEpisode, d: OnlineDetail, stills: Map<String, String>?, progress: Float = 0f, watched: Boolean = false, status: dev.asfakul.yumeiro.online.EpisodeStatus? = null, trailing: @Composable () -> Unit = {}, onClick: () -> Unit) {
-    Surface(shape = RoundedCornerShape(16.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable(onClick = onClick).testTag("online_episode")) {
+    Surface(shape = yuRound(16), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clickable(onClick = onClick).testTag("online_episode")) {
         Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))) {
+            Box(Modifier.width(112.dp).aspectRatio(16f / 9f).clip(yuRound(10))) {
                 EpisodeThumb(d, e, stills, Modifier.fillMaxSize())
                 Icon(if (watched) Icons.Default.CheckCircle else Icons.Default.PlayArrow, null, tint = if (watched) SpotifyGreen else Color.White, modifier = Modifier.align(Alignment.Center).size(28.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)).padding(3.dp))
                 if (progress > 0.01f) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.2f))) {
@@ -414,7 +415,7 @@ private fun DetailSkeleton(preview: OnlineItem?, onBack: () -> Unit) {
             if (preview?.posterUrl != null) {
                 PosterImage(preview.posterUrl, preview.posterHeaders, Modifier.fillMaxSize())
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.3f), DarkBackground))))
-            } else Box(Modifier.fillMaxSize().shimmer(RoundedCornerShape(0.dp)))
+            } else Box(Modifier.fillMaxSize().shimmer(yuRound(0)))
             IconButton(onClick = onBack, modifier = Modifier.statusBarsPadding().padding(4.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.35f))) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
             }
@@ -422,10 +423,10 @@ private fun DetailSkeleton(preview: OnlineItem?, onBack: () -> Unit) {
                 modifier = Modifier.align(Alignment.BottomStart).padding(16.dp))
         }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            SkeletonBlock(null, 50.dp, shape = RoundedCornerShape(24.dp))
+            SkeletonBlock(null, 50.dp, shape = yuRound(24))
             SkeletonBlock(null, 12.dp); SkeletonBlock(null, 12.dp); SkeletonBlock(220.dp, 12.dp)
             Spacer(Modifier.height(8.dp))
-            repeat(4) { SkeletonBlock(null, 64.dp, shape = RoundedCornerShape(16.dp)) }
+            repeat(4) { SkeletonBlock(null, 64.dp, shape = yuRound(16)) }
         }
     }
 }
@@ -433,7 +434,7 @@ private fun DetailSkeleton(preview: OnlineItem?, onBack: () -> Unit) {
 @Composable
 private fun EpisodeTile(e: OnlineEpisode, tag: String? = null, current: Boolean, progress: Float, watched: Boolean, modifier: Modifier, downloaded: Boolean = false, fresh: Boolean = false, onClick: () -> Unit) {
     val bg = when { current -> SpotifyGreen.copy(alpha = 0.24f); watched -> Color.White.copy(alpha = 0.04f); else -> GlassFill }
-    Box(modifier.aspectRatio(1.25f).clip(RoundedCornerShape(12.dp)).background(bg).clickable(onClick = onClick).testTag("online_episode"), contentAlignment = Alignment.Center) {
+    Box(modifier.aspectRatio(1.25f).clip(yuRound(12)).background(bg).clickable(onClick = onClick).testTag("online_episode"), contentAlignment = Alignment.Center) {
         Text(e.episode?.toString() ?: "•", color = if (watched) TextTertiary else TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         if (tag != null) Text(tag, color = TextSecondary, fontSize = 9.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier.align(Alignment.TopStart).padding(start = 5.dp, top = 3.dp, end = 14.dp).testTag("online_episode_tag"))
@@ -480,14 +481,14 @@ private fun MyListButton(d: OnlineDetail) {
                 val now = dev.asfakul.yumeiro.online.OnlineBookmarks.toggle(context, item, dev.asfakul.yumeiro.online.NewEpisodesWorker.episodeCount(d))
                 dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) "Added to My List" else "Removed from My List")
             },
-            shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f).height(46.dp).testTag("online_detail_mylist"),
+            shape = yuRound(24), modifier = Modifier.weight(1f).height(46.dp).testTag("online_detail_mylist"),
         ) {
             Icon(if (b != null) Icons.Default.Check else Icons.Default.Add, null, tint = if (b != null) SpotifyGreen else TextPrimary)
             Spacer(Modifier.width(6.dp))
             Text(if (b != null) "In My List" else "My List", color = TextPrimary, fontWeight = FontWeight.SemiBold)
         }
         if (b != null) Box {
-            androidx.compose.material3.OutlinedButton(onClick = { menu = true }, shape = RoundedCornerShape(24.dp), modifier = Modifier.height(46.dp)) {
+            androidx.compose.material3.OutlinedButton(onClick = { menu = true }, shape = yuRound(24), modifier = Modifier.height(46.dp)) {
                 Text(b.status.label, color = TextPrimary, fontSize = 13.sp)
             }
             androidx.compose.material3.DropdownMenu(menu, onDismissRequest = { menu = false }) {
@@ -504,7 +505,7 @@ private fun MyListButton(d: OnlineDetail) {
                 val c = dev.asfakul.yumeiro.online.OnlineBookmarks.toggleFavorite(context, item)
                 dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (c == dev.asfakul.yumeiro.online.OnlineBookmarks.Change.ADDED) "Added to Favorites" else "Removed from Favorites")
             },
-            shape = RoundedCornerShape(24.dp), contentPadding = PaddingValues(horizontal = 14.dp),
+            shape = yuRound(24), contentPadding = PaddingValues(horizontal = 14.dp),
             modifier = Modifier.height(46.dp).testTag("online_detail_favorite").semantics { contentDescription = if (fav) "Remove from Favorites" else "Add to Favorites" },
         ) {
             Icon(if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (fav) Color(0xFFFF6B8B) else TextPrimary)
@@ -520,12 +521,12 @@ private fun RatingChips(list: List<dev.asfakul.yumeiro.online.meta.TitleFacts.Ra
         list.forEach { r ->
             val imdb = r.source == "IMDb"
             Row(
-                Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.08f)).padding(horizontal = 6.dp, vertical = 3.dp)
+                Modifier.clip(yuRound(8)).background(Color.White.copy(alpha = 0.08f)).padding(horizontal = 6.dp, vertical = 3.dp)
                     .testTag(if (imdb) "online_detail_imdb" else "online_detail_rating"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (imdb) Text("IMDb", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFF5C518)).padding(horizontal = 5.dp, vertical = 1.dp))
+                    modifier = Modifier.clip(yuRound(4)).background(Color(0xFFF5C518)).padding(horizontal = 5.dp, vertical = 1.dp))
                 else {
                     Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(13.dp))
                     Text(" " + r.source.take(24), color = TextSecondary, fontSize = 11.sp, maxLines = 1)

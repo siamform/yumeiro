@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_YUMIXFILTER_1 = Regex("[\\s._-]+")
@@ -231,8 +232,8 @@ private fun SourceChip(label: String, count: Int, sel: Boolean, tag: String, onC
     val bg by animateColorAsState(if (sel) p.accent.copy(alpha = 0.18f) else p.textPrimary.copy(alpha = 0.06f), label = "src_bg")
     Box(Modifier.heightIn(min = 48.dp).selectable(selected = sel, role = Role.RadioButton, onClick = onClick).testTag(tag), contentAlignment = Alignment.Center) {
         Row(
-            Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(10.dp)).background(bg)
-                .border(1.dp, if (sel) p.accent.copy(alpha = 0.6f) else Color.Transparent, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp),
+            Modifier.heightIn(min = 32.dp).clip(yuRound(10)).background(bg)
+                .border(1.dp, if (sel) p.accent.copy(alpha = 0.6f) else Color.Transparent, yuRound(10)).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (sel) { Icon(Icons.Default.Check, null, tint = p.accent, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)) }
@@ -384,7 +385,7 @@ private fun FilterRow(
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (sel) p.accent.copy(alpha = 0.14f) else Color.Transparent, label = "filter_bg")
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).background(bg, RoundedCornerShape(16.dp))
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).background(bg, yuRound(16))
             .selectable(selected = sel, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .testTag(if (name == null) "${tagPrefix}_all" else "${tagPrefix}_$name"),
@@ -468,7 +469,7 @@ private fun CategoryChip(label: String, sel: Boolean, tag: String, onClick: () -
         Modifier.heightIn(min = 48.dp).selectable(selected = sel, role = Role.Tab, onClick = onClick).testTag(tag),
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(10.dp)).background(bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.heightIn(min = 32.dp).clip(yuRound(10)).background(bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
             Text(label, color = if (sel) p.background else p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
     }

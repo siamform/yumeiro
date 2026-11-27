@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** The places that keep working without a connection; provided once by the app shell. */
 @Immutable
@@ -67,7 +68,7 @@ val LocalOfflineExits = staticCompositionLocalOf { OfflineExits() }
 fun OfflineNotice(what: String, modifier: Modifier = Modifier, tag: String = "offline_notice") {
     val p = LocalMtPalette.current
     val exits = LocalOfflineExits.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = yuRound(20)
     Column(
         modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).clip(shape)
             .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.85f else 1f))

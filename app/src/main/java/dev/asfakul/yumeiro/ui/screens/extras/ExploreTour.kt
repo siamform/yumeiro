@@ -85,6 +85,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.roundToInt
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Where a tour stop needs the app to be before it can point at something. */
 enum class TourPlace { HOME, MUSIC, VIDEOS_YUMIX, LIBRARY }
@@ -316,7 +317,7 @@ private fun TourCard(
     var cardLeft by remember { mutableStateOf(0f) }
     var cardWidth by remember { mutableStateOf(0f) }
     val notch = 9.dp
-    val shape = RoundedCornerShape(24.dp)
+    val shape = yuRound(24)
     Column(modifier.widthIn(max = 440.dp).fillMaxWidth()) {
         // A small notch points from the card to the spotlight, like a tutor's finger.
         @Composable fun Notch(up: Boolean) {
@@ -379,7 +380,7 @@ private fun TourCard(
                             inf.animateFloat(0f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "tourTryV").value
                         }
                         Row(
-                            Modifier.clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = if (p.isDark) 0.14f else 0.12f))
+                            Modifier.clip(yuRound(12)).background(p.accent.copy(alpha = if (p.isDark) 0.14f else 0.12f))
                                 .padding(horizontal = 10.dp, vertical = 7.dp).testTag("tour_try_${s.id}"),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

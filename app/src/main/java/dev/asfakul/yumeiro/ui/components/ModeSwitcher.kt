@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One mode of a page (Music: Device / Online / Mix; Videos: Yumix / YouTube / Device / Live TV). */
 @Immutable
@@ -75,7 +76,7 @@ fun ModeSwitcher(
     ) {
         options.forEach { o ->
             val sel = o.key == selectedKey
-            val shape = RoundedCornerShape(16.dp)
+            val shape = yuRound(16)
             val fill by animateColorAsState(
                 if (sel) p.accent.copy(alpha = if (p.isDark) 0.16f else 0.12f) else p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.7f else 1f),
                 label = "modeFill",

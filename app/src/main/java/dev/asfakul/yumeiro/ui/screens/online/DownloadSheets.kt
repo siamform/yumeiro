@@ -74,6 +74,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.youtube.YtItem
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Download state of one episode, shown on its row (tap: download / pause / nothing when saved). */
 @Composable
@@ -107,7 +108,7 @@ internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List
     val folder = remember(d, version) { DownloadNaming.seriesFolder(d.name, d.api, version) }
     val saved = all.count { it.folder == folder && it.status == OnlineDownloads.Status.DONE }
     val active = all.count { it.folder == folder && it.active }
-    OutlinedButton(onClick = { open = true }, shape = RoundedCornerShape(24.dp), modifier = modifier.height(46.dp).testTag("online_detail_download")) {
+    OutlinedButton(onClick = { open = true }, shape = yuRound(24), modifier = modifier.height(46.dp).testTag("online_detail_download")) {
         Icon(if (saved > 0 && active == 0) Icons.Default.DownloadDone else Icons.Default.Download, null, tint = if (saved > 0) SpotifyGreen else TextPrimary)
         Spacer(Modifier.width(6.dp))
         Text(
@@ -226,7 +227,7 @@ internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: S
         color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp).testTag("episode_range_count"),
     )
     androidx.compose.material3.Button(
-        onClick = { onPick(picked) }, enabled = picked.isNotEmpty(), shape = RoundedCornerShape(24.dp),
+        onClick = { onPick(picked) }, enabled = picked.isNotEmpty(), shape = yuRound(24),
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp).testTag("episode_range_start"),
     ) { Text(if (picked.size == 1) "Download 1 episode" else "Download ${picked.size} episodes", fontWeight = FontWeight.SemiBold) }
 }
@@ -259,8 +260,8 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
 @Composable
 private fun SheetOption(icon: ImageVector, title: String, subtitle: String, enabled: Boolean = true, tag: String? = null, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(14.dp), color = GlassFill,
-        modifier = Modifier.fillMaxWidth().then(if (tag != null) Modifier.testTag(tag) else Modifier).padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).clickable(enabled = enabled, onClick = onClick),
+        shape = yuRound(14), color = GlassFill,
+        modifier = Modifier.fillMaxWidth().then(if (tag != null) Modifier.testTag(tag) else Modifier).padding(vertical = 4.dp).clip(yuRound(14)).clickable(enabled = enabled, onClick = onClick),
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = if (enabled) SpotifyGreen else TextTertiary)

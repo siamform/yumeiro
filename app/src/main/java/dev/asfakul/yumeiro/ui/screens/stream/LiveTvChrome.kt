@@ -60,6 +60,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /*
  * NBUG-15 (a)-(c), ADR-028: the Live TV page chrome. Header buttons (Filter, Tools), pinned playlist chips,
@@ -256,7 +257,7 @@ internal fun LiveSearchBox(query: String, onQuery: (String) -> Unit, matches: In
 @Composable
 internal fun LiveSearchEmpty(query: String, scoped: String?, onClear: () -> Unit, onWiden: (() -> Unit)?) {
     val pal = LocalMtPalette.current
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(16.dp)).background(GlassFill).padding(16.dp).testTag("live_search_empty")) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(yuRound(16)).background(GlassFill).padding(16.dp).testTag("live_search_empty")) {
         Text("No channel called \"${query.trim()}\"", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Text(
             if (scoped != null) "Only $scoped is searched now. Search every channel, or check the spelling." else "Check the spelling, or try fewer words (for example \"sports\").",
@@ -349,14 +350,14 @@ private fun LiveCountryRow(
     val pal = LocalMtPalette.current
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-            .background(if (sel) pal.accent.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .background(if (sel) pal.accent.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent, yuRound(16))
+            .clip(yuRound(16))
             .selectable(selected = sel, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag(if (c == null) "${tagPrefix}_any" else "${tagPrefix}_${c.key}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).clip(yuRound(12)).background(GlassFill), contentAlignment = Alignment.Center) {
             val flag = dev.asfakul.yumeiro.stream.LiveFind.flag(c?.code)
             if (flag != null) Text(flag, fontSize = 20.sp)
             else Icon(Icons.Default.Public, null, tint = TextSecondary, modifier = Modifier.size(20.dp))

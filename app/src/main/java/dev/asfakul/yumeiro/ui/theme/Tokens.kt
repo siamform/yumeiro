@@ -11,6 +11,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -43,17 +44,17 @@ object Yume {
     // ---- Shape scale ---------------------------------------------------------------------------
     // Fewer, intentional radii instead of the 6–36dp mix the old screens used.
     val radiusXs = 6.dp     // badges, track artwork in dense lists
-    val radiusSm = 10.dp    // list artwork, small chips
-    val radiusMd = 16.dp    // cards, tiles, panels
-    val radiusLg = 22.dp    // the dock, sheets, hero panels
-    val radiusXl = 28.dp    // dialogs, Now Playing artwork
+    val radiusSm: Dp get() = UiScale.cornerDp(10)    // list artwork, small chips
+    val radiusMd: Dp get() = UiScale.cornerDp(16)    // cards, tiles, panels
+    val radiusLg: Dp get() = UiScale.cornerDp(22)    // the dock, sheets, hero panels
+    val radiusXl: Dp get() = UiScale.cornerDp(28)    // dialogs, Now Playing artwork
 
     val shapeXs = RoundedCornerShape(radiusXs)
-    val shapeSm = RoundedCornerShape(radiusSm)
-    val shapeMd = RoundedCornerShape(radiusMd)
-    val shapeLg = RoundedCornerShape(radiusLg)
-    val shapeXl = RoundedCornerShape(radiusXl)
-    val shapeSheet = RoundedCornerShape(topStart = radiusXl, topEnd = radiusXl)
+    val shapeSm get() = yuRound(10)
+    val shapeMd get() = yuRound(16)
+    val shapeLg get() = yuRound(22)
+    val shapeXl get() = yuRound(28)
+    val shapeSheet get() = RoundedCornerShape(topStart = radiusXl, topEnd = radiusXl)
 
     // ---- Depth ---------------------------------------------------------------------------------
     // Depth comes from tone (ink → lifted ink) and one gold hairline, not from heavy shadows.

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Round 12: audio and subtitle tracks grouped by language. Only the language that's playing is
@@ -93,7 +94,7 @@ fun LazyListScope.trackGroupItems(
         if (grouped) item(key = "${tag}_hdr_${g.key}") {
             val playing = selected in g.indices
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(yuRound(12))
                     .clickable(onClickLabel = if (open) "Hide ${g.label}" else "Show ${g.label}") { if (g.key in toggled) toggled.remove(g.key) else toggled.add(g.key) }
                     .semantics { stateDescription = if (open) "Expanded" else "Collapsed" }
                     .padding(horizontal = 6.dp, vertical = 6.dp).testTag("${tag}_group"),
@@ -112,8 +113,8 @@ fun LazyListScope.trackGroupItems(
         val more = g.indices.size - shown
         if (more > 0) item(key = "${tag}_more_${g.key}") {
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, SpotifyGreen.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(yuRound(12))
+                    .border(1.dp, SpotifyGreen.copy(alpha = 0.35f), yuRound(12))
                     .clickable { pages[g.key] = (pages[g.key] ?: 1) + 1 }.padding(10.dp).testTag("${tag}_more"),
                 horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
             ) {

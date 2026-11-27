@@ -70,6 +70,7 @@ import dev.asfakul.yumeiro.ui.screens.online.PosterImage
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
 private val RX_STREAMWATCHPANEL_HOT_1 = Regex("""[\[(].*?[\])]""")
@@ -449,7 +450,7 @@ private fun ChannelRow(number: Int, ch: StreamRequest, playing: Boolean, striped
             modifier = Modifier.width(48.dp).padding(start = 10.dp),
         )
         Box(
-            Modifier.padding(vertical = 7.dp).size(width = 56.dp, height = 36.dp).clip(RoundedCornerShape(8.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)),
+            Modifier.padding(vertical = 7.dp).size(width = 56.dp, height = 36.dp).clip(yuRound(8)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)),
             contentAlignment = Alignment.Center,
         ) {
             if (ch.logoUrl != null) PosterImage(ch.logoUrl, emptyMap(), Modifier.fillMaxSize().padding(4.dp), Icons.Default.LiveTv)

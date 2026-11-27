@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * The banner every Yumix extension gets: a wide backdrop taken from the extension's own first
@@ -58,7 +59,7 @@ internal fun ExtensionBanner(
     action: String = "Open",
 ) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = yuRound(20)
     Box(
         modifier
             .height(height)

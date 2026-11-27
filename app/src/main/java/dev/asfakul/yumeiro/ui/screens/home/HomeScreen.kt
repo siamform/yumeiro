@@ -161,6 +161,7 @@ import dev.asfakul.yumeiro.youtube.YouTube
 import dev.asfakul.yumeiro.youtube.YtHistory
 import dev.asfakul.yumeiro.youtube.YtItem
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // ---- Rhythm (8dp grid) ---------------------------------------------------------------------
 private val Gutter = 16.dp
@@ -630,7 +631,7 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 2.dp),
                             )
                         }
-                        feed.loading && huesCount > 0 -> SkeletonBlock(null, 184.dp, shape = RoundedCornerShape(24.dp))
+                        feed.loading && huesCount > 0 -> SkeletonBlock(null, 184.dp, shape = yuRound(24))
                         else -> EpisodesEmpty(hasSources = huesCount > 0, onFind = onOpenHues, onAddSources = onOpenHueStore)
                     }
                 }
@@ -766,7 +767,7 @@ fun HomeScreen(
                     item(key = "random_more", contentType = "more") {
                         when {
                             random.loadingMore -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                repeat(randomColumns) { SkeletonBlock(null, 150.dp, Modifier.weight(1f), RoundedCornerShape(14.dp)) }
+                                repeat(randomColumns) { SkeletonBlock(null, 150.dp, Modifier.weight(1f), yuRound(14)) }
                             }
                             random.finished -> EndNote("That's everything your extensions have for now. Shuffle for a new mix.")
                             else -> MoreButton("Load more") { scope.launch { random.more(channels, feed.providers) } }
@@ -826,7 +827,7 @@ fun HomeScreen(
                 HomeLayout.sections.forEach { (key, label) ->
                     val on = key !in hidden
                     Row(
-                        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(12.dp))
+                        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(yuRound(12))
                             .clickable(role = Role.Switch) { HomeLayout.toggle(context, key) }.testTag("home_customize_$key").padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -850,7 +851,7 @@ private fun plays(n: Int, who: String): String = when {
 @Composable
 private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> Unit, onExplore: (() -> Unit)? = null) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(18.dp)
+    val shape = yuRound(18)
     Row(
         Modifier.fillMaxWidth().padding(top = 8.dp).clip(shape)
             .background(p.accent.copy(alpha = if (p.isDark) 0.12f else 0.09f))
@@ -912,14 +913,14 @@ private fun ContinueCard(
     art: @Composable BoxScope.() -> Unit,
 ) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = yuRound(20)
     val track = p.textPrimary.copy(alpha = 0.10f)
     val accent = p.accent
     Column(
         modifier.clip(shape).background(tileFill()).border(1.dp, p.textPrimary.copy(alpha = 0.06f), shape)
             .clickable(onClick = onClick).a11yLabel(eyebrow, title, subtitle).testTag(tag).padding(10.dp),
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1.25f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.05f))) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1.25f).clip(yuRound(14)).background(p.textPrimary.copy(alpha = 0.05f))) {
             art()
             KanjiMark(kanji, Modifier.align(Alignment.BottomStart).padding(start = 6.dp), size = 44.sp, alpha = 0.10f)
             Box(
@@ -978,10 +979,10 @@ private fun FeatureTile(f: Feature, modifier: Modifier) {
         if (pressed && !reduced) 0.92f else 1f,
         androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 600f), label = "seal",
     )
-    val seal = RoundedCornerShape(20.dp)
+    val seal = yuRound(20)
     Column(
         modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(yuRound(18))
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClickLabel = "Open ${f.title}", onClick = f.onClick)
             .semantics(mergeDescendants = true) { contentDescription = "${f.title}, ${f.status}" }
             .padding(vertical = 4.dp)
@@ -1042,7 +1043,7 @@ private fun SpacesMoreButton(expanded: Boolean, count: Int, preview: List<Featur
         if (expanded) 180f else 0f,
         if (reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 420f), label = "spacesChevron",
     )
-    val shape = RoundedCornerShape(18.dp)
+    val shape = yuRound(18)
     Row(
         modifier
             .fillMaxWidth()
@@ -1068,7 +1069,7 @@ private fun SpacesMoreButton(expanded: Boolean, count: Int, preview: List<Featur
             Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
                 preview.forEach { f ->
                     Box(
-                        Modifier.size(26.dp).clip(RoundedCornerShape(9.dp)).background(f.hue).border(1.5.dp, p.background, RoundedCornerShape(9.dp)),
+                        Modifier.size(26.dp).clip(yuRound(9)).background(f.hue).border(1.5.dp, p.background, yuRound(9)),
                         contentAlignment = Alignment.Center,
                     ) { Icon(f.icon, null, tint = Color.White, modifier = Modifier.size(14.dp)) }
                 }
@@ -1145,7 +1146,7 @@ private fun MoodSection(
         )
         // Mood card: the kanji and a one-line description.
         Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(tileFill()).padding(horizontal = 14.dp, vertical = 10.dp)
+            Modifier.fillMaxWidth().clip(yuRound(18)).background(tileFill()).padding(horizontal = 14.dp, vertical = 10.dp)
                 .testTag("home_mood_${mood.key.substringBefore(':')}"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1163,7 +1164,7 @@ private fun MoodSection(
         }
         val list = songs
         when {
-            list == null -> Row(horizontalArrangement = Arrangement.spacedBy(RowGap)) { repeat(3) { SkeletonBlock(120.dp, 120.dp, shape = RoundedCornerShape(14.dp)) } }
+            list == null -> Row(horizontalArrangement = Arrangement.spacedBy(RowGap)) { repeat(3) { SkeletonBlock(120.dp, 120.dp, shape = yuRound(14)) } }
             list.isEmpty() && videos.isEmpty() && picks.isEmpty() -> HintRow(
                 Icons.Default.Album,
                 if (failed) "Couldn't load ${mood.title}" else "Tap to load this mood",
@@ -1190,7 +1191,7 @@ private fun MoodSection(
 private fun HintRow(icon: ImageVector, title: String, text: String, action: String, onClick: () -> Unit, tag: String) {
     val p = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(tileFill())
+        Modifier.fillMaxWidth().clip(yuRound(18)).background(tileFill())
             .clickable(role = Role.Button, onClick = onClick).testTag(tag).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1213,7 +1214,7 @@ private fun HintRow(icon: ImageVector, title: String, text: String, action: Stri
 private fun RandomGroupHeader(api: String, onSeeAll: (() -> Unit)?) {
     val p = LocalMtPalette.current
     Row(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 10.dp).testTag("home_random_group"), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(p.accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(26.dp).clip(yuRound(8)).background(p.accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
             Text(api.take(1).uppercase(), color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.width(10.dp))
@@ -1229,8 +1230,8 @@ private fun RandomGroupHeader(api: String, onSeeAll: (() -> Unit)?) {
 private fun MoreButton(label: String, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     Box(
-        Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(24.dp))
-            .border(1.dp, p.textPrimary.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+        Modifier.fillMaxWidth().height(48.dp).clip(yuRound(24))
+            .border(1.dp, p.textPrimary.copy(alpha = 0.12f), yuRound(24))
             .clickable(role = Role.Button, onClick = onClick).testTag("home_random_more"),
         contentAlignment = Alignment.Center,
     ) { Text(label, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
@@ -1257,8 +1258,8 @@ private fun SquareCard(
     onClick: () -> Unit, art: @Composable BoxScope.() -> Unit,
 ) {
     val p = LocalMtPalette.current
-    Column(Modifier.width(120.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).testTag(tag).padding(bottom = 10.dp)) {
-        Box(Modifier.size(120.dp).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+    Column(Modifier.width(120.dp).clip(yuRound(14)).clickable(onClick = onClick).testTag(tag).padding(bottom = 10.dp)) {
+        Box(Modifier.size(120.dp).clip(yuRound(14)).background(p.textPrimary.copy(alpha = 0.06f))) {
             art()
             Box(
                 Modifier.align(Alignment.BottomStart).padding(6.dp).size(22.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)),
@@ -1276,13 +1277,13 @@ private fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     val width = if (square) 120.dp else 200.dp
     val pressSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    Column(Modifier.width(width).yuEntrance("yt_" + item.id).yuPressScale(pressSource).clip(RoundedCornerShape(14.dp)).clickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick).testTag("home_feed_yt_${item.id}").feedCard("home", item.id).padding(bottom = 10.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(if (square) 1f else 16f / 9f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+    Column(Modifier.width(width).yuEntrance("yt_" + item.id).yuPressScale(pressSource).clip(yuRound(14)).clickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick).testTag("home_feed_yt_${item.id}").feedCard("home", item.id).padding(bottom = 10.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(if (square) 1f else 16f / 9f).clip(yuRound(14)).background(p.textPrimary.copy(alpha = 0.06f))) {
             TrackArtwork(artUri = null, key = item.id, size = 400.dp, cornerRadius = 0.dp, icon = if (square) Icons.Default.MusicNote else Icons.Default.SmartDisplay, modifier = Modifier.fillMaxSize())
             AsyncImage(model = item.thumbnail, contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             if (!square && item.durationSec > 0) Text(
                 formatMs(item.durationSec * 1000), color = Color.White, fontSize = 10.sp,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 5.dp, vertical = 1.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(yuRound(6)).background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 5.dp, vertical = 1.dp),
             )
         }
         Spacer(Modifier.height(6.dp))

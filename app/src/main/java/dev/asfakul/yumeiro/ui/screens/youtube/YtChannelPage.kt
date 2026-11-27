@@ -64,6 +64,7 @@ import dev.asfakul.yumeiro.youtube.YtItem
 import dev.asfakul.yumeiro.youtube.formatYtSubscribers
 import kotlinx.coroutines.launch
 import org.schabi.newpipe.extractor.Page
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private data class TabPage(val items: List<YtItem> = emptyList(), val next: Page? = null, val loading: Boolean = false, val error: String? = null, val done: Boolean = false)
 
@@ -113,7 +114,7 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
             Column {
                 Box(Modifier.fillMaxWidth()) {
                     Box(
-                        Modifier.fillMaxWidth().aspectRatio(16f / 5f).padding(horizontal = 12.dp).clip(RoundedCornerShape(18.dp))
+                        Modifier.fillMaxWidth().aspectRatio(16f / 5f).padding(horizontal = 12.dp).clip(yuRound(18))
                             .background(Brush.linearGradient(listOf(pal.accent.copy(alpha = 0.55f), pal.accent2.copy(alpha = 0.35f)))),
                     ) { if (c?.banner != null) PosterImage(c.banner, emptyMap(), Modifier.fillMaxSize()) }
                     IconButton(
@@ -147,7 +148,7 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
         if (err != null) item("ch_err") { YtProblem(err, null) }
         else {
             if (page.items.isEmpty() && page.loading) itemsIndexed(List(4) { it }, key = { i, _ -> "csk$i" }) { _, _ ->
-                SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(20.dp))
+                SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), yuRound(20))
             }
             if (tab == "shorts") {
                 val rows = page.items.chunked(2)
@@ -170,7 +171,7 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
 /** 9:16 Shorts tile: thumbnail with the title over a bottom scrim. */
 @Composable
 internal fun YtShortCard(item: YtItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(modifier.aspectRatio(9f / 16f).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).testTag("youtube_short")) {
+    Box(modifier.aspectRatio(9f / 16f).clip(yuRound(16)).clickable(onClick = onClick).testTag("youtube_short")) {
         PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.78f))))
         Text(

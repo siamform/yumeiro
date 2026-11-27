@@ -94,6 +94,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Videos → Online → Extensions: installed extensions, their updates and the user's repositories. */
 @Composable
@@ -267,19 +268,19 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         PullToRefreshBox(isRefreshing = checking, onRefresh = { scope.launch { check(true) } }, modifier = Modifier.fillMaxSize()) {
             LazyColumn(Modifier.fillMaxSize().testTag("extensions_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("extensions"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (updates.isNotEmpty()) item("updates") {
-                    Surface(shape = RoundedCornerShape(18.dp), color = SpotifyGreen.copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth().testTag("extensions_updates")) {
+                    Surface(shape = yuRound(18), color = SpotifyGreen.copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth().testTag("extensions_updates")) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.SystemUpdate, null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            Button(onClick = { scope.launch { bulkUpdate(updates) } }, enabled = !bulkBusy, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp), modifier = Modifier.testTag("extensions_update_all")) {
+                            Button(onClick = { scope.launch { bulkUpdate(updates) } }, enabled = !bulkBusy, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = yuRound(20), modifier = Modifier.testTag("extensions_update_all")) {
                                 Text("Update all")
                             }
                         }
                     }
                 }
                 item("more_sources") {
-                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_more_sources"),
+                    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_more_sources"),
                         onClick = onOpenSources) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Language, null, tint = SpotifyGreen)
@@ -295,7 +296,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                     // OWN-5: installed script sources (Vega, Nuvio, SkyStream) with a direct Manage shortcut.
                     val names = scripts.installed.map { it.name }
                     val kinds = (scripts.installed.map { it.ecosystem.label } + scripts.repos.map { it.ecosystem.label }).distinct().joinToString(", ")
-                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_script_sources"),
+                    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_script_sources"),
                         onClick = onOpenScriptRepos) {
                         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Extension, null, tint = SpotifyGreen)
@@ -353,7 +354,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                     Text("No repositories added. The market already includes verified ones.", color = TextTertiary, fontSize = 12.sp)
                 }
                 items(engine.repos, key = { "repo_" + it.url }) { repo ->
-                    Surface(shape = RoundedCornerShape(16.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_repo")) {
+                    Surface(shape = yuRound(16), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_repo")) {
                         Row(Modifier.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(repo.name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -525,7 +526,7 @@ private fun InstalledCard(
         }
     }
     Surface(
-        shape = RoundedCornerShape(20.dp), color = if (isSelected) SpotifyGreen.copy(alpha = 0.16f) else GlassFill,
+        shape = yuRound(20), color = if (isSelected) SpotifyGreen.copy(alpha = 0.16f) else GlassFill,
         modifier = Modifier.fillMaxWidth().testTag("extension_${ext.internalName}")
             .semantics { if (selecting) selected = isSelected }
             .combinedClickable(onClick = { if (selecting) onSelect() }, onLongClick = onLongPress, onLongClickLabel = "Select"),
@@ -605,12 +606,12 @@ private fun InstalledCard(
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (update != null) Button(
                     onClick = onUpdate, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                    shape = RoundedCornerShape(18.dp), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                    shape = yuRound(18), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp).testTag("extension_update_${ext.internalName}"),
                 ) { Icon(Icons.Default.SystemUpdate, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Update to v${update.version}", fontSize = 12.sp) }
                 else androidx.compose.material3.OutlinedButton(
                     onClick = onCheckUpdate, enabled = !busy && !(ext.manual && !ext.sourceUrl.startsWith("http")),
-                    shape = RoundedCornerShape(18.dp), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+                    shape = yuRound(18), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp).testTag("extension_check_${ext.internalName}"),
                 ) { Icon(Icons.Default.Refresh, null, tint = TextSecondary, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Check for update", color = TextSecondary, fontSize = 12.sp) }
                 if (ext.enabled && apis.isNotEmpty() && !signedIn) TextButton(onClick = { signIn(apis.first()) }, contentPadding = PaddingValues(horizontal = 8.dp), modifier = Modifier.height(32.dp)) {
@@ -636,7 +637,7 @@ private fun SelectionBar(
     count: Int, allShownSelected: Boolean, canUpdate: Boolean, busy: Boolean,
     onSelectAll: () -> Unit, onOn: () -> Unit, onOff: () -> Unit, onUpdate: () -> Unit, onRemove: () -> Unit, onCancel: () -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("extensions_selection_bar")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("extensions_selection_bar")) {
         Column(Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 androidx.compose.material3.Checkbox(

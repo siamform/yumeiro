@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import java.text.Normalizer
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
 private val RX_SEARCHSUGGEST_HOT_1 = Regex("\\p{M}+")
@@ -186,7 +187,7 @@ fun SuggestionList(
 ) {
     if (suggestions.isEmpty()) return
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = yuRound(22)
     Column(
         modifier
             .fillMaxWidth()

@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * WEB-BAR-1 + GROUP E2: the bottom bar of Yumeiro's browser (Websites page): Back, Forward, the open tabs (with
@@ -84,7 +85,7 @@ internal fun BrowserBar(
         if (picking) IconButton(onClick = onBlock, modifier = Modifier.testTag("browser_block_stop")) { Icon(Icons.Default.Block, "Stop hiding parts", tint = accent) }
         if (onTabs != null) IconButton(onClick = onTabs, modifier = Modifier.testTag("browser_tabs").semantics { stateDescription = if (tabCount == 1) "1 tab" else "$tabCount tabs" }) {
             // The tab count in a rounded square, like other browsers' tab button.
-            Box(Modifier.size(22.dp).border(1.6.dp, TextPrimary, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(22.dp).border(1.6.dp, TextPrimary, yuRound(6)), contentAlignment = Alignment.Center) {
                 Text(if (tabCount > 9) "9+" else tabCount.toString(), color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clearAndSetSemantics { })
             }
         }

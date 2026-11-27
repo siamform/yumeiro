@@ -53,6 +53,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * PR-1: Settings → Privacy → Profiles. Lists the profiles; tap one to rename it, pick its colour, set a
@@ -72,7 +73,7 @@ fun ProfilesSettings(activity: Activity?) {
     Column(Modifier.testTag("profiles_settings")) {
         list.forEach { p ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().clip(yuRound(12))
                     .clickable { if (p.id != current && p.locked) unlocking = p else editing = p.id }
                     .padding(vertical = 8.dp).testTag("profile_row_${p.id}"),
                 verticalAlignment = Alignment.CenterVertically,
@@ -90,7 +91,7 @@ fun ProfilesSettings(activity: Activity?) {
             }
         }
         if (list.size < Profiles.MAX_PROFILES) Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { if (Profiles.needsMainUnlock(context)) mainCheck = true else adding = true }.padding(vertical = 10.dp).testTag("profile_add"),
+            Modifier.fillMaxWidth().clip(yuRound(12)).clickable { if (Profiles.needsMainUnlock(context)) mainCheck = true else adding = true }.padding(vertical = 10.dp).testTag("profile_add"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(40.dp).clip(CircleShape).border(1.dp, TextTertiary, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = TextPrimary) }
@@ -227,7 +228,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
 @Composable
 private fun ActionRow(label: String, tag: String, danger: Boolean = false, onClick: () -> Unit) {
     Text(label, color = if (danger) dev.asfakul.yumeiro.ui.theme.DangerTone else TextPrimary, fontSize = 14.sp,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(vertical = 12.dp).testTag(tag))
+        modifier = Modifier.fillMaxWidth().clip(yuRound(10)).clickable(onClick = onClick).padding(vertical = 12.dp).testTag(tag))
 }
 
 @Composable

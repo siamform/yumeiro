@@ -127,6 +127,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
 private val RX_STREAMSCREEN_HOT_1 = Regex("[^A-Za-z0-9 ._-]")
@@ -499,7 +500,7 @@ fun StreamScreen(
     }
 
     val linkCard: @Composable () -> Unit = {
-            Surface(shape = RoundedCornerShape(24.dp), color = GlassFill, border = null) {
+            Surface(shape = yuRound(24), color = GlassFill, border = null) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(36.dp).clip(CircleShape).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
@@ -541,7 +542,7 @@ fun StreamScreen(
                         }
                     }
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable { advanced = !advanced }.padding(vertical = 4.dp),
+                        Modifier.fillMaxWidth().clip(yuRound(20)).clickable { advanced = !advanced }.padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text("Headers & DRM", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -838,7 +839,7 @@ fun StreamScreen(
                 }
             }
         } else item(key = "live_none") {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(GlassFill).padding(18.dp).testTag("live_none")) {
+            Column(Modifier.fillMaxWidth().clip(yuRound(20)).background(GlassFill).padding(18.dp).testTag("live_none")) {
                 Text(if (playlists.isEmpty()) "No playlists yet" else "All playlists are off", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
                     if (playlists.isEmpty()) "Get channels from the market, add a playlist URL or play a link." else "Turn a playlist on in Tools → Playlists to see its channels here.",
@@ -960,9 +961,9 @@ internal fun StreamRow(
     onAdd: (() -> Unit)? = null,
     onEditIcon: (() -> Unit)? = null,
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    Surface(shape = yuRound(20), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(yuRound(12)).background(GlassFill), contentAlignment = Alignment.Center) {
                 if (item.logoUrl != null) AsyncImage(model = item.logoUrl, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.size(36.dp))
                 else Icon(Icons.Default.LiveTv, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             }

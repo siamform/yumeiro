@@ -61,6 +61,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * F-17 profile statistics: a GitHub-style activity map of the last weeks (one Canvas, at most 371 cells), streaks,
@@ -129,7 +130,7 @@ fun StatsScreen(onBack: () -> Unit) {
                 SectionTitle("Milestones")
                 milestones.forEach { m ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(SpotifyGreen))
+                        Box(Modifier.size(10.dp).clip(yuRound(3)).background(SpotifyGreen))
                         Text(m.title, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp))
                     }
                 }
@@ -207,7 +208,7 @@ private fun Legend() {
     val levels = levelColors()
     Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         Text("Less", color = TextTertiary, fontSize = 11.sp)
-        levels.forEach { Box(Modifier.size(10.dp).clip(RoundedCornerShape(2.dp)).background(it)) }
+        levels.forEach { Box(Modifier.size(10.dp).clip(yuRound(2)).background(it)) }
         Text("More (0, 15 min, 1 h, 3 h, more)", color = TextTertiary, fontSize = 11.sp)
     }
 }
@@ -219,7 +220,7 @@ private fun SectionTitle(t: String) {
 
 @Composable
 private fun StatCard(label: String, value: String, modifier: Modifier) {
-    Column(modifier.clip(RoundedCornerShape(14.dp)).background(GlassFill).padding(12.dp)) {
+    Column(modifier.clip(yuRound(14)).background(GlassFill).padding(12.dp)) {
         Text(value, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1)
         Text(label, color = TextSecondary, fontSize = 12.sp, maxLines = 1)
     }
@@ -233,8 +234,8 @@ private fun Bar(label: String, value: Long, total: Long, text: String, tag: Stri
             Text(label, color = TextPrimary, fontSize = 13.sp)
             Text(text, color = TextSecondary, fontSize = 13.sp)
         }
-        Box(Modifier.fillMaxWidth().padding(top = 4.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(TextPrimary.copy(alpha = 0.12f))) {
-            Box(Modifier.fillMaxWidth(f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(SpotifyGreen))
+        Box(Modifier.fillMaxWidth().padding(top = 4.dp).height(6.dp).clip(yuRound(3)).background(TextPrimary.copy(alpha = 0.12f))) {
+            Box(Modifier.fillMaxWidth(f).height(6.dp).clip(yuRound(3)).background(SpotifyGreen))
         }
     }
 }
@@ -249,7 +250,7 @@ fun StatsEntryCard(onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val streak = remember(days) { StatsMath.streaks(days, today).current }
     val week = remember(days) { StatsMath.totals(days, StatsMath.gridStart(today, 1), today).totalMs }
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(GlassFill)
+        modifier.fillMaxWidth().clip(yuRound(16)).background(GlassFill)
             .androidxClickable(onOpen).padding(horizontal = 16.dp, vertical = 12.dp).testTag("lib_stats_entry"),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -92,6 +92,7 @@ import dev.asfakul.yumeiro.stream.StreamRequest
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * F-02 (ADR-052): sign in to Telegram, then the user's chats and the videos in each. Every step has its own Back:
@@ -439,7 +440,7 @@ private fun TgVideoTile(v: TgVideo, title: String, thumb: suspend () -> String?,
     val path by produceState<String?>(null, v.thumbFileId) { if (v.thumbFileId != 0) value = thumb() }
     Column(Modifier.fillMaxWidth().testTag("tg_video_${v.messageId}")) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(14.dp)).background(p.surfaceContainerHigh)
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(14)).background(p.surfaceContainerHigh)
                 .clickable(onClickLabel = "Play $title", onClick = onPlay),
             contentAlignment = Alignment.Center,
         ) {
@@ -449,7 +450,7 @@ private fun TgVideoTile(v: TgVideo, title: String, thumb: suspend () -> String?,
             tileBadges(v).takeIf { it.isNotBlank() }?.let { b ->
                 Text(
                     b, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(6.dp))
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(yuRound(6))
                         .background(Color.Black.copy(alpha = 0.68f)).padding(horizontal = 6.dp, vertical = 2.dp),
                 )
             }

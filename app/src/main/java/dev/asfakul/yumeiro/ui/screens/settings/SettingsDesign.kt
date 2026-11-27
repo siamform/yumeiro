@@ -67,6 +67,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Thin gold hairline used around premium cards (matches TsukiDialog and the reminder sheet). */
 @Composable
@@ -121,7 +122,7 @@ internal fun CategoryRow(
     status: String? = null, statusOk: Boolean? = null, onClick: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(yuRound(16)).clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp).testTag(testTag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -199,12 +200,12 @@ fun GuideCard(guide: SetupGuide, modifier: Modifier = Modifier, startExpanded: B
     var open by rememberSaveable(guide.id) { mutableStateOf(startExpanded) }
     val turn by animateFloatAsState(if (open) 180f else 0f, label = "guide_chevron")
     Surface(
-        shape = RoundedCornerShape(20.dp), color = GlassFill,
-        modifier = modifier.fillMaxWidth().border(1.dp, goldHairline(), RoundedCornerShape(20.dp)).animateContentSize().testTag("guide_${guide.id}"),
+        shape = yuRound(20), color = GlassFill,
+        modifier = modifier.fillMaxWidth().border(1.dp, goldHairline(), yuRound(20)).animateContentSize().testTag("guide_${guide.id}"),
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { open = !open }.testTag("guide_${guide.id}_toggle"),
+                Modifier.fillMaxWidth().clip(yuRound(12)).clickable { open = !open }.testTag("guide_${guide.id}_toggle"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconTile(Icons.AutoMirrored.Filled.MenuBook, BrandGold, size = 32)
@@ -245,8 +246,8 @@ private fun GuideStep(n: Int, s: SetupGuide.Step, context: Context) {
             Text(s.text, color = TextPrimary, fontSize = 13.sp)
             if (s.copy != null) {
                 Row(
-                    Modifier.clip(RoundedCornerShape(10.dp)).background(if (dark) Color.Black.copy(alpha = 0.22f) else BrandGold.copy(alpha = 0.12f))
-                        .border(0.5.dp, BrandGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                    Modifier.clip(yuRound(10)).background(if (dark) Color.Black.copy(alpha = 0.22f) else BrandGold.copy(alpha = 0.12f))
+                        .border(0.5.dp, BrandGold.copy(alpha = 0.35f), yuRound(10))
                         .clickable { copyToClipboard(context, "Yumeiro setup", s.copy) }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,

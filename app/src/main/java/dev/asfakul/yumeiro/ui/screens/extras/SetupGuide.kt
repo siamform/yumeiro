@@ -75,6 +75,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One thing the setup guide helps with. Status is read from the real feature, never faked. */
 enum class SetupStep(val title: String, val detail: String, val action: String, val icon: ImageVector) {
@@ -284,7 +285,7 @@ private fun WelcomePage(onExplore: () -> Unit, onSkip: () -> Unit, onChecklist: 
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(dev.asfakul.yumeiro.R.drawable.ic_app_logo),
                         contentDescription = "Yumeiro",
-                        modifier = Modifier.size(96.dp).scale(markScale).clip(RoundedCornerShape(28.dp)),
+                        modifier = Modifier.size(96.dp).scale(markScale).clip(yuRound(28)),
                     )
                 }
                 Column(Modifier.fillMaxWidth().alpha(textAlpha)) {
@@ -357,7 +358,7 @@ private fun ChecklistPage(status: SetupStatus, onAction: (SetupStep) -> Unit) {
 @Composable
 fun SetupStepRow(step: SetupStep, done: Boolean, onClick: () -> Unit) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(18.dp)
+    val shape = yuRound(18)
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(shape)
             .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.7f else 1f))

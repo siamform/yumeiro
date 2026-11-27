@@ -48,6 +48,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 internal fun levelColor(l: ExtensionScanner.Level): Color = when (l) {
@@ -100,7 +101,7 @@ fun ExtensionReviewHost() {
                     (r.version?.let { "v$it · " } ?: "") + "from ${r.source}",
                     color = TextTertiary, fontSize = 12.sp,
                 )
-                Surface(shape = RoundedCornerShape(14.dp), color = levelColor(r.report.level).copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = yuRound(14), color = levelColor(r.report.level).copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp)) {
                         Text("Safety check: ${levelLabel(r.report.level)}", color = levelColor(r.report.level), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Text(r.report.summary, color = TextPrimary, fontSize = 13.sp)

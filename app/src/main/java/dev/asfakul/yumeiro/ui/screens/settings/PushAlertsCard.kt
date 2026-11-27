@@ -45,6 +45,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Settings → Notifications → On-time alerts: optional UnifiedPush (ntfy) wake-ups, so the
@@ -129,7 +130,7 @@ fun PushAlertsCard() {
             Column {
                 distributors.forEach { pkg ->
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { pick = false; PushWake.enable(context, pkg) }
+                        Modifier.fillMaxWidth().clip(yuRound(12)).clickable { pick = false; PushWake.enable(context, pkg) }
                             .padding(vertical = 4.dp).testTag("push_pick_$pkg"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

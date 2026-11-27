@@ -138,6 +138,7 @@ import dev.asfakul.yumeiro.ui.theme.artGradientFor
 import dev.asfakul.yumeiro.ui.theme.glass
 import dev.asfakul.yumeiro.ui.theme.pageBackground
 import dev.asfakul.yumeiro.ui.theme.rememberArtBrush
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 fun NowPlayingScreen(
@@ -251,7 +252,7 @@ fun NowPlayingScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(yuRound(16))
                         .background(Color(0xFF4A1525))
                         .padding(12.dp)
                         .testTag("now_playing_error_banner"),
@@ -486,7 +487,7 @@ private fun ArtworkPanel(track: AudioTrack?, lyrics: Lyrics?, positionMs: () -> 
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(yuRound(14))
                     .clickable(onClick = onOpenLyrics)
                     .padding(horizontal = 8.dp, vertical = 6.dp)
                     .testTag("now_playing_lyric_preview")
@@ -526,8 +527,8 @@ private fun LyricsPanel(
     Column(
         Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(28.dp))
-            .glass(RoundedCornerShape(28.dp))
+            .clip(yuRound(28))
+            .glass(yuRound(28))
             .testTag("now_playing_lyrics_panel")
     ) {
         val lyrics = state.lyrics
@@ -615,7 +616,7 @@ private fun SyncedLyricsList(lyrics: Lyrics, positionMs: () -> Long, onSeek: (Lo
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
-                        if (line.timeMs != null) Modifier.clip(RoundedCornerShape(10.dp)).clickable { onSeek(line.timeMs) }
+                        if (line.timeMs != null) Modifier.clip(yuRound(10)).clickable { onSeek(line.timeMs) }
                         else Modifier
                     )
                     .padding(vertical = 2.dp)
@@ -650,7 +651,7 @@ private fun QueuePanel(playbackState: PlaybackState, onPlayQueueIndex: (Int) -> 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(yuRound(16))
                         .background(if (isCurrent) GlassFill else Color.Transparent)
                         .clickable { onPlayQueueIndex(index) }
                         .padding(horizontal = 8.dp, vertical = 6.dp)
@@ -738,8 +739,8 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(28.dp))
-            .glass(RoundedCornerShape(28.dp))
+            .clip(yuRound(28))
+            .glass(yuRound(28))
             .testTag("now_playing_info_panel"),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -784,7 +785,7 @@ private fun RoundControl(
 private fun PillButton(
     icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, description: String? = null,
 ) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = yuRound(24)
     Row(
         modifier = modifier
             .height(48.dp)
@@ -814,7 +815,7 @@ private fun RailTool(
     Column(
         modifier = modifier
             .heightIn(min = 58.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(yuRound(16))
             .clickable(role = Role.Button, onClick = onClick)
             .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally,

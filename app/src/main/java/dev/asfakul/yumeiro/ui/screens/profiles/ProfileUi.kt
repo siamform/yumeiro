@@ -75,6 +75,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * PR-1 (ADR-041): a profile is a small moon in its own colour with its initial on it, and a thin
@@ -192,7 +193,7 @@ fun WhoIsWatching(activity: Activity, onManage: (() -> Unit)?) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.widthIn(max = 640.dp)) {
             list.forEachIndexed { i, p ->
                 Column(
-                    Modifier.width(96.dp).clip(RoundedCornerShape(16.dp))
+                    Modifier.width(96.dp).clip(yuRound(16))
                         .then(if (i == 0) Modifier.focusRequester(first) else Modifier)
                         .clickable(onClickLabel = "Open ${p.name}") { if (p.locked) unlocking = p else ProfileSession.open(activity, p.id) }
                         .padding(8.dp).testTag("profile_pick_${p.id}"),
@@ -312,7 +313,7 @@ fun PinPadDialog(
     val focus = remember { FocusRequester() }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
-            Modifier.widthIn(max = 360.dp).fillMaxWidth().padding(20.dp).clip(RoundedCornerShape(28.dp))
+            Modifier.widthIn(max = 360.dp).fillMaxWidth().padding(20.dp).clip(yuRound(28))
                 .background(DarkSurfaceContainer).padding(20.dp).testTag("pin_pad")
                 .onPreviewKeyEvent { e ->
                     if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

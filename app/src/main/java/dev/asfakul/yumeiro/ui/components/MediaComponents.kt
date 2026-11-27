@@ -114,6 +114,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import java.util.Locale
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 fun formatDuration(ms: Long): String {
     if (ms <= 0) return "00:00"
@@ -148,7 +149,7 @@ fun StorageStatBanner(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .glass(RoundedCornerShape(24.dp))
+            .glass(yuRound(24))
             .padding(horizontal = 18.dp, vertical = 16.dp)
             .testTag("storage_stat_banner")
     ) {
@@ -195,7 +196,7 @@ fun StatPill(
 ) {
     Row(
         modifier = modifier
-            .glass(RoundedCornerShape(16.dp))
+            .glass(yuRound(16))
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -343,10 +344,10 @@ fun VideoGridCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(yuRound(20))
             .clickable { onVideoClick() }
             .testTag("video_item_${video.id}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = yuRound(20),
         colors = CardDefaults.cardColors(containerColor = GlassFill),
         border = null
     ) {
@@ -393,7 +394,7 @@ fun VideoGridCard(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(6.dp),
-                    shape = RoundedCornerShape(4.dp),
+                    shape = yuRound(4),
                     color = Color.Black.copy(alpha = 0.75f)
                 ) {
                     Text(
@@ -428,7 +429,7 @@ fun VideoGridCard(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(6.dp),
-                    shape = RoundedCornerShape(4.dp),
+                    shape = yuRound(4),
                     color = Color.Black.copy(alpha = 0.8f)
                 ) {
                     Text(
@@ -532,10 +533,10 @@ fun VideoRowCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(yuRound(20))
             .clickable { onVideoClick() }
             .testTag("video_row_${video.id}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = yuRound(20),
         colors = CardDefaults.cardColors(containerColor = GlassFill),
         border = null
     ) {
@@ -550,7 +551,7 @@ fun VideoRowCard(
                 modifier = Modifier
                     .width(115.dp)
                     .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(yuRound(8))
                     .background(rememberArtBrush(video.id)),
                 contentAlignment = Alignment.Center
             ) {
@@ -572,7 +573,7 @@ fun VideoRowCard(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(4.dp),
-                    shape = RoundedCornerShape(3.dp),
+                    shape = yuRound(3),
                     color = Color.Black.copy(alpha = 0.75f)
                 ) {
                     Text(
@@ -590,7 +591,7 @@ fun VideoRowCard(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(4.dp),
-                    shape = RoundedCornerShape(3.dp),
+                    shape = yuRound(3),
                     color = Color.Black.copy(alpha = 0.8f)
                 ) {
                     Text(
@@ -698,10 +699,10 @@ fun ContinueWatchingCard(
     Card(
         modifier = modifier
             .width(220.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(yuRound(20))
             .clickable { onResumeClick() }
             .testTag("continue_card_${video.id}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = yuRound(20),
         colors = CardDefaults.cardColors(containerColor = GlassFill),
         border = null
     ) {
@@ -754,7 +755,7 @@ fun ContinueWatchingCard(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(6.dp),
-                    shape = RoundedCornerShape(4.dp),
+                    shape = yuRound(4),
                     color = Color.Black.copy(alpha = 0.75f)
                 ) {
                     Text(
@@ -816,10 +817,10 @@ fun VideoFolderCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(yuRound(20))
             .clickable { onFolderClick() }
             .testTag("video_folder_${folder.id}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = yuRound(20),
         colors = CardDefaults.cardColors(containerColor = GlassFill),
         border = null
     ) {
@@ -832,7 +833,7 @@ fun VideoFolderCard(
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(yuRound(10))
                     .background(GlassFill),
                 contentAlignment = Alignment.Center
             ) {
@@ -1036,7 +1037,7 @@ fun ManageHiddenFoldersDialog(
                                 ?: path.trim('/').split('/').lastOrNull() ?: path
 
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = yuRound(8),
                                 color = DarkSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1132,7 +1133,7 @@ fun EmptyMediaView(
         StateMessage(icon = shown, title = title, message = subtitle, primary = null, testTag = "empty_state", suggestions = false)
         Button(
             onClick = onButtonClick,
-            shape = RoundedCornerShape(24.dp),
+            shape = yuRound(24),
             colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 22.dp),
             modifier = Modifier.defaultMinSize(minHeight = 48.dp).testTag("empty_state_action_button"),
@@ -1156,7 +1157,7 @@ fun PermissionPromptCard(
             .fillMaxWidth()
             .padding(16.dp)
             .testTag("permission_prompt_card"),
-        shape = RoundedCornerShape(16.dp),
+        shape = yuRound(16),
         colors = CardDefaults.cardColors(containerColor = GlassFill),
         border = androidx.compose.foundation.BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.5f))
     ) {
@@ -1192,7 +1193,7 @@ fun PermissionPromptCard(
 
             Button(
                 onClick = onRequestPermission,
-                shape = RoundedCornerShape(20.dp),
+                shape = yuRound(20),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
                 modifier = Modifier.testTag("grant_permission_button")
             ) {
@@ -1246,7 +1247,7 @@ fun SongActionBottomSheet(
                 Box(
                     modifier = Modifier
                         .size(52.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(yuRound(8))
                         .background(SpotifyGreen.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1368,7 +1369,7 @@ fun SheetActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(yuRound(8))
             .clickable { onClick() }
             .padding(vertical = 12.dp, horizontal = 8.dp)
             .testTag(testTag),
@@ -1441,7 +1442,7 @@ fun AddToPlaylistDialog(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(yuRound(8))
                                 .clickable { isCreatingNew = true }
                                 .padding(vertical = 8.dp),
                             color = SpotifyGreen.copy(alpha = 0.15f)
@@ -1471,7 +1472,7 @@ fun AddToPlaylistDialog(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(yuRound(8))
                                 .clickable { onSelectPlaylist(playlist.id) }
                                 .padding(vertical = 4.dp),
                             color = DarkSurfaceVariant
@@ -1614,7 +1615,7 @@ fun BatchActionBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(yuRound(12))
             .testTag("batch_action_bar"),
         color = GlassFill,
         border = androidx.compose.foundation.BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.5f))

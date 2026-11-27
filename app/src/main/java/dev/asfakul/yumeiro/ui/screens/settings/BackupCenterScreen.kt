@@ -79,6 +79,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
 import java.io.InputStream
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Backup, storage & reset (Round 12, rebuilt). Backups are saved in the phone's own storage
@@ -153,7 +154,7 @@ fun BackupScreen(onBack: () -> Unit) {
                 if (latest != null) {
                     Button(
                         onClick = { openPreview { BackupStore.open(context, latest) } },
-                        enabled = busy == null, shape = RoundedCornerShape(20.dp),
+                        enabled = busy == null, shape = yuRound(20),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.fillMaxWidth().testTag("restore_latest"),
                     ) { Text("Restore latest backup · ${whenText(latest.modified)}", maxLines = 1) }
@@ -162,11 +163,11 @@ fun BackupScreen(onBack: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick = { file.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
-                        enabled = busy == null, shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).testTag("restore_pick_file"),
+                        enabled = busy == null, shape = yuRound(20), modifier = Modifier.weight(1f).testTag("restore_pick_file"),
                     ) { Text("Choose a backup file", maxLines = 1) }
                     OutlinedButton(
                         onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } },
-                        enabled = busy == null, shape = RoundedCornerShape(20.dp), modifier = Modifier.weight(1f).testTag("restore_find_folder"),
+                        enabled = busy == null, shape = yuRound(20), modifier = Modifier.weight(1f).testTag("restore_find_folder"),
                     ) { Text("Find my backups", maxLines = 1) }
                 }
                 Text(
@@ -192,11 +193,11 @@ fun BackupScreen(onBack: () -> Unit) {
                             }
                         },
                         enabled = busy == null && sections.isNotEmpty(),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = yuRound(20),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.testTag("backup_now"),
                     ) { Text("Back up now") }
-                    OutlinedButton(onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } }, shape = RoundedCornerShape(20.dp),
+                    OutlinedButton(onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } }, shape = yuRound(20),
                         modifier = Modifier.testTag("backup_choose_folder")) { Text("Choose folder") }
                 }
                 if (BackupStore.folderUri(context) != null) {
@@ -221,9 +222,9 @@ fun BackupScreen(onBack: () -> Unit) {
                     BackupRow(item, i, onRestore = { openPreview { BackupStore.open(context, item) } }, onDelete = { deleting = item })
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 6.dp)) {
-                    OutlinedButton(onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } }, shape = RoundedCornerShape(20.dp),
+                    OutlinedButton(onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } }, shape = yuRound(20),
                         modifier = Modifier.testTag("backup_find")) { Text("Find my backups") }
-                    OutlinedButton(onClick = { file.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, shape = RoundedCornerShape(20.dp),
+                    OutlinedButton(onClick = { file.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, shape = yuRound(20),
                         modifier = Modifier.testTag("backup_pick_file")) { Text("Open a file") }
                 }
             }
@@ -410,7 +411,7 @@ private fun Block(title: String, hint: String?, content: @Composable () -> Unit)
     Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(top = 18.dp))
     if (hint != null) Text(hint, color = TextTertiary, fontSize = 12.sp, lineHeight = 16.sp)
     Spacer(Modifier.height(8.dp))
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
+    Card(Modifier.fillMaxWidth(), shape = yuRound(14), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) { content() }
     }
 }
@@ -453,12 +454,12 @@ private fun ChoiceRow(title: String, options: List<Pair<Int, String>>, value: In
             options.forEach { (v, label) ->
                 val on = v == value
                 if (on) {
-                    Button(onClick = { onPick(v) }, enabled = enabled, shape = RoundedCornerShape(16.dp),
+                    Button(onClick = { onPick(v) }, enabled = enabled, shape = yuRound(16),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.heightIn(min = 36.dp).testTag("${tag}_$v")) { Text(label, fontSize = 12.sp, maxLines = 1) }
                 } else {
-                    OutlinedButton(onClick = { onPick(v) }, enabled = enabled, shape = RoundedCornerShape(16.dp),
+                    OutlinedButton(onClick = { onPick(v) }, enabled = enabled, shape = yuRound(16),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.heightIn(min = 36.dp).testTag("${tag}_$v")) { Text(label, fontSize = 12.sp, maxLines = 1) }
                 }

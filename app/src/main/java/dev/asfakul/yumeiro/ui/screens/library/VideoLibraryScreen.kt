@@ -86,6 +86,7 @@ import dev.asfakul.yumeiro.ui.theme.DarkSurfaceContainer
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * The video half of Library: continue watching (online and on this device), My List with
@@ -196,8 +197,8 @@ fun VideoLibraryContent(
 
 @Composable
 private fun DeviceCard(v: VideoItem, onClick: () -> Unit) {
-    Column(Modifier.width(180.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(bottom = 10.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(DarkSurfaceContainer)) {
+    Column(Modifier.width(180.dp).clip(yuRound(12)).clickable(onClick = onClick).padding(bottom = 10.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(12)).background(DarkSurfaceContainer)) {
             PosterImage(v.thumbnailUri ?: v.uri, emptyMap(), Modifier.fillMaxSize())
             if (v.durationMs > 0) Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
                 Box(Modifier.fillMaxWidth((v.playbackPositionMs.toFloat() / v.durationMs).coerceIn(0f, 1f)).height(3.dp).background(SpotifyGreen))
@@ -212,12 +213,12 @@ private fun DeviceCard(v: VideoItem, onClick: () -> Unit) {
 private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
-    Column(Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).testTag("library_bookmark").padding(bottom = 10.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(12.dp)).background(DarkSurfaceContainer)) {
+    Column(Modifier.clip(yuRound(12)).clickable(onClick = onClick).testTag("library_bookmark").padding(bottom = 10.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(yuRound(12)).background(DarkSurfaceContainer)) {
             PosterImage(b.posterUrl, b.posterHeaders, Modifier.fillMaxSize())
             if (b.newEpisodes > 0) Text(
                 if (b.newEpisodes == 1) "NEW EP" else "+${b.newEpisodes} EPS", color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontSize = 9.sp, fontWeight = FontWeight.Black,
-                modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(SpotifyGreen).padding(horizontal = 6.dp, vertical = 2.dp),
+                modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(yuRound(6)).background(SpotifyGreen).padding(horizontal = 6.dp, vertical = 2.dp),
             )
             Box(Modifier.align(Alignment.TopEnd)) {
                 IconButton(onClick = { menu = true }, modifier = Modifier.size(32.dp)) {
@@ -243,7 +244,7 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
 
 @Composable
 private fun EmptyCard(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, body: String, action: String?, onAction: (() -> Unit)?) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(DarkSurfaceContainer).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth().clip(yuRound(16)).background(DarkSurfaceContainer).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(34.dp))
         Spacer(Modifier.height(8.dp))
         Text(title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -252,7 +253,7 @@ private fun EmptyCard(icon: androidx.compose.ui.graphics.vector.ImageVector, tit
         if (action != null && onAction != null) {
             Spacer(Modifier.height(12.dp))
             Text(action, color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(SpotifyGreen).clickable(onClick = onAction).padding(horizontal = 18.dp, vertical = 8.dp))
+                modifier = Modifier.clip(yuRound(20)).background(SpotifyGreen).clickable(onClick = onAction).padding(horizontal = 18.dp, vertical = 8.dp))
         }
     }
 }

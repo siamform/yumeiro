@@ -76,6 +76,7 @@ import dev.asfakul.yumeiro.ui.theme.ThemeMode
 import dev.asfakul.yumeiro.ui.theme.ThemeSettings
 import dev.asfakul.yumeiro.ui.theme.currentDayPart
 import dev.asfakul.yumeiro.ui.theme.palette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 object DeveloperInfo {
     const val NAME = "Asfakul Siam"
@@ -108,7 +109,7 @@ fun AppearanceSettingsCard() {
     SettingsCard {
         ThemeMode.entries.forEach { m ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                Modifier.fillMaxWidth().clip(yuRound(10))
                     .clickable { ThemeSettings.setMode(context, m) }
                     .padding(vertical = 4.dp)
                     .testTag("theme_${m.name.lowercase()}"),
@@ -123,9 +124,9 @@ fun AppearanceSettingsCard() {
                 // Each theme's own 夢色 scene, so the vibe is visible before choosing it.
                 val preview = dev.asfakul.yumeiro.ui.theme.previewPaletteFor(m, androidx.compose.foundation.isSystemInDarkTheme(), dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current)
                 Box(
-                    Modifier.padding(start = 8.dp).size(width = 36.dp, height = 48.dp).clip(RoundedCornerShape(10.dp))
+                    Modifier.padding(start = 8.dp).size(width = 36.dp, height = 48.dp).clip(yuRound(10))
                         .dreamScenePreview(preview)
-                        .border(if (mode == m) 2.dp else 1.dp, if (mode == m) SpotifyGreen else TextPrimary.copy(alpha = 0.14f), RoundedCornerShape(10.dp)),
+                        .border(if (mode == m) 2.dp else 1.dp, if (mode == m) SpotifyGreen else TextPrimary.copy(alpha = 0.14f), yuRound(10)),
                 )
             }
         }
@@ -169,6 +170,20 @@ fun AppearanceSettingsCard() {
         )
         SettingsDivider()
         SettingsToggleRow(
+            title = "Compact text and corners",
+            subtitle = "Slightly smaller text and softer, tighter corners across Yumeiro. Off: the larger standard size. If you chose large text in Android settings, your size is kept",
+            checked = dev.asfakul.yumeiro.ui.theme.UiScale.compact,
+            onCheckedChange = { on ->
+                dev.asfakul.yumeiro.ui.theme.UiScale.set(context, on)
+                // Text size lives in the window's configuration: redraw the screen once so every page, dialog and sheet follows.
+                var c: android.content.Context? = context
+                while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+                (c as? android.app.Activity)?.takeIf { it is dev.asfakul.yumeiro.MainActivity }?.recreate()
+            },
+            testTag = "toggle_compact_ui",
+        )
+        SettingsDivider()
+        SettingsToggleRow(
             title = "Japanese accents",
             subtitle = "Small kana labels such as 設定 and 音楽 above page titles. Off: English only",
             checked = kana,
@@ -194,7 +209,7 @@ private fun AccentToneSection(mode: ThemeMode) {
         dev.asfakul.yumeiro.ui.theme.AccentTone.entries.forEach { t ->
             val selected = accent == t
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
+                Modifier.weight(1f).clip(yuRound(12))
                     .clickable(onClickLabel = t.label) { ThemeSettings.setAccent(context, t) }
                     .padding(vertical = 4.dp).testTag("accent_${t.name.lowercase()}")
                     .semantics { this.selected = selected },
@@ -225,7 +240,7 @@ fun SubtitleDisplayCard() {
         SettingsDivider()
         var subStyleOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
         Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+            Modifier.fillMaxWidth().clip(yuRound(10))
                 .clickable { subStyleOpen = true }
                 .padding(vertical = 8.dp)
                 .testTag("settings_subtitle_style"),
@@ -265,7 +280,7 @@ fun VideoPlayerSettingsCard() {
         Text("You can also swipe down on the video to shrink it", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
         PlayerSettings.BackAction.entries.forEach { a ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
+                Modifier.fillMaxWidth().clip(yuRound(10))
                     .clickable { PlayerSettings.setBackAction(context, a) }
                     .padding(vertical = 2.dp)
                     .testTag("back_action_${a.name.lowercase()}"),
@@ -294,7 +309,7 @@ fun DeveloperCard() {
             Image(
                 painter = painterResource(R.drawable.ic_app_logo),
                 contentDescription = null,
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)),
+                modifier = Modifier.size(48.dp).clip(yuRound(14)),
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -312,7 +327,7 @@ fun DeveloperCard() {
         }
         Spacer(Modifier.height(14.dp))
         Box(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+            Modifier.fillMaxWidth().clip(yuRound(14))
                 .background(Brush.linearGradient(listOf(BrandViolet.copy(alpha = 0.16f), BrandCyan.copy(alpha = 0.06f))))
                 .padding(12.dp),
         ) {
@@ -349,7 +364,7 @@ fun DeveloperCard() {
 fun MadeInBangladesh(modifier: Modifier = Modifier) {
     Row(modifier.testTag("made_in_bangladesh"), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(width = 20.dp, height = 12.dp).clip(RoundedCornerShape(2.dp)).background(Color(0xFF006A4E)),
+            Modifier.size(width = 20.dp, height = 12.dp).clip(yuRound(2)).background(Color(0xFF006A4E)),
         ) {
             Box(
                 Modifier.align(Alignment.CenterStart).padding(start = 5.dp).size(7.dp).clip(CircleShape).background(Color(0xFFF42A41)),

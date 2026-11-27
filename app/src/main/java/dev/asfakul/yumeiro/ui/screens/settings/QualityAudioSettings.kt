@@ -65,6 +65,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 private fun <T> ChoiceRow(title: String, tag: String, options: List<T>, selected: T, label: (T) -> String, detail: (T) -> String? = { null }, onPick: (T) -> Unit) {
@@ -77,7 +78,7 @@ private fun <T> ChoiceRow(title: String, tag: String, options: List<T>, selected
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 options.forEach { o ->
                     Row(
-                        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(10.dp)).clickable { onPick(o); open = false }.padding(vertical = 4.dp).testTag("${tag}_${label(o).lowercase().replace(' ', '_')}"),
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(yuRound(10)).clickable { onPick(o); open = false }.padding(vertical = 4.dp).testTag("${tag}_${label(o).lowercase().replace(' ', '_')}"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = o == selected, onClick = { onPick(o); open = false }, colors = RadioButtonDefaults.colors(selectedColor = SpotifyGreen))

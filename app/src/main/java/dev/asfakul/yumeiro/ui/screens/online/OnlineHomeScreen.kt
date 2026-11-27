@@ -90,6 +90,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private sealed interface ProviderHome {
     data object Loading : ProviderHome
@@ -649,7 +650,7 @@ fun OnlineHomeScreen(
                         if (banner.first.isNotEmpty() || resume != null) st.item("hero") {
                             HeroCarousel(banner.first, onPlay = openItem, onInfo = openInfo, resume = resume, onResume = { onOpenTitle(it.toItem()) }, newKeys = banner.second)
                         } else if (loadingNames.isNotEmpty()) st.item("hero_skel") {
-                            dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), RoundedCornerShape(24.dp))
+                            dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), yuRound(24))
                         }
                         if (continueItems.isNotEmpty()) st.item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
@@ -801,7 +802,7 @@ fun OnlineHomeScreen(
 
 @Composable
 private fun ProviderProblem(name: String, message: String, onRetry: (() -> Unit)?) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_error")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_error")) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.CloudOff, null, tint = WarnColor, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
@@ -816,7 +817,7 @@ private fun ProviderProblem(name: String, message: String, onRetry: (() -> Unit)
 
 @Composable
 private fun ProviderSetup(message: String, onSetUp: () -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_setup")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_setup")) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Settings, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
@@ -828,7 +829,7 @@ private fun ProviderSetup(message: String, onSetUp: () -> Unit) {
 
 @Composable
 private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, null, tint = SpotifyGreen) }
             Spacer(Modifier.width(10.dp))
@@ -903,7 +904,7 @@ fun VideoSourceSwitch(
 @Composable
 internal fun UpcomingEntryCard(onClick: () -> Unit) {
     androidx.compose.foundation.layout.Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(16.dp))
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(yuRound(16))
             .background(dev.asfakul.yumeiro.ui.theme.GlassFill).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp)
             .testTag("online_upcoming_entry"),
         verticalAlignment = Alignment.CenterVertically,

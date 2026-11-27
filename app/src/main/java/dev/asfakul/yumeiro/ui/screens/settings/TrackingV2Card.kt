@@ -30,6 +30,7 @@ import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** TRACK-2: the Tracking V2 switch, what is waiting, and the last results (Settings → Tracking). */
 @Composable
@@ -38,7 +39,7 @@ internal fun TrackingV2Card() {
     val on by TrackV2.enabled.collectAsState()
     val queue by TrackV2.queue.collectAsState()
     val log by TrackV2.log.collectAsState()
-    Card(Modifier.fillMaxWidth().testTag("tracking_v2_card"), shape = RoundedCornerShape(14.dp), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
+    Card(Modifier.fillMaxWidth().testTag("tracking_v2_card"), shape = yuRound(14), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SettingsToggleRow(
                 "Tracking V2",

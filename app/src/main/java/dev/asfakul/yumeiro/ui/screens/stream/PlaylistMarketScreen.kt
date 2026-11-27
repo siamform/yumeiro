@@ -84,6 +84,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private const val FILTER_INSTALLED = "__installed__"
 private const val FILTER_UPDATES = "__updates__"
@@ -208,7 +209,7 @@ fun PlaylistMarketScreen(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("market_loading"),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                SkeletonBlock(null, 52.dp, shape = RoundedCornerShape(16.dp))
+                SkeletonBlock(null, 52.dp, shape = yuRound(16))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(4) { SkeletonBlock(72.dp, 30.dp, shape = RoundedCornerShape(50)) } }
                 repeat(6) { SkeletonRow(trailing = true) }
             }
@@ -226,12 +227,12 @@ fun PlaylistMarketScreen(
                 ) {
                     s.warning?.let { w ->
                         item(key = "warning") {
-                            Text(w, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(GlassFill).padding(10.dp).testTag("market_warning"))
+                            Text(w, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clip(yuRound(12)).background(GlassFill).padding(10.dp).testTag("market_warning"))
                         }
                     }
                     if (updates.isNotEmpty()) item(key = "updates") {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 14.dp, vertical = 10.dp),
+                            Modifier.fillMaxWidth().clip(yuRound(18)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Default.SystemUpdate, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
@@ -335,9 +336,9 @@ private fun MarketCard(
     onOpen: () -> Unit,
     onUpdate: () -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("market_${entry.id}")) {
+    Surface(shape = yuRound(20), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("market_${entry.id}")) {
         Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(yuRound(12)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Text(entry.country ?: entry.name.take(2).uppercase(), color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
             }
             Spacer(Modifier.width(12.dp))

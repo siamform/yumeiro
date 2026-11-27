@@ -67,6 +67,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private const val GATE_REMINDER = "reminder"
 private const val GATE_NOTIF = "notif_prompt"
@@ -175,7 +176,7 @@ private fun CardShell(tag: String, onClose: () -> Unit, inline: Boolean = false,
 internal fun ReminderSurface(tag: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val palette = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     val glow = dev.asfakul.yumeiro.ui.theme.LocalAmbientColor.current?.value ?: palette.accent
-    val shape = RoundedCornerShape(28.dp)
+    val shape = yuRound(28)
     val base = palette.surfaceContainer
     val wash = remember(base, glow, palette.isDark) {
         Brush.verticalGradient(
@@ -236,7 +237,7 @@ internal fun ReminderCard(icon: ImageVector, tag: String, title: String, body: S
             Text(body, color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(18.dp))
             Button(
-                onClick = onAction, shape = RoundedCornerShape(16.dp),
+                onClick = onAction, shape = yuRound(16),
                 modifier = Modifier.fillMaxWidth().height(50.dp).testTag("${tag}_action"),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
             ) { Text(action, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
@@ -266,7 +267,7 @@ internal fun FollowCard(inline: Boolean = false, onClose: () -> Unit, onDismiss:
                 Reminders.Social.entries.forEach { s ->
                     Button(
                         onClick = { if (Links.open(context, s.url)) Reminders.recordFollow(context, s); onClose() },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = yuRound(16),
                         colors = ButtonDefaults.buttonColors(containerColor = brandColor(s), contentColor = androidx.compose.ui.graphics.Color.White),
                         modifier = Modifier.fillMaxWidth().height(48.dp).testTag("follow_${s.name.lowercase()}"),
                     ) { Text(s.label, fontWeight = FontWeight.SemiBold, fontSize = 15.sp) }

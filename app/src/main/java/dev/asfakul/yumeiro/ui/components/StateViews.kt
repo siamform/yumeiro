@@ -103,6 +103,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicLong
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // region In-app messages (styled toasts)
 
@@ -225,7 +226,7 @@ fun BoxScope.AppMessageHost(bottomPadding: Dp = 96.dp) {
         // One opaque, theme-aware surface: the old pill was always dark (unreadable in light mode)
         // and drew its fill inside a transparent Surface, so the shadow and edges broke on glass.
         val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
-        val toastShape = RoundedCornerShape(18.dp)
+        val toastShape = yuRound(18)
         val baseFill = if (p.isDark) DarkSurfaceContainerHigh else Color(0xFFFFFBF4)
         val fill = androidx.compose.ui.graphics.lerp(baseFill, tint, if (p.isDark) 0.10f else 0.06f)
         Surface(
@@ -288,7 +289,7 @@ object Skeletons {
  * its own band); the phase is read only while drawing, so a skeleton page redraws but never
  * recomposes per frame (it recomposed 60 times a second before, costly on low-RAM phones).
  */
-fun Modifier.shimmer(shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(8.dp)): Modifier = composed {
+fun Modifier.shimmer(shape: androidx.compose.ui.graphics.Shape = yuRound(8)): Modifier = composed {
     val base = GlassFill
     val highlight = TextPrimary.copy(alpha = 0.10f)
     val reduced = reducedMotion()
@@ -316,7 +317,7 @@ fun Modifier.shimmer(shape: androidx.compose.ui.graphics.Shape = RoundedCornerSh
 }
 
 @Composable
-fun SkeletonBlock(width: Dp?, height: Dp, modifier: Modifier = Modifier, shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(6.dp)) {
+fun SkeletonBlock(width: Dp?, height: Dp, modifier: Modifier = Modifier, shape: androidx.compose.ui.graphics.Shape = yuRound(6)) {
     Box((if (width == null) modifier.fillMaxWidth() else modifier.width(width)).height(height).shimmer(shape))
 }
 
@@ -324,7 +325,7 @@ fun SkeletonBlock(width: Dp?, height: Dp, modifier: Modifier = Modifier, shape: 
 @Composable
 fun CoverSkeleton(modifier: Modifier = Modifier, aspect: Float = 0.7f) {
     Column(modifier.fillMaxWidth().testTag("skeleton_cover")) {
-        Box(Modifier.fillMaxWidth().aspectRatio(aspect).shimmer(RoundedCornerShape(12.dp)))
+        Box(Modifier.fillMaxWidth().aspectRatio(aspect).shimmer(yuRound(12)))
         Spacer(Modifier.height(6.dp))
         SkeletonBlock(null, 11.dp, Modifier.padding(end = 12.dp))
         Spacer(Modifier.height(4.dp))
@@ -356,7 +357,7 @@ fun CoverRowSkeleton(count: Int = 4, coverWidth: Dp = 104.dp, modifier: Modifier
 fun CoverDetailSkeleton(rows: Int = 6, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(16.dp).testTag("skeleton_detail"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row {
-            Box(Modifier.width(110.dp).aspectRatio(0.7f).shimmer(RoundedCornerShape(12.dp)))
+            Box(Modifier.width(110.dp).aspectRatio(0.7f).shimmer(yuRound(12)))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SkeletonBlock(null, 18.dp)
@@ -382,7 +383,7 @@ fun skeletonCells(hasItems: Boolean): Int = if (hasItems) 3 else 9
 fun SkeletonRow(modifier: Modifier = Modifier, trailing: Boolean = false) {
     Surface(shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeMd, color = GlassFill, modifier = modifier.fillMaxWidth().testTag("skeleton_row")) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            SkeletonBlock(44.dp, 44.dp, shape = RoundedCornerShape(12.dp))
+            SkeletonBlock(44.dp, 44.dp, shape = yuRound(12))
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SkeletonBlock(null, 14.dp, Modifier.padding(end = 48.dp))
@@ -443,7 +444,7 @@ fun StateMessage(
         if (primary != null) {
             Spacer(Modifier.height(18.dp))
             Button(
-                onClick = primary.second, shape = RoundedCornerShape(24.dp),
+                onClick = primary.second, shape = yuRound(24),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 24.dp),
                 modifier = Modifier.heightIn(min = 48.dp).testTag("${testTag}_primary"),

@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One place a tab can get its content from (e.g. Music → On device / Online / Mix). */
 @Immutable
@@ -110,7 +111,7 @@ fun SourceMenu(
             exit = if (reduced) fadeOut(YuMotion.exit(true)) else shrinkVertically(YuMotion.exit(false, 180), shrinkTowards = Alignment.Top) + fadeOut(YuMotion.exit(false, 150)),
             modifier = Modifier.padding(horizontal = 12.dp).padding(top = 2.dp),
         ) {
-            val shape = RoundedCornerShape(24.dp)
+            val shape = yuRound(24)
             Column(
                 Modifier.widthIn(max = 420.dp).fillMaxWidth().clip(shape)
                     .background(p.surfaceContainerHigh)
@@ -137,7 +138,7 @@ private fun SourceRow(o: SourceOption, selected: Boolean, index: Int, reduced: B
     // Rows settle in one after another (30 ms apart); skipped entirely with reduced motion.
     val anim = remember { Animatable(if (reduced) 1f else 0f) }
     LaunchedEffect(Unit) { if (!reduced) anim.animateTo(1f, YuMotion.enter(false, 260, delay = 40 + index * 30)) }
-    val shape = RoundedCornerShape(18.dp)
+    val shape = yuRound(18)
     Row(
         Modifier.fillMaxWidth().heightIn(min = 64.dp)
             .graphicsLayer { alpha = anim.value; translationY = (1f - anim.value) * 10.dp.toPx() }

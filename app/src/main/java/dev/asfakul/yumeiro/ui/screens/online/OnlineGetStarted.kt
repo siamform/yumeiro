@@ -71,6 +71,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Categories offered on first run, in order. */
 internal val PICK_CATEGORIES = listOf("Anime", "Movies", "TV", "Asian drama", "Short drama", "Live", "Cartoon", "Documentary")
@@ -175,7 +176,7 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
         if (chosen.isNotEmpty()) item("install") {
             Button(
                 onClick = { installChosen() }, enabled = !installing,
-                colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = yuRound(24),
                 modifier = Modifier.fillMaxWidth().height(50.dp).testTag("online_pick_install"),
             ) {
                 if (installing) CircularProgressIndicator(color = OnAccent, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
@@ -188,8 +189,8 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
 @Composable
 private fun PickCard(ext: RemoteExtension, selected: Boolean, enabled: Boolean, onToggle: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(18.dp), color = if (selected) SpotifyGreen.copy(alpha = 0.14f) else GlassFill,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(enabled = enabled, onClick = onToggle).testTag("online_pick_${ext.internalName}"),
+        shape = yuRound(18), color = if (selected) SpotifyGreen.copy(alpha = 0.14f) else GlassFill,
+        modifier = Modifier.fillMaxWidth().clip(yuRound(18)).clickable(enabled = enabled, onClick = onToggle).testTag("online_pick_${ext.internalName}"),
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             ExtensionIcon(ext.iconUrl?.replace("%size%", "128"), 40.dp)

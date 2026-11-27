@@ -55,6 +55,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.watch.WatchTogether
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Host or join a room on the same Wi-Fi. No account, no server. */
 @Composable
@@ -74,7 +75,7 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
         LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("watch_together"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (status.role) {
                 WatchTogether.Role.HOST -> item("host") {
-                    Surface(shape = RoundedCornerShape(18.dp), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = yuRound(18), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Text("You're hosting \"${status.roomName}\"", color = TextPrimary, fontWeight = FontWeight.Bold)
                             Text("Room code", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
@@ -83,19 +84,19 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
                             Text(if (status.state.title.isBlank()) "Play something from Videos → Online. Everyone in the room follows your title, episode, pause and seek."
                                 else "Now: ${status.state.title}", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                             Spacer(Modifier.height(10.dp))
-                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = RoundedCornerShape(20.dp)) { Text("Close room") }
+                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = yuRound(20)) { Text("Close room") }
                         }
                     }
                 }
                 WatchTogether.Role.GUEST -> item("guest") {
-                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Text(if (status.connected) "In \"${status.roomName}\"" else "Connecting to \"${status.roomName}\"…", color = TextPrimary, fontWeight = FontWeight.Bold)
                             Text(status.state.title.ifBlank { "Waiting for the host to play something" }, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                             status.message?.let { Text(it, color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
                             Text("You need the same source installed as the host. Each phone streams on its own.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                             Spacer(Modifier.height(10.dp))
-                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = RoundedCornerShape(20.dp)) { Text("Leave") }
+                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = yuRound(20)) { Text("Leave") }
                         }
                     }
                 }
@@ -105,15 +106,15 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
                             color = TextSecondary, fontSize = 13.sp)
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { WatchTogether.host(context, android.os.Build.MODEL + " room") }, shape = RoundedCornerShape(20.dp),
+                            Button(onClick = { WatchTogether.host(context, android.os.Build.MODEL + " room") }, shape = yuRound(20),
                                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("wt_host")) { Text("Host a room") }
-                            OutlinedButton(onClick = { manual = true }, shape = RoundedCornerShape(20.dp)) { Text("Join by address") }
+                            OutlinedButton(onClick = { manual = true }, shape = yuRound(20)) { Text("Join by address") }
                         }
                     }
                     item("nearby") { SectionTitle("Rooms nearby", if (found.isEmpty()) "Looking on this Wi-Fi…" else null) }
                     if (found.isEmpty()) item("nearby_empty") {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GlassFill).padding(16.dp).testTag("wt_nearby_empty"),
+                            Modifier.fillMaxWidth().clip(yuRound(18)).background(GlassFill).padding(16.dp).testTag("wt_nearby_empty"),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = SpotifyGreen)

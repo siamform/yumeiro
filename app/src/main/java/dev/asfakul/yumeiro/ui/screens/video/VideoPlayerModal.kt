@@ -152,6 +152,7 @@ import dev.asfakul.yumeiro.subtitles.mimeFor
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @OptIn(UnstableApi::class)
 /**
@@ -213,8 +214,8 @@ fun VideoPlayerModal(
                     .padding(end = 12.dp, bottom = minimizedBottomInset)
                     .offset { androidx.compose.ui.unit.IntOffset(drag.x.toInt(), drag.y.toInt()) }
                     .size(miniWidth, miniHeight)
-                    .shadow(18.dp, RoundedCornerShape(14.dp))
-                    .clip(RoundedCornerShape(14.dp))
+                    .shadow(18.dp, yuRound(14))
+                    .clip(yuRound(14))
                     .pointerInput(maxDx, maxDy) {
                         detectDragGestures { change, d ->
                             change.consume()

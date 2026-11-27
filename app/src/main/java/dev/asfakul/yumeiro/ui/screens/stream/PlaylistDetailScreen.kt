@@ -95,6 +95,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Route slug for the temporary (unsaved) list opened from a URL, an M3U file or another app. */
 const val OPENED_PLAYLIST_SLUG = "opened"
@@ -294,7 +295,7 @@ fun PlaylistDetailScreen(
                     testTag = "playlist_not_found",
                 )
                 LoadState.Loading -> Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("playlist_loading"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SkeletonBlock(null, 52.dp, shape = RoundedCornerShape(16.dp))
+                    SkeletonBlock(null, 52.dp, shape = yuRound(16))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(4) { SkeletonBlock(64.dp, 30.dp, shape = RoundedCornerShape(50)) } }
                     repeat(7) { SkeletonRow() }
                 }
@@ -440,7 +441,7 @@ private fun PlaylistInfoCard(
     onUpdate: () -> Unit,
     onEnable: () -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("playlist_info")) {
+    Surface(shape = yuRound(20), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("playlist_info")) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             playlist.description?.let { Text(it, color = TextSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis) }
             val origin = when {
@@ -480,7 +481,7 @@ private fun PlaylistInfoCard(
             }
             if (updateAvailable) {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 12.dp, vertical = 8.dp),
+                    Modifier.fillMaxWidth().clip(yuRound(14)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("A newer version is available", color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))

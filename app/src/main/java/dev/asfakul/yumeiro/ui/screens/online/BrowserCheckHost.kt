@@ -51,6 +51,7 @@ import dev.asfakul.yumeiro.online.web.BrowserCheck
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Shows a site's "verify you're human" page when it can't pass on its own. The user completes the
@@ -266,7 +267,7 @@ private const val POPUP_PROBE_TIMEOUT_MS = 5_000L
 internal fun AdShieldBar(count: Int, canOpen: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier.fillMaxWidth().padding(12.dp)
-            .background(androidx.compose.ui.graphics.Color(0xF0141414), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .background(androidx.compose.ui.graphics.Color(0xF0141414), androidx.compose.foundation.shape.yuRound(14))
             .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp).testTag("ad_shield_bar"),
         verticalAlignment = Alignment.CenterVertically,
     ) {

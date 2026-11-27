@@ -85,6 +85,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_STREAMPLAYLISTUI_1 = Regex("^https?://\\S+", RegexOption.IGNORE_CASE)
@@ -124,13 +125,13 @@ internal fun PlaylistCard(
 ) {
     var menu by remember { mutableStateOf(false) }
     Surface(
-        shape = RoundedCornerShape(20.dp), color = GlassFill,
+        shape = yuRound(20), color = GlassFill,
         modifier = Modifier.fillMaxWidth().testTag("playlist_${playlist.id}")
             .alpha(if (playlist.enabled) 1f else 0.55f)
             .clickable(enabled = playlist.enabled && !busy, onClick = onOpen),
     ) {
         Row(Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(yuRound(12)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 if (busy) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                 else Icon(
                     when { playlist.isLocal -> Icons.Default.Folder; playlist.isDefault -> Icons.Default.LiveTv; else -> Icons.Default.Public },
@@ -145,7 +146,7 @@ internal fun PlaylistCard(
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "Default", color = OnAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(SpotifyGreen).padding(horizontal = 5.dp, vertical = 1.dp),
+                            modifier = Modifier.clip(yuRound(6)).background(SpotifyGreen).padding(horizontal = 5.dp, vertical = 1.dp),
                         )
                     }
                 }
@@ -315,7 +316,7 @@ internal fun PlaylistEditDialog(
 
 @Composable
 private fun AnalysisSummary(a: PlaylistAnalysis) {
-    Surface(shape = RoundedCornerShape(14.dp), color = GlassFill) {
+    Surface(shape = yuRound(14), color = GlassFill) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             fun kb(b: Int) = if (b > 1_048_576) "%.1f MB".format(b / 1_048_576f) else "${b / 1024} KB"
             Line("Result", if (a.isHls) "Single HLS stream (not a channel list)" else "${a.channels} streams in ${a.groups.size}${if (a.groups.size >= 12) "+" else ""} groups")
@@ -355,7 +356,7 @@ internal fun AddToPlaylistDialog(
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(item.displayTitle, color = TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 localPlaylists.forEach { p ->
-                    Surface(shape = RoundedCornerShape(14.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable { onPick(p) }.testTag("pick_${p.id}")) {
+                    Surface(shape = yuRound(14), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable { onPick(p) }.testTag("pick_${p.id}")) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Folder, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
@@ -435,11 +436,11 @@ internal fun ConfirmDeleteDialog(playlist: StreamPlaylist, onDismiss: () -> Unit
 @Composable
 internal fun MarketEntryCard(installed: Int, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(20.dp), color = SpotifyGreen.copy(alpha = 0.12f),
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick).testTag("market_entry"),
+        shape = yuRound(20), color = SpotifyGreen.copy(alpha = 0.12f),
+        modifier = Modifier.fillMaxWidth().clip(yuRound(20)).clickable(onClick = onClick).testTag("market_entry"),
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(yuRound(12)).background(SpotifyGreen), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Storefront, null, tint = OnAccent, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
@@ -458,9 +459,9 @@ internal fun MarketEntryCard(installed: Int, onClick: () -> Unit) {
 /** The temporary list opened from a link or file (not saved yet). */
 @Composable
 internal fun OpenedListCard(name: String?, count: Int, onOpen: () -> Unit, onClose: () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("opened_list")) {
+    Surface(shape = yuRound(20), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("opened_list")) {
         Row(Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(yuRound(12)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(12.dp))

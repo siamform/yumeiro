@@ -84,6 +84,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.ui.theme.rememberGlassBorder
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /* Shared building blocks for the Library tabs: a soft accent hero, stat strip, tiles, shelves. */
 
@@ -108,7 +109,7 @@ internal fun LibraryHero(
     trailing: @Composable (() -> Unit)? = null, bottom: @Composable (() -> Unit)? = null,
 ) {
     val accent = SpotifyGreen
-    val shape = RoundedCornerShape(26.dp)
+    val shape = yuRound(26)
     val palette = LocalMtPalette.current
     Box(
         modifier.fillMaxWidth().clip(shape)
@@ -142,7 +143,7 @@ internal fun librarySize(bytes: Long): String = if (bytes <= 0) "0 MB" else form
 
 @Composable
 internal fun HeroStat(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.clip(RoundedCornerShape(16.dp)).background(TextPrimary.copy(alpha = 0.07f)).padding(horizontal = 12.dp, vertical = 10.dp)) {
+    Column(modifier.clip(yuRound(16)).background(TextPrimary.copy(alpha = 0.07f)).padding(horizontal = 12.dp, vertical = 10.dp)) {
         // UX-LIB-1: a quarter-width pill fits ~4 bold characters at 17 sp, so "153.4 MB" / "Unknown" showed as "Unkn…";
         // the value now shrinks (down to 11 sp) to fit, and only then ellipsizes
         androidx.compose.foundation.text.BasicText(
@@ -166,8 +167,8 @@ internal fun RoundAction(icon: ImageVector, description: String, filled: Boolean
 /** Compact square-ish tile with an icon chip, title and a one-line count. */
 @Composable
 internal fun LibraryTile(title: String, subtitle: String, icon: ImageVector, modifier: Modifier = Modifier, testTag: String = "", onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(20.dp)).background(GlassFill).clickable(onClick = onClick).padding(14.dp).testTag(testTag)) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(SpotifyGreen.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+    Column(modifier.clip(yuRound(20)).background(GlassFill).clickable(onClick = onClick).padding(14.dp).testTag(testTag)) {
+        Box(Modifier.size(36.dp).clip(yuRound(11)).background(SpotifyGreen.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(19.dp))
         }
         Spacer(Modifier.height(12.dp))
@@ -182,7 +183,7 @@ internal fun PlaylistMosaic(tracks: List<AudioTrack>, key: String, size: Dp) {
     val arts = tracks.mapNotNull { it.albumArtUri }.distinct().take(4)
     if (arts.size < 4) {
         TrackArtwork(arts.firstOrNull(), key, size, 16.dp, icon = Icons.AutoMirrored.Filled.QueueMusic)
-    } else Column(Modifier.size(size).clip(RoundedCornerShape(16.dp))) {
+    } else Column(Modifier.size(size).clip(yuRound(16))) {
         for (r in 0..1) Row(Modifier.weight(1f)) {
             for (c in 0..1) AsyncImage(arts[r * 2 + c], null, contentScale = ContentScale.Crop, modifier = Modifier.weight(1f).fillMaxSize().background(GlassFill))
         }
@@ -250,7 +251,7 @@ internal fun LazyListScope.musicOverview(
         item(key = "recent") {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(recentlyPlayed.take(15), key = { "r_" + it.id }) { t ->
-                    Column(Modifier.width(132.dp).clip(RoundedCornerShape(16.dp)).clickable { onPlay(t, recentlyPlayed) }.testTag("lib_recent_${t.id}").padding(bottom = 10.dp)) {
+                    Column(Modifier.width(132.dp).clip(yuRound(16)).clickable { onPlay(t, recentlyPlayed) }.testTag("lib_recent_${t.id}").padding(bottom = 10.dp)) {
                         TrackArtwork(t.albumArtUri, t.albumId, 132.dp, 16.dp)
                         Spacer(Modifier.height(8.dp))
                         Text(t.title, color = if (currentPlayingTrack?.id == t.id) SpotifyGreen else TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -264,7 +265,7 @@ internal fun LazyListScope.musicOverview(
         LibrarySectionHeader("Playlists", if (playlists.isEmpty()) "Your mixes live here" else "${playlists.size} playlists", "+ New", onCreatePlaylist)
     }
     if (playlists.isEmpty()) item(key = "pl_empty") {
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(GlassFill).clickable(onClick = onCreatePlaylist).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clip(yuRound(20)).background(GlassFill).clickable(onClick = onCreatePlaylist).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             TrackArtwork(null, "new", 56.dp, 14.dp, icon = Icons.Default.Add)
             Spacer(Modifier.width(14.dp))
             Column { Text("Create your first playlist", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp); Text("Add songs from any list with the ⋮ menu", color = TextTertiary, fontSize = 12.sp) }
@@ -273,7 +274,7 @@ internal fun LazyListScope.musicOverview(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             row.forEach { pl ->
                 val tracks = remember(pl.trackIds, trackMap) { pl.trackIds.mapNotNull { trackMap[it] } }
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).clickable { onOpenPlaylist(pl.id) }.testTag("playlist_item_${pl.id}").padding(bottom = 10.dp)) {
+                Column(Modifier.weight(1f).clip(yuRound(18)).clickable { onOpenPlaylist(pl.id) }.testTag("playlist_item_${pl.id}").padding(bottom = 10.dp)) {
                     Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
                         androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) { PlaylistMosaic(tracks, pl.id, maxWidth) }
                     }
@@ -288,7 +289,7 @@ internal fun LazyListScope.musicOverview(
     if (mostPlayed.isNotEmpty()) {
         item(key = "top_h") { LibrarySectionHeader("On repeat", "Your most played") }
         itemsIndexed(mostPlayed.take(5), key = { _, t -> "m_" + t.id }) { i, t ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { onPlay(t, mostPlayed) }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clip(yuRound(16)).clickable { onPlay(t, mostPlayed) }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${i + 1}", color = if (i == 0) SpotifyGreen else TextTertiary, fontSize = 20.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(30.dp))
                 TrackArtwork(t.albumArtUri, t.albumId, 48.dp, 12.dp)
                 Spacer(Modifier.width(12.dp))
@@ -349,12 +350,12 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
         }
         item("sv_h") { LibrarySectionHeader("Saved", if (saved.isEmpty()) null else "${saved.size} titles", "Browse", onBrowse) }
         if (saved.isEmpty()) item("sv_empty") {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(GlassFill).padding(18.dp)) {
+            Column(Modifier.fillMaxWidth().clip(yuRound(20)).background(GlassFill).padding(18.dp)) {
                 Text("Nothing on your shelf yet", color = TextPrimary, fontWeight = FontWeight.Bold)
                 Text("Install a manga source, open a title and tap Save. Reading progress is kept on this phone.", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 Spacer(Modifier.height(12.dp))
                 Text("Add manga sources", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                    modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(SpotifyGreen).clickable(onClick = onOpenSources).padding(horizontal = 16.dp, vertical = 8.dp))
+                    modifier = Modifier.clip(yuRound(20)).background(SpotifyGreen).clickable(onClick = onOpenSources).padding(horizontal = 16.dp, vertical = 8.dp))
             }
         } else items(saved.chunked(3), key = { r -> "sv_" + r.joinToString { it.key } }) { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -367,8 +368,8 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
 
 @Composable
 private fun ShelfCover(e: MangaLibrary.Entry, subtitle: String?, fill: Boolean = false, onClick: () -> Unit) {
-    Column((if (fill) Modifier.fillMaxWidth() else Modifier.width(108.dp)).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(bottom = 10.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(RoundedCornerShape(14.dp)).background(GlassFill)) {
+    Column((if (fill) Modifier.fillMaxWidth() else Modifier.width(108.dp)).clip(yuRound(14)).clickable(onClick = onClick).padding(bottom = 10.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(yuRound(14)).background(GlassFill)) {
             dev.asfakul.yumeiro.ui.screens.manga.MangaCoverImage(e.providerId, e.cover, Modifier.fillMaxSize())
         }
         Spacer(Modifier.height(6.dp))

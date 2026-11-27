@@ -58,6 +58,7 @@ import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Subtitle look editor with a live preview. Changes apply instantly and are remembered. */
 @Composable
@@ -153,7 +154,7 @@ private fun <T> ChipRow(options: List<Pair<String, T>>, current: T?, tag: String
         options.forEachIndexed { i, (label, v) ->
             val sel = v == current
             Box(
-                Modifier.clip(RoundedCornerShape(10.dp))
+                Modifier.clip(yuRound(10))
                     .background(if (sel) SpotifyGreen else DarkSurfaceContainerHigh)
                     .clickable(role = Role.RadioButton) { onPick(v) }
                     .semantics { selected = sel }
@@ -176,7 +177,7 @@ private fun SubtitlePreview(s: SubtitleStyle) {
     }
     val size = 16.sp * (if (s.followSystem) 1f else s.size)
     Box(
-        Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(12.dp))
+        Modifier.fillMaxWidth().height(120.dp).clip(yuRound(12))
             .background(Brush.verticalGradient(listOf(Color(0xFF4A6FA5), Color(0xFFE8B37A), Color(0xFF2B2D42))))
             .testTag("subtitle_style_preview"),
         contentAlignment = Alignment.BottomCenter,

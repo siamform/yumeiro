@@ -45,6 +45,11 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
         return service
     }
 
+    /** F12: compact text app-wide (every window this activity opens), see [dev.asfakul.yumeiro.ui.theme.UiScale]. */
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(dev.asfakul.yumeiro.ui.theme.UiScale.wrap(newBase))
+    }
+
     override fun onDestroy() {
         dev.asfakul.yumeiro.online.ExtensionPopups.clear()
         super.onDestroy()

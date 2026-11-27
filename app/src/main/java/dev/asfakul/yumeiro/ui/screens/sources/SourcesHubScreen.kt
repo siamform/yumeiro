@@ -83,6 +83,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * One place for every source ecosystem besides CloudStream: Aniyomi (anime) and Mihon (manga)
@@ -159,14 +160,14 @@ internal fun HubCard(
     warning: String? = null,
     trailing: @Composable () -> Unit = {},
 ) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = modifier.fillMaxWidth()) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = modifier.fillMaxWidth()) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(title, color = TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (badge != null) {
                         Spacer(Modifier.width(8.dp))
-                        Surface(shape = RoundedCornerShape(8.dp), color = SpotifyGreen.copy(alpha = 0.16f)) {
+                        Surface(shape = yuRound(8), color = SpotifyGreen.copy(alpha = 0.16f)) {
                             Text(badge, color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                         }
                     }
@@ -352,7 +353,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
                                         }
                                     },
                                     enabled = busy == null,
-                                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = yuRound(20),
                                 ) { Text(if (upd) "Update" else "Install") }
                             }
                         }
@@ -608,7 +609,7 @@ private fun ServersTab(nav: SourcesPageNav) {
                 SectionTitle("Add a server")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     listOf(HomeServers.Kind.JELLYFIN, HomeServers.Kind.EMBY, HomeServers.Kind.PLEX).forEach { k ->
-                        Button(onClick = { form = k }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp),
+                        Button(onClick = { form = k }, modifier = Modifier.weight(1f), shape = yuRound(14),
                             colors = ButtonDefaults.buttonColors(containerColor = GlassFill, contentColor = TextPrimary)) { Text(k.label, maxLines = 1, fontSize = 13.sp) }
                     }
                 }
@@ -620,10 +621,10 @@ private fun ServersTab(nav: SourcesPageNav) {
                             found = runCatching { DlnaTree.discover(context) }.getOrElse { AppMessages.error(context, OnlineErrors.friendly(it)); null }
                             scanning = false
                         }
-                    }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp),
+                    }, modifier = Modifier.weight(1f), shape = yuRound(14),
                         colors = ButtonDefaults.buttonColors(containerColor = GlassFill, contentColor = TextPrimary)) { Text("DLNA", maxLines = 1, fontSize = 13.sp) }
                     listOf(HomeServers.Kind.WEBDAV, HomeServers.Kind.SMB).forEach { k ->
-                        Button(onClick = { form = k }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp),
+                        Button(onClick = { form = k }, modifier = Modifier.weight(1f), shape = yuRound(14),
                             colors = ButtonDefaults.buttonColors(containerColor = GlassFill, contentColor = TextPrimary)) { Text(k.label, maxLines = 1, fontSize = 13.sp) }
                     }
                 }

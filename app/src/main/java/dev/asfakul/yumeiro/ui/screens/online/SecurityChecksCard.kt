@@ -49,6 +49,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.ui.theme.WarningTone
 import kotlinx.coroutines.delay
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * ADR-059: Extensions → "Security checks". One row per site that asked to confirm a person is there,
@@ -62,7 +63,7 @@ internal fun SecurityChecksCard() {
     // The "for 25 min" wording counts down while the card is on screen (once a minute, no work otherwise).
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(60_000L); now = System.currentTimeMillis() } }
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(top = 14.dp).testTag("security_checks")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(top = 14.dp).testTag("security_checks")) {
         Column(Modifier.padding(14.dp)) {
             Text("Security checks", color = TextPrimary, fontWeight = FontWeight.SemiBold)
             Text(

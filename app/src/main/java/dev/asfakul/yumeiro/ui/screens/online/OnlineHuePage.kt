@@ -47,6 +47,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One playlist (row) of a Hue with its own paging cursor. */
 internal data class HueRowFeed(val row: OnlineRow, val items: List<OnlineItem>, val page: Int, val hasNext: Boolean, val loading: Boolean = false, val fails: Int = 0) {
@@ -315,7 +316,7 @@ internal fun HuePage(
 internal fun FeedCardSkeleton() {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("feed_card_skeleton")) {
         Box(Modifier.fillMaxWidth().height(0.dp).padding(0.dp))
-        SkeletonBlock(width = null, height = 196.dp, shape = RoundedCornerShape(22.dp))
+        SkeletonBlock(width = null, height = 196.dp, shape = yuRound(22))
         Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             SkeletonBlock(width = 36.dp, height = 36.dp, shape = CircleShape)
             Spacer(Modifier.width(10.dp))
@@ -330,7 +331,7 @@ internal fun FeedCardSkeleton() {
 @Composable
 private fun HueNotice(message: String, action: String? = null, onAction: (() -> Unit)? = null, action2: String? = null, onAction2: (() -> Unit)? = null) {
     androidx.compose.material3.Surface(
-        shape = RoundedCornerShape(18.dp), color = dev.asfakul.yumeiro.ui.theme.GlassFill,
+        shape = yuRound(18), color = dev.asfakul.yumeiro.ui.theme.GlassFill,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_error"),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
