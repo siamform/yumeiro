@@ -934,6 +934,7 @@
     <string name="nx_fallback_retry">%1$s আবার চেষ্টা করুন</string>
     <string name="nx_some_failed">সাড়া দেয়নি: %1$s</string>
     <string name="nx_try_again">আবার চেষ্টা করুন</string>
+    <string name="xr_page">পৃষ্ঠা %1$d</string>
     <string name="nx_all_none_title">এখানে কিছু নেই</string>
     <string name="nx_all_none_text">আপনার কোনো উৎসেই কোনো উপন্যাস পাওয়া যায়নি।</string>
     <string name="hx_select">নির্বাচন</string>

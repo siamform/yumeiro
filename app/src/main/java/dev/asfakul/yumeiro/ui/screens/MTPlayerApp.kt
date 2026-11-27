@@ -1280,6 +1280,8 @@ fun MTPlayerApp(
                                 onBack = popSub,
                                 onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
                                 onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
+                                // Group X (B5): Continue reading opens the chapter itself; the reader restores the exact spot.
+                                onResume = { e -> navigateSub(Screen.MangaReader.route(e.providerId, e.url, e.title, e.lastChapterUrl.orEmpty(), e.lastChapterName.orEmpty())) },
                             )
                         }
                     }
@@ -1289,6 +1291,7 @@ fun MTPlayerApp(
                                 onBack = popSub,
                                 onOpenNovel = { navigateSub(Screen.NovelTitle.route(it.pluginId, it.path, it.name, it.cover)) },
                                 onOpenSources = { navigateSub(Screen.NovelSources.route) },
+                                onResume = { e -> navigateSub(Screen.NovelReader.route(e.pluginId, e.path, e.name, e.chapterPath.orEmpty())) },
                             )
                         }
                     }
@@ -1404,6 +1407,7 @@ fun MTPlayerApp(
                                     onBrowse = { navigateSub(Screen.Manga.route) },
                                     onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
                                     onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
+                                    onResume = { e -> navigateSub(Screen.MangaReader.route(e.providerId, e.url, e.title, e.lastChapterUrl.orEmpty(), e.lastChapterName.orEmpty())) },
                                 )
                             }
                         }

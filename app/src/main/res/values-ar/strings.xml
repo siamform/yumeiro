@@ -934,6 +934,7 @@
     <string name="nx_fallback_retry">جرّب %1$s مرة أخرى</string>
     <string name="nx_some_failed">لم يستجب: %1$s</string>
     <string name="nx_try_again">حاول مرة أخرى</string>
+    <string name="xr_page">صفحة %1$d</string>
     <string name="nx_all_none_title">لا يوجد شيء هنا</string>
     <string name="nx_all_none_text">لم يعرض أي من مصادرك أي روايات.</string>
     <string name="hx_select">تحديد</string>

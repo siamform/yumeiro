@@ -150,7 +150,7 @@ private enum class Feed { POPULAR, LATEST, SEARCH }
  * 50 installed sources stay easy to pick from.
  */
 @Composable
-fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpenSources: () -> Unit) {
+fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpenSources: () -> Unit, onResume: ((MangaLibrary.Entry) -> Unit)? = null) {
     val context = LocalContext.current
     val hub by SourceHub.state.collectAsState()
     val adult by OnlineSettings.adult.collectAsState()
@@ -222,7 +222,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
             val saved = library.filter { it.saved }
             when {
                 savedOnly -> SavedGrid(saved, onOpenTitle)
-                provider != null -> MangaGrid(provider, feed, submitted, saved, onOpenTitle)
+                provider != null -> MangaGrid(provider, feed, submitted, library, onOpenTitle, onResume)
             }
         }
     }
@@ -305,7 +305,7 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
 }
 
 @Composable
-private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved: List<MangaLibrary.Entry>, onOpen: (MangaItem) -> Unit) {
+private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, library: List<MangaLibrary.Entry>, onOpen: (MangaItem) -> Unit, onResume: ((MangaLibrary.Entry) -> Unit)? = null) {
     val items = remember(provider.id, feed, query) { mutableStateListOf<MangaItem>() }
     var page by remember(provider.id, feed, query) { mutableStateOf(0) }
     var hasNext by remember(provider.id, feed, query) { mutableStateOf(true) }
@@ -335,14 +335,17 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
     }
     LazyVerticalGrid(GridCells.Adaptive(108.dp), state = grid, modifier = Modifier.fillMaxSize().testTag("manga_grid"),
         contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        val continueReading = saved.filter { it.lastChapterUrl != null }.take(10)
+        // Group X (B5): every title being read (saved or not), newest first; a tap goes straight back into the
+        // chapter at the exact spot (the reader restores page + offset), not to the title page.
+        val continueReading = library.filter { it.lastChapterUrl != null }.sortedByDescending { it.updatedAt }.take(10)
         if (continueReading.isNotEmpty() && feed != Feed.SEARCH) item(span = { GridItemSpan(maxLineSpan) }, key = "continue") {
             Column {
                 Text(stringResource(R.string.continue_reading), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Spacer(Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(continueReading, key = { it.key }) { e ->
-                        Cover(MangaItem(e.providerId, e.url, e.title, e.cover), subtitle = e.lastChapterName, width = 96.dp) { onOpen(it) }
+                        Cover(MangaItem(e.providerId, e.url, e.title, e.cover), subtitle = listOfNotNull(e.lastChapterName, stringResource(R.string.xr_page, e.lastPage + 1)).joinToString(" · "), width = 96.dp,
+                            tag = "manga_continue_${e.url}") { if (onResume != null) onResume(e) else onOpen(it) }
                     }
                 }
             }
@@ -362,8 +365,8 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
 }
 
 @Composable
-private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, onClick: (MangaItem) -> Unit) {
-    Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable { onClick(m) }) {
+private fun Cover(m: MangaItem, subtitle: String?, width: androidx.compose.ui.unit.Dp? = null, tag: String? = null, onClick: (MangaItem) -> Unit) {
+    Column((if (width != null) Modifier.width(width) else Modifier.fillMaxWidth()).clickable { onClick(m) }.then(if (tag != null) Modifier.testTag(tag) else Modifier)) {
         Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clip(yuRound(12)).background(GlassFill), contentAlignment = Alignment.Center) {
             MangaCoverImage(m.providerId, m.cover, Modifier.fillMaxSize())
         }

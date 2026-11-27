@@ -933,6 +933,7 @@
     <string name="nx_fallback_retry">Try %1$s again</string>
     <string name="nx_some_failed">Didn\'t answer: %1$s</string>
     <string name="nx_try_again">Try again</string>
+    <string name="xr_page">Page %1$d</string>
     <string name="nx_all_none_title">Nothing here</string>
     <string name="nx_all_none_text">None of your sources listed any novels.</string>
     <string name="hx_select">Select</string>

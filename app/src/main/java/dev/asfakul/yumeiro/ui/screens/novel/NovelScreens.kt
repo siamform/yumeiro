@@ -121,7 +121,7 @@ private fun prefs(c: Context) = c.getSharedPreferences("novel_reader", Context.M
 private enum class Feed { POPULAR, LATEST, SAVED, HISTORY }
 
 @Composable
-fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpenSources: () -> Unit) {
+fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpenSources: () -> Unit, onResume: ((NovelLibrary.Entry) -> Unit)? = null) {
     val context = LocalContext.current
     val state by NovelSources.state.collectAsState()
     val library by NovelLibrary.entries.collectAsState()
@@ -215,9 +215,13 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
                 else -> {
                     // GROUP G3: the page opens on a banner: the novel you were reading, then this source's top picks.
                     val reading = remember(library) { library.values.filter { it.readAt > 0 }.maxByOrNull { it.readAt } }
-                    if (all) BrowseAllGrid(feed == Feed.LATEST, onOpenNovel, reading)
+                    // Group X (B5): Continue reading, newest first; a tap reopens the chapter at the exact line.
+                    val continuing = remember(library) { library.values.filter { it.readAt > 0 && !it.chapterPath.isNullOrBlank() }.sortedByDescending { it.readAt }.take(10) }
+                    val resume = onResume
+                    if (all) BrowseAllGrid(feed == Feed.LATEST, onOpenNovel, reading, continuing, resume)
                     else if (plugin != null) BrowseGrid(plugin, feed == Feed.LATEST, onOpenNovel, reading,
-                        onUnusable = if (state.installed.size > 1 && noFallback != plugin.id) ({ fellBackFrom = plugin.id }) else null)
+                        onUnusable = if (state.installed.size > 1 && noFallback != plugin.id) ({ fellBackFrom = plugin.id }) else null,
+                        continuing = continuing, onResume = resume)
                 }
             }
         }
@@ -253,7 +257,8 @@ private fun NovelError(pluginId: String, title: String, error: String, testTag: 
 }
 
 @Composable
-private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry? = null, onUnusable: (() -> Unit)? = null) {
+private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry? = null, onUnusable: (() -> Unit)? = null,
+    continuing: List<NovelLibrary.Entry> = emptyList(), onResume: ((NovelLibrary.Entry) -> Unit)? = null) {
     val context = LocalContext.current
     val items = remember(plugin.id, latest) { mutableStateListOf<NovelItem>() }
     var page by remember(plugin.id, latest) { mutableIntStateOf(1) }
@@ -291,9 +296,13 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
         val banner = NovelBanner.slides(items, reading, plugin.name, latest)
         if (banner.isNotEmpty()) item(key = "novel_banner", span = { GridItemSpan(maxLineSpan) }, contentType = "banner") {
             Box(Modifier.padding(bottom = 6.dp)) {
-                dev.asfakul.yumeiro.ui.screens.home.HeroCarousel(banner.map { it.slide }, tag = "novel_banner") { i -> onOpen(banner[i].item) }
+                dev.asfakul.yumeiro.ui.screens.home.HeroCarousel(banner.map { it.slide }, tag = "novel_banner") { i ->
+                    val r = reading
+                    if (i == 0 && r != null && onResume != null && !r.chapterPath.isNullOrBlank()) onResume(r) else onOpen(banner[i].item)
+                }
             }
         }
+        novelContinueRow(continuing, onResume)
         itemsIndexed(items, key = { _, it -> it.path }) { _, it -> NovelCover(it, null) { n -> onOpen(n) } }
         // SKELETON-2: cover placeholders in the grid's own shape instead of a spinner.
         if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(items.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
@@ -311,7 +320,7 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
  * stops being asked.
  */
 @Composable
-private fun BrowseAllGrid(latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry?) {
+private fun BrowseAllGrid(latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry?, continuing: List<NovelLibrary.Entry> = emptyList(), onResume: ((NovelLibrary.Entry) -> Unit)? = null) {
     val context = LocalContext.current
     val state by NovelSources.state.collectAsState()
     val ids = state.installed.map { it.id }
@@ -361,9 +370,13 @@ private fun BrowseAllGrid(latest: Boolean, onOpen: (NovelItem) -> Unit, reading:
         val banner = NovelBanner.slides(items, reading, label, latest)
         if (banner.isNotEmpty()) item(key = "novel_banner", span = { GridItemSpan(maxLineSpan) }, contentType = "banner") {
             Box(Modifier.padding(bottom = 6.dp)) {
-                dev.asfakul.yumeiro.ui.screens.home.HeroCarousel(banner.map { it.slide }, tag = "novel_banner") { i -> onOpen(banner[i].item) }
+                dev.asfakul.yumeiro.ui.screens.home.HeroCarousel(banner.map { it.slide }, tag = "novel_banner") { i ->
+                    val r = reading
+                    if (i == 0 && r != null && onResume != null && !r.chapterPath.isNullOrBlank()) onResume(r) else onOpen(banner[i].item)
+                }
             }
         }
+        novelContinueRow(continuing, onResume)
         itemsIndexed(items, key = { _, it -> it.pluginId + "|" + it.path }) { _, it -> NovelCover(it, names[it.pluginId]) { n -> onOpen(n) } }
         if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(true), key = { "sk_$it" }, contentType = { "skeleton" }) {
             dev.asfakul.yumeiro.ui.components.CoverSkeleton()
@@ -391,6 +404,25 @@ private fun SearchAllResults(query: String, onOpen: (NovelItem) -> Unit) {
                 else if (grp.items.isEmpty()) Text(stringResource(R.string.no_results), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 else LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(grp.items, key = { it.path }) { NovelCover(it, null, width = 104.dp) { n -> onOpen(n) } }
+                }
+            }
+        }
+    }
+}
+
+/** Group X (B5): "Continue reading" across the grid's width; each cover reopens its chapter at the saved line. */
+private fun androidx.compose.foundation.lazy.grid.LazyGridScope.novelContinueRow(continuing: List<NovelLibrary.Entry>, onResume: ((NovelLibrary.Entry) -> Unit)?) {
+    if (continuing.isEmpty() || onResume == null) return
+    item(key = "novel_continue", span = { GridItemSpan(maxLineSpan) }, contentType = "continue") {
+        Column(Modifier.testTag("novel_continue")) {
+            Text(stringResource(R.string.continue_reading), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(continuing.size, key = { continuing[it].key }) { i ->
+                    val e = continuing[i]
+                    Box(Modifier.testTag("novel_continue_${e.path}")) {
+                        NovelCover(NovelItem(e.pluginId, e.name, e.path, e.cover), e.chapterName, width = 96.dp) { onResume(e) }
+                    }
                 }
             }
         }

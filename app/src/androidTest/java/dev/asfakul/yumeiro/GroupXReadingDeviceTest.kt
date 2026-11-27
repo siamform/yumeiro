@@ -26,6 +26,9 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
+import dev.asfakul.yumeiro.ui.screens.manga.MangaHomeScreen
+import dev.asfakul.yumeiro.ui.screens.novel.NovelHomeScreen
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.sources.SourceHub
@@ -64,7 +67,9 @@ import java.util.zip.DeflaterOutputStream
  *  a: webtoon — scroll to the middle of page 2, leave 0.3 s later, open again → same page, same line.
  *  b: novel — scroll into the middle of a long paragraph, leave 0.3 s later, open again → same paragraph, same line.
  *  c: novel — a bigger text size keeps the same paragraph and the same share into it at the top.
- * Log tag YuGroupX: GX_… lines, GX_RESULT_A/B/C PASS. Shots gx_a_before, gx_a_after, gx_b_before, gx_b_after, gx_c.
+ *  g: manga — read into page 2, go to the Manga home: Continue reading lists the title, a tap opens the chapter at the same line.
+ *  h: novel — read into a paragraph, go to the Novels home: Continue reading lists it, a tap opens the chapter at the same line.
+ * Log tag YuGroupX: GX_… lines, GX_RESULT_A/B/C/G/H PASS. Shots gx_a_before, gx_a_after, gx_b_before, gx_b_after, gx_c.
  */
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -275,8 +280,79 @@ exports.default = new Yu();
         log("GX_RESULT_C PASS")
     }
 
+    // ---- Continue reading (B5) -------------------------------------------------------------------------------
+    private var reading by mutableStateOf(true)
+    private fun shown(tag: String) = runCatching { compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
+
+    @Test fun g_mangaContinueOpensTheChapterAtTheSpot() {
+        val p = mangaSource("yu_test_spot")
+        ctx.getSharedPreferences("manga_reader", 0).edit().putBoolean("vertical", true).commit()
+        ctx.getSharedPreferences("manga_home", 0).edit().putString("source", p.id).commit()
+        MangaLibrary.load(ctx)
+        SourceHub.publishManga("yu_test_spot_bridge", listOf(p))
+        var resumed: MangaLibrary.Entry? = null
+        var openedTitle = false
+        compose.setContent { FirstRun.AppBackground { Box(Modifier.fillMaxSize()) {
+            if (reading) MangaReaderScreen(p.id, "yuspot://g", "YuSpot G", resumed?.lastChapterUrl ?: "yuspot://g/1", resumed?.lastChapterName ?: "YuSpot Chapter 1", onBack = {})
+            else MangaHomeScreen(onBack = {}, onOpenTitle = { openedTitle = true }, onOpenSources = {}, onResume = { e -> resumed = e; reading = true })
+        } } }
+        compose.waitUntil(60_000) { pagesShown() }
+        SystemClock.sleep(1_500); compose.waitForIdle()
+        val before = scrollInto("manga_reader", ::mangaSpot) { it.label != "Page 1" && it.frac in 0.3f..0.7f }
+        SystemClock.sleep(300)
+        reading = false; compose.waitForIdle()
+        compose.waitUntil(30_000) { shown("manga_continue_yuspot://g") }
+        SystemClock.sleep(500); FirstRun.shot("gx_g_home")
+        log("GX_G before=$before saved=${MangaLibrary.get(p.id, "yuspot://g")?.lastPage}")
+        compose.onNodeWithTag("manga_continue_yuspot://g", true).performClick(); compose.waitForIdle()
+        assertTrue("Continue reading opened the title page, not the chapter", !openedTitle)
+        assertEquals("Continue reading did not hand over the chapter", "yuspot://g/1", resumed?.lastChapterUrl)
+        compose.waitUntil(60_000) { pagesShown() }
+        SystemClock.sleep(3_000); compose.waitForIdle()
+        val after = mangaSpot(); FirstRun.shot("gx_g_after")
+        log("GX_G after=$after")
+        assertEquals("Continue reading opened another page", before.label, after?.label)
+        val offPx = kotlin.math.abs((after!!.frac - before.frac) * before.heightPx)
+        assertTrue("Continue reading opened ${offPx.toInt()} px away from the spot", offPx <= 24f)
+        log("GX_RESULT_G PASS")
+    }
+
+    @Test fun h_novelContinueOpensTheChapterAtTheSpot() {
+        startNovel()
+        var resumed: NovelLibrary.Entry? = null
+        var openedTitle = false
+        compose.setContent { FirstRun.AppBackground { Box(Modifier.fillMaxSize()) {
+            if (reading) NovelReaderScreen("yuspot", "novel/long", "Long River", resumed?.chapterPath ?: "novel/long/1", onBack = {})
+            else NovelHomeScreen(onBack = {}, onOpenNovel = { openedTitle = true }, onOpenSources = {}, onResume = { e -> resumed = e; reading = true })
+        } } }
+        compose.waitUntil(60_000) { novelShown() }
+        SystemClock.sleep(1_000); compose.waitForIdle()
+        val before = scrollInto("novel_text", ::novelSpot) { it.label.isNotEmpty() && it.label != "P1" && it.frac in 0.3f..0.7f }
+        SystemClock.sleep(300)
+        reading = false; compose.waitForIdle()
+        compose.waitUntil(60_000) { shown("novel_all_grid") || shown("novel_browse_grid") }
+        val grid = if (shown("novel_all_grid")) "novel_all_grid" else "novel_browse_grid"
+        val tag = "novel_continue_novel/long"
+        runCatching { compose.onNodeWithTag(grid, true).performScrollToNode(hasTestTag(tag)) }
+        compose.waitUntil(30_000) { shown(tag) }
+        SystemClock.sleep(500); FirstRun.shot("gx_h_home")
+        log("GX_H before=$before saved=${NovelLibrary.get("yuspot", "novel/long")?.position}")
+        compose.onNodeWithTag(tag, true).performClick(); compose.waitForIdle()
+        assertTrue("Continue reading opened the novel page, not the chapter", !openedTitle)
+        assertEquals("Continue reading did not hand over the chapter", "novel/long/1", resumed?.chapterPath)
+        compose.waitUntil(60_000) { novelShown() }
+        SystemClock.sleep(2_000); compose.waitForIdle()
+        val after = novelSpot(); FirstRun.shot("gx_h_after")
+        log("GX_H after=$after")
+        assertEquals("Continue reading opened another paragraph", before.label, after?.label)
+        val offPx = kotlin.math.abs((after!!.frac - before.frac) * before.heightPx)
+        assertTrue("Continue reading opened ${offPx.toInt()} px away from the line", offPx <= 24f)
+        log("GX_RESULT_H PASS")
+    }
+
     @After fun tearDown() {
         runCatching { SourceHub.remove("yu_test_spot_bridge") }
+        runCatching { MangaLibrary.remove(ctx, "yu_test_spot|yuspot://g") }
         if (::server.isInitialized) {
             runCatching { NovelSources.uninstall(ctx, "yuspot") }
             runCatching { NovelSources.state.value.repos.filter { it.startsWith(base()) }.forEach { NovelSources.removeRepo(ctx, it) } }
