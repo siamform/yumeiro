@@ -933,3 +933,21 @@ nx_some_failed	সাড়া দেয়নি: %1$s
 nx_try_again	আবার চেষ্টা করুন
 nx_all_none_title	এখানে কিছু নেই
 nx_all_none_text	আপনার কোনো উৎসেই কোনো উপন্যাস পাওয়া যায়নি।
+hx_select	নির্বাচন
+hx_selected	%1$d টি নির্বাচিত
+hx_select_all	সব নির্বাচন
+hx_select_none	নির্বাচন বাতিল
+hx_delete_selected	নির্বাচিতগুলো মুছুন
+hx_delete_history	ইতিহাস মুছুন
+hx_range_hour	গত এক ঘণ্টা
+hx_range_day	গত ২৪ ঘণ্টা
+hx_range_week	গত ৭ দিন
+hx_range_month	গত ৩০ দিন
+hx_range_all	সব সময়
+hx_range_count	শিরোনাম: %1$d
+hx_delete_count	মুছুন (%1$d)
+hx_removed	ইতিহাস থেকে সরানো হয়েছে: %1$d
+hx_undo	ফিরিয়ে আনুন
+hx_sheet_note	এই সময়ে শেষবার দেখা শিরোনাম ও সেগুলোর আবার-শুরুর জায়গা সরানো হবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।
+hx_nothing_in_range	এই সময়ে কিছু দেখা হয়নি
+hx_remove_title	%1$s ইতিহাস থেকে সরান

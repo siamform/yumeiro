@@ -936,4 +936,22 @@
     <string name="nx_try_again">আবার চেষ্টা করুন</string>
     <string name="nx_all_none_title">এখানে কিছু নেই</string>
     <string name="nx_all_none_text">আপনার কোনো উৎসেই কোনো উপন্যাস পাওয়া যায়নি।</string>
+    <string name="hx_select">নির্বাচন</string>
+    <string name="hx_selected">%1$d টি নির্বাচিত</string>
+    <string name="hx_select_all">সব নির্বাচন</string>
+    <string name="hx_select_none">নির্বাচন বাতিল</string>
+    <string name="hx_delete_selected">নির্বাচিতগুলো মুছুন</string>
+    <string name="hx_delete_history">ইতিহাস মুছুন</string>
+    <string name="hx_range_hour">গত এক ঘণ্টা</string>
+    <string name="hx_range_day">গত ২৪ ঘণ্টা</string>
+    <string name="hx_range_week">গত ৭ দিন</string>
+    <string name="hx_range_month">গত ৩০ দিন</string>
+    <string name="hx_range_all">সব সময়</string>
+    <string name="hx_range_count">শিরোনাম: %1$d</string>
+    <string name="hx_delete_count">মুছুন (%1$d)</string>
+    <string name="hx_removed">ইতিহাস থেকে সরানো হয়েছে: %1$d</string>
+    <string name="hx_undo">ফিরিয়ে আনুন</string>
+    <string name="hx_sheet_note">এই সময়ে শেষবার দেখা শিরোনাম ও সেগুলোর আবার-শুরুর জায়গা সরানো হবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।</string>
+    <string name="hx_nothing_in_range">এই সময়ে কিছু দেখা হয়নি</string>
+    <string name="hx_remove_title">%1$s ইতিহাস থেকে সরান</string>
 </resources>

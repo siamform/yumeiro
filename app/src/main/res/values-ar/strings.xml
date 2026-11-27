@@ -936,4 +936,22 @@
     <string name="nx_try_again">حاول مرة أخرى</string>
     <string name="nx_all_none_title">لا يوجد شيء هنا</string>
     <string name="nx_all_none_text">لم يعرض أي من مصادرك أي روايات.</string>
+    <string name="hx_select">تحديد</string>
+    <string name="hx_selected">تم تحديد %1$d</string>
+    <string name="hx_select_all">تحديد الكل</string>
+    <string name="hx_select_none">إلغاء التحديد</string>
+    <string name="hx_delete_selected">حذف المحدد</string>
+    <string name="hx_delete_history">حذف السجل</string>
+    <string name="hx_range_hour">آخر ساعة</string>
+    <string name="hx_range_day">آخر 24 ساعة</string>
+    <string name="hx_range_week">آخر 7 أيام</string>
+    <string name="hx_range_month">آخر 30 يومًا</string>
+    <string name="hx_range_all">كل الوقت</string>
+    <string name="hx_range_count">العناوين: %1$d</string>
+    <string name="hx_delete_count">حذف (%1$d)</string>
+    <string name="hx_removed">أُزيل من السجل: %1$d</string>
+    <string name="hx_undo">تراجع</string>
+    <string name="hx_sheet_note">تُزال العناوين التي شوهدت آخر مرة في هذه الفترة ومواضع الاستئناف الخاصة بها. يمكنك التراجع مباشرة بعد ذلك.</string>
+    <string name="hx_nothing_in_range">لم تشاهد شيئًا في هذه الفترة</string>
+    <string name="hx_remove_title">إزالة %1$s من السجل</string>
 </resources>

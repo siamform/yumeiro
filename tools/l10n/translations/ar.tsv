@@ -933,3 +933,21 @@ nx_some_failed	لم يستجب: %1$s
 nx_try_again	حاول مرة أخرى
 nx_all_none_title	لا يوجد شيء هنا
 nx_all_none_text	لم يعرض أي من مصادرك أي روايات.
+hx_select	تحديد
+hx_selected	تم تحديد %1$d
+hx_select_all	تحديد الكل
+hx_select_none	إلغاء التحديد
+hx_delete_selected	حذف المحدد
+hx_delete_history	حذف السجل
+hx_range_hour	آخر ساعة
+hx_range_day	آخر 24 ساعة
+hx_range_week	آخر 7 أيام
+hx_range_month	آخر 30 يومًا
+hx_range_all	كل الوقت
+hx_range_count	العناوين: %1$d
+hx_delete_count	حذف (%1$d)
+hx_removed	أُزيل من السجل: %1$d
+hx_undo	تراجع
+hx_sheet_note	تُزال العناوين التي شوهدت آخر مرة في هذه الفترة ومواضع الاستئناف الخاصة بها. يمكنك التراجع مباشرة بعد ذلك.
+hx_nothing_in_range	لم تشاهد شيئًا في هذه الفترة
+hx_remove_title	إزالة %1$s من السجل

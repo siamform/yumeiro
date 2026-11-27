@@ -164,6 +164,58 @@ object OnlineHistory {
         dev.asfakul.yumeiro.widget.ContinueWidget.maybeRefresh(context, "${entry.key}|${entry.episodeData}")
     }
 
+    /**
+     * Group Y (B6): what a delete took away, so Undo can put it back exactly (titles with their resume spot, and
+     * the per-episode progress marks that went with them).
+     */
+    data class Removed(val entries: List<Entry>, val marks: Map<String, Progress>) {
+        val count: Int get() = entries.size
+        val isEmpty: Boolean get() = entries.isEmpty() && marks.isEmpty()
+    }
+
+    /**
+     * Group Y (B6): removes every title matching [pick] and its current episode's progress mark; with [marksSince]
+     * also every progress mark recorded from then on ("delete the last hour" forgets everything watched in it).
+     */
+    fun removeWhere(context: Context, marksSince: Long? = null, pick: (Entry) -> Boolean): Removed {
+        ensureLoaded(context)
+        val gone = _entries.value.filter(pick)
+        val goneMarks = LinkedHashMap<String, Progress>()
+        synchronized(this) {
+            val keys = gone.mapNotNull { e -> e.episodeData?.let { progressKey(e.api, it) } }.toHashSet()
+            val it = progress.entries.iterator()
+            while (it.hasNext()) {
+                val (k, p) = it.next()
+                if (k in keys || (marksSince != null && p.at >= marksSince)) { goneMarks[k] = p; it.remove() }
+            }
+            looseIndex = null
+        }
+        if (gone.isEmpty() && goneMarks.isEmpty()) return Removed(emptyList(), emptyMap())
+        val keys = gone.map { it.key }.toHashSet()
+        _entries.value = _entries.value.filterNot { it.key in keys }
+        _version.value++
+        save()
+        dev.asfakul.yumeiro.widget.ContinueWidget.refresh(context)
+        return Removed(gone, goneMarks)
+    }
+
+    /** Group Y (B6): Undo. A title watched again since the delete keeps its newer spot. */
+    fun restore(context: Context, r: Removed) {
+        ensureLoaded(context)
+        if (r.isEmpty) return
+        val now = _entries.value.associateBy { it.key }
+        val back = r.entries.filter { e -> now[e.key].let { it == null || it.updatedAt < e.updatedAt } }
+        val backKeys = back.map { it.key }.toHashSet()
+        _entries.value = (_entries.value.filterNot { it.key in backKeys } + back).sortedByDescending { it.updatedAt }.take(MAX_TITLES)
+        synchronized(this) {
+            r.marks.forEach { (k, p) -> val cur = progress[k]; if (cur == null || cur.at < p.at) progress[k] = p }
+            looseIndex = null
+        }
+        _version.value++
+        save()
+        dev.asfakul.yumeiro.widget.ContinueWidget.refresh(context)
+    }
+
     fun remove(context: Context, api: String, url: String) {
         ensureLoaded(context)
         _entries.value = _entries.value.filterNot { it.api == api && it.url == url }
@@ -242,6 +294,15 @@ object OnlineHistory {
             o.optString("episodeLabel").ifBlank { null }, o.optLong("position"), o.optLong("duration"), o.optLong("at"),
             adult = o.optBoolean("adult", false),
         )
+    }
+
+    /** For tests (Group Y): replace the history with [list] and [marks] (written to disk like real use). */
+    internal fun seedForTests(context: Context, list: List<Entry>, marks: Map<String, Progress> = emptyMap()) {
+        ensureLoaded(context)
+        _entries.value = list.sortedByDescending { it.updatedAt }
+        synchronized(this) { progress.clear(); progress.putAll(marks); looseIndex = null }
+        _version.value++
+        save()
     }
 
     internal fun resetForTests() { flush(); loaded = false; file = null; _entries.value = emptyList(); synchronized(this) { progress.clear(); looseIndex = null } }

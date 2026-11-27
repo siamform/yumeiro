@@ -935,4 +935,22 @@
     <string name="nx_try_again">Try again</string>
     <string name="nx_all_none_title">Nothing here</string>
     <string name="nx_all_none_text">None of your sources listed any novels.</string>
+    <string name="hx_select">Select</string>
+    <string name="hx_selected">%1$d selected</string>
+    <string name="hx_select_all">Select all</string>
+    <string name="hx_select_none">Select none</string>
+    <string name="hx_delete_selected">Delete selected</string>
+    <string name="hx_delete_history">Delete history</string>
+    <string name="hx_range_hour">Last hour</string>
+    <string name="hx_range_day">Last 24 hours</string>
+    <string name="hx_range_week">Last 7 days</string>
+    <string name="hx_range_month">Last 30 days</string>
+    <string name="hx_range_all">All time</string>
+    <string name="hx_range_count">Titles: %1$d</string>
+    <string name="hx_delete_count">Delete (%1$d)</string>
+    <string name="hx_removed">Removed from history: %1$d</string>
+    <string name="hx_undo">Undo</string>
+    <string name="hx_sheet_note">Titles last watched in this time and their resume spots are removed. You can undo right after.</string>
+    <string name="hx_nothing_in_range">Nothing watched in this time</string>
+    <string name="hx_remove_title">Remove %1$s from history</string>
 </resources>
