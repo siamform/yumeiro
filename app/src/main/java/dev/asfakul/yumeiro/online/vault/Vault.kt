@@ -16,7 +16,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
-import java.net.URI
 
 /**
  * F1 Yumeiro Vault (Beta chapter, audits/AUDIT_R.md): a saved title with the source links found on its page, kept
@@ -82,7 +81,7 @@ object VaultHtml {
             )
         }
         VaultEntry(
-            id = str("id")?.takeIf { it.matches(Regex("[A-Za-z0-9_-]{4,64}")) } ?: return null,
+            id = str("id")?.takeIf { it.matches(ID) } ?: return null,
             title = str("title").orEmpty().ifBlank { "Untitled" }.take(MAX_TITLE),
             pageUrl = str("page")?.takeIf(VaultLinks::isSafeUrl).orEmpty(),
             sources = sources,
@@ -92,6 +91,7 @@ object VaultHtml {
     }.getOrNull()
 
     const val MAX_TITLE = 160
+    private val ID = Regex("[A-Za-z0-9_-]{4,64}")
 
     /**
      * The saved page: a Yumeiro header, the title and the list of source names linked to their addresses. Nothing
@@ -161,7 +161,19 @@ $rows
 }
 
 object VaultLinks {
-    fun hostOf(url: String): String? = runCatching { URI(url.trim()).host?.lowercase()?.removePrefix("www.") }.getOrNull()
+    private val DN = Regex("""[?&]dn=([^&]+)""")
+    private val SPACES = Regex("\\s+")
+    private val DASHES = Regex("-+")
+
+    /** The host of an http(s) address, lower case without "www." (read by hand: java.net.URI refuses many real links). */
+    fun hostOf(url: String): String? {
+        val u = url.trim()
+        val rest = u.substringAfter("://", "").takeIf { it.isNotEmpty() && u.substringBefore("://").let { s -> s.equals("http", true) || s.equals("https", true) } } ?: return null
+        val authority = rest.takeWhile { it != '/' && it != '?' && it != '#' }.substringAfterLast('@')
+        val host = (if (authority.startsWith("[")) authority.substringBefore(']') + "]" else authority.substringBefore(':')).lowercase()
+        if (host.isEmpty() || host.any { it.isWhitespace() || it == '<' || it == '>' || it == '"' || it == '\\' }) return null
+        return host.removePrefix("www.")
+    }
 
     /** Only web addresses and magnet links are saved: never javascript:, data:, file: or content: links. */
     fun isSafeUrl(url: String): Boolean {
@@ -176,7 +188,7 @@ object VaultLinks {
     }
 
     fun defaultName(url: String): String {
-        if (url.startsWith("magnet:", true)) return Regex("""[?&]dn=([^&]+)""").find(url)?.groupValues?.get(1)
+        if (url.startsWith("magnet:", true)) return DN.find(url)?.groupValues?.get(1)
             ?.let { runCatching { java.net.URLDecoder.decode(it, "UTF-8") }.getOrDefault(it) }?.take(80) ?: "Torrent"
         val host = hostOf(url) ?: return "Source"
         val file = url.substringBefore('?').substringBefore('#').substringAfterLast('/').takeIf { '.' in it && it.length in 3..80 }
@@ -216,7 +228,7 @@ object VaultLinks {
             val host = hostOf(url)
             if (host != null && social.any { host == it || host.endsWith(".$it") }) continue
             val ext = url.substringBefore('?').substringBefore('#').substringAfterLast('/').substringAfterLast('.', "").lowercase()
-            val name = f.text.trim().replace(Regex("\\s+"), " ").take(120).ifBlank { defaultName(url) }
+            val name = f.text.trim().replace(SPACES, " ").take(120).ifBlank { defaultName(url) }
             when {
                 url.startsWith("magnet:", true) -> add(VaultSource(name, url, VaultSource.Kind.FILE))
                 ext in mediaExt || isMedia(url) -> add(VaultSource(name, url, VaultSource.Kind.FILE, referer = pageUrl.takeIf(::isSafeUrl)))
@@ -235,7 +247,7 @@ object VaultLinks {
     /** A file name for [title] (readable, safe on every file system); the id keeps it unique. Pure. */
     fun fileName(title: String, id: String): String {
         val base = title.lowercase().map { c -> if (c.isLetterOrDigit()) c else '-' }.joinToString("")
-            .replace(Regex("-+"), "-").trim('-').take(48).ifBlank { "title" }
+            .replace(DASHES, "-").trim('-').take(48).ifBlank { "title" }
         return "$base-$id.html"
     }
 
