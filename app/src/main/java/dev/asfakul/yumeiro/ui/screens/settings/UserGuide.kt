@@ -316,7 +316,7 @@ private fun RowScope.Zone(label: String, icon: ImageVector, tint: Color) {
 private fun HomeDiagram() {
     val p = LocalMtPalette.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(stringResource(R.string.continue), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.label_continue), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MockTile(Modifier.weight(1f), Icons.Default.MusicNote, "Last song")
             MockTile(Modifier.weight(1f), Icons.Default.SmartDisplay, "Last video")

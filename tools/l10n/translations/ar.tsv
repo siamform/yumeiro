@@ -13,7 +13,7 @@ check_automatically	البحث تلقائيًا
 look_for_new_versions_each_time	ابحث عن إصدارات جديدة في كل مرة يُفتح فيها التطبيق
 release_history	سجل الإصدارات
 view_all_versions_and_what_changed	اعرض كل الإصدارات وما تغيّر في كل منها
-new	جديد
+label_new	جديد
 whats_new	ما الجديد
 remind_me_later	ذكّرني لاحقًا
 download	تنزيل
@@ -601,7 +601,7 @@ show_the_page	إظهار الصفحة
 open_with_your_telegram_account	فتح @%1$s بحسابك على Telegram؟
 not_now	ليس الآن
 minimize	تصغير
-default	افتراضي
+label_default	افتراضي
 refresh_now	تحديث الآن
 playlist_market	سوق قوائم التشغيل
 restore_default_playlist	استعادة قائمة التشغيل الافتراضية
@@ -710,7 +710,7 @@ illustrated_guide_to_every_section_gesture	دليل مصوّر لكل قسم و�
 the_app_at_a_glance	التطبيق في لمحة
 four_tabs_in_the_floating_dock	أربع علامات تبويب في الشريط العائم بالأسفل. الشريط فوقه هو مشغل الموسيقى.
 drag_sideways_to_seek_double_tap	← اسحب جانبيًا للتنقل →   ·   انقر مرتين على أحد الجانبين: ±10 ث
-continue	متابعة
+label_continue	متابعة
 spaces	المساحات
 yumix_random_keeps_loading_as_you	Yumix عشوائي  ·  يواصل التحميل أثناء التمرير ↓
 accent_colour	اللون المميز
@@ -768,7 +768,7 @@ torrserver_address	عنوان TorrServer
 http_127_0_0_1_8090	http://127.0.0.1:8090
 no_lyrics_found	لم يُعثر على كلمات
 embed_lyrics_in_the_files_tags	ضمّن الكلمات في وسوم الملف، أو ضع ملف .lrc بالاسم نفسه بجانب الأغنية، أو استورد واحدًا.
-import	استيراد
+label_import	استيراد
 lossless	بلا فقدان
 song_info	معلومات الأغنية
 dismiss_error	تجاهل الخطأ

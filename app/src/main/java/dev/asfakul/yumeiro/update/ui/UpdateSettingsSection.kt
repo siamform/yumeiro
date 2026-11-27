@@ -201,7 +201,7 @@ private fun StatusIcon(state: UpdateState) {
         is UpdateState.UpToDate -> Icon(Icons.Default.CheckCircle, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
         is UpdateState.Available, is UpdateState.ReadyToInstall ->
             Box(Modifier.clip(RoundedCornerShape(50)).background(SpotifyGreen).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Text(stringResource(R.string.new), style = MaterialTheme.typography.labelMedium, color = OnAccent, fontWeight = FontWeight.Black)
+                Text(stringResource(R.string.label_new), style = MaterialTheme.typography.labelMedium, color = OnAccent, fontWeight = FontWeight.Black)
             }
         is UpdateState.Downloading -> Icon(Icons.Default.CloudDownload, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
         is UpdateState.Failed -> Icon(Icons.Default.ErrorOutline, null, tint = dev.asfakul.yumeiro.ui.theme.DangerTone, modifier = Modifier.size(22.dp))

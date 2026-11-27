@@ -13,7 +13,7 @@ check_automatically	নিজে থেকে খুঁজুন
 look_for_new_versions_each_time	অ্যাপ খোলার সময় প্রতিবার নতুন সংস্করণ খুঁজুন
 release_history	রিলিজের ইতিহাস
 view_all_versions_and_what_changed	সব সংস্করণ আর প্রতিটিতে কী বদলেছে দেখুন
-new	নতুন
+label_new	নতুন
 whats_new	নতুন কী আছে
 remind_me_later	পরে মনে করিয়ে দিন
 download	ডাউনলোড
@@ -601,7 +601,7 @@ show_the_page	পাতাটি দেখান
 open_with_your_telegram_account	আপনার Telegram অ্যাকাউন্ট দিয়ে @%1$s খুলবেন?
 not_now	এখন না
 minimize	ছোট করুন
-default	ডিফল্ট
+label_default	ডিফল্ট
 refresh_now	এখনই রিফ্রেশ করুন
 playlist_market	প্লেলিস্ট মার্কেট
 restore_default_playlist	ডিফল্ট প্লেলিস্ট ফিরিয়ে আনুন
@@ -710,7 +710,7 @@ illustrated_guide_to_every_section_gesture	প্রতিটি অংশ, জ�
 the_app_at_a_glance	এক নজরে অ্যাপ
 four_tabs_in_the_floating_dock	নিচের ভাসমান ডকে চারটি ট্যাব। এর ওপরের বারটি মিউজিক প্লেয়ার।
 drag_sideways_to_seek_double_tap	← সামনে-পেছনে যেতে পাশে টানুন →   ·   এক পাশে দুবার ট্যাপ: ±10 সেকেন্ড
-continue	চালিয়ে যান
+label_continue	চালিয়ে যান
 spaces	স্পেস
 yumix_random_keeps_loading_as_you	Yumix এলোমেলো  ·  স্ক্রল করলে আরও লোড হয় ↓
 accent_colour	মূল রং
@@ -768,7 +768,7 @@ torrserver_address	TorrServer-এর ঠিকানা
 http_127_0_0_1_8090	http://127.0.0.1:8090
 no_lyrics_found	কোনো গানের কথা পাওয়া যায়নি
 embed_lyrics_in_the_files_tags	ফাইলের ট্যাগে গানের কথা যোগ করুন, গানের পাশে একই নামের একটি .lrc ফাইল রাখুন, বা একটি আমদানি করুন।
-import	আমদানি
+label_import	আমদানি
 lossless	লসলেস
 song_info	গানের তথ্য
 dismiss_error	ত্রুটি সরান

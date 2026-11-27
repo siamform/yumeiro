@@ -573,7 +573,7 @@ private fun LyricsPanel(
                         }) { Text(stringResource(R.string.remove_2), color = TextSecondary, style = MaterialTheme.typography.labelLarge) }
                     }
                     TextButton(onClick = launchImport, modifier = Modifier.testTag("lyrics_import_button")) {
-                        Text(stringResource(R.string.import), color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.label_import), color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }

@@ -147,7 +147,7 @@ internal fun PlaylistCard(
                     if (playlist.isDefault) {
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            stringResource(R.string.default), color = OnAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                            stringResource(R.string.label_default), color = OnAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
                             modifier = Modifier.clip(yuRound(6)).background(SpotifyGreen).padding(horizontal = 5.dp, vertical = 1.dp),
                         )
                     }

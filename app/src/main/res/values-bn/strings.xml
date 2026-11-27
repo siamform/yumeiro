@@ -16,7 +16,7 @@
     <string name="look_for_new_versions_each_time">অ্যাপ খোলার সময় প্রতিবার নতুন সংস্করণ খুঁজুন</string>
     <string name="release_history">রিলিজের ইতিহাস</string>
     <string name="view_all_versions_and_what_changed">সব সংস্করণ আর প্রতিটিতে কী বদলেছে দেখুন</string>
-    <string name="new">নতুন</string>
+    <string name="label_new">নতুন</string>
     <string name="whats_new">নতুন কী আছে</string>
     <string name="remind_me_later">পরে মনে করিয়ে দিন</string>
     <string name="download">ডাউনলোড</string>
@@ -604,7 +604,7 @@
     <string name="open_with_your_telegram_account">আপনার Telegram অ্যাকাউন্ট দিয়ে @%1$s খুলবেন?</string>
     <string name="not_now">এখন না</string>
     <string name="minimize">ছোট করুন</string>
-    <string name="default">ডিফল্ট</string>
+    <string name="label_default">ডিফল্ট</string>
     <string name="refresh_now">এখনই রিফ্রেশ করুন</string>
     <string name="playlist_market">প্লেলিস্ট মার্কেট</string>
     <string name="restore_default_playlist">ডিফল্ট প্লেলিস্ট ফিরিয়ে আনুন</string>
@@ -713,7 +713,7 @@
     <string name="the_app_at_a_glance">এক নজরে অ্যাপ</string>
     <string name="four_tabs_in_the_floating_dock">নিচের ভাসমান ডকে চারটি ট্যাব। এর ওপরের বারটি মিউজিক প্লেয়ার।</string>
     <string name="drag_sideways_to_seek_double_tap">"← সামনে-পেছনে যেতে পাশে টানুন →   ·   এক পাশে দুবার ট্যাপ: ±10 সেকেন্ড"</string>
-    <string name="continue">চালিয়ে যান</string>
+    <string name="label_continue">চালিয়ে যান</string>
     <string name="spaces">স্পেস</string>
     <string name="yumix_random_keeps_loading_as_you">"Yumix এলোমেলো  ·  স্ক্রল করলে আরও লোড হয় ↓"</string>
     <string name="accent_colour">মূল রং</string>
@@ -771,7 +771,7 @@
     <string name="http_127_0_0_1_8090">http://127.0.0.1:8090</string>
     <string name="no_lyrics_found">কোনো গানের কথা পাওয়া যায়নি</string>
     <string name="embed_lyrics_in_the_files_tags">ফাইলের ট্যাগে গানের কথা যোগ করুন, গানের পাশে একই নামের একটি .lrc ফাইল রাখুন, বা একটি আমদানি করুন।</string>
-    <string name="import">আমদানি</string>
+    <string name="label_import">আমদানি</string>
     <string name="lossless">লসলেস</string>
     <string name="song_info">গানের তথ্য</string>
     <string name="dismiss_error">ত্রুটি সরান</string>

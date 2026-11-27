@@ -262,7 +262,7 @@ fun PlayerInfoOverlayCard() {
             Row {
                 TextButton(onClick = { VideoPrefs.setInfoFields(context, VideoPrefs.InfoField.entries.toSet()) }) { Text(stringResource(R.string.all), color = SpotifyGreen) }
                 Spacer(Modifier.width(4.dp))
-                TextButton(onClick = { VideoPrefs.setInfoFields(context, VideoPrefs.DEFAULT_INFO_FIELDS) }) { Text(stringResource(R.string.default), color = SpotifyGreen) }
+                TextButton(onClick = { VideoPrefs.setInfoFields(context, VideoPrefs.DEFAULT_INFO_FIELDS) }) { Text(stringResource(R.string.label_default), color = SpotifyGreen) }
             }
         }
     }

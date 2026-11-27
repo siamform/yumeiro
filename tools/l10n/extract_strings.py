@@ -77,10 +77,18 @@ keys, by_text = load_existing()
 added = []
 
 
+JAVA_KEYWORDS = set("abstract assert boolean break byte case catch char class const continue default do double else enum "
+                    "extends final finally float for goto if implements import instanceof int interface long native new "
+                    "package private protected public return short static strictfp super switch synchronized this throw "
+                    "throws transient try void volatile while true false null".split())
+
+
 def key_for(fmt_text):
     if fmt_text in by_text:
         return by_text[fmt_text]
     base = slug(re.sub(r"%\d+\$s", " ", fmt_text))
+    if base in JAVA_KEYWORDS:  # aapt2 rejects resource names that are Java keywords
+        base = "label_" + base
     k, n = base, 2
     while k in keys:
         k = f"{base}_{n}"; n += 1

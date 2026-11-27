@@ -16,7 +16,7 @@
     <string name="look_for_new_versions_each_time">ابحث عن إصدارات جديدة في كل مرة يُفتح فيها التطبيق</string>
     <string name="release_history">سجل الإصدارات</string>
     <string name="view_all_versions_and_what_changed">اعرض كل الإصدارات وما تغيّر في كل منها</string>
-    <string name="new">جديد</string>
+    <string name="label_new">جديد</string>
     <string name="whats_new">ما الجديد</string>
     <string name="remind_me_later">ذكّرني لاحقًا</string>
     <string name="download">تنزيل</string>
@@ -604,7 +604,7 @@
     <string name="open_with_your_telegram_account">فتح @%1$s بحسابك على Telegram؟</string>
     <string name="not_now">ليس الآن</string>
     <string name="minimize">تصغير</string>
-    <string name="default">افتراضي</string>
+    <string name="label_default">افتراضي</string>
     <string name="refresh_now">تحديث الآن</string>
     <string name="playlist_market">سوق قوائم التشغيل</string>
     <string name="restore_default_playlist">استعادة قائمة التشغيل الافتراضية</string>
@@ -713,7 +713,7 @@
     <string name="the_app_at_a_glance">التطبيق في لمحة</string>
     <string name="four_tabs_in_the_floating_dock">أربع علامات تبويب في الشريط العائم بالأسفل. الشريط فوقه هو مشغل الموسيقى.</string>
     <string name="drag_sideways_to_seek_double_tap">"← اسحب جانبيًا للتنقل →   ·   انقر مرتين على أحد الجانبين: ±10 ث"</string>
-    <string name="continue">متابعة</string>
+    <string name="label_continue">متابعة</string>
     <string name="spaces">المساحات</string>
     <string name="yumix_random_keeps_loading_as_you">"Yumix عشوائي  ·  يواصل التحميل أثناء التمرير ↓"</string>
     <string name="accent_colour">اللون المميز</string>
@@ -771,7 +771,7 @@
     <string name="http_127_0_0_1_8090">http://127.0.0.1:8090</string>
     <string name="no_lyrics_found">لم يُعثر على كلمات</string>
     <string name="embed_lyrics_in_the_files_tags">ضمّن الكلمات في وسوم الملف، أو ضع ملف .lrc بالاسم نفسه بجانب الأغنية، أو استورد واحدًا.</string>
-    <string name="import">استيراد</string>
+    <string name="label_import">استيراد</string>
     <string name="lossless">بلا فقدان</string>
     <string name="song_info">معلومات الأغنية</string>
     <string name="dismiss_error">تجاهل الخطأ</string>

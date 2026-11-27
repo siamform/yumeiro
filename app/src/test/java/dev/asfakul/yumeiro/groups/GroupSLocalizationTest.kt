@@ -41,6 +41,16 @@ class GroupSLocalizationTest {
 
     private val translated = AppLanguage.SHIPPED.map { it.tag }.filter { it != "en" }
 
+    @Test fun f2_noResourceNameIsAJavaKeyword() {
+        // aapt2 fails the whole build on these ("new is not a valid resource name"); keep the guard cheap and local.
+        val keywords = ("abstract assert boolean break byte case catch char class const continue default do double else " +
+            "enum extends final finally float for goto if implements import instanceof int interface long native new " +
+            "package private protected public return short static strictfp super switch synchronized this throw " +
+            "throws transient try void volatile while true false null").split(' ').toSet()
+        val bad = (strings("values").keys + plurals("values").keys).filter { it in keywords }
+        assertTrue("Java keywords used as resource names: $bad", bad.isEmpty())
+    }
+
     @Test fun f2_normalizeKeepsOnlyShippedLanguages() {
         assertEquals("", AppLanguage.normalize(""))
         assertEquals("bn", AppLanguage.normalize("bn-BD"))

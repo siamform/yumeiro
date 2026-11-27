@@ -15,7 +15,7 @@
     <string name="look_for_new_versions_each_time">Look for new versions each time the app opens</string>
     <string name="release_history">Release history</string>
     <string name="view_all_versions_and_what_changed">View all versions and what changed in each</string>
-    <string name="new">NEW</string>
+    <string name="label_new">NEW</string>
     <string name="whats_new">What\'s new</string>
     <string name="remind_me_later">Remind me later</string>
     <string name="download">Download</string>
@@ -603,7 +603,7 @@
     <string name="open_with_your_telegram_account">Open @%1$s with your Telegram account?</string>
     <string name="not_now">Not now</string>
     <string name="minimize">Minimize</string>
-    <string name="default">Default</string>
+    <string name="label_default">Default</string>
     <string name="refresh_now">Refresh now</string>
     <string name="playlist_market">Playlist market</string>
     <string name="restore_default_playlist">Restore default playlist</string>
@@ -712,7 +712,7 @@
     <string name="the_app_at_a_glance">The app at a glance</string>
     <string name="four_tabs_in_the_floating_dock">Four tabs in the floating dock at the bottom. The bar above it is the music player.</string>
     <string name="drag_sideways_to_seek_double_tap">"← drag sideways to seek →   ·   double-tap a side: ±10 s"</string>
-    <string name="continue">Continue</string>
+    <string name="label_continue">Continue</string>
     <string name="spaces">Spaces</string>
     <string name="yumix_random_keeps_loading_as_you">"Yumix random  ·  keeps loading as you scroll ↓"</string>
     <string name="accent_colour">Accent colour</string>
@@ -770,7 +770,7 @@
     <string name="http_127_0_0_1_8090">http://127.0.0.1:8090</string>
     <string name="no_lyrics_found">No lyrics found</string>
     <string name="embed_lyrics_in_the_files_tags">Embed lyrics in the file\'s tags, put a .lrc file with the same name next to the song, or import one.</string>
-    <string name="import">Import</string>
+    <string name="label_import">Import</string>
     <string name="lossless">Lossless</string>
     <string name="song_info">Song info</string>
     <string name="dismiss_error">Dismiss error</string>
