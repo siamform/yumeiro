@@ -36,6 +36,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
@@ -81,7 +82,11 @@ object StreamLookup {
         if (started) return
         started = true
         val app = context.applicationContext
-        scope.launch {
+        // The plan is worked out on IO (it reads preferences) but SourceHub is changed on the main
+        // thread: Home and Manga read SourceHub in composition, and a change from a worker thread
+        // could apply that composition off the main thread (CalledFromWrongThreadException, seen
+        // on the low-RAM emulator in device run 46076378672).
+        scope.launch(Dispatchers.Main) {
             combine(EcosystemRegistry.state, StremioAddons.addons) { reg, addons ->
                 plan(
                     nuvioScrapers = reg.installed.count { it.ecosystem == SourceHub.Ecosystem.NUVIO },
@@ -90,7 +95,7 @@ object StreamLookup {
                     stremioOn = FeatureFlags.on(app, FeatureFlags.Flag.F05_STREMIO_STREAMS),
                     on = FeatureFlags.on(app, FeatureFlags.Flag.SEARCH_LOOKUP) && FeatureFlags.on(app, FeatureFlags.Flag.STREAM_ADDONS),
                 )
-            }.distinctUntilChanged().collect { p ->
+            }.distinctUntilChanged().flowOn(Dispatchers.IO).collect { p ->
                 Log.i(TAG, "lookup sources: nuvio=${p.nuvio} stremio=${p.stremio}")
                 if (p.nuvio) SourceHub.publishVideo("lookup-nuvio", SourceHub.Ecosystem.NUVIO, listOf(StreamLookupProvider(NUVIO_NAME, "nuvio")))
                 else SourceHub.remove("lookup-nuvio")
