@@ -50,6 +50,11 @@
 #     Simkl, Wikidata public metadata), online/anime/IntroDb.kt (IntroDB skip segments, no account data).
 #     Content access (rule 6): online/ExtensionCheckWindows.kt only finds an extension's own check WebView; it turns
 #     content and file access off on it when found (harden) and only reads the page (read-only JavaScript).
+# 10. (2026-11-27, CQ-119..120) Pinning (rule 2): network/AppProxy.kt open() only adds the user's proxy to a
+#     HttpURLConnection; the hosts are its callers': GitHub Releases (update/GitHubReleaseClient.kt; the APK must match
+#     its SHA-256 and the installed app's signing certificate before install, update/ApkInstaller.kt), subtitle search (already rule 5)
+#     and BlackSource (online/blacksource/BlackSource.kt: public genre search on the Yumeiro Cloud host, behind
+#     Cloudflare whose certificates rotate, no account data). HTTPS-only, system CAs.
 #  7. java/unsafe-cert-trust in network/DnsMessage.kt (DNS-over-TLS): the socket comes from the system
 #     SSLSocketFactory (system CAs, no custom TrustManager), sets endpointIdentificationAlgorithm = "HTTPS" via
 #     setSSLParameters before the handshake and then checks the name with the system HostnameVerifier. The
@@ -60,7 +65,7 @@ def suppressed:
   | ((($r == "java/weak-cryptographic-algorithm") or ($r == "java/potentially-weak-cryptographic-algorithm"))
       and ($u | test("^app/src/main/java/(eu/kanade/|dev/asfakul/yumeiro/sources/js/JsCrypto\\.kt$|dev/asfakul/yumeiro/sources/ecosystem/ScriptCrypto\\.kt$|dev/asfakul/yumeiro/youtube/YtAuthHash\\.kt$|dev/asfakul/yumeiro/scrobble/LastFmSignature\\.kt$|com/lagradost/cloudstream3/extractors/(Vidplay|VidSrcTo)\\.kt$)")))
     or (($r == "java/android/missing-certificate-pinning")
-      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource)|online/anime/(AniList|AniSkip|AnimeIds)|youtube/music/YtMusicApi|notify/FcmPush|online/ExtensionMarket|sources/UniversalAdd|subtitles/OnlineSubtitles|online/EpisodeStills|online/upcoming/Upcoming|stream/TeraBoxApi|stream/torrent/TorrentEngine|online/telegram/td/TdEngine|tracking/v2/TrackReading|online/meta/TitleFacts|online/anime/IntroDb)\\.kt$")))
+      and ($u | test("^app/src/main/java/dev/asfakul/yumeiro/(tracking/(Kitsu|Trakt|Simkl)|scrobble/LastFm|lyrics/LrcLib|sources/servers/PlexProvider|notify/(PushWake|CloudAlerts)|youtube/YtAccount|online/subtitles/(OpenSubtitles|SubDL|SubSource)|online/anime/(AniList|AniSkip|AnimeIds)|youtube/music/YtMusicApi|notify/FcmPush|online/ExtensionMarket|sources/UniversalAdd|subtitles/OnlineSubtitles|online/EpisodeStills|online/upcoming/Upcoming|stream/TeraBoxApi|stream/torrent/TorrentEngine|online/telegram/td/TdEngine|tracking/v2/TrackReading|online/meta/TitleFacts|online/anime/IntroDb|network/AppProxy)\\.kt$")))
     or (($r == "java/android/websettings-javascript-enabled")
       and (($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/settings/YouTubeAccountScreen.kt")
         or ($u == "app/src/main/java/dev/asfakul/yumeiro/ui/screens/online/BrowserCheckHost.kt")
