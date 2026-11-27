@@ -69,6 +69,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Stream
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -146,6 +147,7 @@ fun StreamScreen(
     onOpenMarket: () -> Unit = {},
     onOpenWebsites: () -> Unit = {},
     onOpenTelegram: () -> Unit = {},
+    onOpenSports: () -> Unit = {},
 ) {
     androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("live") } // FREEZE-4
     val context = LocalContext.current
@@ -639,6 +641,7 @@ fun StreamScreen(
         LiveTool("market_entry", "Market", "${playlists.count { it.isMarket }} installed", Icons.Default.Storefront, liveHue("market"), onOpenMarket),
         LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
         LiveTool("stream_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, liveHue("telegram"), onOpenTelegram),
+        LiveTool("live_tool_sports", stringResource(R.string.sports_title), stringResource(R.string.sports_tool_status), Icons.Default.SportsSoccer, liveHue("sports"), onOpenSports),
         LiveTool("live_tool_add_url", "Add URL", "Remote list", Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
         LiveTool("live_tool_new", "New list", "Your own", Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
         LiveTool("live_tool_sync", "Update all", if (syncing) "Updating…" else "Every playlist", Icons.Default.Sync, liveHue("sync")) { sync() },

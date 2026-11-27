@@ -47,6 +47,7 @@ object NavActive {
             NavPrefs.Shortcut.SEARCH -> r == Screen.OnlineSearch.route
             NavPrefs.Shortcut.WEBSITES -> r == Screen.WebSites.route
             NavPrefs.Shortcut.TELEGRAM -> r == Screen.Telegram.route
+            NavPrefs.Shortcut.SPORTS -> r == Screen.Sports.route
             NavPrefs.Shortcut.MY_LIST -> r == Screen.OnlineLibrary.route
             NavPrefs.Shortcut.HISTORY -> r == Screen.OnlineHistory.route
             NavPrefs.Shortcut.MARKET -> r == Screen.ExtensionMarket.route

@@ -1018,3 +1018,34 @@ nav_edit_reset_text	الرئيسية والموسيقى والفيديو وال�
 nav_edit_reset	إعادة ضبط
 nav_edit_cancel	إلغاء
 nav_edit_reset_done	أُعيد ضبط شريط التنقل
+sports_title	الرياضة
+sports_tool_status	نتائج مباشرة · مواعيد
+sports_shortcut_detail	النتائج المباشرة ومواعيد المباريات
+sport_football	كرة القدم
+sport_cricket	الكريكيت
+sport_basketball	كرة السلة
+sport_american_football	كرة القدم الأمريكية
+sport_hockey	هوكي الجليد
+sport_baseball	البيسبول
+sport_tennis	التنس
+sport_rugby	الرجبي
+sports_yesterday	أمس
+sports_today	اليوم
+sports_tomorrow	غدًا
+sports_live	مباشر
+sports_live_count	%1$d مباشر
+sports_auto	يُحدَّث كل 30 ثانية أثناء المباريات المباشرة
+sports_source	النتائج من %1$s · آخر تحديث %2$s
+sports_source_fallback	المواعيد من %1$s (لم يستجب ESPN، لذا المباريات أقل) · آخر تحديث %2$s
+sports_refresh	تحديث النتائج
+sports_retry	حاول مجددًا
+sports_empty_title	لا مباريات في هذا اليوم
+sports_empty_msg	لا شيء مدرج لـ%1$s يوم %2$s. جرّب يومًا أو رياضة أخرى.
+sports_err_offline_title	أنت غير متصل
+sports_err_offline	تحتاج النتائج إلى الإنترنت. لا نعرض أرقامًا قديمة.
+sports_err_down_title	النتائج غير متاحة الآن
+sports_err_down	لم يستجب ESPN ولا TheSportsDB. حاول بعد دقيقة.
+sports_err_bad	أرسلت خدمة النتائج بيانات لم يستطع Yumeiro قراءتها. حاول بعد دقيقة.
+sports_cd_vs	%1$s ضد %2$s
+sports_status_live	مباشر، %1$s
+sports_starts	يبدأ %1$s

@@ -79,7 +79,7 @@ class GroupB13NavActiveTest {
             listOf("online", "mix").map { State(Screen.Music.route, "online", it) } +
             listOf(
                 "manga", "novels", Screen.Downloads.route, Screen.Extensions.route, Screen.SourcesHub.route, Screen.OnlineSearch.route,
-                Screen.WebSites.route, Screen.Telegram.route, Screen.OnlineLibrary.route, Screen.OnlineHistory.route,
+                Screen.WebSites.route, Screen.Telegram.route, Screen.Sports.route, Screen.OnlineLibrary.route, Screen.OnlineHistory.route,
                 Screen.ExtensionMarket.route, Screen.SourceHealth.route, Screen.Equalizer.route, Screen.WatchTogether.route,
                 Screen.Settings.route, Screen.Tracking.route, Screen.Stats.route, Screen.OnlineUpcoming.route, Screen.ReadingLibrary.route,
             ).map { State(it, "online", "device") }

@@ -108,11 +108,18 @@ class GroupB9BlackSourceDeviceTest {
         ctx.getSharedPreferences("blacksource", Context.MODE_PRIVATE).edit().clear().commit()
     }
 
+    /** Bumped to leave the page and come back (setContent can run only once per test). */
+    private val visit = androidx.compose.runtime.mutableIntStateOf(0)
     private fun open(sources: List<MainAPI>) = compose.setContent {
         CompositionLocalProvider(LocalTvMode provides Edition.isTv) {
-            MTPlayerTheme { BlackSourceScreen(onBack = {}, onOpenTitle = {}, onSearchWords = {}, providers = { sources }) }
+            MTPlayerTheme {
+                androidx.compose.runtime.key(visit.intValue) {
+                    BlackSourceScreen(onBack = {}, onOpenTitle = {}, onSearchWords = {}, providers = { sources })
+                }
+            }
         }
     }
+    private fun reopen() { compose.runOnIdle { visit.intValue++ }; compose.waitForIdle() }
 
     @Test fun a_advancedFiltersOnlyListMatchingTitles() {
         open(emptyList())
@@ -176,7 +183,7 @@ class GroupB9BlackSourceDeviceTest {
         assertTrue("the Aniyomi source was not asked", asked.getValue("Yu Ani One").isNotEmpty())
         assertTrue("a turned-off source was asked", asked.getValue("Yu CS One").isEmpty() && asked.getValue("Yu CS Two").isEmpty())
         // Next visit: the choice is still there.
-        open(all); compose.waitForIdle()
+        reopen()
         assertTrue("choice not kept: ${texts("bs_sources")}", texts("bs_sources").any { it.contains("1 of 3") })
         log("GB9_RESULT_B PASS")
     }

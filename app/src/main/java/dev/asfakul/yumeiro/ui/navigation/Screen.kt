@@ -18,6 +18,8 @@ sealed class Screen(val route: String) {
     data object WebSites : Screen("websites")
     /** F-02 split: saved public Telegram channels on their own page. */
     data object Telegram : Screen("telegram")
+    /** B15: Live TV → Tools → Sports (live scores and fixtures). */
+    data object Sports : Screen("stream/sports")
     data object Library : Screen("library")
     data object Settings : Screen("settings")
     data object Equalizer : Screen("equalizer")

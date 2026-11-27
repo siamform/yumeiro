@@ -36,7 +36,9 @@ import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.filled.Equalizer
@@ -91,6 +93,8 @@ object NavPrefs {
         SEARCH("search", "Search", "Search every extension at once", nav("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)),
         WEBSITES("websites", "Websites", "Play videos from sites you saved", nav("websites", "Sites", Icons.Filled.Language, Icons.Outlined.Language)),
         TELEGRAM("telegram", "Telegram", "Videos from public Telegram channels", nav("telegram", "Telegram", Icons.AutoMirrored.Filled.Send, Icons.AutoMirrored.Outlined.Send)),
+        // B15: live scores and fixtures (Live TV → Tools → Sports), pinnable like the other tools.
+        SPORTS("sports", "Sports", "Live scores and fixtures", nav("sports", "Sports", Icons.Filled.SportsSoccer, Icons.Outlined.SportsSoccer)),
         YUMIX("yumix", "Yumix", "Anime, movies and shows from your extensions", nav("yumix", "Yumix", dev.asfakul.yumeiro.ui.components.YumixLogo.Filled, dev.asfakul.yumeiro.ui.components.YumixLogo.Icon)),
         YTMUSIC("ytmusic", "YouTube Music", "Songs, albums and artists online", nav("ytmusic", "YT Music", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic)),
         MIX("mix", "Music mix", "Your songs and YouTube Music woven together", nav("mix", "Mix", Icons.Filled.Shuffle, Icons.Outlined.Shuffle)),
