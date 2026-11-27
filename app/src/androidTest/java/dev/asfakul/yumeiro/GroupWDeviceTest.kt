@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.Modifier
@@ -23,6 +24,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -68,7 +70,14 @@ class GroupWDeviceTest {
     @get:Rule val rule = createComposeRule()
     private fun log(s: String) = Log.i("YuGroupW", s)
     private fun count(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().size
-    private fun tap(tag: String) { rule.onAllNodesWithTag(tag, true)[0].performClick(); rule.waitForIdle() }
+    // The click action itself (not a touch at the node's centre): chips at a list's edge on TV are partly
+    // off screen, where a touch lands on a neighbour or outside the window.
+    private fun tap(tag: String) {
+        val n = rule.onAllNodesWithTag(tag, true)[0]
+        if (n.fetchSemanticsNode().config.contains(androidx.compose.ui.semantics.SemanticsActions.OnClick)) n.performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        else n.performClick()
+        rule.waitForIdle()
+    }
     private fun height(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes()[0].size.height
     private fun texts(tag: String): List<String> = rule.onAllNodes(
         hasAnyAncestor(hasTestTag(tag)) and androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), true,
@@ -170,7 +179,9 @@ class GroupWDeviceTest {
         if (count("services_region_bd") == 0) scrollTo("services_regions", "services_region_bd")
         if (count("services_region_bd") > 0) {
             tap("services_region_bd")
-            rule.waitUntil(30_000) { count("services_fallback") > 0 && cards() > 0 }
+            val ok = runCatching { rule.waitUntil(30_000) { count("services_fallback") > 0 && cards() > 0 } }.isSuccess
+            log("GROUPW_B3 BD ok=$ok fallback=${count("services_fallback")} cards=${cards()} error=${count("services_error")} empty=${count("services_empty")} texts=${texts("services_page").take(6)}")
+            assertTrue("B3: Bangladesh shows no services and no India fallback", ok)
             FirstRun.shot("groupw_b3_bd_fallback")
             log("GROUPW_B3 BD cards=${cards()} note=${texts("services_page").firstOrNull { "India" in it }}")
         }
@@ -208,7 +219,8 @@ class GroupWDeviceTest {
     @Test fun e_homePlaceholdersMatchTheirRows() {
         val slides = (1..3).map { HeroSlide("k$it", "A long title for slide $it", null, emptyMap(), "Latest", false, "Anime", "Source", "Open") }
         val song = (1..4).map { YtItem("s$it", "https://music.youtube.com/watch?v=s$it", if (it == 1) "Short" else "A much longer song title that wraps onto two lines", "Artist") }
-        rule.setContent { MTPlayerTheme { Column(Modifier.fillMaxWidth().background(LocalMtPalette.current.background)) {
+        // A scrolling column: every row gets its natural height even below the screen's bottom edge.
+        rule.setContent { MTPlayerTheme { Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).background(LocalMtPalette.current.background)) {
             Box(Modifier.testTag("w_skel")) { HeroCarouselSkeleton(caption = false) }
             Box(Modifier.testTag("w_hero")) { HeroCarousel(slides, tag = "w_carousel") {} }
             Box(Modifier.testTag("w_song_skel")) { YtRowSkeleton(square = true) }

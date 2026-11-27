@@ -265,8 +265,8 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
 internal fun HeroCarouselSkeleton(caption: Boolean) {
     Column(Modifier.fillMaxWidth().testTag("home_episodes_skeleton")) {
         dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, 184.dp, shape = yuRound(24))
-        // Dots row: 10 dp gap + 5 dp dots.
-        Spacer(Modifier.height(15.dp))
+        // Dots row laid out as the carousel's (10 dp padding + 5 dp dot), so pixel rounding is the same too.
+        Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(5.dp))
         // The loaded caption's own text, invisible: same lines on every screen width and font size.
         if (caption) Text(
             androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.follow_a_series_with_reminders_on),

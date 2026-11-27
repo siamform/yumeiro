@@ -239,7 +239,10 @@ private fun FilterSheet(current: DiscoverFilter, onDismiss: () -> Unit, onApply:
         if (value == null) HubDiscover.providersNear(region)?.let { (r, list) -> Discover.providerMemory[region] = list; Discover.providerRegion[region] = r; value = list }
     }
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag("discover_sheet")) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
+      // Group W (B1): Reset / Show results stay pinned under the scrolling filters (they were at the very end of a
+      // long list, out of reach on phones and several D-pad presses away on TV).
+      Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 8.dp).testTag("discover_sheet_list")) {
             Text("Filters", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             val genres = GenreCatalog.forKind(draft.kind)
             SheetGroup("Genres", "Up to ${DiscoverFilter.MAX_GENRES}; titles must have all of them") {
@@ -287,14 +290,15 @@ private fun FilterSheet(current: DiscoverFilter, onDismiss: () -> Unit, onApply:
                         label = { Text("$r+", fontSize = 12.sp) }, modifier = Modifier.testTag("discover_sheet_score_$r"))
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(top = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp).testTag("discover_sheet_footer"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(onClick = { draft = draft.cleared() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("discover_sheet_reset")) { Text("Reset") }
                 Button(onClick = { onApply(draft) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("discover_sheet_apply"),
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black)) {
                     Text(if (draft.activeCount > 0) "Show results (${draft.activeCount})" else "Show results")
                 }
             }
-        }
+      }
     }
 }
 
