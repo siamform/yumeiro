@@ -15,7 +15,7 @@ import {
 } from "./fcm.ts";
 import { apiSig, signRequest } from "./lastfm.ts";
 import { plan as hubPlan, shape as hubShape, shelves as hubShelves } from "./hub.ts";
-import { ANILIST, DEMOGRAPHICS, GENRES, SEARCH_QUERY, SORTS, TAGS_QUERY, plan as bsPlan, shape as bsShape, tagList as bsTags } from "./blacksource.ts";
+import { ANILIST, DEMOGRAPHICS, FORMATS, GENRES, SEARCH_QUERY, SORTS, STATUSES, TAGS_QUERY, plan as bsPlan, shape as bsShape, tagList as bsTags } from "./blacksource.ts";
 
 export interface Env {
   DB: D1Database;
@@ -165,7 +165,7 @@ async function blacksource(req: Request, env: Env, url: URL, ctx?: ExecutionCont
   if (!r.ok) return fail(502, "upstream");
   const raw = await r.json<unknown>().catch(() => null);
   const body = meta
-    ? (() => { const t = bsTags(raw); return t && { genres: GENRES, demographics: DEMOGRAPHICS, sorts: Object.keys(SORTS), tags: t.tags }; })()
+    ? (() => { const t = bsTags(raw); return t && { genres: GENRES, demographics: DEMOGRAPHICS, sorts: Object.keys(SORTS), formats: FORMATS, statuses: STATUSES, tags: t.tags }; })()
     : bsShape(raw, p!);
   if (!body) return fail(502, "upstream_shape");
   const res = cached(json(body), meta ? 24 * 3600 : p!.ttl);

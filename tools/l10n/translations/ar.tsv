@@ -967,3 +967,36 @@ drc_name_needed	أدخل اسمًا
 drc_full	يمكنك الاحتفاظ بما يصل إلى %1$d من الإعدادات. احذف واحدًا أولًا.
 drc_replaces	سيُستبدل الإعداد الذي يحمل هذا الاسم
 xr_page	صفحة %1$d
+bs9_more	مرشحات أكثر
+bs9_fewer	مرشحات أقل
+bs9_format	الشكل
+bs9_status	الحالة
+bs9_years	بدأ بين
+bs9_year_from	من سنة
+bs9_year_to	إلى سنة
+bs9_score	أدنى تقييم
+bs9_score_at_least	%1$d+
+bs9_without	استبعاد أنواع
+bs9_sort	الترتيب
+bs9_sort_popular	الأكثر شعبية
+bs9_sort_score	الأعلى تقييمًا
+bs9_sort_trending	الرائج
+bs9_sort_newest	الأحدث
+bs9_f_tv	تلفزيون
+bs9_f_tv_short	تلفزيون قصير
+bs9_f_movie	فيلم
+bs9_f_special	حلقة خاصة
+bs9_s_airing	يُعرض الآن
+bs9_s_finished	انتهى
+bs9_s_upcoming	لم يُعرض بعد
+bs9_s_hiatus	متوقف مؤقتًا
+bs9_sources	المصادر: %1$d من %2$d
+bs9_sources_hint	اختر المصادر التي يُبحث فيها، من كل منظومة
+bs9_sources_title	مصادر البحث
+bs9_sources_note	المصادر الأقل تنتهي أسرع. المصادر الجديدة مفعّلة حتى توقفها.
+bs9_sources_none	لا توجد مصادر مثبتة بعد.
+bs9_group	%1$s · %2$d من %3$d
+bs9_cost	يستغرق وقتًا أطول: حتى %1$d عملية بحث في %2$d مصدر
+bs9_clear	مسح المرشحات (%1$d)
+bs9_only_found	فقط العناوين الموجودة في مصادري
+bs9_score_of	التقييم %1$d

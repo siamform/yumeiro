@@ -105,3 +105,48 @@ test("handler: fixed query to AniList, values as variables, errors mapped", asyn
     globalThis.fetch = real;
   }
 });
+
+// ---- B9 (Group B9/B10): advanced filters ---------------------------------------------------------------------
+test("plan takes format, status, years, minimum score and excluded genres from allow-lists only", () => {
+  const p = plan(new URLSearchParams("genres=Fantasy&without=Romance&formats=TV,MOVIE&statuses=FINISHED&from=2018&to=2023&score=80&sort=score"));
+  assert.ok(!("error" in p));
+  if (!("error" in p)) {
+    assert.deepEqual(p.variables, {
+      page: 1, perPage: 30, sort: ["SCORE_DESC"], genres: ["Fantasy"], without: ["Romance"], formats: ["TV", "MOVIE"],
+      statuses: ["FINISHED"], after: 20171231, before: 20240101, score: 79,
+    });
+    assert.equal(p.yearFrom, 2018); assert.equal(p.minScore, 80);
+  }
+  // A narrowing filter alone is enough (no genre / words needed).
+  assert.ok(!("error" in plan(new URLSearchParams("formats=MOVIE"))));
+  assert.ok(!("error" in plan(new URLSearchParams("from=2024"))));
+  assert.deepEqual(plan(new URLSearchParams("formats=MUSIC_VIDEO")), { error: "bad_format" });
+  assert.deepEqual(plan(new URLSearchParams("formats=TV){x}")), { error: "bad_format" });
+  assert.deepEqual(plan(new URLSearchParams("statuses=CANCELLED_FOREVER")), { error: "bad_status" });
+  assert.deepEqual(plan(new URLSearchParams("from=2030&to=2020")), { error: "bad_year" });
+  assert.deepEqual(plan(new URLSearchParams("from=19")), { error: "bad_year" });
+  assert.deepEqual(plan(new URLSearchParams("from=1800")), { error: "bad_year" });
+  assert.deepEqual(plan(new URLSearchParams("score=85")), { error: "bad_score" });
+  assert.deepEqual(plan(new URLSearchParams("score=100")), { error: "bad_score" });
+  assert.deepEqual(plan(new URLSearchParams("without=Hentai")), { error: "bad_without" });
+  assert.deepEqual(plan(new URLSearchParams("genres=Drama&without=Drama")), { error: "bad_without" });
+  assert.ok(SEARCH_QUERY.includes("genre_not_in:$without") && SEARCH_QUERY.includes("format_in:$formats"));
+});
+
+test("titles outside the advanced filters are dropped again on the Worker", () => {
+  const base = { ...frieren, status: "FINISHED", averageScore: 90, startDate: { year: 2023 } };
+  const want = { genres: [], tags: [] };
+  assert.equal(title(base, { ...want, formats: ["MOVIE"] }), null);
+  assert.equal(title(base, { ...want, statuses: ["RELEASING"] }), null);
+  assert.equal(title(base, { ...want, without: ["Drama"] }), null);
+  assert.equal(title(base, { ...want, yearTo: 2022 }), null);
+  assert.equal(title(base, { ...want, yearFrom: 2024 }), null);
+  assert.equal(title(base, { ...want, minScore: 91 }), null);
+  assert.equal(title({ ...base, averageScore: null }, { ...want, minScore: 50 }), null);
+  const ok = title(base, { ...want, formats: ["TV"], statuses: ["FINISHED"], without: ["Romance"], yearFrom: 2023, yearTo: 2023, minScore: 90 });
+  assert.ok(ok);
+  assert.equal(ok!.status, "FINISHED"); assert.equal(ok!.score, 90); assert.equal(ok!.year, 2023);
+  // A winter season that started in December: the start year decides, as on AniList.
+  const dec = title({ ...base, seasonYear: 2021, startDate: { year: 2020 } }, { ...want, yearTo: 2020 });
+  assert.ok(dec); assert.equal(dec!.year, 2021);
+});
