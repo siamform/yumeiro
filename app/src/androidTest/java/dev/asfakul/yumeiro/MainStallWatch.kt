@@ -23,6 +23,11 @@ class MainStallWatch(private val tag: String, private val dumpAfterMs: Long = 1_
     val maxLag = AtomicLong()
     val firstStall = AtomicReference<String?>(null)
     @Volatile private var on = false
+    /**
+     * Group V: when set, a stall's main-thread stack is sampled every 100 ms (up to 12 times) and handed over
+     * with the stall's length once the main thread is free again, so a test can tell whose code held it.
+     */
+    @Volatile var onStall: ((lagMs: Long, samples: List<Array<StackTraceElement>>) -> Unit)? = null
 
     fun reset() { maxLag.set(0); firstStall.set(null) }
 
@@ -35,8 +40,13 @@ class MainStallWatch(private val tag: String, private val dumpAfterMs: Long = 1_
                 val t0 = SystemClock.uptimeMillis(); val ran = AtomicLong()
                 h.post { ran.set(SystemClock.uptimeMillis()) }
                 var dumped = false
+                val samples = ArrayList<Array<StackTraceElement>>()
+                var nextSample = t0 + dumpAfterMs
                 while (ran.get() == 0L && on) {
                     SystemClock.sleep(5)
+                    if (onStall != null && SystemClock.uptimeMillis() >= nextSample && samples.size < 12) {
+                        samples += main.stackTrace; nextSample += 100
+                    }
                     if (!dumped && SystemClock.uptimeMillis() - t0 > dumpAfterMs) {
                         dumped = true
                         val st = main.stackTrace.take(40).joinToString(" <- ") { "${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}" }
@@ -46,6 +56,7 @@ class MainStallWatch(private val tag: String, private val dumpAfterMs: Long = 1_
                 }
                 val lag = (ran.get().takeIf { it > 0 } ?: SystemClock.uptimeMillis()) - t0
                 if (lag > maxLag.get()) maxLag.set(lag)
+                if (samples.isNotEmpty()) runCatching { onStall?.invoke(lag, samples) }
                 SystemClock.sleep(45)
             }
         }, "main-stall-watch").apply { isDaemon = true }.start()
