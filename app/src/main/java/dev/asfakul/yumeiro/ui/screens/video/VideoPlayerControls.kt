@@ -631,7 +631,7 @@ fun UpNextCard(
     modifier: Modifier = Modifier,
 ) {
     androidx.compose.material3.Surface(
-        shape = androidx.compose.foundation.shape.yuRound(24),
+        shape = dev.asfakul.yumeiro.ui.theme.yuRound(24),
         color = Color(0xFF2C2452),
         shadowElevation = 10.dp,
         modifier = modifier.widthIn(max = 440.dp).fillMaxWidth().testTag("video_up_next_card")
@@ -840,7 +840,7 @@ private fun DurationPending(isLive: Boolean, @Suppress("UNUSED_PARAMETER") isLoa
         fontWeight = FontWeight.Bold,
         letterSpacing = 1.sp,
         modifier = Modifier
-            .background(Color(0xFFE5484D), androidx.compose.foundation.shape.yuRound(6))
+            .background(Color(0xFFE5484D), dev.asfakul.yumeiro.ui.theme.yuRound(6))
             .padding(horizontal = 7.dp, vertical = 2.dp)
             .testTag("video_live_badge"),
     ) else Text(
