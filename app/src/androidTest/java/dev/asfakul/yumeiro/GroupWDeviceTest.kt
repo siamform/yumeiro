@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -186,19 +187,23 @@ class GroupWDeviceTest {
     private fun cards() = rule.onAllNodes(serviceCard, true).fetchSemanticsNodes().size
 
     @Test fun d_placeholdersKeepTheLoadedSize() {
-        // Discover shelf: the same node's height while loading and once loaded (a real hub row).
+        HubDiscover.baseForTest = BETA_HUB
+        // Discover shelf (a real hub row): every height the shelf has from the first frame until its titles show.
+        // One value only = nothing below it moves (0 then full height was the B12 jump).
         val row = Discover.shelves(Discover.Section.DISCOVER).filterIsInstance<Discover.Row>().first()
+        val heights = java.util.Collections.synchronizedList(ArrayList<Int>())
         rule.setContent { MTPlayerTheme { Column(Modifier.fillMaxWidth().background(LocalMtPalette.current.background)) {
-            DiscoverShelf(row, emptyList(), onOpen = {})
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().onGloballyPositioned { heights += it.size.height }) {
+                DiscoverShelf(row, emptyList(), onOpen = {})
+            }
         } } }
-        rule.waitUntil(5_000) { count("discover_row_${row.key}") > 0 }
-        val loading = height("discover_row_${row.key}")
         rule.waitUntil(45_000) { rule.onAllNodes(hasTestTag("online_poster") and hasAnyAncestor(hasTestTag("discover_row_${row.key}")), true).fetchSemanticsNodes().isNotEmpty() }
         rule.waitForIdle()
-        val loaded = height("discover_row_${row.key}")
-        log("GROUPW_B12 shelf loading=$loading loaded=$loaded")
-        assertEquals("B12: the Discover shelf changes height when it loads", loading, loaded)
+        val seen = synchronized(heights) { heights.distinct() }
+        log("GROUPW_B12 shelf heights=$seen")
+        assertEquals("B12: the Discover shelf changes height while it loads: $seen", 1, seen.size)
     }
+
 
     @Test fun e_homePlaceholdersMatchTheirRows() {
         val slides = (1..3).map { HeroSlide("k$it", "A long title for slide $it", null, emptyMap(), "Latest", false, "Anime", "Source", "Open") }
