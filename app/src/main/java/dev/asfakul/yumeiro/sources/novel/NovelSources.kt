@@ -172,12 +172,27 @@ object NovelSources {
     suspend fun popular(context: Context, id: String, page: Int, latest: Boolean = false): List<NovelItem> = withContext(Dispatchers.IO) {
         val p = need(context, id); val e = engine(context, p)
         val opts = buildJsonObject { put("showLatestNovels", latest) }
-        NovelParse.items(id, e.site, e.call("popularNovels", listOf(JsonPrimitive(page), opts)))
+        explained(p, e, page) { NovelParse.items(id, e.site, e.call("popularNovels", listOf(JsonPrimitive(page), opts))) }
+    }
+
+    /**
+     * B7 (beta chapter): a source behind a Cloudflare check (Scribble Hub) or one whose site now redirects elsewhere
+     * (MTL Novel) answered "no novels": the plugin parsed the check or ad page as an empty list, so the Novel page
+     * showed "listed no novels" and no banner, with nothing to do about it. An empty first page now says why, and
+     * a check page gets the usual "Open <site>" button.
+     */
+    private suspend fun explained(p: NovelPlugin, e: NovelEngine, page: Int, load: suspend () -> List<NovelItem>): List<NovelItem> {
+        val since = System.currentTimeMillis()
+        e.clearAway()
+        val items = load()
+        if (items.isNotEmpty() || page > 1) return items
+        val why = NovelSiteCheck.emptyReason(p.name, dev.asfakul.yumeiro.online.web.BrowserCheck.challengedSince(e.site, since), e.awayHost)
+        return if (why != null) throw IllegalStateException(why) else items
     }
 
     suspend fun search(context: Context, id: String, query: String, page: Int = 1): List<NovelItem> = withContext(Dispatchers.IO) {
         val p = need(context, id); val e = engine(context, p)
-        NovelParse.items(id, e.site, e.call("searchNovels", listOf(JsonPrimitive(query), JsonPrimitive(page))))
+        explained(p, e, page) { NovelParse.items(id, e.site, e.call("searchNovels", listOf(JsonPrimitive(query), JsonPrimitive(page)))) }
     }
 
     /** One result group per source; a source that fails or takes longer than [perSourceMs] is reported, not waited for. */

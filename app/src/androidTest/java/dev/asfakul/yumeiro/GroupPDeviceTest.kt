@@ -16,6 +16,7 @@ import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.data.model.AudioTrack
@@ -236,14 +237,21 @@ class GroupPDeviceTest {
             ctx.getSharedPreferences("novel_reader", Context.MODE_PRIVATE).edit().putString("source", id).commit()
             rule.runOnIdle { current = null }; rule.waitForIdle()
             rule.runOnIdle { current = id }
+            rule.waitForIdle()
+            runCatching { rule.onAllNodesWithTag("novel_feed_popular", true)[0].performClick() }; rule.waitForIdle()
+            val has = { t: String -> rule.onAllNodesWithTag(t, true).fetchSemanticsNodes().isNotEmpty() }
             val decided = runCatching { rule.waitUntil(60_000) {
-                listOf("novel_banner", "novel_browse_error", "novel_browse_empty").any { t -> rule.onAllNodesWithTag(t, true).fetchSemanticsNodes().isNotEmpty() } ||
-                    rule.onAllNodesWithTag("online_poster", true).fetchSemanticsNodes().isNotEmpty()
+                listOf("novel_banner", "novel_browse_error", "novel_browse_error_check", "novel_browse_empty").any(has)
             }; true }.getOrDefault(false)
-            val banner = rule.onAllNodesWithTag("novel_banner", true).fetchSemanticsNodes().isNotEmpty()
-            val error = rule.onAllNodesWithTag("novel_browse_error", true).fetchSemanticsNodes().isNotEmpty()
+            val banner = has("novel_banner")
             if (!banner) {
-                results[id] = when { error -> "source-error"; !decided -> "timeout"; else -> "NO-BANNER" }
+                // A site check or a site that moved is said as such (with what to do); "listed no novels" is the bug.
+                results[id] = when {
+                    has("novel_browse_error_check") -> "site-check"
+                    has("novel_browse_error") -> if (allText().any { "another site" in it }) "moved" else "source-error"
+                    !decided -> "timeout"
+                    else -> "NO-BANNER"
+                }
                 log("GROUPP_B7 d $id ${results[id]} texts=${allText().take(12)}")
                 continue
             }
@@ -251,12 +259,17 @@ class GroupPDeviceTest {
             runCatching { rule.waitUntil(30_000) { inBanner(dev.asfakul.yumeiro.ui.screens.online.PosterImageMode.LOADING_TAG) == 0 } }
             val loading = inBanner(dev.asfakul.yumeiro.ui.screens.online.PosterImageMode.LOADING_TAG)
             val fallback = inBanner(dev.asfakul.yumeiro.ui.screens.online.PosterImageMode.FALLBACK_TAG)
-            results[id] = if (loading == 0 && fallback == 0) "OK" else "BROKEN-IMAGE(fallback=$fallback loading=$loading)"
+            var verdict = if (loading == 0 && fallback == 0) "OK" else "BROKEN-IMAGE(fallback=$fallback loading=$loading)"
+            // The Latest feed has its banner too.
+            runCatching { rule.onAllNodesWithTag("novel_feed_latest", true)[0].performClick() }; rule.waitForIdle()
+            val latest = runCatching { rule.waitUntil(45_000) { listOf("novel_banner", "novel_browse_error", "novel_browse_error_check", "novel_browse_empty").any(has) }; has("novel_banner") }.getOrDefault(false)
+            if (!latest && verdict == "OK") verdict = if (has("novel_browse_empty")) "NO-BANNER(latest)" else "OK(latest: source error)"
+            results[id] = verdict
             val headers = dev.asfakul.yumeiro.sources.novel.NovelSources.plugin(id)?.let { runCatching { NovelSourcesSetup.headersOf(id) }.getOrNull() }
             log("GROUPP_B7 d $id ${results[id]} headers=${headers?.keys}")
         }
         rule.runOnIdle { current = null }
-        val ok = results.filterValues { it == "OK" }.keys
+        val ok = results.filterValues { it.startsWith("OK") }.keys
         val bad = results.filterValues { it == "NO-BANNER" || it.startsWith("BROKEN") }
         log("GROUPP_B7 d results=$results")
         log("GROUPP_B7_RESULT d ${if (bad.isEmpty() && ok.size >= 4) "PASS" else "FAIL"} ok=${ok.size} bad=$bad")

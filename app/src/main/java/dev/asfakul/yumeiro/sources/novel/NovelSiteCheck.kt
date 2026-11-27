@@ -24,6 +24,28 @@ object NovelSiteCheck {
         return markers.any { it in m } || statusCode.containsMatchIn(m) && ("forbidden" in m || "unavailable" in m || "blocked" in m)
     }
 
+    /**
+     * B7: the host a request ended on when it is not the site asked for (nor the source's own site), e.g. MTL Novel's
+     * list redirecting to an ad page; null when it stayed. `www.` and sub-domains of the same site count as the same. Pure.
+     */
+    fun awayHost(requested: String, final: String, site: String): String? {
+        fun host(u: String) = runCatching { java.net.URI(u).host?.lowercase()?.removePrefix("www.") }.getOrNull()
+        val f = host(final) ?: return null
+        val same = { h: String? -> h != null && (f == h || f.endsWith(".$h") || h.endsWith(".$f")) }
+        return if (same(host(requested)) || same(host(site))) null else f
+    }
+
+    /** B7: an empty list because the site sent Yumeiro elsewhere. */
+    fun movedMessage(siteName: String, host: String): String =
+        "$siteName sent Yumeiro to another site ($host) instead of its novels. The site may have moved or closed; try again later or pick another source."
+
+    /** B7: the error to raise for an empty first page, or null when empty really means empty. */
+    fun emptyReason(siteName: String, challenged: Boolean, away: String?): String? = when {
+        challenged -> "$siteName: Cloudflare check (just a moment)"
+        away != null -> movedMessage(siteName, away)
+        else -> null
+    }
+
     fun message(siteName: String): String =
         "$siteName asks for a quick check that you're a person. Open $siteName, finish the check on the page, and Yumeiro loads it again."
 }

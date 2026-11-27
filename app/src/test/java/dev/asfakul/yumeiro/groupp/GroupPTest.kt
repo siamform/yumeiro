@@ -40,6 +40,16 @@ class GroupPTest {
         assertEquals("https://cdn.example/", NovelImageHeaders.forCovers("https://novel.example", mapOf("Referer" to "https://cdn.example/"), "UA")["Referer"])
     }
 
+    @Test fun b7_emptyListSaysWhy() {
+        val s = dev.asfakul.yumeiro.sources.novel.NovelSiteCheck
+        assertEquals("survey-twist.com", s.awayHost("https://www.mtlnovels.com/novel-list/?pg=1", "http://survey-twist.com/", "https://www.mtlnovels.com/"))
+        assertEquals(null, s.awayHost("https://www.site.com/a", "https://site.com/b", "https://www.site.com/"))
+        assertEquals(null, s.awayHost("https://api.site.com/a", "https://cdn.api.site.com/b", "https://site.com/"))
+        assertTrue(s.isSiteCheck(s.emptyReason("Scribble Hub", challenged = true, away = null)))
+        assertTrue(s.emptyReason("MTL Novel", false, "survey-twist.com")!!.contains("another site"))
+        assertEquals(null, s.emptyReason("X", false, null))
+    }
+
     @Test fun b8_chatFilter() {
         val chats = listOf(TgChat(1, "Anime News", TgChat.Kind.CHANNEL, 0), TgChat(2, "Movie Club", TgChat.Kind.GROUP, 0), TgChat(3, "Sam", TgChat.Kind.PRIVATE, 0))
         assertEquals(listOf(1L), TelegramChatFilter.apply(chats, " anime ", TelegramChatFilter.Kind.ALL).map { it.id })

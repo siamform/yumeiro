@@ -43,6 +43,10 @@ class NovelEngine(
     @Volatile private var failure: String? = null
     @Volatile var site: String = plugin.site
         private set
+    /** B7: a request of this source ended on another site (the site moved or was taken over); null = none since [clearAway]. */
+    @Volatile var awayHost: String? = null
+        private set
+    fun clearAway() { awayHost = null }
     /** B7: the plugin's own cover-image headers (`imageRequestInit.headers`), empty when it gives none. */
     @Volatile private var imageInit: Map<String, String> = emptyMap()
 
@@ -115,6 +119,7 @@ class NovelEngine(
             client.newCall(b.build()).execute().use { r ->
                 out.put("status", r.code)
                 out.put("url", r.request.url.toString())
+                NovelSiteCheck.awayHost(url, r.request.url.toString(), site)?.let { awayHost = it }
                 val hs = JSONObject()
                 for (name in r.headers.names()) hs.put(name, r.headers(name).joinToString(", "))
                 out.put("headers", hs)
