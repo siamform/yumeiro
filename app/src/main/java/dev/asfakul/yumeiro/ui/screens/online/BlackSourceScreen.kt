@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -95,6 +97,8 @@ fun BlackSourceScreen(
     var checking by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var job by remember { mutableStateOf<Job?>(null) }
+    val list = rememberLazyListState()
+    val focus = LocalFocusManager.current
 
     val filter = BlackSource.Filter(
         words = words, genres = genres.toSet(), demographic = demographic,
@@ -104,6 +108,7 @@ fun BlackSourceScreen(
     fun start() {
         if (filter.empty) return
         job?.cancel(); hits.clear(); progress = 0 to 0
+        focus.clearFocus()
         val f = filter
         job = scope.launch {
             phase = BsPhase.Loading
@@ -120,6 +125,9 @@ fun BlackSourceScreen(
             checking = false
         }
     }
+
+    // The filters fill most of a phone screen: once AniList answers, bring the answer into view (item 1 = status line).
+    androidx.compose.runtime.LaunchedEffect(phase) { if (phase is BsPhase.Done) list.animateScrollToItem(1) }
 
     if (!optedIn) {
         TsukiDialog(
@@ -143,7 +151,7 @@ fun BlackSourceScreen(
                 }
             },
         )
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
+        LazyColumn(Modifier.fillMaxSize().testTag("blacksource_list"), state = list, contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp)) {
             item {
                 BsField(words, { words = it.take(80) }, stringResource(R.string.bs_words_hint), "blacksource_words", onDone = ::start)
                 Spacer(Modifier.height(12.dp))

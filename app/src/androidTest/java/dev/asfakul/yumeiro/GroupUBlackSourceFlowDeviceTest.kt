@@ -8,6 +8,8 @@ package dev.asfakul.yumeiro
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -15,6 +17,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -59,6 +62,13 @@ class GroupUBlackSourceFlowDeviceTest {
     private lateinit var server: MockWebServer
     private val asked = CopyOnWriteArrayList<String>()
     private fun has(tag: String) = compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
+    /** Scrolls the result list like a person would until a node with [tag] (or [text]) is drawn. */
+    private fun seek(tag: String? = null, text: String? = null): Boolean = runCatching {
+        val m = if (tag != null) hasTestTag(tag) else hasText(text!!, substring = true)
+        compose.onNodeWithTag("blacksource_list", true).performScrollToNode(m)
+        compose.waitForIdle()
+        if (tag != null) has(tag) else compose.onAllNodesWithText(text!!, substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+    }.getOrDefault(false)
     private fun waitFor(ms: Long, what: () -> Boolean) = runCatching { compose.waitUntil(ms) { what() }; true }.getOrDefault(false)
 
     private class FakeSource : MainAPI() {
@@ -117,20 +127,24 @@ class GroupUBlackSourceFlowDeviceTest {
         compose.onNodeWithTag("bs_genre_Fantasy", true).performScrollTo().performClick()
         compose.onNodeWithTag("bs_demo_Shounen", true).performScrollTo().performClick()
         compose.onNodeWithTag("blacksource_search", true).performScrollTo().performClick()
-        val listed = waitFor(15_000) { has("blacksource_title") }
+        val listed = waitFor(20_000) { seek("blacksource_title") }
         val req = asked.firstOrNull { it.contains("/v1/blacksource/search") }.orEmpty()
         Log.i("YuGroupU", "GROUPU_b listed=$listed request=${req.substringAfter("/v1/")}")
         assertTrue("No AniList title listed", listed)
         assertTrue("Request did not carry the picked values: $req", req.contains("q=yu") && req.contains("genres=Fantasy") && req.contains("demographic=Shounen"))
-        val shown = compose.onAllNodesWithText("Frieren: Beyond Journey's End", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-        val facts = compose.onAllNodesWithText("Shounen", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-        val hit = waitFor(30_000) { has("blacksource_hit") }
-        val own = waitFor(30_000) { has("blacksource_own_hit") }
-        val ownName = compose.onAllNodesWithText("Yu Hidden Gem", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-        val plainKept = compose.onAllNodesWithText("Yu Plain Drama", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-        val unrelated = compose.onAllNodesWithText("Unrelated Show", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        val shown = seek(text = "Frieren: Beyond Journey's End")
+        val facts = seek(text = "28 episodes · Shounen")
+        val hit = waitFor(30_000) { seek("blacksource_hit") }
+        val own = waitFor(30_000) { seek("blacksource_own_hit") }
+        // let every source lookup finish before checking what was left out
+        waitFor(30_000) { seek("blacksource_progress") && compose.onAllNodesWithText("Checking", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+        val ownName = seek(text = "Yu Hidden Gem")
+        val plainKept = seek(text = "Yu Plain Drama")
+        val unrelated = seek(text = "Unrelated Show")
+        seek("blacksource_title")
         FirstRun.shot("groupu_results")
-        compose.onAllNodesWithTag("blacksource_hit", true).onFirst().performScrollTo().performClick()
+        seek("blacksource_hit")
+        compose.onAllNodesWithTag("blacksource_hit", true).onFirst().performClick()
         compose.waitForIdle()
         val openedName = opened.firstOrNull()?.name
         val pass = shown && facts && hit && own && ownName && !plainKept && !unrelated && openedName == "Sousou no Frieren (Sub)"

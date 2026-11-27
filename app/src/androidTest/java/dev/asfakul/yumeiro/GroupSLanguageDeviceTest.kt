@@ -28,6 +28,7 @@ import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
 import dev.asfakul.yumeiro.ui.tv.LocalTvMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.FixMethodOrder
 import org.junit.Rule
 import org.junit.Test
@@ -46,6 +47,13 @@ class GroupSLanguageDeviceTest {
     @get:Rule val rule = createComposeRule()
     private val ctx: Context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private fun log(s: String) = Log.i("YuGroupS", s)
+
+    // Android 13+ asks for the notification (and media) permission when MainActivity opens; that system dialog
+    // pauses the app and the recreate below needs it resumed. Granted up front like the other MainActivity tests.
+    @Before fun grant() {
+        listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.POST_NOTIFICATIONS")
+            .forEach { runCatching { InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(ctx.packageName, it) } }
+    }
     private fun savedTag() = ctx.getSharedPreferences("mt_language", Context.MODE_PRIVATE).getString("tag", null)
 
     private fun pick(optionTag: String, wantSaved: String) {
