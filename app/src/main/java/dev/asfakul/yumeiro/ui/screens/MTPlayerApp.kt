@@ -41,6 +41,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -563,6 +565,13 @@ fun MTPlayerApp(
     val lastTabRoute = remember { mutableStateOf(currentRoute) }
     if (!isSubpage && lastTabRoute.value != currentRoute) lastTabRoute.value = currentRoute
     val tabRoute = lastTabRoute.value
+    // B13: the lit bar item follows the route AND the tab's source, plus the item tapped last
+    // (NavActive), so Live TV, Network stream, YouTube... each light themselves, not "Videos".
+    var barIntent by rememberSaveable { mutableStateOf<String?>(null) }
+    val navState = dev.asfakul.yumeiro.ui.navigation.NavActive.State(currentRoute, videoSource.tag, musicMode.key)
+    val keptIntent = dev.asfakul.yumeiro.ui.navigation.NavActive.keepIntent(barIntent, navState, onTab = !isSubpage)
+    if (keptIntent != barIntent) androidx.compose.runtime.SideEffect { barIntent = keptIntent }
+    val barActive = dev.asfakul.yumeiro.ui.navigation.NavActive.active(navState, keptIntent, tabRoute, barItems.map { it.route }) ?: ""
     var tabTopH by remember { mutableStateOf(0.dp) }
     var tabBottomH by remember { mutableStateOf(0.dp) }
     val tabTopBar: @Composable () -> Unit = {
@@ -647,6 +656,7 @@ fun MTPlayerApp(
             }
     }
     val onBarNavigate: (String) -> Unit = { route ->
+        barIntent = route
         val shortcut = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.of(route.removePrefix(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX))
         when (if (route.startsWith(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX)) shortcut else null) {
             null -> navigateTop(route)
@@ -708,7 +718,7 @@ fun MTPlayerApp(
                         )
 
                         if (!tvLayout) MTBottomBar(
-                            currentRoute = tabRoute,
+                            currentRoute = barActive,
                             items = barItems,
                             onNavigateToRoute = onBarNavigate,
                             joinedWithMiniPlayer = dockJoined,
@@ -717,6 +727,12 @@ fun MTPlayerApp(
                     }
                 }
     }
+    // derivedStateOf: the app recomposes when the keyboard opens or closes, not on each frame of its slide.
+    val imeInsets = WindowInsets.ime
+    val imeDensity = androidx.compose.ui.platform.LocalDensity.current
+    val imeOpen by remember(imeInsets, imeDensity) { androidx.compose.runtime.derivedStateOf { imeInsets.getBottom(imeDensity) > 0 } }
+    val subBarOn = isSubpage && !tvLayout && !dev.asfakul.yumeiro.ui.navigation.NavActive.isImmersive(currentRoute) &&
+        !showSplash && !(activePlayingVideo != null && !videoMinimized) && !isNowPlayingExpanded && !imeOpen
     Box(modifier = Modifier.fillMaxSize().pageBackground()) {
         // GATE-1-RENDER: first-use GPU programs compile in idle frames, drawn under every page.
         dev.asfakul.yumeiro.ui.components.ShaderPrewarmHost(remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.SHADER_PREWARM) })
@@ -725,6 +741,9 @@ fun MTPlayerApp(
                 .fillMaxSize()
                 .testTag("app_root_scaffold"),
             containerColor = Color.Transparent,
+            // B13: the same dock stays under every sub-page (not over readers, players, Now Playing,
+            // the splash, the TV layout or an open keyboard). Pages get its height as bottom padding.
+            bottomBar = { if (subBarOn) Box(Modifier.fillMaxWidth().testTag("sub_dock")) { tabBottomBar() } },
         ) { innerPadding ->
             // Each layer keeps its own padding through the page transition. The bars disappear the
             // moment a sub-page opens; with one shared padding the outgoing tab (e.g. Yumix) jumped
@@ -1149,7 +1168,9 @@ fun MTPlayerApp(
                             }
                             val railPad = if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvRailWidth else 0.dp
                             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
-                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }) { tabBottomBar() }
+                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }
+                                // B13: while a sub-page slides in, its own dock (same place, same look) takes over.
+                                .graphicsLayer { alpha = if (subBarOn) 0f else 1f }) { tabBottomBar() }
                             if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvNavRail(
                                 currentRoute = tabRoute,
                                 selectedFocus = railFocus,
@@ -1701,7 +1722,7 @@ fun MTPlayerApp(
                     onMinimize = { videoMinimized = true },
                     onExpand = { videoMinimized = false },
                     minimizedBottomInset = when {
-                        isSubpage -> 16.dp
+                        isSubpage && !subBarOn -> 16.dp
                         playbackState.currentTrack != null -> 170.dp
                         else -> 100.dp
                     },
@@ -1775,7 +1796,7 @@ fun MTPlayerApp(
                 !(isNowPlayingExpanded && playbackState.currentTrack != null),
             enter = fadeIn(tween(200)), exit = fadeOut(tween(200)),
             modifier = Modifier.align(Alignment.BottomCenter),
-        ) { dev.asfakul.yumeiro.ui.components.OfflineBanner() }
+        ) { dev.asfakul.yumeiro.ui.components.OfflineBanner(if (subBarOn) Modifier.padding(bottom = tabBottomH) else Modifier) }
 
         // First-run setup guide (skippable; reopened from Home's setup card).
         val setupOpen by dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.open.collectAsState()
@@ -1818,7 +1839,7 @@ fun MTPlayerApp(
         // (tv-api34: a quick card left 44 dp uncovered under it). TV: at the bottom, above the mini player.
         val tvMessages = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
         AppMessageHost(bottomPadding = when {
-            isSubpage -> androidx.compose.ui.unit.Dp(24f)
+            isSubpage && !subBarOn -> androidx.compose.ui.unit.Dp(24f)
             tvMessages -> if (playbackState.currentTrack != null) androidx.compose.ui.unit.Dp(96f) else androidx.compose.ui.unit.Dp(24f)
             else -> androidx.compose.ui.unit.Dp(150f)
         })

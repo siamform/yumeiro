@@ -761,8 +761,6 @@
     <string name="f_droid">F-Droid</string>
     <string name="google_play">Google Play</string>
     <string name="preview">Preview</string>
-    <string name="of_each_with_a_short_label">%1$s of %2$s · each with a short label; up to seven fit a thumb</string>
-    <string name="pin_up_to_pages_you_open">Pin up to %1$s pages you open every day.</string>
     <string name="built_in_torrent_engine">Built-in torrent engine</string>
     <string name="before_you_turn_it_on">Before you turn it on</string>
     <string name="i_understand_turn_on">I understand, turn on</string>
@@ -1002,4 +1000,24 @@
     <string name="drc_name_needed">Give it a name</string>
     <string name="drc_full">You can keep up to %1$d presets. Delete one first.</string>
     <string name="drc_replaces">A preset with this name is replaced</string>
+    <string name="nav_edit_on_bar">On the bar</string>
+    <string name="nav_edit_on_bar_hint">Drag a handle or use the arrows to change the order. Home stays first.</string>
+    <string name="nav_edit_more">More you can add</string>
+    <string name="nav_edit_more_hint">Main tabs and shortcuts to pages you open often.</string>
+    <string name="nav_edit_kind_tab">Main tab</string>
+    <string name="nav_edit_kind_shortcut">Shortcut</string>
+    <string name="nav_edit_home_first">Always first</string>
+    <string name="nav_edit_move_up">Move %1$s up</string>
+    <string name="nav_edit_move_down">Move %1$s down</string>
+    <string name="nav_edit_drag">Drag to reorder %1$s</string>
+    <string name="nav_edit_count">%1$d of %2$d items · %3$d of %4$d shortcuts</string>
+    <string name="nav_edit_full">The bar is full. Turn one off first.</string>
+    <string name="nav_edit_shortcuts_full">Up to %1$d shortcuts. Turn one off first.</string>
+    <string name="nav_edit_min">Keep at least %1$d items on the bar.</string>
+    <string name="nav_edit_crowded">Five or fewer items keep every label easy to read.</string>
+    <string name="nav_edit_reset_title">Reset the bar?</string>
+    <string name="nav_edit_reset_text">Home, Music, Videos and Library, in that order, with no shortcuts.</string>
+    <string name="nav_edit_reset">Reset</string>
+    <string name="nav_edit_cancel">Cancel</string>
+    <string name="nav_edit_reset_done">Navigation bar reset</string>
 </resources>

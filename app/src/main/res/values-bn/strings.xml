@@ -762,8 +762,6 @@
     <string name="f_droid">F-Droid</string>
     <string name="google_play">Google Play</string>
     <string name="preview">প্রিভিউ</string>
-    <string name="of_each_with_a_short_label">%2$s-এর মধ্যে %1$s · প্রতিটিতে ছোট লেবেল; বুড়ো আঙুলের নাগালে সাতটি পর্যন্ত আঁটে</string>
-    <string name="pin_up_to_pages_you_open">প্রতিদিন খোলেন এমন %1$sটি পর্যন্ত পাতা পিন করুন।</string>
     <string name="built_in_torrent_engine">অন্তর্ভুক্ত টরেন্ট ইঞ্জিন</string>
     <string name="before_you_turn_it_on">চালু করার আগে</string>
     <string name="i_understand_turn_on">বুঝেছি, চালু করুন</string>
@@ -1003,4 +1001,24 @@
     <string name="drc_name_needed">একটি নাম দিন</string>
     <string name="drc_full">সর্বোচ্চ %1$d টি প্রিসেট রাখা যায়। আগে একটি মুছুন।</string>
     <string name="drc_replaces">এই নামের প্রিসেটটি বদলে যাবে</string>
+    <string name="nav_edit_on_bar">বারে আছে</string>
+    <string name="nav_edit_on_bar_hint">ক্রম বদলাতে হ্যান্ডেল টেনে আনুন বা তীর ব্যবহার করুন। হোম সবসময় প্রথমে থাকে।</string>
+    <string name="nav_edit_more">আরও যা যোগ করা যায়</string>
+    <string name="nav_edit_more_hint">মূল ট্যাব আর প্রায়ই খোলা পাতার শর্টকাট।</string>
+    <string name="nav_edit_kind_tab">মূল ট্যাব</string>
+    <string name="nav_edit_kind_shortcut">শর্টকাট</string>
+    <string name="nav_edit_home_first">সবসময় প্রথমে</string>
+    <string name="nav_edit_move_up">%1$s ওপরে সরান</string>
+    <string name="nav_edit_move_down">%1$s নিচে সরান</string>
+    <string name="nav_edit_drag">%1$s-এর ক্রম বদলাতে টানুন</string>
+    <string name="nav_edit_count">%2$d-এর মধ্যে %1$dটি আইটেম · %4$d-এর মধ্যে %3$dটি শর্টকাট</string>
+    <string name="nav_edit_full">বার ভরা। আগে একটি বন্ধ করুন।</string>
+    <string name="nav_edit_shortcuts_full">সর্বোচ্চ %1$dটি শর্টকাট। আগে একটি বন্ধ করুন।</string>
+    <string name="nav_edit_min">বারে অন্তত %1$dটি আইটেম রাখুন।</string>
+    <string name="nav_edit_crowded">পাঁচটি বা তার কম আইটেম থাকলে প্রতিটি লেবেল সহজে পড়া যায়।</string>
+    <string name="nav_edit_reset_title">বার রিসেট করবেন?</string>
+    <string name="nav_edit_reset_text">হোম, মিউজিক, ভিডিও আর লাইব্রেরি, এই ক্রমে, কোনো শর্টকাট ছাড়া।</string>
+    <string name="nav_edit_reset">রিসেট</string>
+    <string name="nav_edit_cancel">বাতিল</string>
+    <string name="nav_edit_reset_done">নেভিগেশন বার রিসেট হয়েছে</string>
 </resources>

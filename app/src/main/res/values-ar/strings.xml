@@ -762,8 +762,6 @@
     <string name="f_droid">F-Droid</string>
     <string name="google_play">Google Play</string>
     <string name="preview">معاينة</string>
-    <string name="of_each_with_a_short_label">%1$s من %2$s · لكل منها تسمية قصيرة؛ يتسع الإبهام لسبعة كحد أقصى</string>
-    <string name="pin_up_to_pages_you_open">ثبّت حتى %1$s صفحات تفتحها كل يوم.</string>
     <string name="built_in_torrent_engine">محرك تورنت مدمج</string>
     <string name="before_you_turn_it_on">قبل أن تفعّله</string>
     <string name="i_understand_turn_on">فهمت، فعّله</string>
@@ -1003,4 +1001,24 @@
     <string name="drc_name_needed">أدخل اسمًا</string>
     <string name="drc_full">يمكنك الاحتفاظ بما يصل إلى %1$d من الإعدادات. احذف واحدًا أولًا.</string>
     <string name="drc_replaces">سيُستبدل الإعداد الذي يحمل هذا الاسم</string>
+    <string name="nav_edit_on_bar">على الشريط</string>
+    <string name="nav_edit_on_bar_hint">اسحب المقبض أو استخدم الأسهم لتغيير الترتيب. تبقى الرئيسية أولًا.</string>
+    <string name="nav_edit_more">يمكنك إضافة المزيد</string>
+    <string name="nav_edit_more_hint">علامات تبويب رئيسية واختصارات لصفحات تفتحها كثيرًا.</string>
+    <string name="nav_edit_kind_tab">علامة تبويب رئيسية</string>
+    <string name="nav_edit_kind_shortcut">اختصار</string>
+    <string name="nav_edit_home_first">دائمًا أولًا</string>
+    <string name="nav_edit_move_up">نقل %1$s لأعلى</string>
+    <string name="nav_edit_move_down">نقل %1$s لأسفل</string>
+    <string name="nav_edit_drag">اسحب لإعادة ترتيب %1$s</string>
+    <string name="nav_edit_count">%1$d من %2$d عناصر · %3$d من %4$d اختصارات</string>
+    <string name="nav_edit_full">الشريط ممتلئ. أوقف عنصرًا أولًا.</string>
+    <string name="nav_edit_shortcuts_full">حتى %1$d اختصارات. أوقف واحدًا أولًا.</string>
+    <string name="nav_edit_min">أبقِ %1$d عناصر على الأقل في الشريط.</string>
+    <string name="nav_edit_crowded">خمسة عناصر أو أقل تُبقي كل تسمية سهلة القراءة.</string>
+    <string name="nav_edit_reset_title">إعادة ضبط الشريط؟</string>
+    <string name="nav_edit_reset_text">الرئيسية والموسيقى والفيديو والمكتبة، بهذا الترتيب، بلا اختصارات.</string>
+    <string name="nav_edit_reset">إعادة ضبط</string>
+    <string name="nav_edit_cancel">إلغاء</string>
+    <string name="nav_edit_reset_done">أُعيد ضبط شريط التنقل</string>
 </resources>

@@ -62,7 +62,9 @@ class GroupYDrcDeviceTest {
     private fun tap(tag: String) {
         val n = compose.onNodeWithTag(tag, true)
         runCatching { n.performScrollTo() }
-        n.performClick(); compose.waitForIdle()
+        // TV has no touch screen: the remote's OK is the node's click action (a touch can land on the rail).
+        if (Edition.isTv) n.performSemanticsAction(SemanticsActions.OnClick) else n.performClick()
+        compose.waitForIdle()
     }
     private fun text(tag: String): String = runCatching {
         compose.onAllNodesWithTag(tag, true)[0].fetchSemanticsNode().config[SemanticsProperties.Text].joinToString { it.text }

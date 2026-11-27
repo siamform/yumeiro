@@ -759,8 +759,6 @@ reliable_alerts_need_a_free_unifiedpush	تحتاج التنبيهات الموث
 f_droid	F-Droid
 google_play	Google Play
 preview	معاينة
-of_each_with_a_short_label	%1$s من %2$s · لكل منها تسمية قصيرة؛ يتسع الإبهام لسبعة كحد أقصى
-pin_up_to_pages_you_open	ثبّت حتى %1$s صفحات تفتحها كل يوم.
 built_in_torrent_engine	محرك تورنت مدمج
 before_you_turn_it_on	قبل أن تفعّله
 i_understand_turn_on	فهمت، فعّله
@@ -1000,3 +998,23 @@ bs9_cost	يستغرق وقتًا أطول: حتى %1$d عملية بحث · ال
 bs9_clear	مسح المرشحات (%1$d)
 bs9_only_found	فقط العناوين الموجودة في مصادري
 bs9_score_of	التقييم %1$d
+nav_edit_on_bar	على الشريط
+nav_edit_on_bar_hint	اسحب المقبض أو استخدم الأسهم لتغيير الترتيب. تبقى الرئيسية أولًا.
+nav_edit_more	يمكنك إضافة المزيد
+nav_edit_more_hint	علامات تبويب رئيسية واختصارات لصفحات تفتحها كثيرًا.
+nav_edit_kind_tab	علامة تبويب رئيسية
+nav_edit_kind_shortcut	اختصار
+nav_edit_home_first	دائمًا أولًا
+nav_edit_move_up	نقل %1$s لأعلى
+nav_edit_move_down	نقل %1$s لأسفل
+nav_edit_drag	اسحب لإعادة ترتيب %1$s
+nav_edit_count	%1$d من %2$d عناصر · %3$d من %4$d اختصارات
+nav_edit_full	الشريط ممتلئ. أوقف عنصرًا أولًا.
+nav_edit_shortcuts_full	حتى %1$d اختصارات. أوقف واحدًا أولًا.
+nav_edit_min	أبقِ %1$d عناصر على الأقل في الشريط.
+nav_edit_crowded	خمسة عناصر أو أقل تُبقي كل تسمية سهلة القراءة.
+nav_edit_reset_title	إعادة ضبط الشريط؟
+nav_edit_reset_text	الرئيسية والموسيقى والفيديو والمكتبة، بهذا الترتيب، بلا اختصارات.
+nav_edit_reset	إعادة ضبط
+nav_edit_cancel	إلغاء
+nav_edit_reset_done	أُعيد ضبط شريط التنقل
