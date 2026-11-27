@@ -257,6 +257,20 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
     }
 }
 
+/**
+ * Group W (B12): the carousel's placeholder at the carousel's exact size: the 184 dp card, the dots row and (when
+ * the loaded carousel will have one) the caption line under it, so nothing below moves when it fills in.
+ */
+@Composable
+internal fun HeroCarouselSkeleton(caption: Boolean) {
+    Column(Modifier.fillMaxWidth().testTag("home_episodes_skeleton")) {
+        dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, 184.dp, shape = yuRound(24))
+        // Dots row: 10 dp gap + 5 dp dots.
+        Spacer(Modifier.height(15.dp))
+        if (caption) Text(" ", style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 2.dp))
+    }
+}
+
 @Composable
 private fun HeroSlideCard(s: HeroSlide, onClick: () -> Unit) {
     val p = LocalMtPalette.current

@@ -635,7 +635,6 @@ fun OnlineHomeScreen(
                     val hubPublished = providers.any { it.name == dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME }
                     val discoverOn = hubPublished && dev.asfakul.yumeiro.sources.hub.YumeiroHub.catalogOn() && dev.asfakul.yumeiro.sources.hub.HubDiscover.available()
                     val discoverSeeds = remember(continueItems) { continueItems.map { it.toItem() } }
-                    Discover.grid?.let { g -> if (discoverOn) DiscoverGrid(g, onOpen = openInfo, onClose = { Discover.grid = null }) }
                     val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
@@ -662,7 +661,7 @@ fun OnlineHomeScreen(
                             st.item("discover_bar") { DiscoverBar(Discover.section, onPick = { Discover.section = it }) }
                             Discover.shelves(Discover.section).forEach { sh ->
                                 st.item("discover_${Discover.section.name}_${sh.key}", contentType = "discover") {
-                                    DiscoverShelf(sh, discoverSeeds, onOpen = openInfo, onGrid = { Discover.grid = it })
+                                    DiscoverShelf(sh, discoverSeeds, onOpen = openInfo)
                                 }
                             }
                         }

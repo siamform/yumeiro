@@ -220,13 +220,13 @@ export function discover(params: URLSearchParams, page: number, today: string): 
   const region = iso2(params.get("region"));
   const origin = iso2(params.get("origin"));
   const lang = params.get("lang");
-  // Group W (B1, B2): themes (TMDB keyword ids, any of them), a year range and a lowest score.
+  // Group W (B1, B2): themes (TMDB keyword ids, all of them, like genres), a year range and a lowest score.
   const keywords = ids(params.get("keyword"), 3);
   const yFrom = yearParam(params.get("year_from"));
   const yTo = yearParam(params.get("year_to"));
   const minRating = Number(params.get("min_rating"));
   if (params.get("anime") === "1") { genres.push(16); q.with_original_language = "ja"; }
-  if (keywords.length) q.with_keywords = keywords.join("|");
+  if (keywords.length) q.with_keywords = keywords.join(",");
   if (yFrom) q[`${date}.gte`] = `${yFrom}-01-01`;
   if (yTo) q[`${date}.lte`] = `${yTo}-12-31`;
   if (Number.isFinite(minRating) && minRating >= 1 && minRating <= 9) { q["vote_average.gte"] = String(Math.floor(minRating)); q["vote_count.gte"] ??= "50"; }

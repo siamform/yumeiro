@@ -35,6 +35,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.alpha
+import dev.asfakul.yumeiro.ui.components.shimmer
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -103,17 +108,31 @@ object Discover {
             shelf != null -> HubDiscover.shelf(shelf, page)
             else -> null
         }
+
+        /** Group W (B1): the results page this row's "See all" opens (a ready shelf, or the row's ask as filters). */
+        fun filter(): dev.asfakul.yumeiro.sources.hub.DiscoverFilter = when {
+            query != null -> dev.asfakul.yumeiro.sources.hub.DiscoverFilter.of(query, title)
+            else -> dev.asfakul.yumeiro.sources.hub.DiscoverFilter(shelf = shelf, title = title)
+        }
     }
     @Immutable data class IfYouLike(override val key: String = "if_you_like") : Shelf
     @Immutable data class Services(val kind: String, override val key: String = "services_$kind") : Shelf
-    @Immutable data class Genres(val kind: String, override val key: String = "genres_$kind") : Shelf
+    /** [kind]: "movie", "tv" or "anime". */
+    @Immutable data class Genres(val kind: String, override val key: String = "genres_$kind") : Shelf {
+        val genreKind: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind get() = when (kind) {
+            "movie" -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.MOVIE
+            "tv" -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.TV
+            "anime" -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ANIME
+            else -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ALL
+        }
+    }
 
     private fun q(kind: String, sort: HubDiscover.Sort, anime: Boolean = false) = HubDiscover.Query(kind, sort, anime = anime)
 
     /** Pure: the shelves of a section, in order (unit-tested). */
     fun shelves(section: Section): List<Shelf> = when (section) {
         Section.DISCOVER -> listOf(
-            Row("hot", "Hot right now", null, "hot_today"), IfYouLike(), Services("movie"), Genres("movie"),
+            Row("hot", "Hot right now", null, "hot_today"), IfYouLike(), Services("all"), Genres("all"),
             Row("top_all", "All-time greats", null, "top_movies"),
         )
         Section.MOVIES -> listOf(
@@ -125,7 +144,7 @@ object Discover {
             Row("t_new", "New series", q("tv", HubDiscover.Sort.NEW), null), Row("t_top", "Top rated series", q("tv", HubDiscover.Sort.TOP), null),
         )
         Section.ANIME -> listOf(
-            Row("a_pop", "Popular anime", q("tv", HubDiscover.Sort.POPULAR, anime = true), null),
+            Row("a_pop", "Popular anime", q("tv", HubDiscover.Sort.POPULAR, anime = true), null), Genres("anime"),
             Row("a_new", "New anime", q("tv", HubDiscover.Sort.NEW, anime = true), null),
             Row("a_top", "Top rated anime", q("tv", HubDiscover.Sort.TOP, anime = true), null),
             Row("a_mov", "Anime movies", q("movie", HubDiscover.Sort.POPULAR, anime = true), null),
@@ -150,10 +169,19 @@ object Discover {
     /** Shown pages, kept while the app runs, so coming back to a page does not flash empty shelves. */
     internal val memory = ConcurrentHashMap<String, HubDiscover.Page>()
     internal val providerMemory = ConcurrentHashMap<String, List<HubDiscover.Provider>>()
+    /** Group W (B3): the country whose list [providerMemory] holds for a phone region (Bangladesh → India). */
+    internal val providerRegion = ConcurrentHashMap<String, String>()
+    /** Group W (B2): genre card art ("" = the genre has none), per kind and genre. */
+    internal val genreArt = ConcurrentHashMap<String, String>()
 
-    /** The open "See all" grid (kept while a title from it is open, so Back returns to the grid) and the section. */
-    internal var grid by mutableStateOf<Row?>(null)
+    /** The section shown on Home and Yumix. */
     internal var section by mutableStateOf(Section.DISCOVER)
+
+    /** Group W (B1, B13): "See all", a genre, a service: each opens its own page (a real route, Back returns). */
+    fun openRow(row: Row) = dev.asfakul.yumeiro.ui.navigation.NavRequests.open(dev.asfakul.yumeiro.ui.navigation.Screen.OnlineDiscover.route(row.filter()))
+    fun openFilter(f: dev.asfakul.yumeiro.sources.hub.DiscoverFilter) = dev.asfakul.yumeiro.ui.navigation.NavRequests.open(dev.asfakul.yumeiro.ui.navigation.Screen.OnlineDiscover.route(f))
+    fun openGenres(kind: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind) = dev.asfakul.yumeiro.ui.navigation.NavRequests.open(dev.asfakul.yumeiro.ui.navigation.Screen.OnlineGenres.route(kind))
+    fun openServices() = dev.asfakul.yumeiro.ui.navigation.NavRequests.open(dev.asfakul.yumeiro.ui.navigation.Screen.OnlineServices.route)
 }
 
 /** Home lays its list out with side gutters; Discover rows run edge to edge like Yumix's (they pad themselves). */
@@ -167,11 +195,23 @@ internal fun Modifier.discoverBleed(gutter: androidx.compose.ui.unit.Dp): Modifi
 private val Chip = RoundedCornerShape(50)
 private val Tile = yuRound(16)
 
-/** The section bar (one row of chips). */
+/**
+ * The section bar: "Find something" (opens the results page with every filter) above one row of section chips.
+ * Group W (B1): before, "Find something new" was only a heading; nothing on it could be tapped.
+ */
 @Composable
-internal fun DiscoverBar(section: Discover.Section, onPick: (Discover.Section) -> Unit, modifier: Modifier = Modifier) {
+internal fun DiscoverBar(section: Discover.Section, onPick: (Discover.Section) -> Unit, modifier: Modifier = Modifier, onFind: () -> Unit = { Discover.openFilter(dev.asfakul.yumeiro.sources.hub.DiscoverFilter()) }) {
     Column(modifier.fillMaxWidth().testTag("discover_bar")) {
         dev.asfakul.yumeiro.ui.components.YuSection("発見", "Discover", "Find something new", modifier = Modifier.padding(horizontal = 16.dp))
+        Row(
+            Modifier.padding(horizontal = 16.dp).padding(bottom = 10.dp).fillMaxWidth().height(48.dp).clip(Chip)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                .clickable(role = Role.Button, onClickLabel = "Find something", onClick = onFind).padding(horizontal = 16.dp).testTag("discover_find"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Filled.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Text("Find something: genre, service, year, score…", color = TextSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp).weight(1f))
+        }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(Discover.Section.entries, key = { it.name }) { s ->
                 OnlineChip(s.label, s == section, { onPick(s) }, Modifier.testTag("discover_section_${s.name.lowercase()}"))
@@ -180,38 +220,62 @@ internal fun DiscoverBar(section: Discover.Section, onPick: (Discover.Section) -
     }
 }
 
-/** One shelf of the current section. Empty or failed shelves take no space. */
+/**
+ * One shelf of the current section. Group W (B12): while it loads it shows placeholders of its loaded size and a
+ * failed shelf says so with Try again in the same space; only a shelf that truly has nothing takes no space.
+ */
 @Composable
-internal fun DiscoverShelf(shelf: Discover.Shelf, seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, onGrid: (Discover.Row) -> Unit) {
+internal fun DiscoverShelf(shelf: Discover.Shelf, seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, onGrid: (Discover.Row) -> Unit = Discover::openRow) {
     when (shelf) {
         is Discover.Row -> DiscoverRow(shelf, onOpen, onGrid)
         is Discover.IfYouLike -> IfYouLikeRow(seeds, onOpen, onGrid)
-        is Discover.Services -> ServicesRow(shelf.kind, onGrid)
-        is Discover.Genres -> GenresGrid(shelf.kind, onGrid)
+        is Discover.Services -> ServicesRow(shelf.kind)
+        is Discover.Genres -> GenresRow(shelf.genreKind)
     }
 }
 
+/** A loaded page, or null while loading, or [Failed] (kept apart so a failure is not shown as "loading"). */
+private val Failed = HubDiscover.Page(emptyList(), hasNext = false)
+
 @Composable
-private fun rowPage(row: Discover.Row): HubDiscover.Page? {
+private fun rowPage(row: Discover.Row, attempt: Int): HubDiscover.Page? {
     // produceState keeps its value when the key changes, so each key reads its own memory (or loads) instead of
     // trusting the old value: a changed row never shows the previous row's titles.
     val mem = row.key + row.query + row.shelf
-    val page by produceState(Discover.memory[mem], mem) {
+    val page by produceState(Discover.memory[mem], mem, attempt) {
         value = Discover.memory[mem]
-        if (value == null) value = row.load(1)?.also { Discover.memory[mem] = it }
+        if (value == null) value = row.load(1)?.also { Discover.memory[mem] = it } ?: Failed
     }
     return page
 }
 
+/** Header with "See all", then the posters, placeholders or a Try again card, always at the posters' height. */
 @Composable
 private fun DiscoverRow(row: Discover.Row, onOpen: (OnlineItem) -> Unit, onGrid: (Discover.Row) -> Unit) {
-    val page = rowPage(row)
+    var attempt by remember { mutableIntStateOf(0) }
+    val page = rowPage(row, attempt)
     val items = remember(page) { page?.items.orEmpty().map { it.toOnlineItem() } }
-    if (items.isEmpty()) return
+    if (page != null && page !== Failed && items.isEmpty()) return
     Column(Modifier.testTag("discover_row_${row.key}")) {
-        SectionHeader(row.title, subtitle = "Yumeiro Cloud · TMDB") { SeeAllButton { onGrid(row) } }
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> PosterCard(it, onClick = { onOpen(it) }, width = 112.dp) }
+        SectionHeader(row.title, subtitle = "Yumeiro Cloud · TMDB") { if (items.isNotEmpty()) SeeAllButton { onGrid(row) } }
+        when {
+            page == null -> ShelfPostersSkeleton(112.dp)
+            page === Failed -> ShelfError { attempt++ }
+            else -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> PosterCard(it, onClick = { onOpen(it) }, width = 112.dp) }
+            }
+        }
+    }
+}
+
+/** A failed shelf: the message and Try again over a still placeholder row, so the page does not move. */
+@Composable
+private fun ShelfError(posters: Boolean = true, height: androidx.compose.ui.unit.Dp = ServiceCardHeight, onRetry: () -> Unit) {
+    Box(Modifier.fillMaxWidth().testTag("discover_shelf_error"), contentAlignment = Alignment.Center) {
+        if (posters) Box(Modifier.alpha(0f)) { ShelfPostersSkeleton(112.dp, still = true) } else Spacer(Modifier.fillMaxWidth().height(height))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(stringResource(R.string.yumeiro_cloud_didnt_answer), color = TextSecondary, fontSize = 13.sp)
+            OnlineChip("Try again", false, onRetry, Modifier.padding(top = 8.dp).testTag("discover_shelf_retry"))
         }
     }
 }
@@ -226,10 +290,11 @@ private fun IfYouLikeRow(seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, 
     val seed = all.firstOrNull { it.url == seedUrl } ?: all.first()
     val ref = YumeiroCatalog.refOf(seed.url) ?: return
     val key = "like_${ref.kind}_${ref.id}"
-    val page by produceState(Discover.memory[key], key) {
+    var attempt by remember { mutableIntStateOf(0) }
+    val page by produceState(Discover.memory[key], key, attempt) {
         // A new seed: drop the old seed's titles at once, then show the new ones (cached or loaded).
         value = Discover.memory[key]
-        if (value == null) value = HubDiscover.recommend(ref.kind, ref.id)?.also { Discover.memory[key] = it }
+        if (value == null) value = HubDiscover.recommend(ref.kind, ref.id)?.also { Discover.memory[key] = it } ?: Failed
     }
     val items = remember(page) { page?.items.orEmpty().map { it.toOnlineItem() } }
     var menu by remember { mutableStateOf(false) }
@@ -253,8 +318,12 @@ private fun IfYouLikeRow(seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, 
             }
         }
         when {
-            page == null -> PosterGridSkeleton(1)
-            items.isEmpty() -> Text(stringResource(R.string.nothing_similar_listed_yet_pick_another), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp))
+            page == null -> ShelfPostersSkeleton(112.dp)
+            page === Failed -> ShelfError { attempt++ }
+            items.isEmpty() -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(Modifier.alpha(0f)) { ShelfPostersSkeleton(112.dp, still = true) }
+                Text(stringResource(R.string.nothing_similar_listed_yet_pick_another), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp))
+            }
             else -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> PosterCard(it, onClick = { onOpen(it) }, width = 112.dp) }
             }
@@ -262,103 +331,82 @@ private fun IfYouLikeRow(seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, 
     }
 }
 
+/**
+ * Group W (B3): streaming services in the phone's country (or the nearest listed one), big services first, as
+ * wide logo cards; "See all" opens every service. Loading and failing keep the row's height.
+ */
 @Composable
-private fun ServicesRow(kind: String, onGrid: (Discover.Row) -> Unit) {
+private fun ServicesRow(kind: String) {
     val region = remember { Discover.region() }
-    val list by produceState(Discover.providerMemory[region], region) {
-        if (value == null) HubDiscover.providers(region)?.let { Discover.providerMemory[region] = it; value = it }
+    var attempt by remember { mutableIntStateOf(0) }
+    var failed by remember { mutableStateOf(false) }
+    val list by produceState(Discover.providerMemory[region], region, attempt) {
+        if (value == null) {
+            val got = HubDiscover.providersNear(region)
+            if (got == null) failed = true else { failed = false; Discover.providerMemory[region] = got.second; Discover.providerRegion[region] = got.first; value = got.second }
+        }
     }
     val shown = list.orEmpty().take(16)
-    if (shown.isEmpty()) return
+    if (list != null && shown.isEmpty()) return
+    val shownRegion = Discover.providerRegion[region] ?: region
+    val cardW = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 900) 220.dp else 176.dp
     Column(Modifier.testTag("discover_services")) {
-        SectionHeader("Streaming services", subtitle = "In ${Locale("", region).displayCountry.ifBlank { region }}")
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(shown, key = { it.id }) { p ->
-                Column(
-                    Modifier.width(88.dp).clip(Tile).clickable(role = Role.Button) {
-                        onGrid(Discover.Row("svc_${kind}_${p.id}", "${p.name} · ${if (kind == "tv") "Series" else "Movies"}", HubDiscover.Query(kind, providers = listOf(p.id), region = region), null))
-                    }.padding(4.dp).testTag("discover_service_${p.id}"),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(Modifier.size(72.dp).clip(Tile).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                        if (p.logo != null) AsyncImage(model = p.logo, contentDescription = p.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                        else Text(p.name.take(2), color = TextPrimary, fontWeight = FontWeight.Bold)
+        SectionHeader("Streaming services", subtitle = "In ${Locale("", shownRegion).getDisplayCountry(Locale.ENGLISH).ifBlank { shownRegion }}") {
+            SeeAllButton { Discover.openServices() }
+        }
+        when {
+            list == null && failed -> ShelfError(posters = false) { failed = false; attempt++ }
+            list == null -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), userScrollEnabled = false) {
+                items(6) { Box(Modifier.width(cardW).height(ServiceCardHeight).shimmer(Tile)) }
+            }
+            else -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(shown, key = { it.id }) { p ->
+                    ServiceCard(p, Modifier.width(cardW).testTag("discover_service_${p.id}")) {
+                        Discover.openFilter(dev.asfakul.yumeiro.sources.hub.DiscoverFilter(kind = serviceKind(kind), services = listOf(p.id), region = shownRegion, title = p.name))
                     }
-                    Text(p.name, color = TextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                 }
+                item("all") { SeeAllCard(cardW, ServiceCardHeight, "All services") { Discover.openServices() } }
             }
         }
     }
 }
 
-/** F9: the genre grid (Hikari has genre chips; here tiles with a colour each, two lines on a phone). */
-@OptIn(ExperimentalLayoutApi::class)
+/** "movie" / "tv" / anything else (films and series). */
+internal fun serviceKind(kind: String) = when (kind) {
+    "movie" -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.MOVIE
+    "tv" -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.TV
+    else -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ALL
+}
+
+/** Group W (B2): the genre rail: art cards for the main genres of [kind] (themes for anime), "See all" opens them all. */
 @Composable
-private fun GenresGrid(kind: String, onGrid: (Discover.Row) -> Unit) {
-    val genres = if (kind == "tv") HubDiscover.TV_GENRES else HubDiscover.MOVIE_GENRES
+private fun GenresRow(kind: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind) {
+    val list = remember(kind) {
+        val all = dev.asfakul.yumeiro.sources.hub.GenreCatalog.forKind(kind)
+        val group = if (kind == dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ANIME) dev.asfakul.yumeiro.sources.hub.GenreCatalog.Group.ANIME else dev.asfakul.yumeiro.sources.hub.GenreCatalog.Group.MAIN
+        all.filter { it.group == group }.take(14)
+    }
     Column(Modifier.testTag("discover_genres")) {
-        SectionHeader("Genres", subtitle = if (kind == "tv") "Series" else "Movies")
-        FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            genres.forEach { (id, name) ->
-                val hue = (id * 47 % 360).toFloat()
-                Box(
-                    Modifier.clip(Tile)
-                        .background(Brush.linearGradient(listOf(Color.hsl(hue, 0.45f, 0.32f), Color.hsl((hue + 30) % 360, 0.5f, 0.22f))))
-                        .clickable(role = Role.Button) { onGrid(Discover.Row("genre_${kind}_$id", name, HubDiscover.Query(kind, genres = listOf(id)), null)) }
-                        .padding(horizontal = 14.dp, vertical = 12.dp).testTag("discover_genre_$id"),
-                ) { Text(name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+        SectionHeader(if (kind == dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ANIME) "Anime themes" else "Genres", subtitle = kind.label) {
+            SeeAllButton { Discover.openGenres(kind) }
+        }
+        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(list, key = { it.key }) { g ->
+                Box(Modifier.testTag("discover_genre_${g.key}")) {
+                    GenreArtCard(g, kind, width = 164.dp) { Discover.openFilter(dev.asfakul.yumeiro.sources.hub.DiscoverFilter(kind = kind, genres = listOf(g.key), title = g.name)) }
+                }
             }
+            item("all") { SeeAllCard(164.dp, 92.dp, "All genres") { Discover.openGenres(kind) } }
         }
     }
 }
 
-/** "See all": every page of a row in a grid, full screen (back closes it). */
+/** The last card of a rail (reachable with the remote on TV, where the header's "See all" is far away). */
 @Composable
-internal fun DiscoverGrid(row: Discover.Row, onOpen: (OnlineItem) -> Unit, onClose: () -> Unit) {
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        val items = remember(row) { mutableStateListOf<OnlineItem>() }
-        var page by remember(row) { mutableStateOf(0) }
-        var more by remember(row) { mutableStateOf(true) }
-        var busy by remember(row) { mutableStateOf(false) }
-        var failed by remember(row) { mutableStateOf(false) }
-        val state = rememberLazyGridState()
-        val nearEnd by remember { derivedStateOf { val i = state.layoutInfo; (i.visibleItemsInfo.lastOrNull()?.index ?: 0) >= i.totalItemsCount - 9 } }
-        LaunchedEffect(row, nearEnd, more, failed) {
-            if (!nearEnd || !more || busy || failed) return@LaunchedEffect
-            busy = true
-            val got = row.load(page + 1)
-            if (got == null) failed = true else {
-                val have = items.mapTo(HashSet()) { it.url }
-                items += got.items.map { it.toOnlineItem() }.filter { have.add(it.url) }
-                page++; more = got.hasNext && page < 20
-            }
-            busy = false
-        }
-        Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().testTag("discover_grid")) {
-            Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose, modifier = Modifier.testTag("discover_grid_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextPrimary) }
-                Text(row.title, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            LazyVerticalGrid(
-                GridCells.Adaptive(108.dp), state = state, contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                items(items, key = { it.url }) { PosterCard(it, onClick = { onOpen(it) }) }
-                if (busy || (more && !failed)) item(span = { GridItemSpan(maxLineSpan) }) { PosterGridSkeleton(1) }
-                if (failed) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.yumeiro_cloud_didnt_answer), color = TextSecondary, fontSize = 13.sp)
-                        OnlineChip("Try again", false, { failed = false }, Modifier.padding(top = 8.dp).testTag("discover_grid_retry"))
-                    }
-                }
-                if (!more && items.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(stringResource(R.string.nothing_listed_here_yet), color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp).testTag("discover_grid_empty"))
-                }
-                if (items.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(stringResource(R.string.data_tmdb_this_product_uses_the), color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp))
-                }
-            }
-        }
-    }
+private fun SeeAllCard(width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.width(width).height(height).clip(Tile).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .clickable(role = Role.Button, onClick = onClick).testTag("discover_see_all_card"),
+        contentAlignment = Alignment.Center,
+    ) { Text(label, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
 }

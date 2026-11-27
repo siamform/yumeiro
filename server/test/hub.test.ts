@@ -156,7 +156,7 @@ test("Group W: discover takes themes, a year range and a lowest score; junk is d
   assert.ok(!("error" in p));
   if (!("error" in p)) {
     const q = new URLSearchParams(p.tmdb.split("?")[1]);
-    assert.equal(q.get("with_keywords"), "237451|207826");
+    assert.equal(q.get("with_keywords"), "237451,207826");
     assert.equal(q.get("first_air_date.gte"), "2015-01-01");
     assert.equal(q.get("first_air_date.lte"), "2024-12-31");
     assert.equal(q.get("vote_average.gte"), "7");

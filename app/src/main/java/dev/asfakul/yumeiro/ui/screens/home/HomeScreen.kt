@@ -151,6 +151,7 @@ import dev.asfakul.yumeiro.ui.components.EmptyMediaView
 import dev.asfakul.yumeiro.ui.components.GlassPill
 import dev.asfakul.yumeiro.ui.components.KanjiMark
 import dev.asfakul.yumeiro.ui.components.SkeletonBlock
+import dev.asfakul.yumeiro.ui.components.shimmer
 import dev.asfakul.yumeiro.ui.components.TrackArtwork
 import dev.asfakul.yumeiro.ui.components.VideoGridCard
 import dev.asfakul.yumeiro.ui.components.YuSection
@@ -335,6 +336,9 @@ fun HomeScreen(
 
     // ---- Online: extension home rows (shared cache with the Yumix tab) -----------------------
     val feed = rememberExtensionFeed()
+    // Group W (B12): only "is the engine ready" is followed here (one change per app start), for the episodes slot.
+    val engineReady by remember { dev.asfakul.yumeiro.online.ExtensionManager.state.map { it.ready }.distinctUntilChanged() }
+        .collectAsState(initial = dev.asfakul.yumeiro.online.ExtensionManager.state.value.ready)
     val channels = feed.ready
     val arrivals = remember(channels) { newArrivals(channels) }
 
@@ -473,9 +477,6 @@ fun HomeScreen(
         LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(context) }
         val discoverHistory by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
         val discoverSeeds = remember(discoverHistory) { discoverHistory.take(20).map { it.toItem() } }
-        dev.asfakul.yumeiro.ui.screens.online.Discover.grid?.let { g ->
-            if (discoverOn) dev.asfakul.yumeiro.ui.screens.online.DiscoverGrid(g, onOpen = onOpenOnlineTitle, onClose = { dev.asfakul.yumeiro.ui.screens.online.Discover.grid = null })
-        }
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().testTag("home_list"),
@@ -630,7 +631,13 @@ fun HomeScreen(
                     when {
                         episodeCards.isNotEmpty() -> EpisodeCarousel(episodeCards) { onOpenOnlineTitle(it.bookmark.toItem()) }
                         latest -> Column {
-                            val picks = arrivals.take(24)
+                            // Group W (B12): while extensions are still adding rows the slides stay as first shown
+                            // (a new list each time made the carousel jump back and re-measure); the fuller list
+                            // takes over once the feed has finished loading.
+                            var held by remember { mutableStateOf(emptyList<dev.asfakul.yumeiro.online.OnlineItem>()) }
+                            val fresh = arrivals.take(24)
+                            LaunchedEffect(fresh.map { it.key }, feed.loading) { if (held.isEmpty() || !feed.loading) held = fresh }
+                            val picks = held.ifEmpty { fresh }
                             val slides = remember(picks) {
                                 picks.map { HeroSlide(it.key, it.name, it.posterUrl, it.posterHeaders, "Latest", fresh = false, line = it.type, meta = it.api, cta = "Open") }
                             }
@@ -641,7 +648,9 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 2.dp),
                             )
                         }
-                        feed.loading && huesCount > 0 -> SkeletonBlock(null, 184.dp, shape = yuRound(24))
+                        // Group W (B12): "still loading" also covers the moments before the extension engine is ready
+                        // (no feed has started yet): that used to show "No sources" and then jump to the carousel.
+                        huesCount > 0 && (feed.loading || !engineReady) -> HeroCarouselSkeleton(caption = true)
                         else -> EpisodesEmpty(hasSources = huesCount > 0, onFind = onOpenHues, onAddSources = onOpenHueStore)
                     }
                 }
@@ -663,7 +672,7 @@ fun HomeScreen(
                 dev.asfakul.yumeiro.ui.screens.online.Discover.shelves(dev.asfakul.yumeiro.ui.screens.online.Discover.section).forEach { sh ->
                     item(key = "discover_${dev.asfakul.yumeiro.ui.screens.online.Discover.section.name}_${sh.key}", contentType = "discover") {
                         Box(Modifier.discoverBleed(Gutter)) {
-                            dev.asfakul.yumeiro.ui.screens.online.DiscoverShelf(sh, discoverSeeds, onOpen = onOpenOnlineTitle, onGrid = { dev.asfakul.yumeiro.ui.screens.online.Discover.grid = it })
+                            dev.asfakul.yumeiro.ui.screens.online.DiscoverShelf(sh, discoverSeeds, onOpen = onOpenOnlineTitle)
                         }
                     }
                 }
@@ -1128,25 +1137,42 @@ private fun MoodSection(
     val mood = remember(moodKey) { HomeMoods.all.firstOrNull { it.key == moodKey } ?: moodKey.removePrefix("topic:").let(HomeMoods::fromTopic) }
     var seed by rememberSaveable { mutableStateOf(System.nanoTime()) }
     var tick by remember { mutableIntStateOf(0) }
-    var songs by remember { mutableStateOf<List<YtItem>?>(null) }
-    var videos by remember { mutableStateOf<List<YtItem>>(emptyList()) }
+    // Group W (B12): songs and videos load at the same time (they were one after the other, up to 40 s before
+    // the videos row appeared and pushed everything down), each row keeps its loaded height while it loads, and a
+    // loaded mood is kept for the session so coming back to Home does not load (and jump) again.
+    val memKey = "$moodKey|$seed"
+    var songs by remember(memKey) { mutableStateOf(MoodMemory.songs[memKey]) }
+    var videos by remember(memKey) { mutableStateOf(MoodMemory.videos[memKey]) }
     var failed by remember { mutableStateOf(false) }
     // Unit tests have no network: don't start a real request there.
     val autoLoad = remember { android.os.Build.FINGERPRINT != "robolectric" }
     LaunchedEffect(mood, tick) {
-        if (!autoLoad && tick == 0) { songs = emptyList(); return@LaunchedEffect }
-        songs = null; failed = false; videos = emptyList()
-        val r = kotlinx.coroutines.withTimeoutOrNull(20_000) {
-            runCatching {
-                YouTube.feed(context, dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, mood.musicQuery, mood.title, "Mood", true)).items
-            }.getOrNull()
+        if (!autoLoad && tick == 0) { songs = emptyList(); videos = emptyList(); return@LaunchedEffect }
+        if (tick == 0 && songs != null && videos != null) return@LaunchedEffect
+        songs = null; videos = null; failed = false
+        kotlinx.coroutines.coroutineScope {
+            launch {
+                val r = kotlinx.coroutines.withTimeoutOrNull(20_000) {
+                    runCatching {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            YouTube.feed(context, dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, mood.musicQuery, mood.title, "Mood", true)).items
+                        }
+                    }.getOrNull()
+                }
+                if (r == null) { failed = true; songs = emptyList() }
+                else songs = r.distinctBy { it.id }.map { it.copy(music = true) }.shuffled(java.util.Random(seed)).take(14).also { MoodMemory.songs[memKey] = it }
+            }
+            launch {
+                val r = kotlinx.coroutines.withTimeoutOrNull(20_000) {
+                    runCatching {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            YouTube.feed(context, dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, mood.videoQuery, mood.title, "Mood", false)).items
+                        }
+                    }.getOrNull()
+                }
+                videos = r.orEmpty().filterNot { it.live }.distinctBy { it.id }.shuffled(java.util.Random(seed)).take(10).also { if (r != null) MoodMemory.videos[memKey] = it }
+            }
         }
-        if (r == null) { failed = true; songs = emptyList() } else songs = r.distinctBy { it.id }.map { it.copy(music = true) }.shuffled(java.util.Random(seed)).take(14)
-        videos = kotlinx.coroutines.withTimeoutOrNull(20_000) {
-            runCatching {
-                YouTube.feed(context, dev.asfakul.yumeiro.youtube.YtFeed(dev.asfakul.yumeiro.youtube.YtFeed.Kind.QUERY, mood.videoQuery, mood.title, "Mood", false)).items
-            }.getOrNull()
-        }.orEmpty().filterNot { it.live }.distinctBy { it.id }.shuffled(java.util.Random(seed)).take(10)
     }
     val picks = remember(mood, channels, seed) { HomeMoods.extensionPicks(mood, channels, seed) }
 
@@ -1173,25 +1199,59 @@ private fun MoodSection(
             return@Column
         }
         val list = songs
+        val vids = videos
         when {
-            list == null -> Row(horizontalArrangement = Arrangement.spacedBy(RowGap)) { repeat(3) { SkeletonBlock(120.dp, 120.dp, shape = yuRound(14)) } }
-            list.isEmpty() && videos.isEmpty() && picks.isEmpty() -> HintRow(
+            list != null && vids != null && list.isEmpty() && vids.isEmpty() && picks.isEmpty() -> HintRow(
                 Icons.Default.Album,
                 if (failed) "Couldn't load ${mood.title}" else "Tap to load this mood",
                 if (failed) "Check your connection, then try again." else "Songs and videos come from YouTube.",
                 if (failed) "Try again" else "Load", onClick = { tick++ }, tag = "home_moods_retry",
             )
             else -> Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (list.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_mood_songs")) {
-                    items(list, key = { "ms_" + it.id }) { yt -> YtCard(yt, square = true) { onPlay(yt, list) } }
+                when {
+                    list == null -> YtRowSkeleton(square = true)
+                    list.isNotEmpty() -> LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_mood_songs")) {
+                        items(list, key = { "ms_" + it.id }) { yt -> YtCard(yt, square = true) { onPlay(yt, list) } }
+                    }
+                    else -> HintRow(Icons.Default.Album, if (failed) "Songs didn't load" else "Load songs for this mood", "From YouTube Music.", if (failed) "Try again" else "Load", onClick = { tick++ }, tag = "home_moods_retry")
                 }
-                if (list.isEmpty()) HintRow(Icons.Default.Album, if (failed) "Songs didn't load" else "Load songs for this mood", "From YouTube Music.", if (failed) "Try again" else "Load", onClick = { tick++ }, tag = "home_moods_retry")
-                if (videos.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth()) {
-                    items(videos, key = { "mv_" + it.id }) { yt -> YtCard(yt, square = false) { onPlay(yt, videos) } }
+                when {
+                    vids == null -> YtRowSkeleton(square = false)
+                    vids.isNotEmpty() -> LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_mood_videos")) {
+                        items(vids, key = { "mv_" + it.id }) { yt -> YtCard(yt, square = false) { onPlay(yt, vids) } }
+                    }
                 }
                 if (picks.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_mood_extensions")) {
                     items(picks, key = { "mx_" + it.key }) { item -> dev.asfakul.yumeiro.ui.feed.FeedSlot("mood_row") { PosterCard(item, onClick = { onOpenTitle(item) }, width = 96.dp, showSource = true) } }
                 }
+            }
+        }
+    }
+}
+
+/** Group W (B12): moods loaded this session (key: mood and shuffle seed), so Home does not reload them. */
+internal object MoodMemory {
+    val songs = java.util.concurrent.ConcurrentHashMap<String, List<YtItem>>()
+    val videos = java.util.concurrent.ConcurrentHashMap<String, List<YtItem>>()
+}
+
+/** Group W (B12): a row of [YtCard] placeholders with the cards' exact size. */
+@Composable
+private fun YtRowSkeleton(square: Boolean) {
+    val width = if (square) 120.dp else 200.dp
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), userScrollEnabled = false, modifier = Modifier.fillMaxWidth().testTag(if (square) "home_mood_songs_skeleton" else "home_mood_videos_skeleton")) {
+        items(4) {
+            Column(Modifier.width(width).padding(bottom = 10.dp)) {
+                Box(Modifier.fillMaxWidth().aspectRatio(if (square) 1f else 16f / 9f).shimmer(yuRound(14)))
+                Spacer(Modifier.height(6.dp))
+                Box {
+                    Text(" ", style = MaterialTheme.typography.titleSmall, minLines = 2, maxLines = 2, color = Color.Transparent)
+                    Column(Modifier.matchParentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Box(Modifier.fillMaxWidth(0.9f).height(12.dp).shimmer(yuRound(6)))
+                        Box(Modifier.fillMaxWidth(0.5f).height(12.dp).shimmer(yuRound(6)))
+                    }
+                }
+                Text(" ", style = MaterialTheme.typography.bodySmall, maxLines = 1, color = Color.Transparent)
             }
         }
     }
@@ -1297,8 +1357,9 @@ private fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
             )
         }
         Spacer(Modifier.height(6.dp))
-        Text(item.title, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text(item.channel, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Group W (B12): always two title lines and the channel line, so every card in a row is the same height.
+        Text(item.title, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(item.channel.ifEmpty { " " }, style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

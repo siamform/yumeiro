@@ -450,8 +450,10 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                     }
                 }
             }
-            details?.genres?.takeIf { it.isNotEmpty() }?.let { g -> item("genres") {
-                Text(g.joinToString(" · "), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+            details?.genres?.takeIf { it.isNotEmpty() }?.let { raw -> item("genres") {
+                // Group W (B2): one tidy name per genre, as everywhere else.
+                val g = dev.asfakul.yumeiro.ui.components.rememberCleanGenres(raw)
+                if (g.isNotEmpty()) Text(g.joinToString(" · "), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp).testTag("manga_genres"))
             } }
             details?.description?.takeIf { it.isNotBlank() }?.let { d -> item("desc") {
                 var open by remember { mutableStateOf(false) }

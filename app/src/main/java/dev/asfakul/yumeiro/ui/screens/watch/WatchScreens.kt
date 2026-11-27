@@ -530,7 +530,8 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, o
                     SkeletonBlock(width = null, height = 12.dp); SkeletonBlock(width = null, height = 12.dp); SkeletonBlock(width = 200.dp, height = 12.dp)
                 }
             } else if (info != null) {
-                WatchDescription(info.description, header = info.tags.takeIf { it.isNotEmpty() }?.joinToString("  ") { "#" + it.replace(" ", "") })
+                val watchTags = dev.asfakul.yumeiro.ui.components.rememberCleanGenres(info.tags)
+                WatchDescription(info.description, header = watchTags.takeIf { it.isNotEmpty() }?.joinToString("  ") { "#" + it.replace(" ", "") })
             }
         }
         item(key = "upnext") { WatchSectionLabel("Up next", if (state.related.isNotEmpty()) "${state.related.size} videos" else null) }

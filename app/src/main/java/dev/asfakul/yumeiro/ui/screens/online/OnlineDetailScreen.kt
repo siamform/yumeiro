@@ -321,10 +321,11 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                         modifier = Modifier.animateContentSize().clickable { plotExpanded = !plotExpanded }.testTag("online_detail_plot"),
                     )
                 }
-                if (d.tags.isNotEmpty()) {
+                val cleanTags = dev.asfakul.yumeiro.ui.components.rememberCleanGenres(d.tags)
+                if (cleanTags.isNotEmpty()) {
                     Spacer(Modifier.height(10.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        d.tags.forEach { Pill(it, TextTertiary) }
+                        cleanTags.forEach { Pill(it, TextTertiary) }
                     }
                 }
             }

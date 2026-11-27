@@ -468,7 +468,8 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
                         d.author?.let { Text(it, color = TextSecondary, fontSize = 13.sp, maxLines = 2) }
                         d.status?.let { Text(it, color = TextTertiary, fontSize = 12.sp) }
                         Text("${d.chapters.size}${if (d.totalPages > morePage) "+" else ""} chapters", color = TextTertiary, fontSize = 12.sp)
-                        if (d.genres.isNotEmpty()) Text(d.genres.take(6).joinToString(" · "), color = TextTertiary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        val cleanGenres = dev.asfakul.yumeiro.ui.components.rememberCleanGenres(d.genres, 6)
+                        if (cleanGenres.isNotEmpty()) Text(cleanGenres.joinToString(" · "), color = TextTertiary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 d.summary?.let { s ->

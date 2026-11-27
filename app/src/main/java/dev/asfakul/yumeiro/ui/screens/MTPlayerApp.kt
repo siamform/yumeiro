@@ -273,6 +273,8 @@ fun MTPlayerApp(
     LaunchedEffect(tabPager) {
         androidx.compose.runtime.snapshotFlow { tabPager.targetPage }.collect { dev.asfakul.yumeiro.ui.components.Entrance.quiet() }
     }
+    // Group W (B13): pages asked for from deep inside a shelf (genres, services, Discover "See all").
+    LaunchedEffect(navController) { dev.asfakul.yumeiro.ui.navigation.NavRequests.requests.collect { navigateSub(it) } }
     // Tap on an online title: movies play straight away; series open their episode list.
     val openOnline: (dev.asfakul.yumeiro.online.OnlineItem) -> Unit = remember(navigateSub) {
         { item -> dev.asfakul.yumeiro.online.OnlineSession.open(context, item) { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) } }
@@ -1218,6 +1220,36 @@ fun MTPlayerApp(
                             dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = q
                             navigateSub(Screen.OnlineSearch.route)
                         })
+                        }
+                    }
+                    page(
+                        subPad, Screen.OnlineDiscover.route,
+                        arguments = listOf(navArgument(Screen.OnlineDiscover.ARG_F) { type = NavType.StringType; defaultValue = "" }),
+                    ) { entry ->
+                        OpaquePage {
+                        dev.asfakul.yumeiro.ui.screens.online.DiscoverScreen(
+                            initial = dev.asfakul.yumeiro.sources.hub.DiscoverFilter.decode(entry.arguments?.getString(Screen.OnlineDiscover.ARG_F)),
+                            onBack = popSub, onOpenTitle = openOnline,
+                        )
+                        }
+                    }
+                    page(
+                        subPad, Screen.OnlineGenres.route,
+                        arguments = listOf(navArgument(Screen.OnlineGenres.ARG_K) { type = NavType.StringType; defaultValue = "all" }),
+                    ) { entry ->
+                        OpaquePage {
+                        dev.asfakul.yumeiro.ui.screens.online.GenresScreen(
+                            initialKind = dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.entries.firstOrNull { it.name.equals(entry.arguments?.getString(Screen.OnlineGenres.ARG_K), true) }
+                                ?: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ALL,
+                            onBack = popSub,
+                            onOpen = { navigateSub(Screen.OnlineDiscover.route(it)) },
+                            onSearch = { q -> dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = q; navigateSub(Screen.OnlineSearch.route) },
+                        )
+                        }
+                    }
+                    page(subPad, Screen.OnlineServices.route) {
+                        OpaquePage {
+                        dev.asfakul.yumeiro.ui.screens.online.ServicesScreen(onBack = popSub, onOpen = { navigateSub(Screen.OnlineDiscover.route(it)) })
                         }
                     }
                     page(subPad, Screen.OnlineHistory.route) {

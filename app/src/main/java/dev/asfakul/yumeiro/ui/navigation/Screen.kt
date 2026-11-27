@@ -47,6 +47,20 @@ sealed class Screen(val route: String) {
     }
     /** "See all" for Continue watching. */
     data object OnlineHistory : Screen("videos/online/history")
+    /** Group W (B1): "Find something": catalog results with filters (the filter travels as [DiscoverFilter.encode]). */
+    data object OnlineDiscover : Screen("videos/online/discover?f={f}") {
+        const val ARG_F = "f"
+        fun route(f: dev.asfakul.yumeiro.sources.hub.DiscoverFilter = dev.asfakul.yumeiro.sources.hub.DiscoverFilter()): String =
+            "videos/online/discover?f=" + android.net.Uri.encode(f.encode())
+    }
+    /** Group W (B2): every genre and theme, searchable, by kind. */
+    data object OnlineGenres : Screen("videos/online/genres?k={k}") {
+        const val ARG_K = "k"
+        fun route(kind: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind = dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ALL): String =
+            "videos/online/genres?k=" + kind.name.lowercase()
+    }
+    /** Group W (B3): every streaming service in the chosen country. */
+    data object OnlineServices : Screen("videos/online/services")
     /** F-08: release calendar. */
     data object OnlineUpcoming : Screen("videos/online/upcoming")
     /** F-17: profile statistics. */
