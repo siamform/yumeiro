@@ -145,8 +145,8 @@ class OpenSubtitlesProvider internal constructor(
         } finally {
             conn.disconnect()
         }
-        val charset = subtitle.encoding?.let { runCatching { Charset.forName(it) }.getOrNull() } ?: Charsets.UTF_8
-        val text = String(bytes, charset).removePrefix("\uFEFF")
+        val declared = subtitle.encoding?.let { runCatching { Charset.forName(it) }.getOrNull() }
+        val text = (if (declared != null) String(bytes, declared) else SubtitleCharset.decode(bytes, subtitle.languageCode)).removePrefix("\uFEFF")
         val dir = File(context.cacheDir, "subtitles").apply { mkdirs() }
         val file = File(dir, "${subtitle.provider}_${subtitle.id}.${subtitle.format}")
         file.writeText(text, Charsets.UTF_8)

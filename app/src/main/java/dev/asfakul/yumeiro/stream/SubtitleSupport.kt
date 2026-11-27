@@ -45,12 +45,11 @@ object SubtitleSniffer {
     }
 
     /** Bytes ready for the parser chosen for [kind]. */
-    fun prepare(bytes: ByteArray, offset: Int, length: Int, kind: SubtitleKind): ByteArray {
+    fun prepare(bytes: ByteArray, offset: Int, length: Int, kind: SubtitleKind, language: String? = null): ByteArray {
         var b = bytes.copyOfRange(offset, offset + length)
-        // UTF-16 files (some old SRTs) → UTF-8.
-        if (b.size >= 2 && ((b[0] == 0xFF.toByte() && b[1] == 0xFE.toByte()) || (b[0] == 0xFE.toByte() && b[1] == 0xFF.toByte()))) {
-            b = String(b, Charsets.UTF_16).toByteArray(Charsets.UTF_8)
-        }
+        // UTF-16 files and old code pages (Windows-1250…1258, 874, CJK by language) → UTF-8; Media3 reads UTF-8 only.
+        val r = dev.asfakul.yumeiro.subtitles.SubtitleCharset.detect(b, language?.takeIf { it != "und" })
+        if (r.charset != "UTF-8") b = r.text.toByteArray(Charsets.UTF_8)
         if (kind == SubtitleKind.VTT_NO_HEADER) {
             // "1\n00:00:01.000 --> …" style: valid WebVTT once it has the header.
             b = "WEBVTT\n\n".toByteArray() + b.toString(Charsets.UTF_8).removePrefix("\uFEFF").toByteArray()
@@ -116,7 +115,7 @@ class SniffingSubtitleParserFactory(private val fallback: SubtitleParser.Factory
                 SubtitleKind.SSA -> if (format.initializationData.isNotEmpty()) SsaParser(format.initializationData) else SsaParser()
                 SubtitleKind.UNKNOWN -> declared ?: return
             }
-            val bytes = SubtitleSniffer.prepare(data, offset, length, kind)
+            val bytes = SubtitleSniffer.prepare(data, offset, length, kind, format.language)
             val shift = SubtitleTiming.offsetUs
             runCatching { parser.parse(bytes, 0, bytes.size, outputOptions) { output.accept(SubtitleTiming.shift(it, shift)) } }
                 .onFailure { android.util.Log.w("Subtitles", "couldn't parse ${format.sampleMimeType} as $kind", it) }

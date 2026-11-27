@@ -35,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.CircularProgressIndicator
@@ -128,9 +129,40 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     val watched by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
     LaunchedEffect(Unit) { if (submitted.isEmpty()) runCatching { focus.requestFocus() } }
 
+    // F3 (Group T): a pasted link, magnet or info-hash is played, not searched as words (and not kept in history).
+    val link = remember(text) { dev.asfakul.yumeiro.stream.SearchLink.parse(text) }
+    var linkBusy by remember { mutableStateOf(false) }
+    var linkError by remember(link) { mutableStateOf<String?>(null) }
+    val linkScope = androidx.compose.runtime.rememberCoroutineScope()
+    val msgPlaylist = stringResource(R.string.search_link_playlist)
+    val msgBrowser = stringResource(R.string.search_link_browser)
+    val msgFailed = stringResource(R.string.search_link_failed)
+    fun playLink(u: String) {
+        if (linkBusy) return
+        keyboard?.hide(); typing = false; linkError = null
+        val request = dev.asfakul.yumeiro.stream.StreamRequest(url = u)
+        if (!u.startsWith("http", ignoreCase = true) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u)) {
+            dev.asfakul.yumeiro.stream.IncomingMedia.open(context, request, recent = dev.asfakul.yumeiro.stream.IncomingMedia.Recent.LINK); return
+        }
+        linkBusy = true
+        linkScope.launch {
+            val r = runCatching { dev.asfakul.yumeiro.stream.StreamResolver.resolve(context, request, thorough = true) }.getOrNull()
+            linkBusy = false
+            when (r) {
+                is dev.asfakul.yumeiro.stream.Resolution.Playable ->
+                    dev.asfakul.yumeiro.stream.IncomingMedia.open(context, r.request, recent = dev.asfakul.yumeiro.stream.IncomingMedia.Recent.LINK)
+                is dev.asfakul.yumeiro.stream.Resolution.Playlist -> linkError = msgPlaylist
+                is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser, is dev.asfakul.yumeiro.stream.Resolution.Handoff -> linkError = msgBrowser
+                is dev.asfakul.yumeiro.stream.Resolution.Failed -> linkError = String.format(msgFailed, r.message)
+                null -> linkError = String.format(msgFailed, "")
+            }
+        }
+    }
+
     // Debounced live search; pressing Search submits immediately.
     LaunchedEffect(text) {
         val q = text.trim()
+        if (dev.asfakul.yumeiro.stream.SearchLink.parse(q) != null) return@LaunchedEffect
         if (q.length >= 2 && q != submitted) { delay(450); submitted = q }
         if (q.isEmpty()) submitted = ""
     }
@@ -186,7 +218,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
             trailingIcon = { if (text.isNotEmpty()) IconButton(onClick = { text = ""; submitted = "" }) { Icon(Icons.Default.Close, stringResource(R.string.clear), tint = TextSecondary) } },
             singleLine = true, shape = yuRound(24),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { submitted = text.trim(); typing = false; keyboard?.hide() }),
+            keyboardActions = KeyboardActions(onSearch = { val l = link; if (l != null) playLink(l) else { submitted = text.trim(); typing = false; keyboard?.hide() } }),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = SpotifyGreen, unfocusedBorderColor = DarkOutline,
                 focusedContainerColor = GlassFill, unfocusedContainerColor = GlassFill,
@@ -195,6 +227,10 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).focusRequester(focus).testTag("online_search_input"),
         )
         Spacer(Modifier.height(8.dp))
+        if (link != null) {
+            SearchLinkCard(busy = linkBusy, error = linkError, onPlay = { playLink(link) })
+            return@Column
+        }
 
         val searching = results.values.count { it is ProviderResult.Searching }
         // SEARCH-CAP-1 (A0): how each source is searched (its own search, a title lookup, or its catalog here).
@@ -253,6 +289,32 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 results = results, all = all, rankingBehind = rankingBehind, filter = filter, onFilter = { filter = it },
                 searching = searching, ways = ways, submitted = submitted, onRetry = { attempt++ }, onOpenTitle = onOpenTitle,
             )
+        }
+    }
+}
+
+/** F3 (Group T): "Play this link" under the search field when the query is a link, magnet or info-hash. */
+@Composable
+private fun SearchLinkCard(busy: Boolean, error: String?, onPlay: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        androidx.compose.material3.Surface(
+            onClick = onPlay, enabled = !busy, shape = yuRound(18), color = GlassFill,
+            border = androidx.compose.foundation.BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)),
+            modifier = Modifier.fillMaxWidth().testTag("online_search_play_link"),
+        ) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = SpotifyGreen, strokeWidth = 2.dp)
+                else Icon(androidx.compose.material.icons.Icons.Default.PlayArrow, null, tint = SpotifyGreen, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(if (busy) R.string.search_link_opening else R.string.search_link_play), color = TextPrimary, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                    Text(stringResource(R.string.search_link_hint), color = TextSecondary, fontSize = 12.sp)
+                }
+            }
+        }
+        if (error != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(error, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("online_search_link_error"))
         }
     }
 }

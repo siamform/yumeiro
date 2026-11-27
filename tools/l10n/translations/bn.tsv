@@ -834,3 +834,9 @@ offline	অফলাইন
 l10n_language	ভাষা
 l10n_device_language	ডিভাইসের ভাষা
 l10n_preview	%1$s · প্রিভিউ, কিছু লেখা এখনও ইংরেজিতে
+search_link_play	এই লিংকটি চালান
+search_link_hint	সোর্সে না খুঁজে সরাসরি প্লেয়ারে খোলে
+search_link_opening	লিংক খোলা হচ্ছে…
+search_link_playlist	এই লিংকটি একটি প্লেলিস্ট। লাইভ টিভি › একটি লিংক চালান থেকে খুলুন।
+search_link_browser	এই পেজটির জন্য ব্রাউজার লাগবে। লাইভ টিভি › একটি লিংক চালান থেকে খুলুন।
+search_link_failed	এই লিংকটি চালানো গেল না। %1$s

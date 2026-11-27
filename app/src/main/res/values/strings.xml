@@ -836,4 +836,10 @@
     <string name="l10n_language">Language</string>
     <string name="l10n_device_language">Device language</string>
     <string name="l10n_preview">%1$s · preview, some text is still in English</string>
+    <string name="search_link_play">Play this link</string>
+    <string name="search_link_hint">Opens it in the player instead of searching your sources</string>
+    <string name="search_link_opening">Opening the link…</string>
+    <string name="search_link_playlist">This link is a playlist. Open it from Live TV › Play a link.</string>
+    <string name="search_link_browser">This page needs the browser. Open it from Live TV › Play a link.</string>
+    <string name="search_link_failed">Couldn\'t play this link. %1$s</string>
 </resources>

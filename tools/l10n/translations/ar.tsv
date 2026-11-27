@@ -834,3 +834,9 @@ offline	دون اتصال
 l10n_language	اللغة
 l10n_device_language	لغة الجهاز
 l10n_preview	%1$s · معاينة، بعض النصوص لا تزال بالإنجليزية
+search_link_play	تشغيل هذا الرابط
+search_link_hint	يفتحه في المشغّل بدلًا من البحث في مصادرك
+search_link_opening	جارٍ فتح الرابط…
+search_link_playlist	هذا الرابط قائمة تشغيل. افتحه من التلفزيون المباشر › تشغيل رابط.
+search_link_browser	تحتاج هذه الصفحة إلى المتصفح. افتحها من التلفزيون المباشر › تشغيل رابط.
+search_link_failed	تعذّر تشغيل هذا الرابط. %1$s

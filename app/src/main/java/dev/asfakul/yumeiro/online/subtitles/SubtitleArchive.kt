@@ -8,10 +8,6 @@ package dev.asfakul.yumeiro.online.subtitles
 import dev.asfakul.yumeiro.text.RegexCache
 
 import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
-import java.nio.charset.CharacterCodingException
-import java.nio.charset.Charset
-import java.nio.charset.CodingErrorAction
 import java.util.zip.ZipInputStream
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
@@ -94,16 +90,8 @@ object SubtitleArchive {
         return out.toByteArray()
     }
 
-    /** UTF-8 (with or without BOM / UTF-16 BOM), else Windows-1252 so old SRTs still read. */
-    fun decode(bytes: ByteArray): String {
-        if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) return String(bytes, 2, bytes.size - 2, Charsets.UTF_16LE)
-        if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) return String(bytes, 2, bytes.size - 2, Charsets.UTF_16BE)
-        val utf8 = Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
-        val text = try { utf8.decode(ByteBuffer.wrap(bytes)).toString() } catch (_: CharacterCodingException) {
-            String(bytes, runCatching { Charset.forName("windows-1252") }.getOrDefault(Charsets.ISO_8859_1))
-        }
-        return text.removePrefix("\uFEFF")
-    }
+    /** UTF-8 / UTF-16 by BOM, else the old code page that fits the text (Group T, [SubtitleCharset]). */
+    fun decode(bytes: ByteArray, hint: String? = null): String = dev.asfakul.yumeiro.subtitles.SubtitleCharset.decode(bytes, hint)
 
     private fun looksLikeSubtitle(text: String): Boolean {
         val head = text.take(4000)

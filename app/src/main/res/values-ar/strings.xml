@@ -837,4 +837,10 @@
     <string name="l10n_language">اللغة</string>
     <string name="l10n_device_language">لغة الجهاز</string>
     <string name="l10n_preview">%1$s · معاينة، بعض النصوص لا تزال بالإنجليزية</string>
+    <string name="search_link_play">تشغيل هذا الرابط</string>
+    <string name="search_link_hint">يفتحه في المشغّل بدلًا من البحث في مصادرك</string>
+    <string name="search_link_opening">جارٍ فتح الرابط…</string>
+    <string name="search_link_playlist">هذا الرابط قائمة تشغيل. افتحه من التلفزيون المباشر › تشغيل رابط.</string>
+    <string name="search_link_browser">تحتاج هذه الصفحة إلى المتصفح. افتحها من التلفزيون المباشر › تشغيل رابط.</string>
+    <string name="search_link_failed">تعذّر تشغيل هذا الرابط. %1$s</string>
 </resources>
