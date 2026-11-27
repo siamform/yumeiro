@@ -864,3 +864,65 @@ bs_no_sources	%1$d عنوانًا من AniList. ثبّت إضافة أو فعّ�
 bs_episodes	%1$d حلقة
 bs_search_sources	ابحث في مصادرك
 bs_own_genres	عُثر عليها حسب أنواع مصادرك
+dw_find_something	ابحث عن شيء
+dw_find_hint	ابحث عن شيء: النوع، الخدمة، السنة، التقييم…
+dw_subtitle_filterable	أفلام ومسلسلات وأنمي · Yumeiro Cloud
+dw_subtitle_shelf	Yumeiro Cloud · TMDB
+dw_cloud_error_title	لم يستجب Yumeiro Cloud
+dw_cloud_error_text	تحقّق من الاتصال، ثم حاول مرة أخرى.
+dw_nothing_matches	لا شيء يطابق
+dw_try_fewer	جرّب عوامل تصفية أقل.
+dw_nothing_listed	لا يوجد شيء هنا بعد.
+dw_clear_filters	مسح عوامل التصفية
+dw_tmdb_credit	البيانات: TMDB. يستخدم هذا المنتج واجهة TMDB البرمجية، لكنه غير معتمد أو موثّق من TMDB.
+dw_filters_on	عوامل التصفية (%1$d مفعّلة)
+dw_sort_label	الترتيب: %1$s
+dw_sort_popular	الأكثر شعبية
+dw_sort_top	الأفضل على الإطلاق
+dw_sort_new	الأحدث
+dw_sort_upcoming	قريبًا
+dw_sort_rating	الأعلى تقييمًا
+dw_clear_all	مسح الكل
+dw_service	خدمة
+dw_from_country	من %1$s
+dw_score_at_least	التقييم %1$d+
+dw_remove	إزالة %1$s
+dw_years_range	%1$d–%2$d
+dw_years_from	%1$d وما بعدها
+dw_years_to	حتى %1$d
+dw_years_any	أي سنة
+dw_genres	الأنواع
+dw_genres_hint	حتى %1$d، ويجب أن تحملها العناوين كلها
+dw_anime_themes	موضوعات الأنمي
+dw_themes	الموضوعات والأجواء
+dw_streaming_on	متاح للبث على
+dw_streaming_hint	حتى %1$d، أيٌّ منها · %2$s
+dw_no_services_country	لا توجد خدمات مدرجة لهذا البلد.
+dw_from	بلد الإنتاج
+dw_released	سنة الإصدار
+dw_score	التقييم
+dw_score_hint	تقييم مستخدمي TMDB
+dw_reset	إعادة الضبط
+dw_show_results	عرض النتائج
+dw_show_results_n	عرض النتائج (%1$d)
+dw_genres_count	الأنواع والموضوعات: %1$d
+dw_search_genres	ابحث في الأنواع
+dw_clear_search	مسح البحث
+dw_from_sources	من مصادرك
+dw_from_sources_hint	أنواع تستخدمها إضافاتك؛ تفتح بحثًا
+dw_no_genre	لا يوجد نوع باسم «%1$s»
+dw_search_instead	ابحث عنه في مصادرك بدلًا من ذلك.
+dw_open	فتح %1$s
+dw_services_title	خدمات البث
+dw_where_to_watch	أين تشاهد · %1$s
+dw_in_country	في %1$s
+dw_services_fallback	لا توجد خدمات مدرجة في %1$s؛ نعرض خدمات %2$s.
+dw_no_services	لا توجد خدمات مدرجة
+dw_no_services_text	لا يدرج TMDB أي خدمة في %1$s. اختر بلدًا آخر من الأعلى.
+dw_all_genres	كل الأنواع
+dw_all_services	كل الخدمات
+dw_kind_all	الكل
+dw_kind_movie	أفلام
+dw_kind_tv	مسلسلات
+dw_kind_anime	أنمي
+dw_score_plus	%1$d+

@@ -864,3 +864,65 @@ bs_no_sources	AniList থেকে %1$dটি টাইটেল। আপনা
 bs_episodes	%1$d পর্ব
 bs_search_sources	আপনার সোর্সে খুঁজুন
 bs_own_genres	আপনার সোর্সের নিজস্ব জনরা অনুযায়ী পাওয়া
+dw_find_something	কিছু খুঁজুন
+dw_find_hint	কিছু খুঁজুন: জনরা, সার্ভিস, বছর, রেটিং…
+dw_subtitle_filterable	সিনেমা, সিরিজ ও অ্যানিমে · Yumeiro Cloud
+dw_subtitle_shelf	Yumeiro Cloud · TMDB
+dw_cloud_error_title	Yumeiro Cloud সাড়া দেয়নি
+dw_cloud_error_text	সংযোগ দেখে নিয়ে আবার চেষ্টা করুন।
+dw_nothing_matches	মিলছে এমন কিছু নেই
+dw_try_fewer	কম ফিল্টার দিয়ে চেষ্টা করুন।
+dw_nothing_listed	এখানে এখনো কিছু নেই।
+dw_clear_filters	ফিল্টার মুছুন
+dw_tmdb_credit	তথ্য: TMDB। এই পণ্যটি TMDB API ব্যবহার করে, তবে TMDB এটি অনুমোদন বা প্রত্যয়ন করেনি।
+dw_filters_on	ফিল্টার (%1$dটি চালু)
+dw_sort_label	সাজানো: %1$s
+dw_sort_popular	জনপ্রিয়
+dw_sort_top	সর্বকালের সেরা
+dw_sort_new	সবচেয়ে নতুন
+dw_sort_upcoming	শীঘ্রই আসছে
+dw_sort_rating	সর্বোচ্চ রেটিং
+dw_clear_all	সব মুছুন
+dw_service	সার্ভিস
+dw_from_country	%1$s থেকে
+dw_score_at_least	রেটিং %1$d+
+dw_remove	%1$s সরান
+dw_years_range	%1$d–%2$d
+dw_years_from	%1$d ও তার পরে
+dw_years_to	%1$d পর্যন্ত
+dw_years_any	যেকোনো বছর
+dw_genres	জনরা
+dw_genres_hint	সর্বোচ্চ %1$dটি; টাইটেলে সবগুলো থাকতে হবে
+dw_anime_themes	অ্যানিমে থিম
+dw_themes	থিম ও মুড
+dw_streaming_on	যেখানে স্ট্রিম হয়
+dw_streaming_hint	সর্বোচ্চ %1$dটি; যেকোনোটি · %2$s
+dw_no_services_country	এই দেশের জন্য কোনো সার্ভিস তালিকায় নেই।
+dw_from	দেশ
+dw_released	মুক্তির বছর
+dw_score	রেটিং
+dw_score_hint	TMDB ব্যবহারকারীদের রেটিং
+dw_reset	রিসেট
+dw_show_results	ফলাফল দেখুন
+dw_show_results_n	ফলাফল দেখুন (%1$d)
+dw_genres_count	জনরা ও থিম: %1$dটি
+dw_search_genres	জনরা খুঁজুন
+dw_clear_search	খোঁজা মুছুন
+dw_from_sources	আপনার সোর্স থেকে
+dw_from_sources_hint	আপনার এক্সটেনশন যেসব জনরা ব্যবহার করে; খোঁজ খুলবে
+dw_no_genre	“%1$s” নামে কোনো জনরা নেই
+dw_search_instead	এর বদলে আপনার সোর্সে এটি খুঁজুন।
+dw_open	%1$s খুলুন
+dw_services_title	স্ট্রিমিং সার্ভিস
+dw_where_to_watch	কোথায় দেখবেন · %1$s
+dw_in_country	%1$s-এ
+dw_services_fallback	%1$s-এর জন্য কোনো সার্ভিস তালিকায় নেই; %2$s-এর সার্ভিস দেখানো হচ্ছে।
+dw_no_services	কোনো সার্ভিস তালিকায় নেই
+dw_no_services_text	TMDB-তে %1$s-এর জন্য কিছু নেই। ওপরে অন্য দেশ বেছে নিন।
+dw_all_genres	সব জনরা
+dw_all_services	সব সার্ভিস
+dw_kind_all	সব
+dw_kind_movie	সিনেমা
+dw_kind_tv	সিরিজ
+dw_kind_anime	অ্যানিমে
+dw_score_plus	%1$d+

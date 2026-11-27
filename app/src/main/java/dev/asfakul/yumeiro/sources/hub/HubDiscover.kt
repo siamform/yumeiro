@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.sources.hub
 
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineItem
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -149,7 +150,15 @@ object HubDiscover {
     /** Tests and the code that swaps the server only. */
     internal fun clearCache() = synchronized(memo) { memo.clear() }
 
-    @Volatile internal var fetch: suspend (String) -> String? = { url -> dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider.httpGet(url) }
+    /**
+     * Group W (B3): the hub answers in well under a second; a call that hangs is almost always a dead pooled
+     * connection or a lost packet (TV api24 run 46042804018: the services page waited 30 s, then showed the error,
+     * while the same address answered in 0.35 s). So each try is cut at 8 s and tried once more on a fresh call.
+     */
+    @Volatile internal var fetch: suspend (String) -> String? = { url ->
+        val get = dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider
+        get.httpGet(url, timeoutSec = 8) ?: get.httpGet(url, timeoutSec = 8)
+    }
 
     private suspend fun get(path: String): String? {
         val url = base + path
@@ -181,11 +190,15 @@ object HubDiscover {
     }
 
     /** The services in [region], or in [nearbyRegion] when it has none; with the region they are for. */
-    suspend fun providersNear(region: String): Pair<String, List<Provider>>? {
-        val here = providers(region) ?: return null
-        if (here.isNotEmpty()) return region to here
-        val near = nearbyRegion(region) ?: return region to here
-        return (providers(near) ?: return null).let { near to it }
+    suspend fun providersNear(region: String): Pair<String, List<Provider>>? = kotlinx.coroutines.coroutineScope {
+        val near = nearbyRegion(region)
+        // Countries TMDB is known to list nothing for (they fall back to India): ask both at once, not one after the other.
+        val early = if (near == "IN") async { providers(near) } else null
+        val here = providers(region) ?: run { early?.cancel(); return@coroutineScope null }
+        if (here.isNotEmpty()) { early?.cancel(); return@coroutineScope region to here }
+        if (near == null) return@coroutineScope region to here
+        val list = (early?.await() ?: providers(near)) ?: return@coroutineScope null
+        near to list
     }
 
     // endregion
