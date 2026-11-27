@@ -208,8 +208,16 @@ class GroupWDeviceTest {
                 DiscoverShelf(row, emptyList(), onOpen = {})
             }
         } } }
-        rule.waitUntil(45_000) { rule.onAllNodes(hasTestTag("online_poster") and hasAnyAncestor(hasTestTag("discover_row_${row.key}")), true).fetchSemanticsNodes().isNotEmpty() }
+        val posters = hasTestTag("online_poster") and hasAnyAncestor(hasTestTag("discover_row_${row.key}"))
+        val t0 = android.os.SystemClock.elapsedRealtime()
+        // Posters, or the shelf's own error (then it is said plainly, not a bare timeout).
+        runCatching { rule.waitUntil(60_000) { rule.onAllNodes(posters, true).fetchSemanticsNodes().isNotEmpty() || rule.onAllNodes(hasTestTag("discover_shelf_error"), true).fetchSemanticsNodes().isNotEmpty() } }
         rule.waitForIdle()
+        val shown = rule.onAllNodes(posters, true).fetchSemanticsNodes().size
+        val error = rule.onAllNodes(hasTestTag("discover_shelf_error"), true).fetchSemanticsNodes().size
+        log("GROUPW_B12 shelf ${row.key} posters=$shown error=$error after ${android.os.SystemClock.elapsedRealtime() - t0}ms")
+        if (shown == 0) FirstRun.shot("groupw_b12_shelf_not_loaded")
+        assertTrue("B12: the ${row.key} shelf showed no titles (error=$error)", shown > 0)
         val seen = synchronized(heights) { heights.distinct() }
         log("GROUPW_B12 shelf heights=$seen")
         assertEquals("B12: the Discover shelf changes height while it loads: $seen", 1, seen.size)
