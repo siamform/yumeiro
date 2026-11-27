@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.data.repository
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
@@ -387,7 +389,7 @@ class OfflineMediaRepository(
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
-                    val title = if (titleCol >= 0) cursor.getString(titleCol) ?: "Unknown Title" else "Unknown Title"
+                    val title = if (titleCol >= 0) cursor.getString(titleCol) ?: tr(R.string.unknown_title, "Unknown Title") else tr(R.string.unknown_title, "Unknown Title")
                     val artist = if (artistCol >= 0) cursor.getString(artistCol) ?: "Unknown Artist" else "Unknown Artist"
                     val album = if (albumCol >= 0) cursor.getString(albumCol) ?: "Unknown Album" else "Unknown Album"
                     val duration = if (durationCol >= 0) cursor.getLong(durationCol) else 0L
@@ -458,7 +460,7 @@ class OfflineMediaRepository(
                     Album(
                         id = albumId,
                         name = tracks.first().album,
-                        artist = tracks.firstOrNull()?.artist ?: "Various Artists",
+                        artist = tracks.firstOrNull()?.artist ?: tr(R.string.various_artists, "Various Artists"),
                         trackCount = tracks.size,
                         albumArtUri = tracks.firstOrNull { it.albumArtUri != null }?.albumArtUri,
                         tracks = tracks
@@ -871,8 +873,8 @@ internal fun displayFolderName(name: String?, path: String = ""): String {
     val n = name?.trim().orEmpty()
     val parent = java.io.File(path).parentFile?.parentFile?.name.orEmpty()
     return when {
-        n.isEmpty() || n.equals("<unknown>", true) || n.equals("unknown", true) -> "Internal storage"
-        n == "0" && (path.contains("/emulated/") || parent == "emulated") -> "Internal storage"
+        n.isEmpty() || n.equals("<unknown>", true) || n.equals("unknown", true) -> tr(R.string.internal_storage_2, "Internal storage")
+        n == "0" && (path.contains("/emulated/") || parent == "emulated") -> tr(R.string.internal_storage_2, "Internal storage")
         RX_MEDIAREPOSITORY_1.matches(n) -> "SD card"
         else -> n
     }

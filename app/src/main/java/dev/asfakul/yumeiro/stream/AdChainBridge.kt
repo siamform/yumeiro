@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import android.webkit.CookieManager
@@ -71,12 +73,12 @@ object AdChainBridge {
         }
     }
 
-    internal const val SHORT_LINK_REASON = "This is a short link. Open it in the page browser: Yumeiro goes through its " +
+    internal val SHORT_LINK_REASON: String get() = tr(R.string.this_is_a_short_link_open, "This is a short link. Open it in the page browser: Yumeiro goes through its ") +
         "steps and walks on to the real link by itself. If the site asks you to tick a box, do it there (Yumeiro " +
         "doesn't answer these checks for you)."
 
-    internal const val SHORT_LINK_TITLE = "This is a short link"
-    internal const val CHECK_PAGE_TITLE = "The site asks for a check"
+    internal val SHORT_LINK_TITLE: String get() = tr(R.string.this_is_a_short_link, "This is a short link")
+    internal val CHECK_PAGE_TITLE: String get() = tr(R.string.the_site_asks_for_a_check, "The site asks for a check")
 
     /**
      * What the card says when the walk stopped at a step that needs the page browser. Pure.
@@ -100,7 +102,7 @@ object AdChainBridge {
         }
     }
 
-    private fun Resolution.reasonOr(): String = (this as? Resolution.NeedsBrowser)?.reason ?: "Open the link's page to finish"
+    private fun Resolution.reasonOr(): String = (this as? Resolution.NeedsBrowser)?.reason ?: tr(R.string.open_the_links_page_to_finish, "Open the link's page to finish")
 
     /** Hands the chain's session to the WebView so the browser continues the same visit. */
     private suspend fun syncCookies(cookies: List<Cookie>) {

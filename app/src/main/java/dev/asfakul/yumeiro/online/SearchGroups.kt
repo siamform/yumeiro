@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 /**
  * F13 (Beta chapter, Group O): Yumix search grouped by extension.
  *
@@ -18,7 +21,7 @@ package dev.asfakul.yumeiro.online
  * Pure; unit-tested.
  */
 object SearchGroups {
-    enum class Sort(val label: String) { BEST("Best match"), MOST("Most results"), AZ("A–Z") }
+    enum class Sort(val label: String) { BEST(tr(R.string.best_match, "Best match")), MOST(tr(R.string.most_results, "Most results")), AZ("A–Z") }
     enum class State { SEARCHING, DONE, FAILED }
 
     data class Group(val name: String, val items: List<OnlineItem>, val best: Int)

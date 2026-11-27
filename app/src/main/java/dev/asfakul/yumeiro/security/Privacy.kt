@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.security
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.app.Activity
 import android.content.Context
 import android.hardware.biometrics.BiometricManager
@@ -69,7 +71,7 @@ object Privacy {
     fun setLockEnabled(activity: Activity, on: Boolean, onResult: (Boolean) -> Unit = {}) {
         if (!on) { _lockEnabled.value = false; prefs(activity).edit().putBoolean("lock", false).apply(); dev.asfakul.yumeiro.widget.ContinueWidget.refresh(activity); onResult(true); return }
         if (!canAuthenticate(activity)) { onResult(false); return }
-        authenticate(activity, "Turn on app lock") { ok ->
+        authenticate(activity, tr(R.string.turn_on_app_lock, "Turn on app lock")) { ok ->
             if (ok) { _lockEnabled.value = true; prefs(activity).edit().putBoolean("lock", true).apply(); dev.asfakul.yumeiro.widget.ContinueWidget.refresh(activity) }
             onResult(ok)
         }
@@ -111,7 +113,7 @@ object Privacy {
     fun unlock(activity: Activity) {
         if (!_locked.value) return
         if (releaseIfNoScreenLock(activity)) return
-        authenticate(activity, "Unlock Yumeiro") { ok ->
+        authenticate(activity, tr(R.string.unlock_yumeiro, "Unlock Yumeiro")) { ok ->
             android.util.Log.i("YuPrivacy", "LOCK_UNLOCK ok=$ok")
             if (ok) { backgroundAt = 0L; _locked.value = false }
         }
@@ -133,7 +135,7 @@ object Privacy {
         prefs(activity).edit().putBoolean("lock", false).apply()
         dev.asfakul.yumeiro.widget.ContinueWidget.refresh(activity)
         android.util.Log.i("YuPrivacy", "LOCK_RELEASED no secure lock screen")
-        dev.asfakul.yumeiro.ui.components.AppMessages.info(activity, "App lock was turned off because this phone has no screen lock. Set one, then turn it on again in Settings.")
+        dev.asfakul.yumeiro.ui.components.AppMessages.info(activity, tr(R.string.app_lock_was_turned_off_because, "App lock was turned off because this phone has no screen lock. Set one, then turn it on again in Settings."))
         return true
     }
 
@@ -178,7 +180,7 @@ object Privacy {
 
     private fun authenticate(activity: Activity, title: String, done: (Boolean) -> Unit) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) { confirmCredential(activity, title, done); return }
-        val builder = BiometricPrompt.Builder(activity).setTitle(title).setSubtitle("Use your fingerprint, face or screen lock")
+        val builder = BiometricPrompt.Builder(activity).setTitle(title).setSubtitle(tr(R.string.use_your_fingerprint_face_or_screen, "Use your fingerprint, face or screen lock"))
         // API 30+: the unlock is bound to a Keystore key that only works right after a strong
         // biometric or the device PIN, so a hooked callback alone can't open the app.
         val cipher = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) LockKey.cipher() else null

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -412,9 +413,9 @@ fun LibraryScreen(
             if (playlistTracks.isEmpty()) {
                 item {
                     EmptyMediaView(
-                        title = "Playlist is empty",
-                        subtitle = "In Music, tap ⋮ on any song and choose Add to playlist.",
-                        buttonText = "Browse music",
+                        title = tr(R.string.playlist_is_empty, "Playlist is empty"),
+                        subtitle = tr(R.string.in_music_tap_on_any_song, "In Music, tap ⋮ on any song and choose Add to playlist."),
+                        buttonText = tr(R.string.browse_music, "Browse music"),
                         onButtonClick = onNavigateToMusic
                     )
                 }

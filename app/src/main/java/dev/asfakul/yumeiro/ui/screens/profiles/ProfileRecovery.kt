@@ -1,5 +1,6 @@
 package dev.asfakul.yumeiro.ui.screens.profiles
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Column
@@ -30,9 +31,9 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 
 /** Suggestions the questions start with; each can be edited. */
 internal val SUGGESTED_QUESTIONS = listOf(
-    "What was the name of your first school?",
-    "In which city was your mother born?",
-    "What was your first pet's name?",
+    tr(R.string.what_was_the_name_of_your, "What was the name of your first school?"),
+    tr(R.string.in_which_city_was_your_mother, "In which city was your mother born?"),
+    tr(R.string.what_was_your_first_pets_name, "What was your first pet's name?"),
 )
 
 /**
@@ -61,7 +62,7 @@ internal fun SecurityQuestionsDialog(p: Profiles.Profile, onDismiss: () -> Unit)
         },
         confirmButton = {
             TextButton(onClick = {
-                if (Profiles.setRecovery(context, p.id, questions.toList(), answers.toList())) { AppMessages.success(context, "Security questions saved"); onDismiss() }
+                if (Profiles.setRecovery(context, p.id, questions.toList(), answers.toList())) { AppMessages.success(context, tr(R.string.security_questions_saved, "Security questions saved")); onDismiss() }
             }, enabled = ok, modifier = Modifier.testTag("recovery_save")) { Text(stringResource(R.string.save), color = if (ok) SpotifyGreen else TextTertiary) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
@@ -94,7 +95,7 @@ internal fun RecoveryAnswerDialog(p: Profiles.Profile, onDismiss: () -> Unit, on
             TextButton(onClick = {
                 when (Profiles.recoverWithAnswers(context, p.id, answers.toList())) {
                     Profiles.PinCheck.OK, Profiles.PinCheck.NO_PIN -> { AppMessages.success(context, "PIN removed for ${p.name}"); onCleared() }
-                    Profiles.PinCheck.WRONG -> error = "The answers don't match"
+                    Profiles.PinCheck.WRONG -> error = tr(R.string.the_answers_dont_match, "The answers don't match")
                     Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, p.id))}"
                 }
             }, modifier = Modifier.testTag("recovery_ok")) { Text(stringResource(R.string.remove_pin)) }

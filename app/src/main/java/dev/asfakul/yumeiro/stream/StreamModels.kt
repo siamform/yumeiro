@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.net.Uri
 import androidx.media3.common.MimeTypes
 import org.json.JSONArray
@@ -13,11 +15,11 @@ import org.json.JSONObject
 /** Container / protocol of a network stream. AUTO detects from the URL. */
 enum class StreamFormat(val label: String, val mimeType: String?) {
     AUTO("Auto", null),
-    HLS("HLS (m3u8)", MimeTypes.APPLICATION_M3U8),
-    DASH("DASH (mpd)", MimeTypes.APPLICATION_MPD),
-    SMOOTH("Smooth Streaming", MimeTypes.APPLICATION_SS),
+    HLS(tr(R.string.hls_m3u8, "HLS (m3u8)"), MimeTypes.APPLICATION_M3U8),
+    DASH(tr(R.string.dash_mpd, "DASH (mpd)"), MimeTypes.APPLICATION_MPD),
+    SMOOTH(tr(R.string.smooth_streaming, "Smooth Streaming"), MimeTypes.APPLICATION_SS),
     RTSP("RTSP", MimeTypes.APPLICATION_RTSP),
-    PROGRESSIVE("Progressive (mp4, ts, mkv…)", null),
+    PROGRESSIVE(tr(R.string.progressive_mp4_ts_mkv, "Progressive (mp4, ts, mkv…)"), null),
 }
 
 enum class DrmScheme(val label: String) { NONE("None"), WIDEVINE("Widevine"), CLEARKEY("ClearKey") }
@@ -25,9 +27,9 @@ enum class DrmScheme(val label: String) { NONE("None"), WIDEVINE("Widevine"), CL
 /** User-agent presets; many stream hosts reject the default ExoPlayer UA. */
 enum class UserAgentPreset(val label: String, val value: String?) {
     DEFAULT("Yumeiro", null),
-    CHROME("Chrome (Android)", "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36"),
-    DESKTOP("Chrome (Desktop)", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"),
-    SAFARI("Safari (iPhone)", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"),
+    CHROME(tr(R.string.chrome_android, "Chrome (Android)"), "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36"),
+    DESKTOP(tr(R.string.chrome_desktop, "Chrome (Desktop)"), "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"),
+    SAFARI(tr(R.string.safari_iphone, "Safari (iPhone)"), "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"),
     VLC("VLC", "VLC/3.0.21 LibVLC/3.0.21"),
 }
 
@@ -175,7 +177,7 @@ fun guessTitle(url: String): String {
     magnetName(url)?.let { return it }
     val uri = runCatching { Uri.parse(url) }.getOrNull()
     val last = uri?.lastPathSegment?.substringBeforeLast('.')?.takeIf { it.isNotBlank() && it.lowercase() !in setOf("index", "master", "playlist", "manifest", "stream") }
-    return last ?: uri?.host ?: "Network stream"
+    return last ?: uri?.host ?: tr(R.string.network_stream, "Network stream")
 }
 
 /**

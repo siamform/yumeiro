@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import com.lagradost.cloudstream3.MainAPI
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.sources.manga.MangaProvider
@@ -28,7 +30,7 @@ object SourceHub {
     enum class Ecosystem(val label: String) {
         CLOUDSTREAM("CloudStream"), ANIYOMI("Aniyomi"), MIHON("Mihon"), STREMIO("Stremio"),
         JAVASCRIPT("JavaScript"), JELLYFIN("Jellyfin"), EMBY("Emby"), PLEX("Plex"), DLNA("DLNA"),
-        SMB("SMB share"), WEBDAV("WebDAV"), YUMEIRO("Yumeiro"),
+        SMB(tr(R.string.smb_share, "SMB share")), WEBDAV("WebDAV"), YUMEIRO("Yumeiro"),
         // ADR-047: script ecosystems run through sources/ecosystem (one registry, one adapter each).
         VEGA("Vega"), NUVIO("Nuvio"), SKYSTREAM("SkyStream"),
     }

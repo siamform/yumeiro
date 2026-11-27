@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.backup
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
@@ -46,11 +48,11 @@ object Backup {
 
     /** What a backup can carry; each can be ticked on or off when making or restoring one. */
     enum class Section(val label: String, val hint: String) {
-        SETTINGS("Settings", "Player, appearance, network, notifications and every other switch"),
-        LIBRARY("Library and history", "Continue watching, My List, playlists and favourites, play counts, manga progress, saved lyrics"),
-        SOURCES("Sources", "Extension list, repositories, playlists, home servers, Stremio add-ons"),
-        EXTENSION_FILES("Extension files", "The extensions themselves, so they work offline right after restoring"),
-        APPEARANCE("Background photo", "Your own photo behind the app"),
+        SETTINGS("Settings", tr(R.string.player_appearance_network_notifications_and_ever, "Player, appearance, network, notifications and every other switch")),
+        LIBRARY(tr(R.string.library_and_history, "Library and history"), tr(R.string.continue_watching_my_list_playlists_and, "Continue watching, My List, playlists and favourites, play counts, manga progress, saved lyrics")),
+        SOURCES("Sources", tr(R.string.extension_list_repositories_playlists_home_serve, "Extension list, repositories, playlists, home servers, Stremio add-ons")),
+        EXTENSION_FILES(tr(R.string.extension_files, "Extension files"), tr(R.string.the_extensions_themselves_so_they_work, "The extensions themselves, so they work offline right after restoring")),
+        APPEARANCE(tr(R.string.background_photo, "Background photo"), tr(R.string.your_own_photo_behind_the_app, "Your own photo behind the app")),
     }
 
     /** Shared preferences that must stay on this device. */

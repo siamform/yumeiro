@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player.equalizer
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.content.SharedPreferences
 import android.media.audiofx.BassBoost
@@ -39,7 +41,7 @@ class EqualizerManager private constructor(context: Context) {
         private const val KEY_VIRTUALIZER = "eq_virtualizer"
         private const val KEY_BAND_PREFIX = "eq_band_"
 
-        val PRESETS_LIST = listOf("Normal", "Rock", "Pop", "Jazz", "Classical", "Dance", "Bass Boost", "Custom")
+        val PRESETS_LIST = listOf("Normal", "Rock", "Pop", "Jazz", "Classical", "Dance", tr(R.string.bass_boost_2, "Bass Boost"), "Custom")
 
         // Relative gain offsets (-1500 to +1500 millibels) across 5 normalized frequency points
         private val PRESET_GAINS = mapOf(

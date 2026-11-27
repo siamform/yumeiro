@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.youtube
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import dev.asfakul.yumeiro.network.NetworkClient
@@ -70,16 +72,16 @@ data class YtChannel(
 
 /** Built-in shelves shown on the YouTube and YouTube Music home pages. */
 enum class YtShelf(val title: String, val kioskId: String?, val query: String?, val music: Boolean) {
-    TRENDING_MUSIC("Trending music", "trending_music", null, true),
-    TRENDING_GAMING("Trending in gaming", "trending_gaming", null, false),
-    TRENDING_MOVIES("Movies & shows", "trending_movies_and_shows", null, false),
-    LIVE("Live now", "live", null, false),
-    ANIME("Anime picks", null, "anime opening 4k", false),
-    AMV("AMV & edits", null, "amv edit", false),
-    LOFI("Lo-fi & chill", null, "lofi hip hop", true),
-    JPOP("J-Pop & anime songs", null, "anime songs jpop", true),
-    TOP_HITS("Top hits", null, "top hits this week", true),
-    WORKOUT("Energy boost", null, "workout music mix", true),
+    TRENDING_MUSIC(tr(R.string.trending_music, "Trending music"), "trending_music", null, true),
+    TRENDING_GAMING(tr(R.string.trending_in_gaming, "Trending in gaming"), "trending_gaming", null, false),
+    TRENDING_MOVIES(tr(R.string.movies_shows, "Movies & shows"), "trending_movies_and_shows", null, false),
+    LIVE(tr(R.string.live_now, "Live now"), "live", null, false),
+    ANIME(tr(R.string.anime_picks, "Anime picks"), null, "anime opening 4k", false),
+    AMV(tr(R.string.amv_edits, "AMV & edits"), null, "amv edit", false),
+    LOFI(tr(R.string.lo_fi_chill, "Lo-fi & chill"), null, "lofi hip hop", true),
+    JPOP(tr(R.string.j_pop_anime_songs, "J-Pop & anime songs"), null, "anime songs jpop", true),
+    TOP_HITS(tr(R.string.top_hits, "Top hits"), null, "top hits this week", true),
+    WORKOUT(tr(R.string.energy_boost, "Energy boost"), null, "workout music mix", true),
 }
 
 /**

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.network.NetworkClient
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -54,7 +56,7 @@ object StreamProbe {
     fun probe(request: StreamRequest, defaultUserAgent: String, client: OkHttpClient = NetworkClient.get()): ProbeResult {
         val url = request.url.trim()
         val builder = try { Request.Builder().url(url) } catch (e: IllegalArgumentException) {
-            return failed(url, NetworkFailure.OTHER, "Not a valid http(s) URL")
+            return failed(url, NetworkFailure.OTHER, tr(R.string.not_a_valid_http_s_url, "Not a valid http(s) URL"))
         }
         builder.header("User-Agent", request.userAgent ?: defaultUserAgent)
         builder.header("Accept", "*/*")
@@ -129,7 +131,7 @@ object RetryAfter {
         val v = value.trim()
         v.toLongOrNull()?.let { return it.coerceAtLeast(0) }
         return runCatching {
-            val fmt = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", java.util.Locale.US)
+            val fmt = java.text.SimpleDateFormat(tr(R.string.eee_dd_mmm_yyyy_hh_mm, "EEE, dd MMM yyyy HH:mm:ss zzz"), java.util.Locale.US)
             ((fmt.parse(v)!!.time - now) / 1000).coerceAtLeast(0)
         }.getOrNull()
     }

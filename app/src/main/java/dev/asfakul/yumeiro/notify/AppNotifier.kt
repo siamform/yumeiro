@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.notify
 
+import dev.asfakul.yumeiro.l10n.tr
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -38,11 +39,11 @@ object AppNotifier {
      * created, so a new sound needs new channel ids; the old ones are removed.
      */
     enum class Channel(val id: String, val title: String, val description: String, val importance: Int) {
-        EPISODES("yumeiro_episodes_v3", "New episodes", "Saved series with new episodes", NotificationManager.IMPORTANCE_DEFAULT),
-        DISCOVER("yumeiro_discover_v3", "New extensions & streams", "New extensions in the market and new stream playlists", NotificationManager.IMPORTANCE_DEFAULT),
-        NEWS("yumeiro_news_v3", "What's new", "New features, releases and announcements", NotificationManager.IMPORTANCE_DEFAULT),
-        NUDGE("yumeiro_suggestions_v3", "Suggestions", "An occasional idea for something to watch or listen to", NotificationManager.IMPORTANCE_LOW),
-        ALERTS("yumeiro_alerts_v3", "Service alerts", "Maintenance, outages and messages for this device", NotificationManager.IMPORTANCE_HIGH),
+        EPISODES("yumeiro_episodes_v3", tr(R.string.new_episodes, "New episodes"), tr(R.string.saved_series_with_new_episodes, "Saved series with new episodes"), NotificationManager.IMPORTANCE_DEFAULT),
+        DISCOVER("yumeiro_discover_v3", tr(R.string.new_extensions_streams, "New extensions & streams"), tr(R.string.new_extensions_in_the_market_and, "New extensions in the market and new stream playlists"), NotificationManager.IMPORTANCE_DEFAULT),
+        NEWS("yumeiro_news_v3", tr(R.string.whats_new, "What's new"), tr(R.string.new_features_releases_and_announcements, "New features, releases and announcements"), NotificationManager.IMPORTANCE_DEFAULT),
+        NUDGE("yumeiro_suggestions_v3", "Suggestions", tr(R.string.an_occasional_idea_for_something_to, "An occasional idea for something to watch or listen to"), NotificationManager.IMPORTANCE_LOW),
+        ALERTS("yumeiro_alerts_v3", tr(R.string.service_alerts, "Service alerts"), tr(R.string.maintenance_outages_and_messages_for_this, "Maintenance, outages and messages for this device"), NotificationManager.IMPORTANCE_HIGH),
     }
     private val OLD_CHANNELS = listOf(
         "new_episodes", "discover_new", "discover_nudge",
@@ -79,10 +80,10 @@ object AppNotifier {
     /** Why a notification would stay in the inbox instead of reaching the status bar. */
     enum class Block(val title: String, val hint: String) {
         NONE("", ""),
-        PERMISSION("Notifications are not allowed", "Android hasn't given Yumeiro permission yet. Tap Turn on and allow notifications."),
-        APP_OFF("Notifications are off for Yumeiro", "They're turned off in Android settings. Tap Turn on to switch them back on."),
-        MASTER_OFF("Show notifications is off", "Settings → Notifications → Show notifications keeps everything in the inbox only."),
-        CHANNEL_OFF("Some notification types are off", "One or more Yumeiro categories are turned off in Android settings. Tap Turn on to check them."),
+        PERMISSION(tr(R.string.notifications_are_not_allowed, "Notifications are not allowed"), tr(R.string.android_hasnt_given_yumeiro_permission_yet, "Android hasn't given Yumeiro permission yet. Tap Turn on and allow notifications.")),
+        APP_OFF(tr(R.string.notifications_are_off_for_yumeiro, "Notifications are off for Yumeiro"), tr(R.string.theyre_turned_off_in_android_settings, "They're turned off in Android settings. Tap Turn on to switch them back on.")),
+        MASTER_OFF(tr(R.string.show_notifications_is_off, "Show notifications is off"), tr(R.string.settings_notifications_show_notifications_keeps, "Settings → Notifications → Show notifications keeps everything in the inbox only.")),
+        CHANNEL_OFF(tr(R.string.some_notification_types_are_off, "Some notification types are off"), tr(R.string.one_or_more_yumeiro_categories_are, "One or more Yumeiro categories are turned off in Android settings. Tap Turn on to check them.")),
     }
 
     /** True when the user (or the system) turned this channel off in Android settings. */
@@ -168,8 +169,8 @@ object AppNotifier {
         if (why != Block.NONE) return why
         ensureChannels(c)
         val now = System.currentTimeMillis()
-        show(c, Inbox.Item("test-$now", Inbox.Kind.NEWS, "Notifications work",
-            "This is how Yumeiro tells you about new episodes, extensions and news.", now), 0x7199)
+        show(c, Inbox.Item("test-$now", Inbox.Kind.NEWS, tr(R.string.notifications_work, "Notifications work"),
+            tr(R.string.this_is_how_yumeiro_tells_you, "This is how Yumeiro tells you about new episodes, extensions and news."), now), 0x7199)
         return Block.NONE
     }
 
@@ -178,8 +179,8 @@ object AppNotifier {
         if (more <= 0 || block(c, Inbox.Kind.NEWS) != Block.NONE) return
         ensureChannels(c)
         val now = System.currentTimeMillis()
-        NotifyPacer.offer(c, Inbox.Item("summary-$now", Inbox.Kind.NEWS, "$more more updates",
-            "Open your Yumeiro inbox to see everything that's new.", now), 0x7198) { i, n -> show(c, i, n) }
+        NotifyPacer.offer(c, Inbox.Item("summary-$now", Inbox.Kind.NEWS, tr(R.string.more_updates, "%1\$s more updates", more),
+            tr(R.string.open_your_yumeiro_inbox_to_see, "Open your Yumeiro inbox to see everything that's new."), now), 0x7198) { i, n -> show(c, i, n) }
     }
 
     private fun show(c: Context, item: Inbox.Item, notificationId: Int) {

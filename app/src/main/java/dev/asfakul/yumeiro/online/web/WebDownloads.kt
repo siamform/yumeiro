@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.web
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.webkit.CookieManager
 import android.webkit.WebView
 import dev.asfakul.yumeiro.FeatureFlags
@@ -67,7 +69,7 @@ object WebDownloads {
     }
 
     /** Message shown when the page builds the file itself (blob: / data:), which only a browser can save. */
-    const val PAGE_MADE_FILE = "This page makes the file itself, so it can't be saved here. Open the page in your browser to save it."
+    val PAGE_MADE_FILE: String get() = tr(R.string.this_page_makes_the_file_itself, "This page makes the file itself, so it can't be saved here. Open the page in your browser to save it.")
 
     /** Installs the listener on [web] when the flag is on. [pageUrl] is the page the user is on now. */
     fun attach(web: WebView, pageUrl: () -> String?, onPlayable: ((StreamRequest) -> Boolean)? = null) {

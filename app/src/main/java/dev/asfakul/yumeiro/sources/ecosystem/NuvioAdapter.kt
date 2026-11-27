@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.ecosystem
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import com.lagradost.cloudstream3.MainAPI
@@ -181,7 +183,7 @@ object NuvioAdapter : RuntimeAdapter {
 object NuvioStreams : StreamAddon {
     private const val TAG = "NuvioStreams"
     override val id = "nuvio"
-    override val label = "Nuvio scrapers"
+    override val label = tr(R.string.nuvio_scrapers, "Nuvio scrapers")
 
     private fun ready(context: Context): List<EcosystemRegistry.Installed> =
         EcosystemRegistry.state.value.installed.filter { it.ecosystem == SourceHub.Ecosystem.NUVIO }
@@ -239,5 +241,5 @@ object NuvioStreams : StreamAddon {
         if (!any.get() && asked.isNotEmpty()) send(LinkEvent.Done(false, NO_STREAMS))
     }.flowOn(Dispatchers.IO)
 
-    const val NO_STREAMS = "No scrapers returned a stream"
+    val NO_STREAMS: String get() = tr(R.string.no_scrapers_returned_a_stream, "No scrapers returned a stream")
 }

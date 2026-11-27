@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -287,9 +288,9 @@ private fun GestureDiagram() {
     val p = LocalMtPalette.current
     Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(12)).background(Color.Black)) {
         Row(Modifier.fillMaxSize()) {
-            Zone("Brightness\nswipe up/down", Icons.Default.BrightnessMedium, p.accent.copy(alpha = 0.18f))
-            Zone("Swipe down\nto shrink", Icons.Default.KeyboardArrowDown, Color.White.copy(alpha = 0.06f))
-            Zone("Volume\nswipe up/down", Icons.AutoMirrored.Filled.VolumeUp, p.accent.copy(alpha = 0.18f))
+            Zone(tr(R.string.brightness_swipe_up_down, "Brightness\nswipe up/down"), Icons.Default.BrightnessMedium, p.accent.copy(alpha = 0.18f))
+            Zone(tr(R.string.swipe_down_to_shrink, "Swipe down\nto shrink"), Icons.Default.KeyboardArrowDown, Color.White.copy(alpha = 0.06f))
+            Zone(tr(R.string.volume_swipe_up_down, "Volume\nswipe up/down"), Icons.AutoMirrored.Filled.VolumeUp, p.accent.copy(alpha = 0.18f))
         }
         Text(
             stringResource(R.string.drag_sideways_to_seek_double_tap),
@@ -318,8 +319,8 @@ private fun HomeDiagram() {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(stringResource(R.string.label_continue), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MockTile(Modifier.weight(1f), Icons.Default.MusicNote, "Last song")
-            MockTile(Modifier.weight(1f), Icons.Default.SmartDisplay, "Last video")
+            MockTile(Modifier.weight(1f), Icons.Default.MusicNote, tr(R.string.last_song, "Last song"))
+            MockTile(Modifier.weight(1f), Icons.Default.SmartDisplay, tr(R.string.last_video, "Last video"))
         }
         Text(stringResource(R.string.spaces), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -365,7 +366,7 @@ private fun FloatingDiagram() {
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.KeyboardArrowDown, null, tint = p.accent)
-            Text("Back or\nswipe down", color = p.textSecondary, fontSize = 9.sp, textAlign = TextAlign.Center)
+            Text(tr(R.string.back_or_swipe_down, "Back or\nswipe down"), color = p.textSecondary, fontSize = 9.sp, textAlign = TextAlign.Center)
         }
         PhoneMock(Modifier.weight(1f)) {
             Column(Modifier.padding(6.dp)) { repeat(4) { Bar(0.9f, 6); Spacer(Modifier.height(5.dp)) } }
@@ -388,100 +389,100 @@ private fun PhoneMock(modifier: Modifier, content: @Composable () -> Unit) {
 private fun guideChapters(): List<GuideChapter> = listOf(
     GuideChapter(
         "home", Icons.Default.Home, "Home",
-        "Your starting point. It remembers what you played last and keeps suggesting more.",
+        tr(R.string.your_starting_point_it_remembers_what, "Your starting point. It remembers what you played last and keeps suggesting more."),
         listOf(
-            "Tap the song or video card under Continue to pick up where you stopped.",
-            "Spaces jump to every part of Yumeiro. Eight show at first; tap Show all for the rest.",
-            "Mood of the hour changes with the time of day; tap Shuffle for another. Yumix random at the bottom never ends.",
+            tr(R.string.tap_the_song_or_video_card, "Tap the song or video card under Continue to pick up where you stopped."),
+            tr(R.string.spaces_jump_to_every_part_of, "Spaces jump to every part of Yumeiro. Eight show at first; tap Show all for the rest."),
+            tr(R.string.mood_of_the_hour_changes_with, "Mood of the hour changes with the time of day; tap Shuffle for another. Yumix random at the bottom never ends."),
         ),
-        tip = "Customize home (at the bottom) turns sections on or off. Search, alerts and Settings sit in the top-right corner.",
+        tip = tr(R.string.customize_home_at_the_bottom_turns, "Customize home (at the bottom) turns sections on or off. Search, alerts and Settings sit in the top-right corner."),
     ) { HomeDiagram() },
     GuideChapter(
         "music", Icons.Default.MusicNote, "Music & Now Playing",
-        "Everything on your phone plus YouTube Music, with lyrics, equalizer and a sleep timer.",
+        tr(R.string.everything_on_your_phone_plus_youtube, "Everything on your phone plus YouTube Music, with lyrics, equalizer and a sleep timer."),
         listOf(
-            "Open Music and tap any song. The music bar appears above the dock — tap it for Now Playing.",
-            "In Now Playing use Lyrics, Up next and Info at the bottom. Tap a lyric line to jump to it.",
-            "Tap the moon icon at the top to set a sleep timer (5 min to 1.5 h, or end of song).",
+            tr(R.string.open_music_and_tap_any_song, "Open Music and tap any song. The music bar appears above the dock — tap it for Now Playing."),
+            tr(R.string.in_now_playing_use_lyrics_up, "In Now Playing use Lyrics, Up next and Info at the bottom. Tap a lyric line to jump to it."),
+            tr(R.string.tap_the_moon_icon_at_the, "Tap the moon icon at the top to set a sleep timer (5 min to 1.5 h, or end of song)."),
         ),
-        tip = "The music fades out gently over the last 20 seconds of a sleep timer.",
+        tip = tr(R.string.the_music_fades_out_gently_over, "The music fades out gently over the last 20 seconds of a sleep timer."),
     ) { Flow("Pick a song" to Icons.Default.MusicNote, "Music bar" to Icons.Default.PlayArrow, "Lyrics · EQ" to Icons.Default.Lyrics, "Sleep timer" to Icons.Default.Bedtime) },
     GuideChapter(
         "player", Icons.Default.TouchApp, "Video player gestures",
-        "The player is controlled with simple swipes on the picture.",
+        tr(R.string.the_player_is_controlled_with_simple, "The player is controlled with simple swipes on the picture."),
         listOf(
-            "Swipe up or down on the left side for brightness, on the right side for volume.",
-            "Drag sideways to seek; double-tap the left or right side to jump 10 seconds.",
-            "Swipe down from the middle to shrink the video (or leave fullscreen).",
+            tr(R.string.swipe_up_or_down_on_the, "Swipe up or down on the left side for brightness, on the right side for volume."),
+            tr(R.string.drag_sideways_to_seek_double_tap_2, "Drag sideways to seek; double-tap the left or right side to jump 10 seconds."),
+            tr(R.string.swipe_down_from_the_middle_to, "Swipe down from the middle to shrink the video (or leave fullscreen)."),
         ),
     ) { GestureDiagram() },
     GuideChapter(
         "floating", Icons.Default.SmartDisplay, "Floating player & picture-in-picture",
-        "Keep watching while you browse — just like YouTube.",
+        tr(R.string.keep_watching_while_you_browse_just, "Keep watching while you browse — just like YouTube."),
         listOf(
-            "Press Back while a video plays: it pops out into picture-in-picture.",
-            "Hold the player and swipe down: it shrinks into a small floating player inside Yumeiro.",
-            "Drag the floating player anywhere. Tap it to open it again, or tap × to close.",
+            tr(R.string.press_back_while_a_video_plays, "Press Back while a video plays: it pops out into picture-in-picture."),
+            tr(R.string.hold_the_player_and_swipe_down, "Hold the player and swipe down: it shrinks into a small floating player inside Yumeiro."),
+            tr(R.string.drag_the_floating_player_anywhere_tap, "Drag the floating player anywhere. Tap it to open it again, or tap × to close."),
             "Leave the app while playing and it continues in Android's picture-in-picture window.",
         ),
-        tip = "Settings → Video Player → Back button lets you choose picture-in-picture, floating player or close.",
+        tip = tr(R.string.settings_video_player_back_button_lets, "Settings → Video Player → Back button lets you choose picture-in-picture, floating player or close."),
     ) { FloatingDiagram() },
     GuideChapter(
         "watch", Icons.Default.PlayArrow, "Watch page: the moon dial",
-        "Under every Yumix, YouTube and Live TV player sits Yumeiro's moon dial and source card.",
+        tr(R.string.under_every_yumix_youtube_and_live, "Under every Yumix, YouTube and Live TV player sits Yumeiro's moon dial and source card."),
         listOf(
-            "Dim veils everything except the player; tap anywhere to brighten again.",
-            "Autoplay starts the video as soon as it opens; Auto-advance (Auto-zap for live TV) moves to the next one when it ends or fails.",
-            "Skip intros jumps over openings when the extension marks them.",
-            "The source card shows what is playing. Stuck on black? Tap another source or open-as mode. Yumeiro remembers what worked for each site.",
-            "Long series show an episode board: pick a range, type a number in Jump to #, tap a tile.",
+            tr(R.string.dim_veils_everything_except_the_player, "Dim veils everything except the player; tap anywhere to brighten again."),
+            tr(R.string.autoplay_starts_the_video_as_soon, "Autoplay starts the video as soon as it opens; Auto-advance (Auto-zap for live TV) moves to the next one when it ends or fails."),
+            tr(R.string.skip_intros_jumps_over_openings_when, "Skip intros jumps over openings when the extension marks them."),
+            tr(R.string.the_source_card_shows_what_is, "The source card shows what is playing. Stuck on black? Tap another source or open-as mode. Yumeiro remembers what worked for each site."),
+            tr(R.string.long_series_show_an_episode_board, "Long series show an episode board: pick a range, type a number in Jump to #, tap a tile."),
         ),
     ) { Flow("Moon dial" to Icons.Default.Tune, "Source card" to Icons.Default.LiveTv, "Episode board" to Icons.Default.PlayArrow) },
     GuideChapter(
         "hues", Icons.Default.Extension, "Yumix (extensions)",
-        "Yumix extensions are CloudStream-compatible extensions that add online catalogues for anime, movies and shows.",
+        tr(R.string.yumix_extensions_are_cloudstream_compatible_exte, "Yumix extensions are CloudStream-compatible extensions that add online catalogues for anime, movies and shows."),
         listOf(
-            "Open the Yumix store from Home → Explore, add a repository link, then install the extensions you want.",
-            "Browse an extension or open For you to see picks from all of them; tap a title, then an episode.",
-            "Yumeiro picks the best source and automatically switches server if one fails.",
+            tr(R.string.open_the_yumix_store_from_home, "Open the Yumix store from Home → Explore, add a repository link, then install the extensions you want."),
+            tr(R.string.browse_an_extension_or_open_for, "Browse an extension or open For you to see picks from all of them; tap a title, then an episode."),
+            tr(R.string.yumeiro_picks_the_best_source_and, "Yumeiro picks the best source and automatically switches server if one fails."),
         ),
-        tip = "Only install extensions for content you have the right to watch.",
+        tip = tr(R.string.only_install_extensions_for_content_you, "Only install extensions for content you have the right to watch."),
     ) { Flow("Add repo" to Icons.Default.Link, "Install extension" to Icons.Default.Extension, "Pick title" to Icons.Default.Search, "Watch" to Icons.Default.PlayArrow) },
     GuideChapter(
         "stream", Icons.Default.LiveTv, "Live TV: links & IPTV",
-        "Paste any video link or IPTV playlist. Yumeiro inspects it and plays it in a watch page with the channel list below.",
+        tr(R.string.paste_any_video_link_or_iptv, "Paste any video link or IPTV playlist. Yumeiro inspects it and plays it in a watch page with the channel list below."),
         listOf(
             "Open Videos → Live TV, paste a link (or open an .m3u file / pick one in the playlist market) and tap Play.",
-            "Yumeiro checks the link. If the server refuses it, it retries automatically like a browser, like the site's own player and like VLC.",
-            "While watching, switch channels from the list under the player or use Previous / Next channel.",
+            tr(R.string.yumeiro_checks_the_link_if_the, "Yumeiro checks the link. If the server refuses it, it retries automatically like a browser, like the site's own player and like VLC."),
+            tr(R.string.while_watching_switch_channels_from_the, "While watching, switch channels from the list under the player or use Previous / Next channel."),
         ),
-        tip = "Still \"Access denied\"? Refresh the playlist (tokens expire) or add the site's Referer / Cookie under Headers & DRM.",
+        tip = tr(R.string.still_access_denied_refresh_the_playlist, "Still \"Access denied\"? Refresh the playlist (tokens expire) or add the site's Referer / Cookie under Headers & DRM."),
     ) { Flow("Paste link" to Icons.Default.Link, "Check & fix headers" to Icons.Default.AutoAwesome, "Watch page" to Icons.Default.LiveTv) },
     GuideChapter(
         "youtube", Icons.Default.SmartDisplay, "YouTube & YouTube Music",
-        "No account needed. Search, trending, live and music with background play.",
+        tr(R.string.no_account_needed_search_trending_live, "No account needed. Search, trending, live and music with background play."),
         listOf(
-            "Open Videos → YouTube, or Music → YouTube Music.",
-            "Tap a video to open its watch page with related videos below the player.",
-            "Songs from YouTube Music play in the music player, so the sleep timer and lyrics work too.",
+            tr(R.string.open_videos_youtube_or_music_youtube, "Open Videos → YouTube, or Music → YouTube Music."),
+            tr(R.string.tap_a_video_to_open_its, "Tap a video to open its watch page with related videos below the player."),
+            tr(R.string.songs_from_youtube_music_play_in, "Songs from YouTube Music play in the music player, so the sleep timer and lyrics work too."),
         ),
     ) { Flow("Search" to Icons.Default.Search, "Watch page" to Icons.Default.SmartDisplay, "Up next" to Icons.Default.PlayArrow) },
     GuideChapter(
         "errors", Icons.Default.Shield, "When something goes wrong",
-        "Every error shows what happened and a short \"Try this\" list with the fixes that usually work.",
+        tr(R.string.every_error_shows_what_happened_and, "Every error shows what happened and a short \"Try this\" list with the fixes that usually work."),
         listOf(
-            "Read the Try this tips on the error card and tap Retry.",
-            "For online videos, tap another source on the source card under the player.",
-            "Check your connection and turn off VPN or data saver if streams keep failing.",
+            tr(R.string.read_the_try_this_tips_on, "Read the Try this tips on the error card and tap Retry."),
+            tr(R.string.for_online_videos_tap_another_source, "For online videos, tap another source on the source card under the player."),
+            tr(R.string.check_your_connection_and_turn_off, "Check your connection and turn off VPN or data saver if streams keep failing."),
         ),
-        tip = "Yumeiro never bypasses region locks or logins — some content can only be played in its own app.",
+        tip = tr(R.string.yumeiro_never_bypasses_region_locks_or, "Yumeiro never bypasses region locks or logins — some content can only be played in its own app."),
     ) { Flow("Error" to Icons.Default.Shield, "Try this tips" to Icons.Outlined.Lightbulb, "Retry" to Icons.Default.PlayArrow) },
     GuideChapter(
         "updates", Icons.Default.SystemUpdate, "Updates",
-        "Yumeiro updates itself from GitHub Releases. Every update is checked against the official signature.",
+        tr(R.string.yumeiro_updates_itself_from_github_releases, "Yumeiro updates itself from GitHub Releases. Every update is checked against the official signature."),
         listOf(
-            "When an update is ready you'll see a card — tap Update and confirm the install.",
-            "Settings → App Updates lets you check manually and choose the update channel.",
+            tr(R.string.when_an_update_is_ready_youll, "When an update is ready you'll see a card — tap Update and confirm the install."),
+            tr(R.string.settings_app_updates_lets_you_check, "Settings → App Updates lets you check manually and choose the update channel."),
         ),
     ) { Flow("New release" to Icons.Default.SystemUpdate, "Verify signature" to Icons.Default.Shield, "Install" to Icons.Default.PlayArrow) },
 )

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.Movie
@@ -277,7 +278,7 @@ fun VideoPlayerTopBar(
                         ) {
                             Icon(
                                 imageVector = if (captionsOn) Icons.Default.ClosedCaption else Icons.Default.ClosedCaptionDisabled,
-                                contentDescription = if (captionsOn) "Captions on" else "Captions off",
+                                contentDescription = if (captionsOn) tr(R.string.captions_on, "Captions on") else tr(R.string.captions_off, "Captions off"),
                                 tint = if (captionsOn) Color.White else Color.White.copy(alpha = 0.55f),
                                 modifier = Modifier.size(20.dp)
                             )
@@ -308,7 +309,7 @@ fun VideoPlayerTopBar(
                                 .combinedClickable(
                                     onClick = onSpeedClick,
                                     onLongClick = onSpeedLongClick,
-                                    onLongClickLabel = "Switch between 1x and 2x",
+                                    onLongClickLabel = tr(R.string.switch_between_1x_and_2x, "Switch between 1x and 2x"),
                                     role = androidx.compose.ui.semantics.Role.Button,
                                 )
                                 .padding(horizontal = 8.dp, vertical = 8.dp)
@@ -392,7 +393,7 @@ fun VideoPlayerTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Rotate90DegreesCw,
-                                contentDescription = if (rotationDegrees == 0) "Rotate video" else "Rotate video, now ${rotationDegrees} degrees",
+                                contentDescription = if (rotationDegrees == 0) tr(R.string.rotate_video, "Rotate video") else "Rotate video, now ${rotationDegrees} degrees",
                                 tint = if (rotationDegrees == 0) Color.White else SpotifyGreen,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -477,7 +478,7 @@ private fun VideoPlayerMoreMenu(
             Box {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = if (sleepLabel != null) "More options, sleep timer on" else "More options",
+                    contentDescription = if (sleepLabel != null) tr(R.string.more_options_sleep_timer_on, "More options, sleep timer on") else tr(R.string.more_options, "More options"),
                     tint = Color.White,
                     modifier = Modifier.size(22.dp)
                 )
@@ -503,32 +504,32 @@ private fun VideoPlayerMoreMenu(
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.QUALITY ->
                         item("Quality", "video_quality_btn_menu", Icons.Default.HighQuality, qualityLabel, onQualityClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.AUDIO ->
-                        item("Audio tracks", "video_audio_track_btn_menu", Icons.Default.Audiotrack, onClick = onAudioTrackClick)
+                        item(tr(R.string.audio_tracks, "Audio tracks"), "video_audio_track_btn_menu", Icons.Default.Audiotrack, onClick = onAudioTrackClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.SUBTITLES -> {
-                        item(if (captionsOn) "Turn captions off" else "Turn captions on", "video_cc_btn_menu",
+                        item(if (captionsOn) tr(R.string.turn_captions_off, "Turn captions off") else tr(R.string.turn_captions_on, "Turn captions on"), "video_cc_btn_menu",
                             if (captionsOn) Icons.Default.ClosedCaptionDisabled else Icons.Default.ClosedCaption, onClick = onCaptionsToggle)
                         item("Subtitles", "video_subtitle_btn_menu", Icons.Default.Subtitles, onClick = onSubtitleClick)
                     }
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.SPEED ->
                         item("Speed", "video_speed_btn_menu", Icons.Default.Speed, "${currentSpeed}x", onSpeedClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.ASPECT ->
-                        item("Aspect ratio", "video_aspect_ratio_btn_menu", Icons.Default.AspectRatio, onClick = onAspectRatioClick)
+                        item(tr(R.string.aspect_ratio, "Aspect ratio"), "video_aspect_ratio_btn_menu", Icons.Default.AspectRatio, onClick = onAspectRatioClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.PIP ->
                         item("Picture-in-picture", "video_pip_btn_menu", Icons.Default.PictureInPicture, onClick = onPipClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.INFO ->
-                        item("Video details", "video_info_btn_menu", androidx.compose.material.icons.Icons.Outlined.Movie, onClick = onInfoClick)
+                        item(tr(R.string.video_details, "Video details"), "video_info_btn_menu", androidx.compose.material.icons.Icons.Outlined.Movie, onClick = onInfoClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.LOCK ->
-                        item("Lock controls", "video_screen_lock_btn_menu", Icons.Default.LockOpen, onClick = onLockClick)
+                        item(tr(R.string.lock_controls, "Lock controls"), "video_screen_lock_btn_menu", Icons.Default.LockOpen, onClick = onLockClick)
                     dev.asfakul.yumeiro.player.VideoPrefs.Control.ROTATE ->
-                        item("Rotate video", "video_rotate_btn_menu", Icons.Default.Rotate90DegreesCw,
+                        item(tr(R.string.rotate_video, "Rotate video"), "video_rotate_btn_menu", Icons.Default.Rotate90DegreesCw,
                             if (rotationDegrees == 0) null else "${rotationDegrees}°", onRotateClick)
                 }
             }
             // ROT-1d: a turned picture can be set upright from the menu in every player size (the reset pill
             // only fits the full-screen player), wherever Settings put the Rotate button.
-            if (rotationDegrees != 0) item("Reset rotation", "video_rotate_reset_menu", Icons.Default.Rotate90DegreesCw, "${rotationDegrees}°", onRotateReset)
+            if (rotationDegrees != 0) item(tr(R.string.reset_rotation_2, "Reset rotation"), "video_rotate_reset_menu", Icons.Default.Rotate90DegreesCw, "${rotationDegrees}°", onRotateReset)
             if (overflow.isNotEmpty() || rotationDegrees != 0) HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
-            item("Sleep timer", "video_sleep_timer_menu", Icons.Default.Bedtime, sleepLabel, onSleepTimerClick)
+            item(tr(R.string.sleep_timer, "Sleep timer"), "video_sleep_timer_menu", Icons.Default.Bedtime, sleepLabel, onSleepTimerClick)
             if (enhanceLabel != null) item("Anime4K", "video_anime4k_menu", androidx.compose.material.icons.Icons.Default.AutoFixHigh, enhanceLabel, onEnhanceClick)
         }
     }
@@ -560,8 +561,8 @@ fun VideoPlayerCenterControls(
         val off by dev.asfakul.yumeiro.player.VideoPrefs.extrasOff.collectAsState()
         val skips = !compact && dev.asfakul.yumeiro.player.VideoPrefs.Extra.PREV_NEXT !in off
         val seeks = dev.asfakul.yumeiro.player.VideoPrefs.Extra.SEEK !in off
-        if (skips) CenterRoundButton(Icons.Default.SkipPrevious, "Previous video", onPrevious, "video_previous_btn", 46, 28, enabledLook = hasPrevious)
-        if (seeks) CenterRoundButton(Icons.Default.FastRewind, "Rewind 10s", onRewind10s, "video_rewind_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
+        if (skips) CenterRoundButton(Icons.Default.SkipPrevious, tr(R.string.previous_video, "Previous video"), onPrevious, "video_previous_btn", 46, 28, enabledLook = hasPrevious)
+        if (seeks) CenterRoundButton(Icons.Default.FastRewind, tr(R.string.rewind_10s, "Rewind 10s"), onRewind10s, "video_rewind_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
 
         // Play / Pause / Replay
         Box(
@@ -590,8 +591,8 @@ fun VideoPlayerCenterControls(
             )
         }
 
-        if (seeks) CenterRoundButton(Icons.Default.FastForward, "Forward 10s", onForward10s, "video_forward_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
-        if (skips) CenterRoundButton(Icons.Default.SkipNext, "Next video", onNext, "video_next_btn", 46, 28, enabledLook = hasNext)
+        if (seeks) CenterRoundButton(Icons.Default.FastForward, tr(R.string.forward_10s, "Forward 10s"), onForward10s, "video_forward_10s_btn", if (compact) 38 else 52, if (compact) 20 else 28)
+        if (skips) CenterRoundButton(Icons.Default.SkipNext, tr(R.string.next_video, "Next video"), onNext, "video_next_btn", 46, 28, enabledLook = hasNext)
     }
 }
 
@@ -716,7 +717,7 @@ fun VideoPlayerBottomBar(
             if (known != null) Text(formatDuration(durationMs), color = TextSecondary, fontSize = 11.sp)
             else DurationPending(isLive = isLive, isLoading = isLoading)
             if (showFullscreenButton) IconButton(onClick = onToggleFullscreen, modifier = Modifier.testTag("video_fullscreen_btn")) {
-                Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, if (isFullscreen) "Exit fullscreen" else "Enter fullscreen", tint = Color.White, modifier = Modifier.size(22.dp))
+                Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, if (isFullscreen) tr(R.string.exit_fullscreen, "Exit fullscreen") else tr(R.string.enter_fullscreen, "Enter fullscreen"), tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
         return
@@ -758,7 +759,7 @@ fun VideoPlayerBottomBar(
                 ) {
                     Icon(
                         imageVector = if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                        contentDescription = if (isFullscreen) "Exit fullscreen" else "Enter fullscreen",
+                        contentDescription = if (isFullscreen) tr(R.string.exit_fullscreen, "Exit fullscreen") else tr(R.string.enter_fullscreen, "Enter fullscreen"),
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
                     )

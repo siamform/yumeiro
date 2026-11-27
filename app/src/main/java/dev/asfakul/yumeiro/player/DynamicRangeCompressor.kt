@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.C
@@ -52,17 +54,17 @@ object DynamicRangeCompressor {
     }
 
     enum class Preset(val label: String, val summary: String, val settings: Settings?) {
-        OFF("Off", "Sound as the video was mixed", null),
-        LIGHT("Light", "Takes the edge off explosions", Settings(-18f, 2f, 6f, 10f, 150f, 4f)),
-        NIGHT("Night", "Quieter loud scenes, clearer voices", Settings(-24f, 3f, 8f, 5f, 200f, 8f)),
-        STRONG("Strong", "Everything at about the same loudness", Settings(-32f, 6f, 6f, 3f, 250f, 14f)),
+        OFF("Off", tr(R.string.sound_as_the_video_was_mixed, "Sound as the video was mixed"), null),
+        LIGHT("Light", tr(R.string.takes_the_edge_off_explosions, "Takes the edge off explosions"), Settings(-18f, 2f, 6f, 10f, 150f, 4f)),
+        NIGHT("Night", tr(R.string.quieter_loud_scenes_clearer_voices, "Quieter loud scenes, clearer voices"), Settings(-24f, 3f, 8f, 5f, 200f, 8f)),
+        STRONG("Strong", tr(R.string.everything_at_about_the_same_loudness, "Everything at about the same loudness"), Settings(-32f, 6f, 6f, 3f, 250f, 14f)),
         // Group Y (B8): more starting points. Values chosen from common broadcast / playback practice, own numbers.
-        DIALOGUE("Voices", "Lifts speech over music and effects", Settings(-28f, 4f, 10f, 2f, 160f, 10f)),
-        MOVIE("Movie", "Keeps the punch, tames sudden peaks", Settings(-14f, 4f, 4f, 1f, 120f, 3f)),
-        MUSIC("Music", "Gentle: songs keep their dynamics", Settings(-12f, 1.5f, 12f, 20f, 400f, 2f)),
-        LOUD_PLACE("Noisy place", "Commute or kitchen: quiet parts come right up", Settings(-40f, 8f, 6f, 2f, 220f, 18f)),
+        DIALOGUE("Voices", tr(R.string.lifts_speech_over_music_and_effects, "Lifts speech over music and effects"), Settings(-28f, 4f, 10f, 2f, 160f, 10f)),
+        MOVIE("Movie", tr(R.string.keeps_the_punch_tames_sudden_peaks, "Keeps the punch, tames sudden peaks"), Settings(-14f, 4f, 4f, 1f, 120f, 3f)),
+        MUSIC("Music", tr(R.string.gentle_songs_keep_their_dynamics, "Gentle: songs keep their dynamics"), Settings(-12f, 1.5f, 12f, 20f, 400f, 2f)),
+        LOUD_PLACE(tr(R.string.noisy_place, "Noisy place"), tr(R.string.commute_or_kitchen_quiet_parts_come, "Commute or kitchen: quiet parts come right up"), Settings(-40f, 8f, 6f, 2f, 220f, 18f)),
         /** Group Y (B8): "Manual" in the UI (the saved name stays CUSTOM so earlier choices keep working). */
-        CUSTOM("Manual", "Every setting yours: threshold, ratio, knee, attack, release and gain", null),
+        CUSTOM("Manual", tr(R.string.every_setting_yours_threshold_ratio_knee, "Every setting yours: threshold, ratio, knee, attack, release and gain"), null),
     }
 
     /** Group Y (B8): a set of values the person saved under their own name. */

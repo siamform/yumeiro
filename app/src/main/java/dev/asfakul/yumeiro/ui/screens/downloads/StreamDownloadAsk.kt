@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.FeatureFlags
 import dev.asfakul.yumeiro.online.download.DownloadGroups
@@ -31,9 +33,9 @@ import dev.asfakul.yumeiro.ui.components.AppMessages
 object StreamDownloadAsk {
     /** Quality line for the prompt: what kind of file this link is. Pure (unit-tested). */
     fun qualityText(req: StreamRequest): String = when (req.resolvedFormat()) {
-        StreamFormat.HLS -> "Best of the stream (HLS)"
-        StreamFormat.DASH -> "Best of the stream (DASH)"
-        else -> "Original file"
+        StreamFormat.HLS -> tr(R.string.best_of_the_stream_hls, "Best of the stream (HLS)")
+        StreamFormat.DASH -> tr(R.string.best_of_the_stream_dash, "Best of the stream (DASH)")
+        else -> tr(R.string.original_file, "Original file")
     }
 
     private val OTHER_EXT = setOf(
@@ -59,7 +61,7 @@ object StreamDownloadAsk {
             // Old path: start at once.
             when (val o = StreamDownload.enqueue(context, req, sourceUrl)) {
                 is StreamDownload.Outcome.Refused -> onRefused(o.message)
-                is StreamDownload.Outcome.Queued -> AppMessages.show(context, "Downloading \"${o.title}\"", AppMessages.Kind.INFO, "View downloads") { DownloadsNav.open() }
+                is StreamDownload.Outcome.Queued -> AppMessages.show(context, "Downloading \"${o.title}\"", AppMessages.Kind.INFO, tr(R.string.view_downloads, "View downloads")) { DownloadsNav.open() }
             }
             return
         }
@@ -114,7 +116,7 @@ object StreamDownloadAsk {
             offer = offer,
             // OWN-18: size for the picked quality, subtitles and format.
             facts = listOfNotNull(
-                when (req.resolvedFormat()) { StreamFormat.HLS -> "HLS stream"; StreamFormat.DASH -> "DASH stream"; else -> if (other) "File" else "Video file" },
+                when (req.resolvedFormat()) { StreamFormat.HLS -> tr(R.string.hls_stream, "HLS stream"); StreamFormat.DASH -> tr(R.string.dash_stream, "DASH stream"); else -> if (other) "File" else tr(R.string.video_file, "Video file") },
                 named.size.takeIf { it > 0 }?.let { "$it subtitle ${if (it == 1) "file" else "files"}" },
             ),
             sizeFor = { h ->

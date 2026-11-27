@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.online.download
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 /**
  * Every YouTube quality we can save, built from the streams NewPipe Extractor reports.
  * Pure → unit-tested; [dev.asfakul.yumeiro.online.download.YtDownloads] maps StreamInfo into it.
@@ -18,7 +21,7 @@ object YtDownloadOptions {
     const val AUTO_AUDIO = -2
 
     /** OL-12: the choice a playlist batch queues for every song (resolved by [bestAudio] at start). */
-    val AUTO_AUDIO_CHOICE = Choice(label = "Best audio", detail = "M4A when offered", videoItag = -1, audioItag = AUTO_AUDIO, container = "m4a", sizeBytes = -1, audioOnly = true)
+    val AUTO_AUDIO_CHOICE = Choice(label = tr(R.string.best_audio, "Best audio"), detail = tr(R.string.m4a_when_offered, "M4A when offered"), videoItag = -1, audioItag = AUTO_AUDIO, container = "m4a", sizeBytes = -1, audioOnly = true)
 
     /** OL-12: best audio-only choice of [choices]: M4A (AAC, plays everywhere) first, then any; highest bitrate. */
     fun bestAudio(choices: List<Choice>): Choice? {

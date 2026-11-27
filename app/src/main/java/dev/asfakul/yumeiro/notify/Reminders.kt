@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.notify
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.content.SharedPreferences
 
@@ -31,8 +33,8 @@ object Reminders {
     enum class Kind { FOLLOW, STAR, SUPPORT }
     /** The Yumeiro community on Telegram: the news channel and the chat group. */
     enum class Social(val label: String, val detail: String, val url: String) {
-        TELEGRAM_CHANNEL("Telegram channel", "News, releases and sneak peeks", "https://t.me/yumeiroofficial"),
-        TELEGRAM_GROUP("Telegram group", "Chat with the community, ask for help, share ideas", "https://t.me/chatyumeiroofficial"),
+        TELEGRAM_CHANNEL(tr(R.string.telegram_channel, "Telegram channel"), tr(R.string.news_releases_and_sneak_peeks, "News, releases and sneak peeks"), "https://t.me/yumeiroofficial"),
+        TELEGRAM_GROUP(tr(R.string.telegram_group, "Telegram group"), tr(R.string.chat_with_the_community_ask_for, "Chat with the community, ask for help, share ideas"), "https://t.me/chatyumeiroofficial"),
     }
 
     const val GITHUB_URL = "https://github.com/siamform/yumeiro"

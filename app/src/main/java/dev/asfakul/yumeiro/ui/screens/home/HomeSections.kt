@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import androidx.compose.ui.focus.onFocusChanged
 import android.content.Context
 import androidx.compose.animation.core.animateDpAsState
@@ -135,10 +137,10 @@ internal data class EpisodeCard(
         val total = bookmark.episodes
         val n = bookmark.newEpisodes
         return when {
-            n > 0 && total > 0 && n == 1 -> "Episode $total is out"
+            n > 0 && total > 0 && n == 1 -> tr(R.string.episode_is_out, "Episode %1\$s is out", total)
             n > 0 && total > 0 -> "Episodes ${total - n + 1}–$total are out"
-            n > 0 -> if (n == 1) "1 new episode" else "$n new episodes"
-            total > 0 -> if (total == 1) "1 episode available" else "$total episodes available"
+            n > 0 -> if (n == 1) "1 new episode" else tr(R.string.new_episodes_2, "%1\$s new episodes", n)
+            total > 0 -> if (total == 1) "1 episode available" else tr(R.string.episodes_available, "%1\$s episodes available", total)
             else -> null
         }
     }
@@ -175,10 +177,10 @@ internal data class HeroSlide(
 
 internal fun EpisodeCard.toSlide() = HeroSlide(
     key = bookmark.key, name = bookmark.name, poster = bookmark.posterUrl, headers = bookmark.posterHeaders,
-    badge = if (fresh) (if (bookmark.newEpisodes == 1) "New episode" else "${bookmark.newEpisodes} new") else bookmark.status.label,
+    badge = if (fresh) (if (bookmark.newEpisodes == 1) tr(R.string.new_episode_2, "New episode") else "${bookmark.newEpisodes} new") else bookmark.status.label,
     fresh = fresh, line = episodeLine,
     meta = listOfNotNull(foundAt?.let { "Found ${shortDate(it)}" }, bookmark.api).joinToString(" · "),
-    cta = if (fresh) "Watch now" else "Episodes",
+    cta = if (fresh) tr(R.string.watch_now, "Watch now") else "Episodes",
 )
 
 /** Series with new or next episodes, as an auto-advancing hero carousel. */
@@ -349,12 +351,12 @@ internal fun EpisodesEmpty(hasSources: Boolean, onFind: () -> Unit, onAddSources
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                if (hasSources) "No episode reminders yet" else "Add a Yumix source first",
+                if (hasSources) tr(R.string.no_episode_reminders_yet, "No episode reminders yet") else tr(R.string.add_a_yumix_source_first, "Add a Yumix source first"),
                 style = MaterialTheme.typography.titleSmall, color = p.textPrimary,
             )
             Text(
-                if (hasSources) "Follow a series with reminders on. New episodes land here."
-                else "Episodes come from the extensions you install.",
+                if (hasSources) tr(R.string.follow_a_series_with_reminders_on_2, "Follow a series with reminders on. New episodes land here.")
+                else tr(R.string.episodes_come_from_the_extensions_you, "Episodes come from the extensions you install."),
                 style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
         }

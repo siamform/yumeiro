@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.youtube
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.webkit.CookieManager
 import dev.asfakul.yumeiro.online.OnlineSettings
@@ -29,8 +31,8 @@ import org.schabi.newpipe.extractor.exceptions.SignInConfirmNotBotException
 object YtAccount {
 
     enum class Mode(val label: String, val detail: String) {
-        WHEN_BLOCKED("Only when YouTube blocks a video", "Recommended. Everything stays anonymous until YouTube refuses to play something"),
-        ALWAYS("Always", "Every YouTube request uses your account. Fewer blocks, but YouTube sees all your viewing"),
+        WHEN_BLOCKED(tr(R.string.only_when_youtube_blocks_a_video, "Only when YouTube blocks a video"), tr(R.string.recommended_everything_stays_anonymous_until_you, "Recommended. Everything stays anonymous until YouTube refuses to play something")),
+        ALWAYS("Always", tr(R.string.every_youtube_request_uses_your_account, "Every YouTube request uses your account. Fewer blocks, but YouTube sees all your viewing")),
     }
 
     data class State(val signedIn: Boolean = false, val since: Long = 0L, val mode: Mode = Mode.WHEN_BLOCKED)
@@ -198,15 +200,15 @@ object YtAccount {
         return when {
             accountCanHelp(t) -> blockedHint()
             chain.any { it is ContentNotAvailableException } ->
-                "YouTube says this video isn't available here. It may be limited to some countries, or YouTube is limiting this network. Try again later or on another network"
+                tr(R.string.youtube_says_this_video_isnt_available, "YouTube says this video isn't available here. It may be limited to some countries, or YouTube is limiting this network. Try again later or on another network")
             else -> null
         }
     }
 
     /** What to tell the user when YouTube put up a sign-in wall. */
     fun blockedHint(): String = when {
-        cookie == null -> "YouTube wants a sign-in for this video. Try another network, or sign in under Settings → YouTube account"
-        else -> "YouTube still refused this video with your account. Try again later or on another network"
+        cookie == null -> tr(R.string.youtube_wants_a_sign_in_for, "YouTube wants a sign-in for this video. Try another network, or sign in under Settings → YouTube account")
+        else -> tr(R.string.youtube_still_refused_this_video_with, "YouTube still refused this video with your account. Try again later or on another network")
     }
 
     // endregion
@@ -232,7 +234,7 @@ object YtAccount {
             val host = u.substringAfter("://")
             val domain = "." + host.removePrefix("www.").removePrefix("m.").removePrefix("music.").removePrefix("accounts.")
             for (n in names) {
-                cm.setCookie(u, "$n=; Max-Age=0; Path=/")
+                cm.setCookie(u, tr(R.string.max_age_0_path, "%1\$s=; Max-Age=0; Path=/", n))
                 cm.setCookie(u, "$n=; Max-Age=0; Path=/; Domain=$domain")
             }
         }

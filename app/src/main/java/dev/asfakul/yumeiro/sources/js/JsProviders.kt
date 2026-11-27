@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.js
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import com.lagradost.cloudstream3.DubStatus
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -68,7 +70,7 @@ internal object JsShapes {
         return Detail(o.s("name"), o.s("imageUrl"), o.s("description"), o.s("author") ?: o.s("artist"), o.s("status")?.toIntOrNull(), genres, chapters)
     }
 
-    fun status(s: Int?) = when (s) { 0 -> "Ongoing"; 1 -> "Completed"; 2 -> "On hiatus"; 3 -> "Cancelled"; 4 -> "Finished"; else -> null }
+    fun status(s: Int?) = when (s) { 0 -> "Ongoing"; 1 -> "Completed"; 2 -> tr(R.string.bs9_s_hiatus, "On hiatus"); 3 -> "Cancelled"; 4 -> "Finished"; else -> null }
 }
 
 /** A Mangayomi anime / video JavaScript source as a [MainAPI]. */

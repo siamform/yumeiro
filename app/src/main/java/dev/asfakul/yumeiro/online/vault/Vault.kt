@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.vault
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -31,7 +33,7 @@ data class VaultSource(
     val referer: String? = null,
     val userAgent: String? = null,
 ) {
-    enum class Kind(val label: String) { STREAM("Stream"), FILE("Video file"), EMBED("Player page"), LINK("Link") }
+    enum class Kind(val label: String) { STREAM("Stream"), FILE(tr(R.string.video_file, "Video file")), EMBED(tr(R.string.player_page, "Player page")), LINK("Link") }
 }
 
 data class VaultEntry(
@@ -112,13 +114,13 @@ object VaultHtml {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
-<meta name="generator" content="Yumeiro Vault">
+<meta name="generator" content=tr(R.string.yumeiro_vault, "Yumeiro Vault")>
 <title>${escape(e.title)}</title>
 <style>
   :root { color-scheme: dark light; --bg:#0d0c12; --card:#17151f; --line:#2a2733; --ink:#f3efe6; --soft:#a9a3b3; --gold:#e3b66b; }
   @media (prefers-color-scheme: light) { :root { --bg:#f7f4ee; --card:#ffffff; --line:#e7e1d6; --ink:#1d1a22; --soft:#6d6676; --gold:#a8741f; } }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui, -apple-system, tr(R.string.segoe_ui, "Segoe UI"), Roboto, tr(R.string.noto_sans, "Noto Sans"), sans-serif; }
   header { padding:20px 18px 8px; max-width:720px; margin:0 auto; }
   .mark { display:flex; align-items:center; gap:10px; letter-spacing:.14em; text-transform:uppercase; font-size:11px; font-weight:700; color:var(--gold); }
   .mark i { width:22px; height:22px; border-radius:7px; background:linear-gradient(135deg,var(--gold),#c46a8a); display:inline-block; }

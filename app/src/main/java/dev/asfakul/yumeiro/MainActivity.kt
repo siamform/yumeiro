@@ -58,6 +58,15 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // F19: Android's own per-app language page changed the language while this process ran: restart, so no
+        // text made earlier stays in the old language. Otherwise text outside screens uses this activity's language.
+        dev.asfakul.yumeiro.l10n.AppLanguage.resetCache()
+        if (dev.asfakul.yumeiro.l10n.Tr.staleFor(dev.asfakul.yumeiro.l10n.AppLanguage.saved(this))) {
+            dev.asfakul.yumeiro.l10n.AppLanguage.restartInto(this)
+            return
+        }
+        dev.asfakul.yumeiro.l10n.Tr.use(this)
+        if (dev.asfakul.yumeiro.l10n.AppLanguage.takeReopenSettings(this)) dev.asfakul.yumeiro.ui.screens.extras.AppPages.runAction("settings")
         // F-07: one result launcher for hand-offs to VLC / MX / mpv / Just (watched position comes back here).
         dev.asfakul.yumeiro.player.ExternalPlayerHost.launcher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {
             dev.asfakul.yumeiro.player.ExternalPlayerHost.onResult(it.data)

@@ -1,5 +1,6 @@
 package dev.asfakul.yumeiro.ui.screens.profiles
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.app.Activity
@@ -85,7 +86,7 @@ fun ProfilesSettings(activity: Activity?) {
                 Column(Modifier.weight(1f)) {
                     Text(p.name, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(
-                        listOfNotNull(if (p.id == current) "Watching now" else null, if (p.hasPin) "PIN" else null, if (p.biometric) "Screen lock" else null, if (!p.locked) "No lock" else null).joinToString(" · "),
+                        listOfNotNull(if (p.id == current) tr(R.string.watching_now, "Watching now") else null, if (p.hasPin) "PIN" else null, if (p.biometric) tr(R.string.screen_lock, "Screen lock") else null, if (!p.locked) tr(R.string.no_lock, "No lock") else null).joinToString(" · "),
                         color = TextTertiary, fontSize = 12.sp,
                     )
                 }
@@ -103,7 +104,7 @@ fun ProfilesSettings(activity: Activity?) {
         Text(stringResource(R.string.each_profile_has_its_own_history),
             color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp, bottom = 6.dp))
     }
-    if (adding) NameAndColourDialog("New profile", "", AccentTone.entries[list.size % AccentTone.entries.size], onDismiss = { adding = false }) { name, tone ->
+    if (adding) NameAndColourDialog(tr(R.string.new_profile, "New profile"), "", AccentTone.entries[list.size % AccentTone.entries.size], onDismiss = { adding = false }) { name, tone ->
         adding = false
         val p = Profiles.add(context, name, tone)
         AppMessages.success(context, "${p.name} added. Open it from Who's watching? or here.")
@@ -149,22 +150,22 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
             Column {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { pickPhoto() }, enabled = !photoBusy, modifier = Modifier.testTag("profile_photo_pick")) {
-                        Text(when { photoBusy -> "Saving…"; p.photo > 0L -> "Change picture"; else -> "Choose a picture" }, color = SpotifyGreen)
+                        Text(when { photoBusy -> "Saving…"; p.photo > 0L -> tr(R.string.change_picture, "Change picture"); else -> tr(R.string.choose_a_picture, "Choose a picture") }, color = SpotifyGreen)
                     }
-                    if (p.photo > 0L) TextButton(onClick = { photoScope.launch { dev.asfakul.yumeiro.profiles.ProfilePhotos.remove(context, p.id); AppMessages.success(context, "Picture removed") } },
+                    if (p.photo > 0L) TextButton(onClick = { photoScope.launch { dev.asfakul.yumeiro.profiles.ProfilePhotos.remove(context, p.id); AppMessages.success(context, tr(R.string.picture_removed, "Picture removed")) } },
                         enabled = !photoBusy, modifier = Modifier.testTag("profile_photo_remove")) { Text(stringResource(R.string.remove_picture), color = TextSecondary) }
                 }
                 ToneRow(p.tone) { Profiles.setTone(context, p.id, it) }
                 Spacer(Modifier.height(8.dp))
-                ActionRow("Rename", "profile_rename") { rename = true }
-                ActionRow(if (p.hasPin) "Change PIN" else "Set a PIN", "profile_pin") { guarded { pinError = null; settingFirst = !p.hasPin; pinStep = 1 } }
-                if (p.hasPin) ActionRow("Remove PIN", "profile_pin_remove") { guarded { Profiles.setPin(context, p.id, null); AppMessages.success(context, "PIN removed") } }
-                if (p.hasPin) ActionRow(if (p.hasRecovery) "Change security questions" else "Set security questions", "profile_recovery") { guarded { questions = true } }
-                if (p.hasRecovery) ActionRow("Remove security questions", "profile_recovery_remove") { guarded { Profiles.setRecovery(context, p.id, emptyList(), emptyList()); AppMessages.success(context, "Security questions removed") } }
+                ActionRow(tr(R.string.rename, "Rename"), "profile_rename") { rename = true }
+                ActionRow(if (p.hasPin) tr(R.string.change_pin, "Change PIN") else tr(R.string.set_a_pin, "Set a PIN"), "profile_pin") { guarded { pinError = null; settingFirst = !p.hasPin; pinStep = 1 } }
+                if (p.hasPin) ActionRow(tr(R.string.remove_pin, "Remove PIN"), "profile_pin_remove") { guarded { Profiles.setPin(context, p.id, null); AppMessages.success(context, tr(R.string.pin_removed, "PIN removed")) } }
+                if (p.hasPin) ActionRow(if (p.hasRecovery) tr(R.string.change_security_questions, "Change security questions") else tr(R.string.set_security_questions, "Set security questions"), "profile_recovery") { guarded { questions = true } }
+                if (p.hasRecovery) ActionRow(tr(R.string.remove_security_questions, "Remove security questions"), "profile_recovery_remove") { guarded { Profiles.setRecovery(context, p.id, emptyList(), emptyList()); AppMessages.success(context, tr(R.string.security_questions_removed, "Security questions removed")) } }
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.unlock_with_the_phones_lock), color = TextPrimary, fontSize = 14.sp)
-                        Text(if (Privacy.canAuthenticate(context)) "Fingerprint, face or screen lock" else "Set a screen lock in Android settings first", color = TextTertiary, fontSize = 12.sp)
+                        Text(if (Privacy.canAuthenticate(context)) tr(R.string.fingerprint_face_or_screen_lock, "Fingerprint, face or screen lock") else tr(R.string.set_a_screen_lock_in_android, "Set a screen lock in Android settings first"), color = TextTertiary, fontSize = 12.sp)
                     }
                     Switch(p.biometric, onCheckedChange = { on ->
                         if (!on) Profiles.setBiometric(context, p.id, false)
@@ -172,7 +173,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
                     }, modifier = Modifier.testTag("profile_bio"))
                 }
                 if (!isCurrent && activity != null) ActionRow("Switch to ${p.name}", "profile_switch") { ProfileSession.open(activity, p.id) }
-                if (p.id != Profiles.DEFAULT) ActionRow("Delete profile", "profile_delete", danger = true) { confirmDelete = true }
+                if (p.id != Profiles.DEFAULT) ActionRow(tr(R.string.delete_profile, "Delete profile"), "profile_delete", danger = true) { confirmDelete = true }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
@@ -180,12 +181,12 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
     if (questions) SecurityQuestionsDialog(p) { questions = false }
     if (rename) NameAndColourDialog("Rename", p.name, null, onDismiss = { rename = false }) { name, _ -> rename = false; Profiles.rename(context, p.id, name) }
     if (pinStep > 0) PinPadDialog(
-        title = if (pinStep == 1) "New PIN for ${p.name}" else "Repeat the PIN",
-        subtitle = "4 to 8 digits", error = pinError,
+        title = if (pinStep == 1) "New PIN for ${p.name}" else tr(R.string.repeat_the_pin, "Repeat the PIN"),
+        subtitle = tr(R.string.t_4_to_8_digits, "4 to 8 digits"), error = pinError,
         onDismiss = { pinStep = 0 },
         onPin = { pin ->
             if (pinStep == 1) { firstPin = pin; pinError = null; pinStep = 2 }
-            else if (pin != firstPin) { pinError = "The PINs don't match"; pinStep = 1 }
+            else if (pin != firstPin) { pinError = tr(R.string.the_pins_dont_match, "The PINs don't match"); pinStep = 1 }
             else {
                 val askQuestions = ProfilePinGuard.askQuestionsAfterSet(settingFirst, p)
                 Profiles.setPin(context, p.id, pin); pinStep = 0; AppMessages.success(context, "PIN set for ${p.name}")
@@ -198,10 +199,10 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
         if (activity != null) UnlockProfileDialog(activity, p, title = title, onDismiss = { guard = null }, onUnlocked = { guard = null; action() })
         else {
             var err by remember { mutableStateOf<String?>(null) }
-            PinPadDialog(title = title, subtitle = "Enter the PIN", error = err, onDismiss = { guard = null }, onPin = { pin ->
+            PinPadDialog(title = title, subtitle = tr(R.string.enter_the_pin, "Enter the PIN"), error = err, onDismiss = { guard = null }, onPin = { pin ->
                 when (Profiles.checkPin(context, p.id, pin)) {
                     Profiles.PinCheck.OK, Profiles.PinCheck.NO_PIN -> { guard = null; action() }
-                    Profiles.PinCheck.WRONG -> err = "Wrong PIN"
+                    Profiles.PinCheck.WRONG -> err = tr(R.string.wrong_pin, "Wrong PIN")
                     Profiles.PinCheck.LOCKED_OUT -> err = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, p.id))}"
                 }
             })

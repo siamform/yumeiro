@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -84,7 +85,7 @@ internal fun MarketInfoSheet(
                 ext.language?.takeIf { it.isNotBlank() }?.let { "Language" to it.uppercase() },
                 ext.tvTypes.takeIf { it.isNotEmpty() }?.let { "Content" to it.joinToString(", ") },
                 "Repository" to ext.repoName,
-                ext.copies.takeIf { it > 1 }?.let { "Copies" to "Published in $it repositories" },
+                ext.copies.takeIf { it > 1 }?.let { "Copies" to tr(R.string.published_in_repositories, "Published in %1\$s repositories", it) },
                 "Installed" to (installedVersion?.let { "v$it" + if (hasUpdate) " (v${ext.version} available)" else "" } ?: "No"),
                 "Works with" to if (ext.apiVersion <= OnlineRuntime.API_VERSION) "This version of Yumeiro" else "A newer Yumeiro (needs plugin API ${ext.apiVersion})",
             )

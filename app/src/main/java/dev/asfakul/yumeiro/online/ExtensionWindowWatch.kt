@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -195,7 +197,7 @@ object ExtensionWindowWatch {
     private fun frame(view: View, lp: WindowManager.LayoutParams, extName: String) {
         if (!framed.add(view)) return // a dialog shown again keeps its first frame
         if (lp.title.isNullOrBlank() || lp.title.toString().contains("Activity")) {
-            lp.title = "From extension: $extName"
+            lp.title = tr(R.string.from_extension, "From extension: %1\$s", extName)
             runCatching { windowManager?.updateViewLayout(view, lp) }
         }
         val density = view.resources.displayMetrics.density
@@ -234,7 +236,7 @@ object ExtensionWindowWatch {
         for (f in stack) {
             val c = f.className
             if (!isExtensionClass(c)) continue
-            return ExtensionManager.extensionForClass(c) ?: ("unknown" to "An extension")
+            return ExtensionManager.extensionForClass(c) ?: ("unknown" to tr(R.string.an_extension, "An extension"))
         }
         return null
     }

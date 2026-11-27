@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.Manifest
@@ -76,8 +77,8 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
             Text(stringResource(R.string.keep_notifications_on_time), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(Modifier.height(6.dp))
             Text(
-                if (status.stalled) "Yumeiro's background checks haven't run for a while, so alerts arrive late. These settings let them run while the app is closed."
-                else "Android and your phone maker can stop apps that are closed. Check each item once.",
+                if (status.stalled) tr(R.string.yumeiros_background_checks_havent_run_for, "Yumeiro's background checks haven't run for a while, so alerts arrive late. These settings let them run while the app is closed.")
+                else tr(R.string.android_and_your_phone_maker_can, "Android and your phone maker can stop apps that are closed. Check each item once."),
                 color = TextSecondary, fontSize = 14.sp,
             )
             Spacer(Modifier.height(14.dp))
@@ -107,7 +108,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
                         onClick = { ReliabilityGuide.markVendorDone(context, !status.vendorDone); tick++ },
                         colors = ButtonDefaults.buttonColors(containerColor = if (status.vendorDone) TextSecondary else SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.weight(1f).testTag("guide_vendor_done"),
-                    ) { Text(if (status.vendorDone) "Done ✓" else "I did this") }
+                    ) { Text(if (status.vendorDone) "Done ✓" else tr(R.string.i_did_this, "I did this")) }
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -115,7 +116,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
                 onClick = onClose, shape = yuRound(16),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                 modifier = Modifier.fillMaxWidth().height(48.dp).testTag("guide_close"),
-            ) { Text(if (status.allGood) "All set" else "Close", fontWeight = FontWeight.Bold) }
+            ) { Text(if (status.allGood) tr(R.string.all_set, "All set") else "Close", fontWeight = FontWeight.Bold) }
         }
     }
     if (inline || dev.asfakul.yumeiro.ui.components.LocalPopupPreview.current) { ReminderSurface("reliability_guide", Modifier.padding(horizontal = 20.dp), body); return }

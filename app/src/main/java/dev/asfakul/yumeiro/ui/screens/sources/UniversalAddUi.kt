@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.net.Uri
@@ -85,7 +86,7 @@ fun UniversalAddDialog(onDismiss: () -> Unit, onServer: (UniversalAdd.Outcome) -
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     InputDialog(
-        title = "Add anything", label = "Link or short code",
+        title = tr(R.string.add_anything, "Add anything"), label = tr(R.string.link_or_short_code, "Link or short code"),
         hint = ".cs3, repo.json, plugins.json, index.min.json, manifest.json, stremio://, aniyomi://, a GitHub repo or a server",
         confirm = "Add", onDismiss = onDismiss,
     ) { text, done ->

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.ecosystem
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.sources.SourceHub
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -108,7 +110,7 @@ object CloudStreamRepoParser : ManifestParser {
 
     override fun parse(root: JsonElement, sourceUrl: String): ParsedRepo = with(RepoFormats) {
         val o = root as JsonObject
-        ParsedRepo(SourceHub.Ecosystem.CLOUDSTREAM, format, o.s("name") ?: "CloudStream repository", emptyList(),
+        ParsedRepo(SourceHub.Ecosystem.CLOUDSTREAM, format, o.s("name") ?: tr(R.string.cloudstream_repository, "CloudStream repository"), emptyList(),
             o.strings("pluginLists").map { resolve(sourceUrl, it) })
     }
 }
@@ -124,7 +126,7 @@ object NuvioManifestParser : ManifestParser {
     }
 
     override fun parse(root: JsonElement, sourceUrl: String): ParsedRepo = with(RepoFormats) {
-        val name = (root as? JsonObject)?.s("name") ?: "Nuvio scrapers"
+        val name = (root as? JsonObject)?.s("name") ?: tr(R.string.nuvio_scrapers, "Nuvio scrapers")
         val list = (root as? JsonObject)?.get("scrapers") ?: root
         val plugins = list.objects().filter(::isScraper).map { o ->
             val id = safeId(o.s("id")!!)
@@ -161,7 +163,7 @@ object VegaManifestParser : ManifestParser {
                 disabled = o.b("disabled") == true,
             )
         }
-        ParsedRepo(SourceHub.Ecosystem.VEGA, format, "Vega providers", plugins)
+        ParsedRepo(SourceHub.Ecosystem.VEGA, format, tr(R.string.vega_providers, "Vega providers"), plugins)
     }
 }
 
@@ -174,7 +176,7 @@ object SkyStreamRepoParser : ManifestParser {
     override fun parse(root: JsonElement, sourceUrl: String): ParsedRepo = with(RepoFormats) {
         val o = root as JsonObject
         val children = (o.strings("pluginLists") + o.strings("repos")).map { resolve(sourceUrl, it) }
-        ParsedRepo(SourceHub.Ecosystem.SKYSTREAM, format, o.s("name") ?: "SkyStream repository", emptyList(), children)
+        ParsedRepo(SourceHub.Ecosystem.SKYSTREAM, format, o.s("name") ?: tr(R.string.skystream_repository, "SkyStream repository"), emptyList(), children)
     }
 
     /**

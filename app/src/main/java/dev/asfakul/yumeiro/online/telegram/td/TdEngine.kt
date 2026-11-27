@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.telegram.td
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +79,7 @@ object TdEngine {
         withContext(Dispatchers.IO) {
             lock.withLock {
                 if (loaded) return@withLock true
-                val pin = pick(abis, pins) ?: run { _state.value = State.Failed("Telegram sign-in isn't available for this device yet."); return@withLock false }
+                val pin = pick(abis, pins) ?: run { _state.value = State.Failed(tr(R.string.telegram_sign_in_isnt_available_for, "Telegram sign-in isn't available for this device yet.")); return@withLock false }
                 val dir = File(context.noBackupFilesDir, "tdlib/${TD_COMMIT.take(8)}/${pin.abi}")
                 val lib = File(dir, "libtdjsonjava.so")
                 try {
@@ -100,9 +102,9 @@ object TdEngine {
                 } catch (e: Throwable) {
                     _state.value = State.Failed(
                         when (e) {
-                            is SecurityException -> "The Telegram engine download was damaged and was deleted. Try again."
-                            is UnsatisfiedLinkError -> "The Telegram engine can't run on this device."
-                            else -> "Couldn't download the Telegram engine. Check your connection and try again."
+                            is SecurityException -> tr(R.string.the_telegram_engine_download_was_damaged, "The Telegram engine download was damaged and was deleted. Try again.")
+                            is UnsatisfiedLinkError -> tr(R.string.the_telegram_engine_cant_run_on, "The Telegram engine can't run on this device.")
+                            else -> tr(R.string.couldnt_download_the_telegram_engine_check, "Couldn't download the Telegram engine. Check your connection and try again.")
                         }
                     )
                     false

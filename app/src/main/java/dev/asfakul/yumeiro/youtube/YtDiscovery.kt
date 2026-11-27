@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.youtube
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import java.text.Normalizer
 import java.util.Locale
@@ -78,24 +80,24 @@ object YtDiscovery {
         val mine = input.history.filter { it.music == m }
         // 1. "Because you played": related lists for the two most recent distinct plays.
         mine.distinctBy { it.id }.take(2).forEach {
-            add(YtFeed(YtFeed.Kind.RELATED, it.id, it.title.take(60), if (m) "Because you listened to" else "Because you watched", m))
+            add(YtFeed(YtFeed.Kind.RELATED, it.id, it.title.take(60), if (m) tr(R.string.because_you_listened_to, "Because you listened to") else tr(R.string.because_you_watched, "Because you watched"), m))
         }
         // 2. Channels / artists you come back to (at least twice).
         mine.mapNotNull { it.channel.removeSuffix(" - Topic").trim().takeIf { c -> c.isNotEmpty() } }
             .groupingBy { it }.eachCount().filter { it.value >= 2 }
             .entries.sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
             .take(2).forEach { (channel, _) ->
-                add(YtFeed(YtFeed.Kind.QUERY, if (m) "$channel songs" else channel, channel, if (m) "Artist you play" else "Channel you watch", m))
+                add(YtFeed(YtFeed.Kind.QUERY, if (m) "$channel songs" else channel, channel, if (m) tr(R.string.artist_you_play, "Artist you play") else tr(R.string.channel_you_watch, "Channel you watch"), m))
             }
         // 3. Your topics, in your order.
         input.topics.forEach { add(YtFeed(YtFeed.Kind.QUERY, it, it, "Your topic", m)) }
         // 4. Your newest searches (skipping ones that are already a topic).
-        input.searches.take(4).forEach { if (out.size < input.maxFeeds) add(YtFeed(YtFeed.Kind.QUERY, it, it, "From your searches", m)) }
+        input.searches.take(4).forEach { if (out.size < input.maxFeeds) add(YtFeed(YtFeed.Kind.QUERY, it, it, tr(R.string.from_your_searches, "From your searches"), m)) }
         // 5. Live chart.
-        if (m) add(YtFeed(YtFeed.Kind.KIOSK, "trending_music", "Trending music", "Trending", true))
+        if (m) add(YtFeed(YtFeed.Kind.KIOSK, "trending_music", tr(R.string.trending_music, "Trending music"), "Trending", true))
         else {
-            add(YtFeed(YtFeed.Kind.KIOSK, "trending_gaming", "Trending in gaming", "Trending", false))
-            add(YtFeed(YtFeed.Kind.KIOSK, "live", "Live now", "Trending", false))
+            add(YtFeed(YtFeed.Kind.KIOSK, "trending_gaming", tr(R.string.trending_in_gaming, "Trending in gaming"), "Trending", false))
+            add(YtFeed(YtFeed.Kind.KIOSK, "live", tr(R.string.live_now, "Live now"), "Trending", false))
         }
         // 6. Explore mix: 3 picks from the pool, rotated daily / on shuffle.
         rotate(if (m) MUSIC_POOL else VIDEO_POOL, input.rotation).take(3).forEach {

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.classics
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -43,7 +45,7 @@ import org.json.JSONObject
  * title/subject words. Built in and on by default (like Yumeiro Drama); one tap turns it off.
  */
 object YumeiroClassics {
-    const val NAME = "Yumeiro Classics"
+    val NAME: String get() = tr(R.string.yumeiro_classics, "Yumeiro Classics")
     private const val PREFS = "yumeiro_classics"
     private const val BRIDGE = "classics"
 
@@ -142,7 +144,7 @@ class YumeiroClassicsProvider(
     }
 
     private suspend fun query(q: String, page: Int): List<Doc> {
-        val full = "($q) AND mediatype:movies AND NOT title:($ADULT_Q) AND NOT subject:($ADULT_Q)"
+        val full = tr(R.string.and_mediatype_movies_and_not_title, "(%1\$s) AND mediatype:movies AND NOT title:(%2\$s) AND NOT subject:(%3\$s)", q, ADULT_Q, ADULT_Q)
         val url = "$mainUrl/advancedsearch.php?q=${enc(full)}&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&fl%5B%5D=subject" +
             "&sort%5B%5D=downloads+desc&rows=$ROWS&page=${page.coerceAtLeast(1)}&output=json"
         val docs = fetch(url)?.let { runCatching { JSONObject(it).optJSONObject("response")?.optJSONArray("docs") }.getOrNull() } ?: return emptyList()
@@ -220,7 +222,7 @@ class YumeiroClassicsProvider(
         internal fun subtitles(files: JSONArray): List<Pair<String, String>> =
             (0 until files.length()).mapNotNull { files.optJSONObject(it)?.optString("name") }
                 .filter { it.endsWith(".srt", true) || it.endsWith(".vtt", true) }
-                .map { n -> (if (".asr." in n) "English (auto)" else "English") to n }
+                .map { n -> (if (".asr." in n) tr(R.string.english_auto, "English (auto)") else "English") to n }
                 .take(2)
 
         suspend fun httpGet(url: String, timeoutSec: Long = 20): String? = withContext(Dispatchers.IO) {

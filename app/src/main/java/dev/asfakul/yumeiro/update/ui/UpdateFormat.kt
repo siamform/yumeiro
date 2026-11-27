@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.update.ui
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.update.UpdateState
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -57,19 +59,19 @@ internal fun formatBytes(bytes: Long): String {
 internal fun eta(s: UpdateState.Downloading): String {
     if (s.bytesPerSecond <= 0 || s.totalBytes <= 0) return "calculating…"
     val secs = ((s.totalBytes - s.downloadedBytes) / s.bytesPerSecond).coerceAtLeast(0)
-    return if (secs >= 60) "${secs / 60} min ${secs % 60} s left" else "$secs s left"
+    return if (secs >= 60) "${secs / 60} min ${secs % 60} s left" else tr(R.string.s_left, "%1\$s s left", secs)
 }
 
 internal fun formatDate(iso: String): String = runCatching {
     val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-    SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(parser.parse(iso)!!)
+    SimpleDateFormat(tr(R.string.mmm_d_yyyy, "MMM d, yyyy"), Locale.getDefault()).format(parser.parse(iso)!!)
 }.getOrDefault("Latest")
 
 internal fun formatRelative(epochMillis: Long, now: Long = System.currentTimeMillis()): String {
     if (epochMillis <= 0) return "Never"
     val diff = (now - epochMillis) / 1000
     return when {
-        diff < 60 -> "Just now"
+        diff < 60 -> tr(R.string.just_now, "Just now")
         diff < 3600 -> "${diff / 60} min ago"
         diff < 86_400 -> "${diff / 3600} h ago"
         else -> "${diff / 86_400} d ago"

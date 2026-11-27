@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.notify
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,10 +26,10 @@ object Inbox {
     private const val MAX = 100
 
     enum class Kind(val label: String) {
-        EPISODE("New episode"), EXTENSION("Extensions"), PLAYLIST("Streams"), UPDATE("App update"),
-        NEWS("What's new"), NUDGE("For you"), INFO("Yumeiro"),
+        EPISODE(tr(R.string.new_episode_2, "New episode")), EXTENSION("Extensions"), PLAYLIST("Streams"), UPDATE(tr(R.string.app_update, "App update")),
+        NEWS(tr(R.string.whats_new, "What's new")), NUDGE(tr(R.string.for_you_2, "For you")), INFO("Yumeiro"),
         /** Maintenance / outage notices and messages for this device (push). */
-        ALERT("Service alert");
+        ALERT(tr(R.string.service_alert, "Service alert"));
         companion object { fun of(s: String?) = entries.firstOrNull { it.name.equals(s, true) } ?: INFO }
     }
 

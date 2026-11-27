@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.js
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import dev.asfakul.yumeiro.network.NetworkClient
@@ -45,7 +47,7 @@ object JsSources {
         val itemType get() = raw.s("itemType")?.toIntOrNull() ?: if (raw.s("isManga") == "false") 1 else 0
         val nsfw get() = raw.s("isNsfw") == "true"
         val isJs get() = raw.s("sourceCodeLanguage") == "1"
-        val kindLabel get() = when (itemType) { 0 -> "Manga"; 1 -> "Anime / video"; else -> "Novel" }
+        val kindLabel get() = when (itemType) { 0 -> "Manga"; 1 -> tr(R.string.anime_video, "Anime / video"); else -> "Novel" }
     }
 
     data class State(val repos: List<String> = emptyList(), val installed: List<Entry> = emptyList())

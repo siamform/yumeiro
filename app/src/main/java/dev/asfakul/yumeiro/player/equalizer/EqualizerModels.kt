@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.player.equalizer
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 data class EqualizerBand(
     val bandIndex: Short,
     val centerFreqHz: Int,
@@ -33,7 +36,7 @@ data class EqualizerBand(
 data class EqualizerState(
     val isEnabled: Boolean = false,
     val currentPreset: String = "Normal",
-    val presets: List<String> = listOf("Normal", "Rock", "Pop", "Jazz", "Classical", "Dance", "Bass Boost", "Custom"),
+    val presets: List<String> = listOf("Normal", "Rock", "Pop", "Jazz", "Classical", "Dance", tr(R.string.bass_boost_2, "Bass Boost"), "Custom"),
     val bands: List<EqualizerBand> = emptyList(),
     val isBassBoostSupported: Boolean = false,
     val bassBoostStrength: Int = 0, // 0 to 1000

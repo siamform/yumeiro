@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -73,7 +74,7 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().testTag("watch_together")) {
-        SubPageHeader(title = "Watch together", onBack = onBack, subtitle = "Same Wi-Fi · no account needed")
+        SubPageHeader(title = tr(R.string.watch_together, "Watch together"), onBack = onBack, subtitle = tr(R.string.same_wi_fi_no_account_needed, "Same Wi-Fi · no account needed"))
         LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("watch_together"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (status.role) {
                 WatchTogether.Role.HOST -> item("host") {
@@ -83,7 +84,7 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
                             Text(stringResource(R.string.room_code), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
                             Text(status.code, color = TextPrimary, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                             Text(stringResource(R.string.address_watching, status.address, status.guests), color = TextSecondary, fontSize = 13.sp)
-                            Text(if (status.state.title.isBlank()) "Play something from Videos → Online. Everyone in the room follows your title, episode, pause and seek."
+                            Text(if (status.state.title.isBlank()) tr(R.string.play_something_from_videos_online_everyone, "Play something from Videos → Online. Everyone in the room follows your title, episode, pause and seek.")
                                 else "Now: ${status.state.title}", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                             Spacer(Modifier.height(10.dp))
                             OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = yuRound(20)) { Text(stringResource(R.string.close_room)) }
@@ -94,7 +95,7 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
                     Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Text(if (status.connected) "In \"${status.roomName}\"" else "Connecting to \"${status.roomName}\"…", color = TextPrimary, fontWeight = FontWeight.Bold)
-                            Text(status.state.title.ifBlank { "Waiting for the host to play something" }, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                            Text(status.state.title.ifBlank { tr(R.string.waiting_for_the_host_to_play, "Waiting for the host to play something") }, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                             status.message?.let { Text(it, color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
                             Text(stringResource(R.string.you_need_the_same_source_installed), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                             Spacer(Modifier.height(10.dp))
@@ -113,7 +114,7 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
                             OutlinedButton(onClick = { manual = true }, shape = yuRound(20)) { Text(stringResource(R.string.join_by_address)) }
                         }
                     }
-                    item("nearby") { SectionTitle("Rooms nearby", if (found.isEmpty()) "Looking on this Wi-Fi…" else null) }
+                    item("nearby") { SectionTitle(tr(R.string.rooms_nearby, "Rooms nearby"), if (found.isEmpty()) tr(R.string.looking_on_this_wi_fi, "Looking on this Wi-Fi…") else null) }
                     if (found.isEmpty()) item("nearby_empty") {
                         Row(
                             Modifier.fillMaxWidth().clip(yuRound(18)).background(GlassFill).padding(16.dp).testTag("wt_nearby_empty"),

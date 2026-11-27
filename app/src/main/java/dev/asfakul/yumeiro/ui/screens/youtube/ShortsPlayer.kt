@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.view.ViewGroup
@@ -223,7 +224,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                 framed[id] = true
             }
             override fun onPlayerError(error: PlaybackException) {
-                currentNow.value?.let { failed[it.id] = "This Short couldn't play." }
+                currentNow.value?.let { failed[it.id] = tr(R.string.this_short_couldnt_play, "This Short couldn't play.") }
             }
         }
         l.addListener(listener)

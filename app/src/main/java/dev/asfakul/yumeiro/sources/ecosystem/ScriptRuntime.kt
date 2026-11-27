@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.ecosystem
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.sources.js.QuickJsGuard
 import android.content.Context
 import android.content.pm.PackageManager
@@ -164,5 +166,5 @@ object ScriptRuntime {
 
     class ScriptException(message: String, cause: Throwable? = null) : IllegalStateException(message, cause)
 
-    const val STOPPED = "This source took too long and was stopped"
+    val STOPPED: String get() = tr(R.string.this_source_took_too_long_and, "This source took too long and was stopped")
 }

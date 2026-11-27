@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -88,7 +89,7 @@ import kotlinx.coroutines.launch
 import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private enum class MarketTab(val label: String) { DISCOVER("Discover"), REPOS("Repositories"), INSTALLED("Installed") }
-private enum class MarketSort(val label: String) { TOP("Top"), UPDATED("Recently updated"), NAME("A–Z") }
+private enum class MarketSort(val label: String) { TOP("Top"), UPDATED(tr(R.string.recently_updated, "Recently updated")), NAME("A–Z") }
 
 /**
  * Videos → Online → Market. Every extension the market workflow found (curated, CloudStream's
@@ -192,18 +193,18 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("market_screen")) {
         SubPageHeader(
-            title = "Extension market", onBack = onBack,
+            title = tr(R.string.extension_market, "Extension market"), onBack = onBack,
             subtitle = data?.let { d -> "${safe.count { it.primary }} extensions · ${d.repos.size} repositories" } ?: "Loading…",
         ) {
             if (tab != MarketTab.REPOS) {
-                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "market_search_toggle", "Search the market")
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "market_search_toggle", tr(R.string.search_the_market, "Search the market"))
             }
             if (tab == MarketTab.DISCOVER) dev.asfakul.yumeiro.ui.components.FilterIconButton(activeFilters, { showFilters = true }, "market_filter")
             IconButton(onClick = { showRepoDialog = true }, modifier = Modifier.testTag("market_add_repo")) { Icon(Icons.Default.Add, stringResource(R.string.add_repository), tint = TextPrimary) }
         }
         dev.asfakul.yumeiro.ui.components.HeaderSearchField(
             open = tab != MarketTab.REPOS && (searchOpen || query.isNotEmpty()), query = query, onQuery = { query = it },
-            placeholder = "Name, site, author or repository", tag = "market_search",
+            placeholder = tr(R.string.name_site_author_or_repository, "Name, site, author or repository"), tag = "market_search",
         )
         // B2: the tab switch and the applied-filter chips slide away on scroll down, back on scroll up.
         dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = tab, header = {
@@ -251,7 +252,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
         when {
             data == null && error == null -> Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { repeat(6) { SkeletonRow(trailing = true) } }
             data == null || (data?.items?.isEmpty() == true && error != null && tab != MarketTab.REPOS) -> StateMessage(
-                Icons.Default.CloudOff, "Market unavailable", error ?: "Check your connection and try again.", tint = ErrorColor,
+                Icons.Default.CloudOff, tr(R.string.market_unavailable, "Market unavailable"), error ?: tr(R.string.check_your_connection_and_try_again, "Check your connection and try again."), tint = ErrorColor,
                 primary = "Retry" to { scope.launch { error = null; data = null; load(true) } },
                 secondary = "Add a repository" to { showRepoDialog = true }, testTag = "market_error",
                 modifier = Modifier.padding(top = 32.dp),
@@ -268,8 +269,8 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
             }
             else -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { load(true) } }, modifier = Modifier.fillMaxSize()) {
                 if (visible.isEmpty() && !(tab == MarketTab.DISCOVER && category == "Short drama")) StateMessage(
-                    Icons.Default.SearchOff, "Nothing here",
-                    when { query.isNotBlank() -> "No extension matches \"$query\"."; tab == MarketTab.INSTALLED -> "You haven't installed any extension yet."; else -> "No extensions in this list yet." },
+                    Icons.Default.SearchOff, tr(R.string.nx_all_none_title, "Nothing here"),
+                    when { query.isNotBlank() -> tr(R.string.no_extension_matches, "No extension matches \"%1\$s\".", query); tab == MarketTab.INSTALLED -> tr(R.string.you_havent_installed_any_extension_yet, "You haven't installed any extension yet."); else -> tr(R.string.no_extensions_in_this_list_yet, "No extensions in this list yet.") },
                     tint = TextSecondary, testTag = "market_empty", modifier = Modifier.padding(top = 32.dp),
                 )
                 else LazyColumn(Modifier.fillMaxSize().testTag("market_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("market_list"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -321,7 +322,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
         onReset = if (activeFilters > 0) ({ category = "All"; language = null; sort = MarketSort.TOP; repoFilter = null; originFilter = null; repoQuery = "" }) else null,
         resultCount = visible.size, tag = "market_filter_sheet",
     ) {
-        dev.asfakul.yumeiro.ui.components.FilterGroup("Sort by") {
+        dev.asfakul.yumeiro.ui.components.FilterGroup(tr(R.string.sort_by, "Sort by")) {
             MarketSort.entries.forEach { s2 -> OnlineChip(s2.label, s2 == sort, { sort = s2 }, Modifier.testTag("market_sort_${s2.name.lowercase()}")) }
         }
         dev.asfakul.yumeiro.ui.components.FilterGroup("Category") {
@@ -369,7 +370,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
         )
     }
     if (showRepoDialog) InputDialog(
-        title = "Add repository", label = "Repository link", hint = "https://…/repo.json or a GitHub repo",
+        title = tr(R.string.add_repository, "Add repository"), label = tr(R.string.repository_link, "Repository link"), hint = "https://…/repo.json or a GitHub repo",
         confirm = "Add", onDismiss = { showRepoDialog = false },
     ) { text, done ->
         scope.launch {
@@ -414,10 +415,10 @@ private fun RepoCard(r: ExtensionSources.RepoListing, onOpen: () -> Unit) {
 @Composable
 private fun OriginPill(origin: String, verified: Boolean) {
     when {
-        origin == "curated" || (verified && origin != "user") -> Pill("Curated", SpotifyGreen)
-        origin == "community" -> Pill("Community", TextSecondary)
-        origin == "discovered" -> Pill("Discovered", WarnColor)
-        else -> Pill("Added by you", TextSecondary)
+        origin == "curated" || (verified && origin != "user") -> Pill(tr(R.string.curated, "Curated"), SpotifyGreen)
+        origin == "community" -> Pill(tr(R.string.community, "Community"), TextSecondary)
+        origin == "discovered" -> Pill(tr(R.string.discovered, "Discovered"), WarnColor)
+        else -> Pill(tr(R.string.added_by_you, "Added by you"), TextSecondary)
     }
 }
 
@@ -488,8 +489,8 @@ private fun MarketCard(
                 ext.language?.takeIf { it.isNotBlank() && (!rich || dev.asfakul.yumeiro.online.ExtensionLabels.langCode(it) == null) }?.let { Pill(it.uppercase(), TextSecondary) }
                 ext.categories.take(3).forEach { Pill(it, TextSecondary) }
                 if (ext.origin != "curated") OriginPill(ext.origin, ext.verified)
-                if (ext.apiVersion > OnlineRuntime.API_VERSION) Pill("Needs app update", ErrorColor)
-                if (ext.compatNote != null) Pill("May not work", WarnColor)
+                if (ext.apiVersion > OnlineRuntime.API_VERSION) Pill(tr(R.string.needs_app_update, "Needs app update"), ErrorColor)
+                if (ext.compatNote != null) Pill(tr(R.string.may_not_work, "May not work"), WarnColor)
             }
             ext.compatNote?.let {
                 Spacer(Modifier.height(6.dp))

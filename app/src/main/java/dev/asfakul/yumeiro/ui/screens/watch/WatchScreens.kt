@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -158,7 +159,7 @@ fun PlayerBrandBar(
     onMinimize: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    minimizeLabel: String = "Minimize player",
+    minimizeLabel: String = tr(R.string.minimize_player, "Minimize player"),
 ) {
     val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     val brush = remember(p.textPrimary, p.accentBright) { Brush.linearGradient(listOf(p.textPrimary, p.accentBright)) }
@@ -477,7 +478,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, o
             val views = (info?.views ?: item.views).takeIf { it >= 0 }?.let { formatYtViews(it) }
             WatchTitle(
                 title = info?.title ?: item.title,
-                overline = if (item.music) "YouTube Music" else if (item.live) "Live" else "YouTube",
+                overline = if (item.music) tr(R.string.youtube_music, "YouTube Music") else if (item.live) "Live" else "YouTube",
                 meta = listOfNotNull(views, info?.uploaded ?: item.uploaded, item.durationSec.takeIf { it > 0 }?.let { formatYtDuration(it) }, info?.category).joinToString(" · "),
             )
             PlaybackFactsRow()
@@ -486,7 +487,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, o
             // BUG-2 (E1): the channel row opens the channel (it had no click).
             val chUrl = info?.channelUrl ?: item.channelUrl
             val chName = info?.channel ?: item.channel
-            val open = if (chUrl != null && onOpenChannel != null) Modifier.clickable(onClickLabel = "Open channel") { onOpenChannel(chUrl, chName) } else Modifier
+            val open = if (chUrl != null && onOpenChannel != null) Modifier.clickable(onClickLabel = tr(R.string.open_channel, "Open channel")) { onOpenChannel(chUrl, chName) } else Modifier
             Row(Modifier.fillMaxWidth().then(open).testTag("yt_watch_channel").padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 val avatar = info?.channelAvatar ?: item.channelAvatar
                 Box(
@@ -512,14 +513,14 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, o
                 if (!item.live) WatchAction(Icons.Default.Download, "Download", "yt_watch_download") { ytDownload = true }
                 WatchAction(Icons.Default.Share, "Share", "yt_watch_share") {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "${item.title}\n${item.url}")
-                    runCatching { context.startActivity(Intent.createChooser(send, "Share video").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    runCatching { context.startActivity(Intent.createChooser(send, tr(R.string.share_video, "Share video")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }
-                WatchAction(Icons.Default.ContentCopy, "Copy link", "yt_watch_copy") {
+                WatchAction(Icons.Default.ContentCopy, tr(R.string.copy_link, "Copy link"), "yt_watch_copy") {
                     val cm = context.getSystemService(android.content.ClipboardManager::class.java)
-                    cm?.setPrimaryClip(android.content.ClipData.newPlainText("YouTube link", item.url))
-                    dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Link copied")
+                    cm?.setPrimaryClip(android.content.ClipData.newPlainText(tr(R.string.youtube_link, "YouTube link"), item.url))
+                    dev.asfakul.yumeiro.ui.components.AppMessages.success(context, tr(R.string.link_copied, "Link copied"))
                 }
-                WatchAction(Icons.AutoMirrored.Filled.OpenInNew, "Open in browser", "yt_watch_open") {
+                WatchAction(Icons.AutoMirrored.Filled.OpenInNew, tr(R.string.open_in_browser, "Open in browser"), "yt_watch_open") {
                     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 }
             }
@@ -534,7 +535,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, o
                 WatchDescription(info.description, header = watchTags.takeIf { it.isNotEmpty() }?.joinToString("  ") { "#" + it.replace(" ", "") })
             }
         }
-        item(key = "upnext") { WatchSectionLabel("Up next", if (state.related.isNotEmpty()) "${state.related.size} videos" else null) }
+        item(key = "upnext") { WatchSectionLabel(tr(R.string.up_next, "Up next"), if (state.related.isNotEmpty()) "${state.related.size} videos" else null) }
         if (state.loading) {
             items(6, key = { "yt_sk_$it" }) { Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) { WatchRowSkeleton() } }
         } else if (state.related.isEmpty()) {
@@ -586,7 +587,7 @@ fun YouTubeWatchLayer(playerOpen: Boolean, onPlay: (YtItem) -> Unit, onOpenChann
         screen = {
             val err = state.error
             if (err != null) WatchScreenError("YouTube couldn't play this video: $err", onRetry = { onPlay(state.item) }, onClose = close)
-            else WatchScreenStatus(if (state.item.live) "Joining the live stream…" else "Loading video…", onCancel = close)
+            else WatchScreenStatus(if (state.item.live) tr(R.string.joining_the_live_stream, "Joining the live stream…") else tr(R.string.loading_video, "Loading video…"), onCancel = close)
         },
     ) {
         // BUG-2 (E6): the channel row works here too (loading or failed page), not only once the player opened.

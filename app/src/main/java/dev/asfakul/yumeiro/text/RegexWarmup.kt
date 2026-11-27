@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.text
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 /**
  * R15: the pattern tables live in objects, and an object's patterns compile on first touch. The
  * first touch used to be a card being composed (release tags under a poster, audio-language
@@ -33,7 +36,7 @@ object RegexWarmup {
         val loader = RegexWarmup::class.java.classLoader
         for (name in CLASSES) runCatching { Class.forName(name, true, loader) }
         // A real parse, so lazily built members are ready too.
-        runCatching { dev.asfakul.yumeiro.online.ReleaseTags.parse("Show S01E01 1080p WEB-DL HEVC x265 DDP5.1 Dual Audio") }
+        runCatching { dev.asfakul.yumeiro.online.ReleaseTags.parse(tr(R.string.show_s01e01_1080p_web_dl_hevc, "Show S01E01 1080p WEB-DL HEVC x265 DDP5.1 Dual Audio")) }
         runCatching { dev.asfakul.yumeiro.ui.components.Kana.forTitle("Home") }
         done = true
     }

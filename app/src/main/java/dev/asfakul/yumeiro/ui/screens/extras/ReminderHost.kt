@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.Manifest
@@ -141,17 +142,17 @@ fun ReminderHost(blocked: Boolean) {
         Reminders.Kind.FOLLOW -> FollowCard(onClose = close, onDismiss = { dismiss(Reminders.Kind.FOLLOW) })
         Reminders.Kind.STAR -> ReminderCard(
             icon = Icons.Default.Star, tag = "reminder_star",
-            title = "Enjoying Yumeiro?",
+            title = tr(R.string.enjoying_yumeiro, "Enjoying Yumeiro?"),
             body = SupportMessage.STAR,
-            action = "Star on GitHub",
+            action = tr(R.string.star_on_github, "Star on GitHub"),
             onAction = { if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context); close() },
             onClose = { dismiss(Reminders.Kind.STAR) },
         )
         Reminders.Kind.SUPPORT -> ReminderCard(
             icon = Icons.Default.Favorite, tag = "reminder_support",
-            title = "Help keep Yumeiro alive",
+            title = tr(R.string.help_keep_yumeiro_alive, "Help keep Yumeiro alive"),
             body = SupportMessage.SHORT,
-            action = "Buy me a coffee",
+            action = tr(R.string.buy_me_a_coffee, "Buy me a coffee"),
             onAction = { Reminders.recordSupportOpened(context); close(); AppPages.open(AppPages.Page.SUPPORT) },
             onClose = { dismiss(Reminders.Kind.SUPPORT) },
         )
@@ -307,9 +308,9 @@ fun NotificationPromptHost(blocked: Boolean) {
     val close = { show = false; PopupGate.release(GATE_NOTIF) }
     if (show) ReminderCard(
         icon = Icons.Default.NotificationsActive, tag = "notif_prompt",
-        title = "Turn on notifications",
-        body = "Hear about new episodes, extensions and app updates. You choose exactly which ones in Settings.",
-        action = "Turn on",
+        title = tr(R.string.turn_on_notifications, "Turn on notifications"),
+        body = tr(R.string.hear_about_new_episodes_extensions_and, "Hear about new episodes, extensions and app updates. You choose exactly which ones in Settings."),
+        action = tr(R.string.turn_on, "Turn on"),
         onAction = {
             close()
             val canAsk = Build.VERSION.SDK_INT >= 33 &&

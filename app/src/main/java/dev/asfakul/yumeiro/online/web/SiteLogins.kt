@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.web
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.webkit.CookieManager
 import java.util.concurrent.ConcurrentHashMap
@@ -70,7 +72,7 @@ object SiteLogins {
      */
     internal fun expiryLines(url: String, name: String, host: String): List<String> {
         val secure = if (url.startsWith("https://")) "; Secure" else ""
-        val base = "$name=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"
+        val base = tr(R.string.max_age_0_expires_thu_01, "%1\$s=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/", name)
         return if (name.startsWith("__Host-")) listOf(base + secure)
         else listOf(base + secure, "$base; Domain=$host$secure")
     }

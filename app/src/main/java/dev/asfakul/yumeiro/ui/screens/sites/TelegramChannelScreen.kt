@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -142,8 +143,8 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                     posts.addAll(r.value.posts.filter { it.id !in known }.sortedByDescending { it.id })
                     before = r.value.before
                     if (posts.isEmpty()) {
-                        error = (if (q.isNotBlank()) "No video posts match \"$q\" in @$channel." else "No video posts in the latest posts of @$channel.") +
-                            (if (r.value.before != null) " Try older posts." else "")
+                        error = (if (q.isNotBlank()) tr(R.string.no_video_posts_match_in, "No video posts match \"%1\$s\" in @%2\$s.", q, channel) else tr(R.string.no_video_posts_in_the_latest, "No video posts in the latest posts of @%1\$s.", channel)) +
+                            (if (r.value.before != null) tr(R.string.try_older_posts, " Try older posts.") else "")
                     }
                 }
             }
@@ -202,14 +203,14 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
     Column(Modifier.fillMaxSize().background(p.background).testTag("tg_channel")) {
         SubPageHeader(
             title = title,
-            subtitle = "@$channel · public posts" + if (withheld > 0) " · " + dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.withheld(withheld, signedIn) else "",
+            subtitle = tr(R.string.public_posts, "@%1\$s · public posts", channel) + if (withheld > 0) " · " + dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.withheld(withheld, signedIn) else "",
             onBack = onBack,
         ) {
             // GROUP F: search is an icon that opens the box (Group C pattern), not a field that is always there.
             dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, {
                 searchOpen = !searchOpen
                 if (!searchOpen && query.isNotEmpty()) { input = ""; search("") }
-            }, "tg_search_toggle", "Search this channel")
+            }, "tg_search_toggle", tr(R.string.search_this_channel, "Search this channel"))
         }
         if (searchOpen) androidx.compose.material3.OutlinedTextField(
             value = input, onValueChange = { input = it }, singleLine = true,
@@ -240,7 +241,7 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                                     onClick = onSignIn,
                                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
                                     modifier = Modifier.heightIn(min = 48.dp).testTag("tg_sign_in_play"),
-                                ) { Text(if (signedIn) "Open my account" else "Sign in to play") }
+                                ) { Text(if (signedIn) tr(R.string.open_my_account, "Open my account") else tr(R.string.sign_in_to_play, "Sign in to play")) }
                             } else {
                                 TextButton(onClick = { openInTelegram(post) }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_open_app")) { Text(stringResource(R.string.open_in_telegram)) }
                             }
@@ -309,7 +310,7 @@ private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, sign
     val label = post.text.lineSequence().firstOrNull()?.ifBlank { null } ?: "Video ${post.id}"
     Row(
         Modifier.fillMaxWidth().clip(yuRound(16)).background(p.surfaceContainerHigh)
-            .clickable(onClickLabel = if (post.playable || signedIn) "Play" else "Sign in to play", role = Role.Button, onClick = onClick)
+            .clickable(onClickLabel = if (post.playable || signedIn) "Play" else tr(R.string.sign_in_to_play, "Sign in to play"), role = Role.Button, onClick = onClick)
             .padding(10.dp).testTag("tg_post_${post.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -328,7 +329,7 @@ private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, sign
             }
             Text(label, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(post.date?.take(10), when { post.playable -> null; opening -> "Opening with your account…"; else -> dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.rowNote(signedIn) }).joinToString(" · ").ifBlank { "Post ${post.id}" },
+                listOfNotNull(post.date?.take(10), when { post.playable -> null; opening -> tr(R.string.opening_with_your_account, "Opening with your account…"); else -> dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.rowNote(signedIn) }).joinToString(" · ").ifBlank { "Post ${post.id}" },
                 color = if (post.playable) p.textTertiary else p.textSecondary, fontSize = 12.sp, maxLines = 1,
             )
         }

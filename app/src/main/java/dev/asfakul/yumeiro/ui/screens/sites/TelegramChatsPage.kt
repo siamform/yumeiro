@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
@@ -195,11 +196,11 @@ fun TelegramChatsPage(
 
     Column(Modifier.fillMaxSize().testTag("tg_chats_page")) {
         TgSearchHeader(
-            title = "Your Telegram",
+            title = tr(R.string.your_telegram, "Your Telegram"),
             subtitle = if (chats.isNotEmpty()) "${chats.size} chats" else "Chats",
             searching = searching, onSearching = { searching = it },
             query = query, onQuery = { query = it },
-            placeholder = "Find a chat", onBack = onBack,
+            placeholder = tr(R.string.find_a_chat, "Find a chat"), onBack = onBack,
         ) {
             IconButton(onClick = { showMe = true }, modifier = Modifier.testTag("tg_me_button").semantics { contentDescription = "Your account" }) {
                 TelegramAvatar(me?.second, me?.first?.name.orEmpty().ifBlank { "Me" }, size = 30.dp)
@@ -228,7 +229,7 @@ fun TelegramChatsPage(
                     TelegramAvatar(pic, chat.title, size = 44.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(chat.title.ifBlank { "Untitled chat" }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(chat.title.ifBlank { tr(R.string.untitled_chat, "Untitled chat") }, color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(when (chat.kind) { TgChat.Kind.CHANNEL -> "Channel"; TgChat.Kind.GROUP -> "Group"; TgChat.Kind.PRIVATE -> "Chat" }, color = p.textSecondary, fontSize = 12.sp)
                     }
                 }
@@ -239,7 +240,7 @@ fun TelegramChatsPage(
                         error ?: when {
                             query.isNotBlank() -> "No chat matches \"${query.trim()}\". Try part of the name."
                             kind != TelegramChatFilter.Kind.ALL -> "No ${kind.label.lowercase()} here."
-                            else -> "No chats yet."
+                            else -> tr(R.string.no_chats_yet, "No chats yet.")
                         },
                         color = p.textSecondary, modifier = Modifier.testTag("tg_chats_empty"),
                     )

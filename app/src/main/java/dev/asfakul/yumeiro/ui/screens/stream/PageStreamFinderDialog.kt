@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.online.web.SafeWebView
@@ -87,7 +88,7 @@ internal const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Apple
 private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier.background(DarkSurface).testTag("page_finder_auto"), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(32.dp)) {
-            dev.asfakul.yumeiro.ui.components.YuLoader(size = 56.dp, label = "Looking for streams")
+            dev.asfakul.yumeiro.ui.components.YuLoader(size = 56.dp, label = tr(R.string.looking_for_streams, "Looking for streams"))
             Text(stringResource(R.string.finding_the_video_on, host), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             androidx.compose.animation.AnimatedContent(step, label = "autoStep") { Text("$it…", color = TextSecondary, fontSize = 13.sp) }
             androidx.compose.material3.TextButton(onClick = onShowPage, modifier = Modifier.testTag("page_finder_show_page")) {
@@ -471,7 +472,7 @@ fun PageStreamFinderDialog(
     val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
     var autoActive by remember(pageUrl) { mutableStateOf(auto) }
-    var autoStep by remember(pageUrl) { mutableStateOf("Opening the link") }
+    var autoStep by remember(pageUrl) { mutableStateOf(tr(R.string.opening_the_link, "Opening the link")) }
     var autoNote by remember(pageUrl) { mutableStateOf<String?>(null) }
     var played by remember(pageUrl) { mutableStateOf(false) }
     val found = keep?.found ?: remember(pageUrl) { mutableStateListOf<CapturedStream>() }
@@ -581,7 +582,7 @@ fun PageStreamFinderDialog(
                                 val label: String
                                 if (dest is dev.asfakul.yumeiro.online.web.ChainDestination.Kind.Media) { u = dest.url; label = dest.label }
                                 else { val fh = dest as dev.asfakul.yumeiro.online.web.ChainDestination.Kind.FileHost; u = fh.url; label = fh.label }
-                                chainBanner = ChainBanner("Link reached", "$label · playing in Yumeiro", ChainBanner.Kind.DONE)
+                                chainBanner = ChainBanner(tr(R.string.link_reached, "Link reached"), tr(R.string.playing_in_yumeiro, "%1\$s · playing in Yumeiro", label), ChainBanner.Kind.DONE)
                                 if (!played) {
                                     played = true
                                     val req = StreamRequest(
@@ -595,7 +596,7 @@ fun PageStreamFinderDialog(
                                 }
                             }
                             is dev.asfakul.yumeiro.online.web.ChainDestination.Kind.HostPage -> {
-                                chainBanner = ChainBanner("Link reached", "${dest.label} · starting its player", ChainBanner.Kind.DONE)
+                                chainBanner = ChainBanner(tr(R.string.link_reached, "Link reached"), "${dest.label} · starting its player", ChainBanner.Kind.DONE)
                                 // Hosts like Gofile hand the file only to their own page: start its player, play what it loads.
                                 chainAutoPick = true
                                 repeat(6) {
@@ -603,7 +604,7 @@ fun PageStreamFinderDialog(
                                     kotlinx.coroutines.delay(2_000L)
                                 }
                             }
-                            dev.asfakul.yumeiro.online.web.ChainDestination.Kind.Page -> chainBanner = ChainBanner("Link reached", act.host, ChainBanner.Kind.DONE)
+                            dev.asfakul.yumeiro.online.web.ChainDestination.Kind.Page -> chainBanner = ChainBanner(tr(R.string.link_reached, "Link reached"), act.host, ChainBanner.Kind.DONE)
                         }
                         kotlinx.coroutines.delay(5_000L)
                         chainBanner = null
@@ -640,18 +641,18 @@ fun PageStreamFinderDialog(
         val on = !filterOn
         pageFilter = on
         dev.asfakul.yumeiro.online.web.BrowserFilters.setPage(wv, on)
-        barNote = BarNote(if (on) "Ad filter on for this page" else "Ad filter off for this page. Pop-ups and ads can show", null, null)
+        barNote = BarNote(if (on) tr(R.string.ad_filter_on_for_this_page, "Ad filter on for this page") else tr(R.string.ad_filter_off_for_this_page_2, "Ad filter off for this page. Pop-ups and ads can show"), null, null)
         wv.reload()
     }
 
     /** ADCHAIN-2: a pop-up the filter held back; the person can still open it. */
     fun popupHeld(target: String?) = main.post {
-        barNote = BarNote("Pop-up blocked", if (target != null) "Open" else null, target?.let { t -> { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, t, emptyMap()) }; Unit } })
+        barNote = BarNote(tr(R.string.pop_up_blocked, "Pop-up blocked"), if (target != null) "Open" else null, target?.let { t -> { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, t, emptyMap()) }; Unit } })
     }
 
     /** B12: Stop redirects held the page's own jump to another site; the person can still go there. */
     fun redirectHeld(target: String) = main.post {
-        barNote = BarNote("Redirect stopped", "Open", { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, target, emptyMap()) }; Unit })
+        barNote = BarNote(tr(R.string.redirect_stopped, "Redirect stopped"), "Open", { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, target, emptyMap()) }; Unit })
     }
 
     fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
@@ -719,7 +720,7 @@ fun PageStreamFinderDialog(
         }
         if (dev.asfakul.yumeiro.stream.TeraBoxApi.isWebStream(c.url)) {
             // TB-PREVIEW-1: TeraBox's page player may hold only the 30-second preview; check it before playing.
-            autoStep = "Checking the TeraBox stream"
+            autoStep = tr(R.string.checking_the_terabox_stream, "Checking the TeraBox stream")
             val share = teraShare ?: currentUrl
             scope.launch {
                 val r = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -746,7 +747,7 @@ fun PageStreamFinderDialog(
         if (!dev.asfakul.yumeiro.stream.TeraBoxApi.signedIn(teraCookies())) return
         teraResumed = true
         played = true
-        autoNote = "Signed in. Getting the full video from TeraBox"
+        autoNote = tr(R.string.signed_in_getting_the_full_video, "Signed in. Getting the full video from TeraBox")
         val req = (base ?: StreamRequest(url = share)).copy(url = share, format = StreamFormat.AUTO, pageUrl = share)
         scope.launch {
             val r = runCatching { dev.asfakul.yumeiro.stream.StreamResolver.resolve(appContext, req) }.getOrNull()
@@ -786,20 +787,20 @@ fun PageStreamFinderDialog(
             kotlinx.coroutines.delay(PageStreamCapture.AUTO_TIMEOUT_MS)
             if (autoActive && !played) {
                 autoActive = false
-                autoNote = "Yumeiro couldn't start this video by itself. Start it on the page and it will play here."
+                autoNote = tr(R.string.yumeiro_couldnt_start_this_video_by, "Yumeiro couldn't start this video by itself. Start it on the page and it will play here.")
             }
         }
         // First capture → short settle (prefer a manifest) → play.
         androidx.compose.runtime.LaunchedEffect(pageUrl, found.size, autoActive) {
             if (!autoActive || played || found.isEmpty()) return@LaunchedEffect
-            autoStep = "Picking up the stream"
+            autoStep = tr(R.string.picking_up_the_stream, "Picking up the stream")
             kotlinx.coroutines.delay(PageStreamCapture.AUTO_SETTLE_MS)
             PageStreamCapture.bestForAuto(found.filter { it.url !in rejected })?.let { play(it) }
         }
         // Nudge the page's player a few times while the page settles (players load late).
         androidx.compose.runtime.LaunchedEffect(pageUrl, progress >= 100, autoActive) {
             if (!autoActive || progress < 100) return@LaunchedEffect
-            autoStep = "Starting its player"
+            autoStep = tr(R.string.starting_its_player, "Starting its player")
             repeat(8) {
                 if (!autoActive || played) return@LaunchedEffect
                 webViewRef?.evaluateJavascript(PageStreamCapture.AUTOPLAY_JS, null)
@@ -824,7 +825,7 @@ fun PageStreamFinderDialog(
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onDismiss, modifier = Modifier.testTag("page_finder_close")) { Icon(Icons.Default.Close, stringResource(R.string.close), tint = TextPrimary) }
                     Column(Modifier.weight(1f)) {
-                        Text(pageTitle.ifBlank { "Find stream" }, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(pageTitle.ifBlank { tr(R.string.find_stream, "Find stream") }, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(PlatformRules.hostOf(currentUrl) ?: currentUrl, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.minimize), tint = TextSecondary) }
@@ -835,7 +836,7 @@ fun PageStreamFinderDialog(
                     ) {
                         Icon(
                             if (filterOn) Icons.Default.Shield else Icons.Default.RemoveModerator,
-                            if (filterOn) "Ad filter on for this page. Turn off" else "Ad filter off for this page. Turn on",
+                            if (filterOn) tr(R.string.ad_filter_on_for_this_page_2, "Ad filter on for this page. Turn off") else tr(R.string.ad_filter_off_for_this_page_3, "Ad filter off for this page. Turn on"),
                             tint = if (filterOn) SpotifyGreen else TextSecondary,
                         )
                     }
@@ -849,7 +850,7 @@ fun PageStreamFinderDialog(
                         chainBanner = null
                     }), onBack = if (b.kind == ChainBanner.Kind.STOPPED && canBackAny(webViewRef)) ({ webViewRef?.goBack(); chainBanner = null }) else null,
                         onOutside = if (b.kind == ChainBanner.Kind.STOPPED) ({
-                            if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote("No browser on this phone can open the page", null, null)
+                            if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote(tr(R.string.no_browser_on_this_phone_can, "No browser on this phone can open the page"), null, null)
                         }) else null)
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -890,17 +891,17 @@ fun PageStreamFinderDialog(
                                     @JavascriptInterface fun onDrm(system: String) {
                                         val system = dev.asfakul.yumeiro.online.web.pageDrmSystemName(system)
                                         synchronized(capture) { capture.drmSystem = system }
-                                        main.post { drmNote = "This page uses DRM ($system). It plays here only if the site's licence server accepts this app; protection is never bypassed." }
+                                        main.post { drmNote = tr(R.string.this_page_uses_drm_it_plays, "This page uses DRM (%1\$s). It plays here only if the site's licence server accepts this app; protection is never bypassed.", system) }
                                     }
                                 }, "MTFinder")
                                 if (browser) addJavascriptInterface(object {
                                     @JavascriptInterface fun onPicked(selector: String) = main.post {
                                         val url = currentUrl
                                         picking = false
-                                        barNote = if (dev.asfakul.yumeiro.online.web.ElementBlocker.add(appContext, url, selector)) BarNote("Hidden on this site from now on", "Undo") {
+                                        barNote = if (dev.asfakul.yumeiro.online.web.ElementBlocker.add(appContext, url, selector)) BarNote(tr(R.string.hidden_on_this_site_from_now, "Hidden on this site from now on"), "Undo") {
                                             dev.asfakul.yumeiro.online.web.ElementBlocker.undoLast(appContext, url)
                                             webViewRef?.reload()
-                                        } else BarNote("That part can't be blocked", null, null)
+                                        } else BarNote(tr(R.string.that_part_cant_be_blocked, "That part can't be blocked"), null, null)
                                     }
                                     @JavascriptInterface fun onPickEnd() = main.post { picking = false }
                                 }, "YuBlock")
@@ -1020,7 +1021,7 @@ fun PageStreamFinderDialog(
                                         url?.let { currentUrl = it }
                                         if (autoActive && url != null && PageStreamCapture.needsUser(url)) {
                                             autoActive = false
-                                            autoNote = "Sign in or finish the check on the page once; the video then plays here."
+                                            autoNote = tr(R.string.sign_in_or_finish_the_check, "Sign in or finish the check on the page once; the video then plays here.")
                                         }
                                         view?.evaluateJavascript(PageStreamCapture.HOOK_JS, null)
                                     }
@@ -1092,10 +1093,10 @@ fun PageStreamFinderDialog(
                     onBlock = {
                         picking = !picking
                         webViewRef?.evaluateJavascript(dev.asfakul.yumeiro.online.web.ElementBlocker.PICK_JS, null)
-                        barNote = if (picking) BarNote("Tap the part of the page to hide. Tap the block button again to stop.", null, null) else null
+                        barNote = if (picking) BarNote(tr(R.string.tap_the_part_of_the_page, "Tap the part of the page to hide. Tap the block button again to stop."), null, null) else null
                     },
                     onOpenOutside = {
-                        if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote("No browser on this phone can open the page", null, null)
+                        if (!OutsideBrowser.open(appContext, currentUrl)) barNote = BarNote(tr(R.string.no_browser_on_this_phone_can, "No browser on this phone can open the page"), null, null)
                     },
                     accent = SpotifyGreen,
                     filterOn = filterOn, onFilter = { togglePageFilter() }, onManageAds = { manageAds = true },

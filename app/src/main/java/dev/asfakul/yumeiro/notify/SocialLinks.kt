@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.notify
 
+import dev.asfakul.yumeiro.l10n.tr
 import dev.asfakul.yumeiro.R
 
 /**
@@ -19,10 +20,10 @@ object SocialLinks {
 
     /** Yumeiro's own accounts besides Telegram and the website (those are rows of their own). */
     val yumeiro: List<Link> = listOf(
-        Link("discord", "Discord", "Yumeiro server", "https://discord.gg/eqkNymUAMJ", R.drawable.ic_brand_discord),
+        Link("discord", "Discord", tr(R.string.yumeiro_server, "Yumeiro server"), "https://discord.gg/eqkNymUAMJ", R.drawable.ic_brand_discord),
         Link("facebook", "Facebook", HANDLE, "https://www.facebook.com/$HANDLE", R.drawable.ic_brand_facebook),
         Link("instagram", "Instagram", "@$HANDLE", "https://www.instagram.com/$HANDLE", R.drawable.ic_brand_instagram),
-        Link("x", "X (Twitter)", "@$HANDLE", "https://x.com/$HANDLE", R.drawable.ic_brand_x),
+        Link("x", tr(R.string.x_twitter, "X (Twitter)"), "@$HANDLE", "https://x.com/$HANDLE", R.drawable.ic_brand_x),
         Link("tiktok", "TikTok", "@$HANDLE", "https://www.tiktok.com/@$HANDLE", R.drawable.ic_brand_tiktok),
         Link("reddit", "Reddit", "u/$HANDLE", "https://www.reddit.com/user/$HANDLE", R.drawable.ic_brand_reddit),
     )

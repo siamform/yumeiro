@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.cast
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.util.Log
 import java.io.BufferedInputStream
 import java.net.Inet4Address
@@ -98,7 +100,7 @@ object CastSubtitleServer {
             val token = requestLine.getOrNull(1).orEmpty().substringBefore('?').trim('/').removeSuffix(".vtt")
             val body = tracks[token]
             val out = sock.getOutputStream()
-            val cors = "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, HEAD, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\n"
+            val cors = tr(R.string.access_control_allow_origin_access_control, "Access-Control-Allow-Origin: *\nAccess-Control-Allow-Methods: GET, HEAD, OPTIONS\nAccess-Control-Allow-Headers: *\n")
             when {
                 method == "OPTIONS" && body != null ->
                     out.write("HTTP/1.1 204 No Content\r\n${cors}Content-Length: 0\r\nConnection: close\r\n\r\n".toByteArray())

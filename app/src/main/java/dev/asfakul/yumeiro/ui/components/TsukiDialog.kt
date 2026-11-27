@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -69,12 +71,12 @@ enum class DialogTone(val badge: String?) {
     /** Regular choices and forms: the theme accent, no badge. */
     NEUTRAL(null),
     /** Helpful context ("Approve on Trakt", "Download?"). */
-    INFO("Good to know"),
+    INFO(tr(R.string.good_to_know, "Good to know")),
     SUCCESS("Done"),
     /** Something to think about first (18+ content, risky extension, overwrite). */
-    WARNING("Heads up"),
+    WARNING(tr(R.string.heads_up, "Heads up")),
     /** Deletes or signs out: cannot be undone. */
-    DANGER("Can't be undone"),
+    DANGER(tr(R.string.cant_be_undone, "Can't be undone")),
     /** Security / data-loss level. */
     CRITICAL("Important");
 

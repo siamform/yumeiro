@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.util.Log
 import com.lagradost.cloudstream3.AnimeLoadResponse
 import com.lagradost.cloudstream3.DubStatus
@@ -158,7 +160,7 @@ data class OnlineLink(
     val qualityLabel: String get() = when (quality) {
         0 -> "Auto"; 400, -1 -> ""; 2160 -> "4K"; in 1..4320 -> "${quality}p"; else -> ""
     }
-    val formatLabel: String get() = when { isHls -> "HLS"; isDash -> "DASH"; audioOnly -> "Audio only"; else -> container?.uppercase() ?: "Direct" }
+    val formatLabel: String get() = when { isHls -> "HLS"; isDash -> "DASH"; audioOnly -> tr(R.string.audio_only, "Audio only"); else -> container?.uppercase() ?: "Direct" }
     /** File extension of the link's path, lowercase ("mp4", "mp3", "m3u8"…). */
     val container: String? get() = url.substringBefore('?').substringBefore('#').substringAfterLast('/').substringAfterLast('.', "").lowercase().takeIf { it.length in 2..5 }
     /** Plain audio files (no picture). Never preferred over a video. */
@@ -592,8 +594,8 @@ object OnlineRepository {
                 .filter { it.value.isNotEmpty() }
                 .sortedBy { when (it.key) { DubStatus.Subbed -> 0; DubStatus.Dubbed -> 1; else -> 2 } }
                 .associate { (status, list) -> versionLabel(status) to list.map { it.toEpisode() } }
-            is TorrentLoadResponse -> { unsupported = "Torrent sources aren't supported"; emptyMap() }
-            else -> { unsupported = "This kind of title isn't supported yet"; emptyMap() }
+            is TorrentLoadResponse -> { unsupported = tr(R.string.torrent_sources_arent_supported, "Torrent sources aren't supported"); emptyMap() }
+            else -> { unsupported = tr(R.string.this_kind_of_title_isnt_supported, "This kind of title isn't supported yet"); emptyMap() }
         }
         val kind = when {
             r is LiveStreamLoadResponse || r.type == TvType.Live -> OnlineKind.LIVE
@@ -663,9 +665,9 @@ object OnlineRepository {
 
     private fun mapLinkFixed(link: ExtractorLink, url: String): LinkEvent = when {
         // Protected streams aren't played: this app doesn't bypass DRM.
-        link is DrmExtractorLink -> LinkEvent.Skipped("DRM-protected source skipped")
-        link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET -> LinkEvent.Skipped("Torrent source skipped", link.url)
-        !UrlFix.isHttp(url) -> LinkEvent.Skipped("Unsupported link")
+        link is DrmExtractorLink -> LinkEvent.Skipped(tr(R.string.drm_protected_source_skipped, "DRM-protected source skipped"))
+        link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET -> LinkEvent.Skipped(tr(R.string.torrent_source_skipped, "Torrent source skipped"), link.url)
+        !UrlFix.isHttp(url) -> LinkEvent.Skipped(tr(R.string.unsupported_link, "Unsupported link"))
         else -> LinkEvent.Link(
             OnlineLink(
                 name = link.name.ifBlank { link.source }, source = link.source, url = url,
@@ -729,7 +731,7 @@ object OnlineRepository {
     )
 
     fun typeLabel(t: TvType?): String = when (t) {
-        TvType.Movie -> "Movie"; TvType.AnimeMovie -> "Anime movie"; TvType.TvSeries -> "TV series"; TvType.Cartoon -> "Cartoon"
+        TvType.Movie -> "Movie"; TvType.AnimeMovie -> tr(R.string.anime_movie, "Anime movie"); TvType.TvSeries -> tr(R.string.tv_series, "TV series"); TvType.Cartoon -> "Cartoon"
         TvType.Anime -> "Anime"; TvType.OVA -> "OVA"; TvType.Documentary -> "Documentary"; TvType.AsianDrama -> "Asian drama"
         TvType.Live -> "Live"; TvType.Music -> "Music"; TvType.AudioBook -> "Audiobook"; TvType.Audio -> "Audio"
         TvType.Podcast -> "Podcast"; TvType.Torrent -> "Torrent"; null -> "Video"; else -> t.name

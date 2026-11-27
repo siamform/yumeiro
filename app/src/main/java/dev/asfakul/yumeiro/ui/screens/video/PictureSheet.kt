@@ -1,5 +1,6 @@
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Context
@@ -93,7 +94,7 @@ internal fun PictureScope(d: PictureDraft, onRebuild: () -> Unit, onPreview: () 
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.this_title_only), color = p.textPrimary)
-                Text(if (d.perTitle) "Saved for this show; other videos keep the main settings" else "Changes apply to all videos",
+                Text(if (d.perTitle) tr(R.string.saved_for_this_show_other_videos, "Saved for this show; other videos keep the main settings") else tr(R.string.changes_apply_to_all_videos, "Changes apply to all videos"),
                     color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             }
             Switch(checked = d.perTitle, modifier = Modifier.testTag("pic_scope"), onCheckedChange = { only ->
@@ -148,7 +149,7 @@ internal fun PicturePresets(d: PictureDraft, onPreview: () -> Unit) {
 @Composable
 internal fun PictureControls(d: PictureDraft, onPreview: () -> Unit) {
     val p = LocalMtPalette.current
-    Section("Picture controls")
+    Section(tr(R.string.picture_controls, "Picture controls"))
     val c = d.profile.controls
     fun set(n: PictureLook.Controls, save: Boolean) {
         // Moving a control away from a named preset turns it into "Custom (based on …)" (label only).
@@ -186,26 +187,26 @@ internal fun Anime4kFilters(d: PictureDraft, tier: VideoPrefs.GpuTier, onRebuild
     val allowed = PictureLook.allowedIterations(t.iterations, tier, heat)
     ValueSlider("Iterations", "a4k_iterations", t.iterations.toFloat(), 1f..PictureLook.MAX_ITERATIONS.toFloat(), 1f, null, 1f,
         steps = PictureLook.MAX_ITERATIONS - 2,
-        help = "How many times the Anime4K pass runs on each frame. More passes give cleaner, sharper lines but use more GPU power " +
+        help = tr(R.string.how_many_times_the_anime4k_pass, "How many times the Anime4K pass runs on each frame. More passes give cleaner, sharper lines but use more GPU power ") +
             "and battery. Default 1. Weaker or hot devices run fewer passes automatically.",
         onChange = { v, s ->
             val next = d.profile.copy(tuning = t.copy(iterations = v.roundToInt()))
             if (s) { d.commit(next); onRebuild(); onPreview() } else d.preview(next)
         })
     if (allowed < t.iterations) {
-        Text(if (allowed == 0) "Paused while the device is hot." else "This device runs $allowed now to keep playback smooth.",
+        Text(if (allowed == 0) tr(R.string.paused_while_the_device_is_hot, "Paused while the device is hot.") else tr(R.string.this_device_runs_now_to_keep, "This device runs %1\$s now to keep playback smooth.", allowed),
             color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("a4k_iterations_capped"))
     }
     ValueSlider("Threshold", "a4k_threshold", t.threshold, 0f..1f, 0.2f, Kind.PERCENT, 0.05f,
-        help = "How strong an edge must be before Anime4K touches it. Lower sharpens fainter lines (and more noise); higher only " +
+        help = tr(R.string.how_strong_an_edge_must_be, "How strong an edge must be before Anime4K touches it. Lower sharpens fainter lines (and more noise); higher only ") +
             "sharpens clear outlines. Default 20%.",
         onChange = { v, s -> tune(d, t.copy(threshold = v), s, onPreview) })
     ValueSlider("Range", "a4k_range", t.range, 0f..1f, 0.3f, Kind.PERCENT, 0.05f,
-        help = "How far a sharpened pixel may move beyond its neighbours. Low keeps it clean with no halos; high gives crisper lines " +
+        help = tr(R.string.how_far_a_sharpened_pixel_may, "How far a sharpened pixel may move beyond its neighbours. Low keeps it clean with no halos; high gives crisper lines ") +
             "but can add a thin bright edge. Default 30%.",
         onChange = { v, s -> tune(d, t.copy(range = v), s, onPreview) })
     ValueSlider("Grain", "a4k_grain", t.grain, 0f..1f, 0f, Kind.PERCENT, 0.05f,
-        help = "Adds fine film grain after the filter. A little grain hides banding in dark scenes and makes heavy sharpening look " +
+        help = tr(R.string.adds_fine_film_grain_after_the, "Adds fine film grain after the filter. A little grain hides banding in dark scenes and makes heavy sharpening look ") +
             "more natural. Default 0% (off).",
         onChange = { v, s -> tune(d, t.copy(grain = v), s, onPreview) })
 }

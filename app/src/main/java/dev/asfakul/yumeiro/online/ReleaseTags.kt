@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 /**
  * Poster tags (language, release source, resolution, kind) read from what an extension gives us:
  * its `SearchQuality`, `TvType`, anime dub / sub status, and — because many South Asian sites
@@ -32,7 +35,7 @@ object ReleaseTags {
         Rule("CAMRip", Kind.SOURCE, r("cam[ ._-]?rip|camrip"), low = true),
         Rule("HDTC", Kind.SOURCE, r("hd[ ._-]?tc|telecine"), low = true),
         Rule("TS", Kind.SOURCE, r("telesync|pdvd|pre[ ._-]?dvd(?:rip)?"), low = true),
-        Rule("HC HDRip", Kind.SOURCE, r("hc[ ._-]?hd[ ._-]?rip")),
+        Rule(tr(R.string.hc_hdrip, "HC HDRip"), Kind.SOURCE, r("hc[ ._-]?hd[ ._-]?rip")),
         Rule("HDRip", Kind.SOURCE, r("hd[ ._-]?rip")),
         Rule("DVDRip", Kind.SOURCE, r("dvd[ ._-]?rip|dvdscr|dvd")),
         Rule("HDTV", Kind.SOURCE, r("hdtv|pdtv|tvrip")),
@@ -46,7 +49,7 @@ object ReleaseTags {
     )
 
     private val multiRule = Rule("Multi Audio", Kind.LANGUAGE, r("multi[ ._-]?(?:audio|lang(?:uage)?s?)"))
-    private val dualRule = Rule("Dual Audio", Kind.LANGUAGE, r("dual[ ._-]?audio"))
+    private val dualRule = Rule(tr(R.string.dual_audio, "Dual Audio"), Kind.LANGUAGE, r("dual[ ._-]?audio"))
 
     private val languageRules = listOf(
         Rule("Bengali", Kind.LANGUAGE, r("bengali|bangla|বাংলা")),
@@ -129,7 +132,7 @@ object ReleaseTags {
         when {
             multiRule.regex.containsMatchIn(t) || langs.size >= 3 -> out += Tag("Multi Audio", Kind.LANGUAGE)
             dualRule.regex.containsMatchIn(t) || langs.size == 2 -> out += Tag(
-                if (langs.size == 2) "Dual · " + langs.joinToString("-") { short(it) } else "Dual Audio", Kind.LANGUAGE,
+                if (langs.size == 2) "Dual · " + langs.joinToString("-") { short(it) } else tr(R.string.dual_audio, "Dual Audio"), Kind.LANGUAGE,
             )
             langs.size == 1 -> out += Tag(langs[0], Kind.LANGUAGE)
             else -> {

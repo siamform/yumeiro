@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -98,7 +99,7 @@ internal fun LibrarySectionHeader(title: String, subtitle: String? = null, actio
         else -> null
     }
     dev.asfakul.yumeiro.ui.components.YuSection(
-        kana = kana, label = subtitle ?: when (title) { "Saved" -> "Your shelf"; "Continue reading" -> "Pick up again"; else -> "Library" }, title = title,
+        kana = kana, label = subtitle ?: when (title) { "Saved" -> tr(R.string.your_shelf, "Your shelf"); "Continue reading" -> tr(R.string.pick_up_again, "Pick up again"); else -> "Library" }, title = title,
         top = 14.dp, action = action, onAction = onAction, actionTag = testTag,
     )
 }
@@ -230,8 +231,8 @@ internal fun LazyListScope.musicOverview(
     if (statsEntry != null) item(key = "stats_entry") { statsEntry() }
     item(key = "hero") {
         LibraryHero(
-            overline = "Your music", title = "Liked songs",
-            subtitle = if (favorites.isEmpty()) "Tap the heart on any song to keep it here" else songsLabel(favorites.size, favorites.sumOf { it.durationMs }),
+            overline = tr(R.string.your_music, "Your music"), title = tr(R.string.liked_songs, "Liked songs"),
+            subtitle = if (favorites.isEmpty()) tr(R.string.tap_the_heart_on_any_song, "Tap the heart on any song to keep it here") else songsLabel(favorites.size, favorites.sumOf { it.durationMs }),
             glyph = "夢", testTag = "lib_fav_card", onClick = onOpenMusic,
             trailing = {
                 RoundAction(Icons.Default.PlayArrow, "Play liked songs", filled = true, testTag = "lib_play_liked") {
@@ -249,7 +250,7 @@ internal fun LazyListScope.musicOverview(
         )
     }
     if (recentlyPlayed.isNotEmpty()) {
-        item(key = "recent_h") { LibrarySectionHeader("Jump back in", "Recently played") }
+        item(key = "recent_h") { LibrarySectionHeader("Jump back in", tr(R.string.recently_played, "Recently played")) }
         item(key = "recent") {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(recentlyPlayed.take(15), key = { "r_" + it.id }) { t ->
@@ -264,7 +265,7 @@ internal fun LazyListScope.musicOverview(
         }
     }
     item(key = "pl_h") {
-        LibrarySectionHeader("Playlists", if (playlists.isEmpty()) "Your mixes live here" else "${playlists.size} playlists", "+ New", onCreatePlaylist)
+        LibrarySectionHeader("Playlists", if (playlists.isEmpty()) tr(R.string.your_mixes_live_here, "Your mixes live here") else "${playlists.size} playlists", "+ New", onCreatePlaylist)
     }
     if (playlists.isEmpty()) item(key = "pl_empty") {
         Row(Modifier.fillMaxWidth().clip(yuRound(20)).background(GlassFill).clickable(onClick = onCreatePlaylist).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -289,7 +290,7 @@ internal fun LazyListScope.musicOverview(
         }
     }
     if (mostPlayed.isNotEmpty()) {
-        item(key = "top_h") { LibrarySectionHeader("On repeat", "Your most played") }
+        item(key = "top_h") { LibrarySectionHeader("On repeat", tr(R.string.your_most_played, "Your most played")) }
         itemsIndexed(mostPlayed.take(5), key = { _, t -> "m_" + t.id }) { i, t ->
             Row(Modifier.fillMaxWidth().clip(yuRound(16)).clickable { onPlay(t, mostPlayed) }.padding(vertical = 6.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${i + 1}", color = if (i == 0) SpotifyGreen else TextTertiary, fontSize = 20.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(30.dp))
@@ -318,12 +319,12 @@ internal fun VideoLibraryHero(historyCount: Int, savedCount: Int, downloadCount:
                 }
             })
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            LibraryTile("History", "Everything you watched", Icons.Default.History, Modifier.weight(1f), "lib_tile_history", onHistory)
-            LibraryTile("Downloads", "Offline & permanent", Icons.Default.CloudDownload, Modifier.weight(1f), "lib_tile_downloads", onDownloads)
+            LibraryTile("History", tr(R.string.everything_you_watched, "Everything you watched"), Icons.Default.History, Modifier.weight(1f), "lib_tile_history", onHistory)
+            LibraryTile("Downloads", tr(R.string.offline_permanent, "Offline & permanent"), Icons.Default.CloudDownload, Modifier.weight(1f), "lib_tile_downloads", onDownloads)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            LibraryTile("Watch together", "Same Wi-Fi room", Icons.Default.Groups, Modifier.weight(1f), "lib_tile_together", onTogether)
-            LibraryTile("Sources", "Add-ons & servers", Icons.Default.Extension, Modifier.weight(1f), "lib_tile_sources", onSources)
+            LibraryTile(tr(R.string.watch_together, "Watch together"), tr(R.string.same_wi_fi_room, "Same Wi-Fi room"), Icons.Default.Groups, Modifier.weight(1f), "lib_tile_together", onTogether)
+            LibraryTile("Sources", tr(R.string.add_ons_servers, "Add-ons & servers"), Icons.Default.Extension, Modifier.weight(1f), "lib_tile_sources", onSources)
         }
     }
 }
@@ -338,7 +339,7 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
     val saved = remember(entries) { entries.filter { it.saved }.sortedBy { it.title.lowercase() } }
     LazyColumn(modifier.fillMaxSize().testTag("reading_library"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("reading_library"), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 140.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item("hero") {
-            LibraryHero(overline = "Your shelf", title = "Manga & comics", subtitle = if (entries.isEmpty()) "Read from Mihon, Aniyomi and JavaScript sources" else "${saved.size} saved · ${reading.size} in progress",
+            LibraryHero(overline = tr(R.string.your_shelf, "Your shelf"), title = tr(R.string.manga_comics, "Manga & comics"), subtitle = if (entries.isEmpty()) tr(R.string.read_from_mihon_aniyomi_and_javascript, "Read from Mihon, Aniyomi and JavaScript sources") else "${saved.size} saved · ${reading.size} in progress",
                 glyph = "本", testTag = "lib_reading_hero", onClick = onBrowse,
                 trailing = { RoundAction(Icons.AutoMirrored.Filled.MenuBook, "Browse manga", filled = true, testTag = "lib_browse_manga", onClick = onBrowse) })
         }

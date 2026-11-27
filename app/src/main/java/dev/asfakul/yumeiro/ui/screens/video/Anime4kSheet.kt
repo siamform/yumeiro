@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -105,7 +106,7 @@ fun Anime4kSheet(
                 Anime4kV2.Engine.entries.forEach { e -> Pill(e.label, "a4k_engine_${e.name}", e == engine) { Anime4kV2.setEngine(context, e); onChanged(true) } }
             }
             if (engine == Anime4kV2.Engine.CLASSIC) {
-                Section("GPU tier")
+                Section(tr(R.string.gpu_tier, "GPU tier"))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     VideoPrefs.GpuTier.entries.forEach { t -> Pill(t.label, "a4k_tier_${t.name}", t == tier) { VideoPrefs.setGpuTier(context, t); onChanged(true) } }
                 }
@@ -124,11 +125,11 @@ fun Anime4kSheet(
                 Text(style.detail, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
             } else {
                 Section("Custom")
-                Level("Restore strength", "a4k_custom_sharpen", custom.sharpen) { Anime4kV2.setCustom(context, custom.copy(sharpen = it)); onChanged(true) }
-                Level("Line darkening", "a4k_custom_darken", custom.darken) { Anime4kV2.setCustom(context, custom.copy(darken = it)); onChanged(true) }
+                Level(tr(R.string.restore_strength, "Restore strength"), "a4k_custom_sharpen", custom.sharpen) { Anime4kV2.setCustom(context, custom.copy(sharpen = it)); onChanged(true) }
+                Level(tr(R.string.line_darkening, "Line darkening"), "a4k_custom_darken", custom.darken) { Anime4kV2.setCustom(context, custom.copy(darken = it)); onChanged(true) }
                 Level("Denoise", "a4k_custom_denoise", custom.denoise) { Anime4kV2.setCustom(context, custom.copy(denoise = it)); onChanged(true) }
-                Toggle("Wide reach", "Restores softer, blurrier detail (samples 2 pixels away)", "a4k_custom_wide", custom.wide) { Anime4kV2.setCustom(context, custom.copy(wide = it)); onChanged(true) }
-                Toggle("Diagonal samples", "More precise lines; 9 samples per pixel instead of 5", "a4k_custom_diag", custom.diagonals) { Anime4kV2.setCustom(context, custom.copy(diagonals = it)); onChanged(true) }
+                Toggle(tr(R.string.wide_reach, "Wide reach"), tr(R.string.restores_softer_blurrier_detail_samples_2, "Restores softer, blurrier detail (samples 2 pixels away)"), "a4k_custom_wide", custom.wide) { Anime4kV2.setCustom(context, custom.copy(wide = it)); onChanged(true) }
+                Toggle(tr(R.string.diagonal_samples, "Diagonal samples"), tr(R.string.more_precise_lines_9_samples_per, "More precise lines; 9 samples per pixel instead of 5"), "a4k_custom_diag", custom.diagonals) { Anime4kV2.setCustom(context, custom.copy(diagonals = it)); onChanged(true) }
             }
         }
     }

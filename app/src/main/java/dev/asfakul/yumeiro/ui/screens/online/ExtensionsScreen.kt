@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -166,7 +167,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         bulkBusy = false
         afterChange()
         val broken = if (on) list.filter { ExtensionManager.state.value.info(it.key).error != null }.map { it.name } else emptyList()
-        val msg = dev.asfakul.yumeiro.online.ExtensionBulk.summary(if (on) "Turned on" else "Turned off", o.copy(ok = o.ok - broken.size, failed = o.failed + broken))
+        val msg = dev.asfakul.yumeiro.online.ExtensionBulk.summary(if (on) tr(R.string.turned_on, "Turned on") else tr(R.string.turned_off_2, "Turned off"), o.copy(ok = o.ok - broken.size, failed = o.failed + broken))
         if (o.failed.isEmpty() && broken.isEmpty()) AppMessages.success(context, if (list.isEmpty()) "Already ${if (on) "on" else "off"}" else msg) else AppMessages.error(context, msg)
         endSelection()
     }
@@ -222,15 +223,15 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     val shownKeys = remember(shown) { shown.map { it.key } }
     Column(Modifier.fillMaxSize().testTag("extensions_screen")) {
         SubPageHeader(
-            title = "Extensions", onBack = { if (selecting) endSelection() else onBack() },
+            title = tr(R.string.extensions, "Extensions"), onBack = { if (selecting) endSelection() else onBack() },
             subtitle = if (engine.ready) "${engine.installed.size} installed · ${engine.enabledCount} active" else "Loading…",
         ) {
             if (engine.installed.size > 1) {
-                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "extensions_search_toggle", "Search installed extensions")
+                dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "extensions_search_toggle", tr(R.string.search_installed_extensions, "Search installed extensions"))
                 dev.asfakul.yumeiro.ui.components.FilterIconButton(if (status != "all") 1 else 0, { showFilters = true }, "extensions_filter")
             }
             if (engine.installed.isNotEmpty()) IconButton(onClick = { if (selecting) endSelection() else selecting = true }, modifier = Modifier.testTag("extensions_select")) {
-                Icon(Icons.Default.Checklist, if (selecting) "Stop selecting" else "Select extensions", tint = if (selecting) SpotifyGreen else TextPrimary)
+                Icon(Icons.Default.Checklist, if (selecting) tr(R.string.stop_selecting, "Stop selecting") else tr(R.string.select_extensions, "Select extensions"), tint = if (selecting) SpotifyGreen else TextPrimary)
             }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, stringResource(R.string.more_sources), tint = TextPrimary) }
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, stringResource(R.string.market), tint = TextPrimary) }
@@ -248,7 +249,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                 }
             }
         }
-        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search installed extensions", "extensions_search")
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, tr(R.string.search_installed_extensions, "Search installed extensions"), "extensions_search")
         if (selecting) SelectionBar(
             count = selected.size,
             allShownSelected = shownKeys.isNotEmpty() && selected.containsAll(shownKeys),
@@ -314,11 +315,11 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                     }
                 }
                 if (engine.installed.isEmpty()) item("empty") {
-                    StateMessage(Icons.Default.Extension, "No extensions installed", "Extensions add more online sources: home rows, search, details and streams. Yumeiro's own built-in sources are below.",
+                    StateMessage(Icons.Default.Extension, tr(R.string.no_extensions_installed, "No extensions installed"), tr(R.string.extensions_add_more_online_sources_home, "Extensions add more online sources: home rows, search, details and streams. Yumeiro's own built-in sources are below."),
                         primary = "Browse market" to onOpenMarket, secondary = "Add a repository" to { showRepoDialog = true }, testTag = "extensions_empty")
                 }
                 if (engine.installed.isNotEmpty() && shown.isEmpty()) item("no_match") {
-                    StateMessage(Icons.Default.Extension, "No extension matches", if (query.isNotBlank()) "Nothing installed matches \"${query.trim()}\"." else "No extension is in this state.",
+                    StateMessage(Icons.Default.Extension, tr(R.string.no_extension_matches_2, "No extension matches"), if (query.isNotBlank()) "Nothing installed matches \"${query.trim()}\"." else tr(R.string.no_extension_is_in_this_state, "No extension is in this state."),
                         primary = "Clear filters" to { query = ""; status = "all"; searchOpen = false }, testTag = "extensions_no_match")
                 }
                 items(shown, key = { it.key }) { ext ->
@@ -383,7 +384,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         onDismiss = { showFilters = false }, onReset = if (status != "all") ({ status = "all" }) else null, resultCount = null, tag = "extensions_filter_sheet",
     ) {
         dev.asfakul.yumeiro.ui.components.FilterGroup("Show") {
-            listOf("all" to "All", "on" to "On", "off" to "Off", "problems" to "Needs attention", "updates" to "Has update").forEach { (k, l) ->
+            listOf("all" to "All", "on" to "On", "off" to "Off", "problems" to tr(R.string.needs_attention, "Needs attention"), "updates" to tr(R.string.has_update, "Has update")).forEach { (k, l) ->
                 OnlineChip(l, status == k, { status = k }, Modifier.testTag("extensions_status_$k"))
             }
         }
@@ -391,7 +392,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
     if (showAnyDialog) dev.asfakul.yumeiro.ui.screens.sources.UniversalAddDialog(onDismiss = { showAnyDialog = false; afterChange() },
         onServer = { AppMessages.show(context, it.message); onOpenSources() })
     if (showRepoDialog) InputDialog(
-        title = "Add repository", label = "Repository link", hint = "https://…/repo.json or a GitHub repo",
+        title = tr(R.string.add_repository, "Add repository"), label = tr(R.string.repository_link, "Repository link"), hint = "https://…/repo.json or a GitHub repo",
         confirm = "Add", onDismiss = { showRepoDialog = false },
     ) { text, done ->
         scope.launch {
@@ -406,7 +407,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         }
     }
     if (showLinkDialog) InputDialog(
-        title = "Install from link", label = "Extension link", hint = "https://…/Extension.cs3 (any format is detected)",
+        title = tr(R.string.install_from_link, "Install from link"), label = tr(R.string.extension_link, "Extension link"), hint = "https://…/Extension.cs3 (any format is detected)",
         confirm = "Install", onDismiss = { showLinkDialog = false },
     ) { text, done ->
         scope.launch {
@@ -509,22 +510,22 @@ private fun InstalledCard(
     }
     editUrl?.let { api ->
         InputDialog(
-            title = "Website address", label = api.name, hint = ProviderOverrides.mainUrl(api.name) ?: api.mainUrl, confirm = "Save",
+            title = tr(R.string.website_address, "Website address"), label = api.name, hint = ProviderOverrides.mainUrl(api.name) ?: api.mainUrl, confirm = "Save",
             onDismiss = { editUrl = null },
         ) { text, done ->
-            if (text.isNotBlank() && ProviderOverrides.normalize(text) == null) done("That isn't a web address")
+            if (text.isNotBlank() && ProviderOverrides.normalize(text) == null) done(tr(R.string.that_isnt_a_web_address, "That isn't a web address"))
             else { ProviderOverrides.setMainUrl(api, text); done(null); editUrl = null
                 AppMessages.success(context, if (text.isBlank()) "${api.name} uses its default address" else "${api.name} now uses ${api.mainUrl}") }
         }
     }
     cloneOf?.let { api ->
         InputDialog(
-            title = "Clone site", label = "Address of a site like ${api.name}", hint = "https://another-site.example", confirm = "Add clone",
+            title = tr(R.string.clone_site, "Clone site"), label = "Address of a site like ${api.name}", hint = "https://another-site.example", confirm = tr(R.string.add_clone, "Add clone"),
             onDismiss = { cloneOf = null },
         ) { text, done ->
             dev.asfakul.yumeiro.online.SiteClones.add(context, api, text)
-                .onSuccess { name -> done(null); cloneOf = null; AppMessages.success(context, "Added $name. It searches and opens like any source") }
-                .onFailure { done(it.message ?: "Couldn't add that clone") }
+                .onSuccess { name -> done(null); cloneOf = null; AppMessages.success(context, tr(R.string.added_it_searches_and_opens_like, "Added %1\$s. It searches and opens like any source", name)) }
+                .onFailure { done(it.message ?: tr(R.string.couldnt_add_that_clone, "Couldn't add that clone")) }
         }
     }
     Surface(
@@ -565,11 +566,11 @@ private fun InstalledCard(
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         if (plugin?.openSettings != null && ext.enabled) DropdownMenuItem(text = { Text(stringResource(R.string.settings)) }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { menu = false; openSettings() })
                         apis.forEach { api ->
-                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Website address · ${api.name}" else "Website address") }, leadingIcon = { Icon(Icons.Default.Language, null) }, onClick = { menu = false; editUrl = api })
+                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Website address · ${api.name}" else tr(R.string.website_address, "Website address")) }, leadingIcon = { Icon(Icons.Default.Language, null) }, onClick = { menu = false; editUrl = api })
                         }
                         // F7: a copy of a source that reads a clone site; clones themselves can be removed here.
                         if (ext.enabled) apis.filter { api -> !dev.asfakul.yumeiro.online.SiteClones.isClone(api.name) }.forEach { api ->
-                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Clone site · ${api.name}" else "Clone site") }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
+                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Clone site · ${api.name}" else tr(R.string.clone_site, "Clone site")) }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
                                 onClick = { menu = false; cloneOf = api }, modifier = Modifier.testTag("extension_clone_${api.name}"))
                         }
                         apis.filter { api -> dev.asfakul.yumeiro.online.SiteClones.isClone(api.name) }.forEach { api ->
@@ -580,12 +581,12 @@ private fun InstalledCard(
                         if (update != null) DropdownMenuItem(text = { Text(stringResource(R.string.update_to_v, update.version)) }, leadingIcon = { Icon(Icons.Default.SystemUpdate, null) }, onClick = { menu = false; onUpdate() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.check_for_update)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onCheckUpdate() })
                         if (ext.enabled) apis.forEach { api ->
-                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Sign in to site · ${api.name}" else "Sign in to site") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Login, null) }, onClick = { menu = false; signIn(api) })
+                            DropdownMenuItem(text = { Text(if (apis.size > 1) "Sign in to site · ${api.name}" else tr(R.string.sign_in_to_site, "Sign in to site")) }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Login, null) }, onClick = { menu = false; signIn(api) })
                         }
                         if (signedIn) DropdownMenuItem(text = { Text(stringResource(R.string.sign_out_of_site)) }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { menu = false; signOut() })
                         if (report != null) DropdownMenuItem(text = { Text(stringResource(R.string.safety_check_2)) }, leadingIcon = { Icon(Icons.Default.Shield, null) }, onClick = { menu = false; showReport = true })
                         if (!ext.manual) DropdownMenuItem(
-                            text = { Text(if (ext.autoUpdate) "Turn off auto-update" else "Turn on auto-update") },
+                            text = { Text(if (ext.autoUpdate) tr(R.string.turn_off_auto_update, "Turn off auto-update") else tr(R.string.turn_on_auto_update, "Turn on auto-update")) },
                             leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onAuto(!ext.autoUpdate) },
                         )
                         DropdownMenuItem(text = { Text(stringResource(R.string.remove_2), color = ErrorColor) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = ErrorColor) },
@@ -596,11 +597,11 @@ private fun InstalledCard(
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 when {
-                    !ext.enabled -> Pill("Off", TextTertiary)
-                    info.error != null -> Pill("Error", ErrorColor)
+                    !ext.enabled -> Pill(tr(R.string.off, "Off"), TextTertiary)
+                    info.error != null -> Pill(tr(R.string.error, "Error"), ErrorColor)
                     info.loaded -> Pill(if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS)) "On" else "${info.providers.size} source${if (info.providers.size == 1) "" else "s"}")
                 }
-                if (!ext.manual) Pill(if (ext.autoUpdate) "Auto-update" else "Manual updates", TextSecondary)
+                if (!ext.manual) Pill(if (ext.autoUpdate) "Auto-update" else tr(R.string.manual_updates, "Manual updates"), TextSecondary)
                 if (update != null) Pill("Update v${update.version}", WarnColor)
                 report?.let { r -> androidx.compose.foundation.layout.Box(Modifier.clickable { showReport = true }) { Pill(levelLabel(r.level), levelColor(r.level)) } }
                 if (signedIn) Pill("Signed in", SpotifyGreen)
@@ -647,7 +648,7 @@ private fun SelectionBar(
                     colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = SpotifyGreen, checkmarkColor = OnAccent),
                     modifier = Modifier.testTag("extensions_select_all"),
                 )
-                Text(if (count == 0) "Select all" else "$count selected", color = TextPrimary, fontWeight = FontWeight.SemiBold,
+                Text(if (count == 0) tr(R.string.hx_select_all, "Select all") else "$count selected", color = TextPrimary, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f).testTag("extensions_selected_count"))
                 TextButton(onClick = onCancel, modifier = Modifier.testTag("extensions_bulk_cancel")) { Text(stringResource(R.string.done), color = TextSecondary) }
             }

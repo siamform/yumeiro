@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -77,14 +78,14 @@ fun OnlineSettingsCard(part: OnlinePart) {
         var text by remember(which) { mutableStateOf(when (which) { "os" -> osKey; "subdl" -> subdlKey; "subsource" -> subsourceKey; else -> lang }) }
         TsukiDialog(
             onDismissRequest = { edit = null },
-            title = { Text(when (which) { "os" -> "OpenSubtitles API key"; "subdl" -> "SubDL API key"; "subsource" -> "SubSource API key"; else -> "Subtitle language" }) },
+            title = { Text(when (which) { "os" -> tr(R.string.opensubtitles_api_key, "OpenSubtitles API key"); "subdl" -> tr(R.string.subdl_api_key, "SubDL API key"); "subsource" -> tr(R.string.subsource_api_key, "SubSource API key"); else -> tr(R.string.subtitle_language, "Subtitle language") }) },
             text = {
                 Column {
                     Text(when (which) {
                         "os" -> "Free key: sign up at opensubtitles.com, open Consumers, create one and paste its API key. Used only to search subtitles."
                         "subdl" -> "Free key: sign in at subdl.com, open your account panel and copy the API key. Used only to search and download subtitles."
                         "subsource" -> "Free key: sign in at subsource.net, open your profile and create an API key. Used only to search and download subtitles."
-                        else -> "Two-letter code, e.g. en, bn, hi, es, ar (pt-br for Brazilian Portuguese)."
+                        else -> tr(R.string.two_letter_code_e_g_en, "Two-letter code, e.g. en, bn, hi, es, ar (pt-br for Brazilian Portuguese).")
                     }, color = TextSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(text, { text = it }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("setting_key_field"))
@@ -108,27 +109,27 @@ fun OnlineSettingsCard(part: OnlinePart) {
     SettingsCard {
         when (part) {
             OnlinePart.ADULT -> {
-                SettingsToggleRow("Show 18+ content", "Adult extensions and titles, for the profile you are using. Off by default.", adult, { on ->
+                SettingsToggleRow(tr(R.string.show_18_content_2, "Show 18+ content"), tr(R.string.adult_extensions_and_titles_for_the, "Adult extensions and titles, for the profile you are using. Off by default."), adult, { on ->
                     if (!on) OnlineSettings.setAdult(context, false)
                     else if (dev.asfakul.yumeiro.profiles.Profiles.needsMainUnlock(context)) adultMainCheck = true
                     else confirmAdult = true
                 }, "setting_adult")
                 if (adult) {
                     val priv by OnlineSettings.adultPrivate.collectAsState()
-                    SettingsToggleRow("Keep 18+ activity private", "18+ titles you watch are saved quietly: they never show in Home, feeds, suggestions or Continue watching. Find them with search", priv,
+                    SettingsToggleRow(tr(R.string.keep_18_activity_private, "Keep 18+ activity private"), "18+ titles you watch are saved quietly: they never show in Home, feeds, suggestions or Continue watching. Find them with search", priv,
                         { OnlineSettings.setAdultPrivate(context, it) }, "setting_adult_private")
                 }
             }
             OnlinePart.SKIP -> {
-                SettingsToggleRow("Skip intro & outro", "Community times: AniSkip for anime, IntroDB for shows and movies", skip, { OnlineSettings.setSkipIntro(context, it) }, "setting_skip_intro")
-                if (skip) SettingsToggleRow("Skip automatically", "Jump past intros and outros without asking", auto, { OnlineSettings.setAutoSkip(context, it) }, "setting_auto_skip")
+                SettingsToggleRow(tr(R.string.skip_intro_outro, "Skip intro & outro"), tr(R.string.community_times_aniskip_for_anime_introdb, "Community times: AniSkip for anime, IntroDB for shows and movies"), skip, { OnlineSettings.setSkipIntro(context, it) }, "setting_skip_intro")
+                if (skip) SettingsToggleRow(tr(R.string.skip_automatically, "Skip automatically"), tr(R.string.jump_past_intros_and_outros_without, "Jump past intros and outros without asking"), auto, { OnlineSettings.setAutoSkip(context, it) }, "setting_auto_skip")
             }
             OnlinePart.SUBTITLES -> {
-                ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
+                ValueRow(tr(R.string.subtitle_search_language, "Subtitle search language"), lang.uppercase()) { edit = "lang" }
                 Text(stringResource(R.string.subtitle_sites_all_free_use_any), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                ValueRow("OpenSubtitles API key", when { osKey.isNotBlank() -> "Your key"; dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> "Not set" }) { edit = "os" }
-                ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
-                ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
+                ValueRow(tr(R.string.opensubtitles_api_key, "OpenSubtitles API key"), when { osKey.isNotBlank() -> tr(R.string.your_key, "Your key"); dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> tr(R.string.not_set, "Not set") }) { edit = "os" }
+                ValueRow(tr(R.string.subdl_api_key, "SubDL API key"), if (subdlKey.isBlank()) tr(R.string.not_set, "Not set") else "Set") { edit = "subdl" }
+                ValueRow(tr(R.string.subsource_api_key, "SubSource API key"), if (subsourceKey.isBlank()) tr(R.string.not_set, "Not set") else "Set") { edit = "subsource" }
             }
         }
     }

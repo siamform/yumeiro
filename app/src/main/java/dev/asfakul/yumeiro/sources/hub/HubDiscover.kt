@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.hub
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineItem
 import kotlinx.coroutines.async
@@ -56,12 +58,12 @@ object HubDiscover {
     val MOVIE_GENRES = listOf(
         28 to "Action", 12 to "Adventure", 16 to "Animation", 35 to "Comedy", 80 to "Crime", 99 to "Documentary",
         18 to "Drama", 10751 to "Family", 14 to "Fantasy", 36 to "History", 27 to "Horror", 10402 to "Music",
-        9648 to "Mystery", 10749 to "Romance", 878 to "Science Fiction", 53 to "Thriller", 10752 to "War", 37 to "Western",
+        9648 to "Mystery", 10749 to "Romance", 878 to tr(R.string.science_fiction, "Science Fiction"), 53 to "Thriller", 10752 to "War", 37 to "Western",
     )
     val TV_GENRES = listOf(
-        10759 to "Action & Adventure", 16 to "Animation", 35 to "Comedy", 80 to "Crime", 99 to "Documentary",
+        10759 to tr(R.string.action_adventure, "Action & Adventure"), 16 to "Animation", 35 to "Comedy", 80 to "Crime", 99 to "Documentary",
         18 to "Drama", 10751 to "Family", 10762 to "Kids", 9648 to "Mystery", 10764 to "Reality",
-        10765 to "Sci-Fi & Fantasy", 10768 to "War & Politics", 37 to "Western",
+        10765 to tr(R.string.sci_fi_fantasy, "Sci-Fi & Fantasy"), 10768 to tr(R.string.war_politics, "War & Politics"), 37 to "Western",
     )
 
     /** Tests point this at a local server; null = Yumeiro Cloud. */
@@ -136,7 +138,7 @@ object HubDiscover {
     /** Item → a card that opens the catalog title (played through the user's own sources). */
     fun Item.toOnlineItem(): OnlineItem = OnlineItem(
         name = title, url = url, api = YumeiroHub.NAME, posterUrl = poster,
-        type = when { anime -> "Anime"; kind == "tv" -> "TV series"; else -> "Movie" },
+        type = when { anime -> "Anime"; kind == "tv" -> tr(R.string.tv_series, "TV series"); else -> "Movie" },
         score = rating,
     )
 

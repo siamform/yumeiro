@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.telegram.td
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.serialization.json.put
 
@@ -62,8 +64,8 @@ object TgMiniApp {
     }
 
     /** What the user is agreeing to, in plain words (shown before the first Mini App opens). */
-    const val CONSENT_TEXT = "This opens a Telegram bot's mini app inside Yumeiro, as the Telegram app would. " +
-        "The bot is run by a third party, not by Yumeiro or DiskWala. Telegram gives it your Telegram name, " +
+    val CONSENT_TEXT: String get() = tr(R.string.this_opens_a_telegram_bots_mini, "This opens a Telegram bot's mini app inside Yumeiro, as the Telegram app would. ") +
+        tr(R.string.the_bot_is_run_by_a, "The bot is run by a third party, not by Yumeiro or DiskWala. Telegram gives it your Telegram name, ") +
         "user id and language, and Yumeiro gives it the link. The bot may show its own ads. You can turn this off " +
         "in Websites > Telegram > Bot mini apps."
 

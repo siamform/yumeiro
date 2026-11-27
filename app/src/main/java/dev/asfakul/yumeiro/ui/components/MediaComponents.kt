@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.LibraryMusic
@@ -182,9 +183,9 @@ fun StorageStatBanner(
         }
         Spacer(modifier = Modifier.height(14.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatPill(label = "Tracks", value = "${stats.audioCount}", icon = Icons.Default.MusicNote, modifier = Modifier.weight(1f))
-            StatPill(label = "Videos", value = "${stats.videoCount}", icon = Icons.Default.Videocam, modifier = Modifier.weight(1f))
-            StatPill(label = "Storage", value = formatFileSize(stats.totalStorageUsedBytes), icon = Icons.Default.Folder, modifier = Modifier.weight(1.2f))
+            StatPill(label = tr(R.string.tracks, "Tracks"), value = "${stats.audioCount}", icon = Icons.Default.MusicNote, modifier = Modifier.weight(1f))
+            StatPill(label = tr(R.string.videos, "Videos"), value = "${stats.videoCount}", icon = Icons.Default.Videocam, modifier = Modifier.weight(1f))
+            StatPill(label = tr(R.string.storage, "Storage"), value = formatFileSize(stats.totalStorageUsedBytes), icon = Icons.Default.Folder, modifier = Modifier.weight(1.2f))
         }
     }
 }
@@ -420,7 +421,7 @@ fun VideoGridCard(
                 ) {
                     Icon(
                         imageVector = if (video.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (video.isFavorite) "Remove from favorites" else "Add to favorites",
+                        contentDescription = if (video.isFavorite) tr(R.string.remove_from_favorites_2, "Remove from favorites") else tr(R.string.add_to_favorites_2, "Add to favorites"),
                         tint = if (video.isFavorite) SpotifyGreen else Color.White,
                         modifier = Modifier.size(18.dp)
                     )
@@ -667,7 +668,7 @@ fun VideoRowCard(
             ) {
                 Icon(
                     imageVector = if (video.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (video.isFavorite) "Remove from favorites" else "Add to favorites",
+                    contentDescription = if (video.isFavorite) tr(R.string.remove_from_favorites_2, "Remove from favorites") else tr(R.string.add_to_favorites_2, "Add to favorites"),
                     tint = if (video.isFavorite) SpotifyGreen else TextSecondary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -920,22 +921,22 @@ fun VideoDetailsDialog(
                     .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                DetailItem(label = "Title", value = video.title)
-                DetailItem(label = "Duration", value = formatDuration(video.durationMs))
-                DetailItem(label = "Resolution", value = "${video.resolution} (${if (video.width > 0 && video.height > 0) "${video.width}x${video.height}" else "Auto"})")
-                DetailItem(label = "File size", value = formatFileSize(video.sizeBytes))
+                DetailItem(label = tr(R.string.title, "Title"), value = video.title)
+                DetailItem(label = tr(R.string.duration, "Duration"), value = formatDuration(video.durationMs))
+                DetailItem(label = tr(R.string.resolution, "Resolution"), value = "${video.resolution} (${if (video.width > 0 && video.height > 0) "${video.width}x${video.height}" else "Auto"})")
+                DetailItem(label = tr(R.string.file_size, "File size"), value = formatFileSize(video.sizeBytes))
                 DetailItem(label = "Folder", value = video.folderName)
                 if (video.folderPath.isNotBlank()) {
-                    DetailItem(label = "Location", value = video.folderPath)
+                    DetailItem(label = tr(R.string.location, "Location"), value = video.folderPath)
                 }
                 if (video.playbackPositionMs > 0) {
                     val pct = if (video.durationMs > 0) ((video.playbackPositionMs.toDouble() / video.durationMs.toDouble()) * 100).toInt() else 0
                     DetailItem(
-                        label = "Watch Progress",
+                        label = tr(R.string.watch_progress, "Watch Progress"),
                         value = "${formatDuration(video.playbackPositionMs)} / ${formatDuration(video.durationMs)} ($pct%)"
                     )
                 }
-                DetailItem(label = "Favorite", value = if (video.isFavorite) "Yes ★" else "No")
+                DetailItem(label = tr(R.string.favorite, "Favorite"), value = if (video.isFavorite) "Yes ★" else "No")
             }
         },
         confirmButton = {
@@ -1295,7 +1296,7 @@ fun SongActionBottomSheet(
 
             // Action Items
             SheetActionRow(
-                title = "Play next",
+                title = tr(R.string.play_next, "Play next"),
                 icon = Icons.Default.PlayArrow,
                 onClick = {
                     onPlayNext()
@@ -1305,7 +1306,7 @@ fun SongActionBottomSheet(
             )
 
             SheetActionRow(
-                title = "Add to queue",
+                title = tr(R.string.add_to_queue, "Add to queue"),
                 icon = Icons.AutoMirrored.Filled.PlaylistAdd,
                 onClick = {
                     onAddToQueue()
@@ -1315,7 +1316,7 @@ fun SongActionBottomSheet(
             )
 
             SheetActionRow(
-                title = "Add to playlist…",
+                title = tr(R.string.add_to_playlist_2, "Add to playlist…"),
                 icon = Icons.AutoMirrored.Filled.QueueMusic,
                 onClick = {
                     onDismiss()
@@ -1325,7 +1326,7 @@ fun SongActionBottomSheet(
             )
 
             SheetActionRow(
-                title = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
+                title = if (track.isFavorite) tr(R.string.remove_from_favorites_2, "Remove from favorites") else tr(R.string.add_to_favorites_2, "Add to favorites"),
                 icon = if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 iconTint = if (track.isFavorite) SpotifyGreen else TextPrimary,
                 onClick = {
@@ -1336,7 +1337,7 @@ fun SongActionBottomSheet(
             )
 
             if (onDownload != null) SheetActionRow(
-                title = "Download song",
+                title = tr(R.string.download_song, "Download song"),
                 icon = Icons.Default.Download,
                 onClick = {
                     onDismiss()
@@ -1346,7 +1347,7 @@ fun SongActionBottomSheet(
             )
 
             SheetActionRow(
-                title = "Song details",
+                title = tr(R.string.song_details, "Song details"),
                 icon = androidx.compose.material.icons.Icons.Outlined.LibraryMusic,
                 onClick = {
                     onDismiss()
@@ -1406,7 +1407,7 @@ fun AddToPlaylistDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = if (isCreatingNew) "Create new playlist" else "Add to playlist",
+                text = if (isCreatingNew) tr(R.string.create_new_playlist, "Create new playlist") else tr(R.string.add_to_playlist, "Add to playlist"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -1565,16 +1566,16 @@ fun SongDetailsDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DetailItem(label = "Title", value = track.title)
-                DetailItem(label = "Artist", value = track.artist)
-                DetailItem(label = "Album", value = track.album)
-                DetailItem(label = "Duration", value = durationMs?.let(::formatDuration) ?: if (reading && durationMs == null) "Reading…" else "Unknown")
-                DetailItem(label = "File size", value = if (reading && sizeBytes == null) "Reading…" else dev.asfakul.yumeiro.player.SongFacts.sizeLabel(sizeBytes, track.uri, ::formatFileSize))
+                DetailItem(label = tr(R.string.title, "Title"), value = track.title)
+                DetailItem(label = tr(R.string.artist, "Artist"), value = track.artist)
+                DetailItem(label = tr(R.string.album, "Album"), value = track.album)
+                DetailItem(label = tr(R.string.duration, "Duration"), value = durationMs?.let(::formatDuration) ?: if (reading && durationMs == null) "Reading…" else "Unknown")
+                DetailItem(label = tr(R.string.file_size, "File size"), value = if (reading && sizeBytes == null) "Reading…" else dev.asfakul.yumeiro.player.SongFacts.sizeLabel(sizeBytes, track.uri, ::formatFileSize))
                 DetailItem(label = "Folder", value = track.folderName)
                 if (track.folderPath.isNotBlank()) {
-                    DetailItem(label = "Path", value = track.folderPath)
+                    DetailItem(label = tr(R.string.path, "Path"), value = track.folderPath)
                 }
-                DetailItem(label = "Plays", value = "${track.playCount} times")
+                DetailItem(label = tr(R.string.plays_2, "Plays"), value = "${track.playCount} times")
             }
         },
         confirmButton = {

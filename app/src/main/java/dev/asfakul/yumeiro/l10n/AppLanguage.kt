@@ -5,9 +5,7 @@
  */
 package dev.asfakul.yumeiro.l10n
 
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
@@ -23,6 +21,7 @@ import java.util.Locale
 object AppLanguage {
     private const val PREFS = "mt_language"
     private const val KEY = "tag"
+    private const val KEY_REOPEN = "reopen_settings"
 
     /**
      * Languages that ship translations. [complete] is true only when every string of the interface is translated,
@@ -65,7 +64,7 @@ object AppLanguage {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, tag).apply()
     }
 
-    /** Saves [tag] ("" = device language) and redraws the open screen in it. */
+    /** Saves [tag] ("" = device language) and restarts the app in it (see [restartInto]). */
     fun set(context: Context, tag: String) {
         val t = normalize(tag)
         cached = t
@@ -74,10 +73,22 @@ object AppLanguage {
             context.getSystemService(android.app.LocaleManager::class.java)?.applicationLocales =
                 if (t.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(t)
         }
-        var c: Context? = context
-        while (c is ContextWrapper && c !is Activity) c = c.baseContext
-        // Android 13+ recreates the activity itself after a per-app locale change.
-        if (Build.VERSION.SDK_INT < 33) (c as? Activity)?.recreate()
+        // F19: a restart, so text made once per process is in the new language too (see Tr). Settings open again.
+        if (Tr.staleFor(t)) restartInto(context)
+    }
+
+    /** Restarts the app and opens Settings again (the page the language was picked on). */
+    fun restartInto(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_REOPEN, true).commit()
+        dev.asfakul.yumeiro.backup.Restart.now(context)
+    }
+
+    /** True once after [restartInto]: the shell opens Settings. */
+    fun takeReopenSettings(context: Context): Boolean {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!p.getBoolean(KEY_REOPEN, false)) return false
+        p.edit().putBoolean(KEY_REOPEN, false).apply()
+        return true
     }
 
     /** The locale the interface uses now: the pick, or the device's first language. */

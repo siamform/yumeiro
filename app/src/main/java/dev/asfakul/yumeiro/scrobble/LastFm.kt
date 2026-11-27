@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.scrobble
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineSettings
@@ -61,7 +63,7 @@ object LastFm {
      * codes 16 / 29), so the scrobble queue keeps the plays and tries again on its next flush, never in a loop.
      */
     internal fun cloudSig(client: OkHttpClient, params: Map<String, String>, host: String): String {
-        if (host.isBlank()) throw ApiException(26, "Last.fm needs your own API key in this build (Settings → Tracking)")
+        if (host.isBlank()) throw ApiException(26, tr(R.string.last_fm_needs_your_own_api, "Last.fm needs your own API key in this build (Settings → Tracking)"))
         val body = JSONObject().put("params", JSONObject(params)).toString()
             .toRequestBody("application/json".toMediaType())
         val req = Request.Builder().url("https://$host/v1/lastfm/sign").post(body).header("User-Agent", userAgent()).build()
@@ -70,8 +72,8 @@ object LastFm {
             val sig = o?.optString("api_sig").orEmpty()
             when {
                 r.isSuccessful && sig.length == 32 -> sig
-                r.code == 429 -> throw ApiException(29, "Last.fm is busy. Your plays are kept and sent later")
-                r.code == 503 || r.code >= 500 || o == null -> throw ApiException(16, "Yumeiro's Last.fm link isn't available right now. Your plays are kept and sent later; you can also add your own API key in Settings → Tracking")
+                r.code == 429 -> throw ApiException(29, tr(R.string.last_fm_is_busy_your_plays, "Last.fm is busy. Your plays are kept and sent later"))
+                r.code == 503 || r.code >= 500 || o == null -> throw ApiException(16, tr(R.string.yumeiros_last_fm_link_isnt_available, "Yumeiro's Last.fm link isn't available right now. Your plays are kept and sent later; you can also add your own API key in Settings → Tracking"))
                 // Kept as transient: a refusal is a server set-up problem, never the user's plays (they expire after 14 days).
                 else -> throw ApiException(16, "Yumeiro's server refused this Last.fm request (${o.optString("error").ifBlank { "HTTP ${r.code}" }})")
             }

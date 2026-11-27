@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.js
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.dokar.quickjs.QuickJs
 import com.dokar.quickjs.QuickJsInterruptedException
@@ -132,6 +134,6 @@ class JsEngine(private val context: Context, val sourceId: String, private val s
         const val LOAD_TIMEOUT_MS = 20_000L
         /** SRC-1: one call, including the HTTP requests the source makes inside it (Nuvio uses 60 s too). */
         const val CALL_TIMEOUT_MS = 60_000L
-        const val STOPPED = "This source took too long and was stopped"
+        val STOPPED: String get() = tr(R.string.this_source_took_too_long_and, "This source took too long and was stopped")
     }
 }

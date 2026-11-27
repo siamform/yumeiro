@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.youtube
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -27,11 +29,11 @@ import kotlinx.serialization.json.jsonPrimitive
 object YtCookiePaste {
 
     enum class Format(val label: String) {
-        HEADER("Cookie header"),
+        HEADER(tr(R.string.cookie_header, "Cookie header")),
         CURL("cURL command"),
         NETSCAPE("cookies.txt"),
-        JSON("JSON export"),
-        ARCHIVETUNE("ArchiveTune token"),
+        JSON(tr(R.string.json_export, "JSON export")),
+        ARCHIVETUNE(tr(R.string.archivetune_token, "ArchiveTune token")),
     }
 
     sealed interface Result {

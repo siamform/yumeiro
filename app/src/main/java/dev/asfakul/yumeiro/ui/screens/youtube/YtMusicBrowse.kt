@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.a11yLabel
@@ -365,7 +366,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_results"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
                     pageBody(results, home = false, onOpen = open, onPlay = ::play, onRetry = { search(sub) })
                     val p = results.page
-                    if (p != null && p.shelves.isEmpty() && !results.loading) item("none") { YtProblem("No results for “$sub”.", null) }
+                    if (p != null && p.shelves.isEmpty() && !results.loading) item("none") { YtProblem(tr(R.string.no_results_for_2, "No results for “%1\$s”.", sub), null) }
                 }
             } else dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = chip, header = {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("ytmusic_chips")) {
@@ -381,7 +382,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_music_list"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
                 if (chip == CHIP_EXPLORE) item("explore_tiles") { ExploreTiles(open) }
                 if (chip == CHIP_HOME && listened.isNotEmpty()) item("listen_again") {
-                    YmShelfHeader("Listen again", "From your history", Icons.Default.History, null)
+                    YmShelfHeader(tr(R.string.listen_again, "Listen again"), tr(R.string.from_your_history, "From your history"), Icons.Default.History, null)
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         itemsIndexed(listened, key = { i, it -> "la$i${it.id}" }) { _, it ->
                             YmCover(it.title, it.channel.removeSuffix(" - Topic"), it.thumbnail, 132.dp, round = false) { onPlay(it, listened) }
@@ -404,7 +405,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 exit = androidx.compose.animation.slideOutVertically(dev.asfakul.yumeiro.ui.components.YuMotion.exit(dev.asfakul.yumeiro.ui.components.reducedMotion(), 180)) { -it / 2 } + androidx.compose.animation.fadeOut(),
             ) {
                 YtSearchBar(
-                    query, "Songs, albums, artists, podcasts", music = true, autoFocus = asked == key, floating = true,
+                    query, tr(R.string.songs_albums_artists_podcasts, "Songs, albums, artists, podcasts"), music = true, autoFocus = asked == key, floating = true,
                     onChange = { query = it; if (it.isBlank()) { submitted = null; YmStore.resultsGen++; results = YmState(loading = false) } },
                     onSearch = { search(query) },
                     onClear = { query = ""; submitted = null; YmStore.resultsGen++; results = YmState(loading = false); dev.asfakul.yumeiro.ui.components.TabSearch.close(key) },
@@ -545,7 +546,7 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
         is YmItem.Song -> if (compact) QuickPickRow(item, art, pad, onSong) else Row(
             // No download icon on song rows (it cluttered search results): long-press downloads.
             Modifier.fillMaxWidth().combinedClickable(
-                onClickLabel = "Play", onLongClickLabel = "Download song",
+                onClickLabel = "Play", onLongClickLabel = tr(R.string.download_song, "Download song"),
                 onLongClick = { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) },
                 onClick = { onSong(item) },
             ).padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
@@ -608,7 +609,7 @@ internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmI
         Modifier.fillMaxWidth().feedCard("ytmusic", item.videoId).clip(yuRound(12))
             .background(if (isCurrent) accent.copy(alpha = 0.10f) else Color.Transparent)
             .combinedClickable(
-                onClickLabel = "Play", onLongClickLabel = "Download song",
+                onClickLabel = "Play", onLongClickLabel = tr(R.string.download_song, "Download song"),
                 onLongClick = { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); download() },
                 onClick = { onSong(item) },
             )
@@ -669,9 +670,9 @@ private fun MoodGrid(shelf: YmShelf, sideways: Boolean, onOpen: (YmBrowse) -> Un
 @Composable
 private fun ExploreTiles(onOpen: (YmBrowse) -> Unit) {
     val tiles = listOf(
-        Triple("New releases", Icons.Default.Album, YtMusicApi.NEW_RELEASES),
+        Triple(tr(R.string.new_releases, "New releases"), Icons.Default.Album, YtMusicApi.NEW_RELEASES),
         Triple("Charts", Icons.AutoMirrored.Filled.QueueMusic, YtMusicApi.CHARTS),
-        Triple("Moods & genres", Icons.Default.MusicNote, YtMusicApi.MOODS),
+        Triple(tr(R.string.moods_genres, "Moods & genres"), Icons.Default.MusicNote, YtMusicApi.MOODS),
     )
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         tiles.forEach { (label, icon, id) ->
@@ -755,11 +756,11 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
                 title = header?.title ?: "Playlist",
                 what = if (left.size == 1) "1 song" else "${left.size} songs" + if (left.size < tracks.size) " (${tracks.size - left.size} already saved)" else "",
                 count = left.size, folder = dev.asfakul.yumeiro.online.download.OnlineDownloads.youTubeFolder(true, true),
-                quality = "Best audio (M4A when offered)", defaultKeep = true,
+                quality = tr(R.string.best_audio_m4a_when_offered, "Best audio (M4A when offered)"), defaultKeep = true,
                 // OWN-18: songs x their length at 128 kbps (YouTube Music's usual best audio).
                 sizeFor = { _ -> dev.asfakul.yumeiro.online.download.DownloadSize.songsEstimate(all.filter { s -> left.any { it.id == s.videoId } }.map { it.durationSec }) },
-                facts = listOf("YouTube Music", "Audio only"),
-            ) { keep -> if (dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueueYouTubeBatch(context, left, keep) == 0) "Already downloaded or queued" else null })
+                facts = listOf("YouTube Music", tr(R.string.audio_only, "Audio only")),
+            ) { keep -> if (dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueueYouTubeBatch(context, left, keep) == 0) tr(R.string.already_downloaded_or_queued, "Already downloaded or queued") else null })
         }
     }
     LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_detail"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
@@ -790,8 +791,8 @@ internal fun PlaylistDownloadButton(p: dev.asfakul.yumeiro.online.download.Playl
     Box(
         // OL-12-TOUCH: 44 dp circle, 48 dp touch area (TouchTargetTest).
         Modifier.minimumInteractiveComponentSize().size(44.dp).clip(CircleShape).background(GlassFill)
-            .clickable(enabled = !fetching && !p.allDone, onClickLabel = "Download playlist", onClick = onClick)
-            .semantics { contentDescription = "Download playlist" + if (status.isNotBlank()) ". $status" else "" }
+            .clickable(enabled = !fetching && !p.allDone, onClickLabel = tr(R.string.download_playlist, "Download playlist"), onClick = onClick)
+            .semantics { contentDescription = tr(R.string.download_playlist, "Download playlist") + if (status.isNotBlank()) ". $status" else "" }
             .testTag("ytmusic_download_all"),
         contentAlignment = Alignment.Center,
     ) {
@@ -809,7 +810,7 @@ internal fun PlaylistDownloadButton(p: dev.asfakul.yumeiro.online.download.Playl
 
 /** OL-12: the batch status line under Play / Shuffle / Download. */
 internal fun playlistDownloadStatus(p: dev.asfakul.yumeiro.online.download.PlaylistDownload.Progress, fetching: Boolean): String =
-    if (fetching) "Getting every song…" else dev.asfakul.yumeiro.online.download.PlaylistDownload.label(p)
+    if (fetching) tr(R.string.getting_every_song, "Getting every song…") else dev.asfakul.yumeiro.online.download.PlaylistDownload.label(p)
 
 @Composable
 private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay: Boolean, onPlay: () -> Unit, onShuffle: () -> Unit, download: (@Composable () -> Unit)? = null, downloadStatus: String = "") {

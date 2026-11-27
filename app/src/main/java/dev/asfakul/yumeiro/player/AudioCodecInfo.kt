@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import java.util.Locale
 
 /**
@@ -71,7 +73,7 @@ data class AudioCodecInfo(
             val c = codecs?.lowercase().orEmpty()
             return when (m) {
                 "audio/mp4a-latm", "audio/aac" -> when {
-                    c.startsWith("mp4a.40.29") -> "HE-AAC v2"
+                    c.startsWith("mp4a.40.29") -> tr(R.string.he_aac_v2, "HE-AAC v2")
                     c.startsWith("mp4a.40.5") -> "HE-AAC"
                     c.startsWith("mp4a.40.42") -> "xHE-AAC"
                     c.startsWith("mp4a.40.2") -> "AAC-LC"

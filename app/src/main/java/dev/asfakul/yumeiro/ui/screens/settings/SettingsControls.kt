@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -129,23 +130,23 @@ fun NotificationSettingsCard() {
         )
         SettingsDivider()
         SettingsActionRow(
-            "System notifications",
+            tr(R.string.system_notifications, "System notifications"),
             when {
-                !systemOn -> "Blocked by Android. Tap to turn them on"
-                block == dev.asfakul.yumeiro.notify.AppNotifier.Block.CHANNEL_OFF -> "Some categories are off in Android. Tap to check them"
-                else -> "Allowed by Android. Change sound, pop-up and lock-screen style here"
+                !systemOn -> tr(R.string.blocked_by_android_tap_to_turn, "Blocked by Android. Tap to turn them on")
+                block == dev.asfakul.yumeiro.notify.AppNotifier.Block.CHANNEL_OFF -> tr(R.string.some_categories_are_off_in_android, "Some categories are off in Android. Tap to check them")
+                else -> tr(R.string.allowed_by_android_change_sound_pop, "Allowed by Android. Change sound, pop-up and lock-screen style here")
             },
             "settings_system_notifications", status = if (!systemOn) "Off" else if (block == dev.asfakul.yumeiro.notify.AppNotifier.Block.CHANNEL_OFF) "Partly" else "On",
             ok = systemOn && block != dev.asfakul.yumeiro.notify.AppNotifier.Block.CHANNEL_OFF,
             onClick = { PermissionCenter.openNotificationSettings(context) },
         )
         SettingsDivider()
-        SettingsToggleRow("Show notifications", "Off keeps everything quietly in the inbox only", enabled,
+        SettingsToggleRow(tr(R.string.show_notifications, "Show notifications"), tr(R.string.off_keeps_everything_quietly_in_the, "Off keeps everything quietly in the inbox only"), enabled,
             { ns.set(context, Key.ENABLED, it); block = dev.asfakul.yumeiro.notify.AppNotifier.block(context) }, "toggle_notify_enabled")
         SettingsDivider()
-        SettingsActionRow("Send a test notification", "Check that Yumeiro shows up in the status bar and plays its chime", "settings_test_notification") {
+        SettingsActionRow(tr(R.string.send_a_test_notification, "Send a test notification"), tr(R.string.check_that_yumeiro_shows_up_in, "Check that Yumeiro shows up in the status bar and plays its chime"), "settings_test_notification") {
             val why = dev.asfakul.yumeiro.notify.AppNotifier.sendTest(context)
-            if (why == dev.asfakul.yumeiro.notify.AppNotifier.Block.NONE) AppMessages.success(context, "Test sent. Check your status bar")
+            if (why == dev.asfakul.yumeiro.notify.AppNotifier.Block.NONE) AppMessages.success(context, tr(R.string.test_sent_check_your_status_bar, "Test sent. Check your status bar"))
             else {
                 AppMessages.error(context, "${why.title}. ${why.hint}")
                 if (why != dev.asfakul.yumeiro.notify.AppNotifier.Block.MASTER_OFF) PermissionCenter.openNotificationSettings(context)
@@ -154,48 +155,48 @@ fun NotificationSettingsCard() {
         }
         if (enabled) {
             SettingsDivider()
-            SettingsToggleRow("New episodes", "For shows you follow with the bell in My List", episodes,
+            SettingsToggleRow(tr(R.string.new_episodes, "New episodes"), tr(R.string.for_shows_you_follow_with_the, "For shows you follow with the bell in My List"), episodes,
                 { ns.set(context, Key.EPISODES, it) }, "toggle_notify_episodes")
             SettingsDivider()
-            SettingsToggleRow("New extensions", "When new extensions arrive in the extension market", ext,
+            SettingsToggleRow(tr(R.string.new_extensions, "New extensions"), tr(R.string.when_new_extensions_arrive_in_the, "When new extensions arrive in the extension market"), ext,
                 { ns.setExtensions(context, it) }, "toggle_notify_extensions")
             SettingsDivider()
-            SettingsToggleRow("New stream playlists", "When new playlists are added to the stream market", pl,
+            SettingsToggleRow(tr(R.string.new_stream_playlists, "New stream playlists"), tr(R.string.when_new_playlists_are_added_to, "When new playlists are added to the stream market"), pl,
                 { ns.setPlaylists(context, it) }, "toggle_notify_playlists")
             SettingsDivider()
-            SettingsToggleRow("Yumeiro news", "New features, releases and announcements", news,
+            SettingsToggleRow(tr(R.string.yumeiro_news, "Yumeiro news"), tr(R.string.new_features_releases_and_announcements, "New features, releases and announcements"), news,
                 { ns.set(context, Key.NEWS, it) }, "toggle_notify_news")
             SettingsDivider()
-            SettingsToggleRow("Service alerts", "Planned maintenance, outages and messages for this device. Rare, but worth knowing", service,
+            SettingsToggleRow(tr(R.string.service_alerts, "Service alerts"), tr(R.string.planned_maintenance_outages_and_messages_for, "Planned maintenance, outages and messages for this device. Rare, but worth knowing"), service,
                 { ns.set(context, Key.SERVICE, it) }, "toggle_notify_service")
             SettingsDivider()
-            SettingsToggleRow("Suggestions", "An occasional evening idea, like a movie or some music (at most every 3 days)", nudge,
+            SettingsToggleRow("Suggestions", tr(R.string.an_occasional_evening_idea_like_a, "An occasional evening idea, like a movie or some music (at most every 3 days)"), nudge,
                 { ns.setNudges(context, it) }, "toggle_notify_nudges")
             SettingsDivider()
-            SettingsToggleRow("Yumeiro chime", "Play Yumeiro's own sound. Off makes notifications silent", sound,
+            SettingsToggleRow(tr(R.string.yumeiro_chime, "Yumeiro chime"), tr(R.string.play_yumeiros_own_sound_off_makes, "Play Yumeiro's own sound. Off makes notifications silent"), sound,
                 { ns.set(context, Key.SOUND, it) }, "toggle_notify_sound")
         }
         if (pushBuilt) {
             SettingsDivider()
             // Instant notices over Firebase Cloud Messaging. Opt-out for anyone who wants no Google push at all.
             SettingsToggleRow(
-                "Instant alerts",
-                if (!instant) "Off. News, updates and service alerts still arrive with the background checks"
+                tr(R.string.instant_alerts, "Instant alerts"),
+                if (!instant) tr(R.string.off_news_updates_and_service_alerts, "Off. News, updates and service alerts still arrive with the background checks")
                 else "News, updates and service alerts the moment they're sent (Firebase Cloud Messaging) · ${pushStatus.label}",
                 instant, { ns.set(context, Key.FCM, it) }, "toggle_notify_instant",
             )
             val supportId = remember(pushStatus) { if (instant) dev.asfakul.yumeiro.notify.FcmPush.supportId() else null }
             if (supportId != null) {
                 TextButton(
-                    onClick = { copyToClipboard(context, "Yumeiro support ID", supportId) },
+                    onClick = { copyToClipboard(context, tr(R.string.yumeiro_support_id, "Yumeiro support ID"), supportId) },
                     modifier = Modifier.testTag("notify_support_id"),
                 ) { Text(stringResource(R.string.copy_support_id, supportId), color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
             }
         }
         SettingsDivider()
-        SettingsToggleRow("In-app reminders", "Now and then: join the Telegram community, star on GitHub, support the app", reminders,
+        SettingsToggleRow(tr(R.string.in_app_reminders, "In-app reminders"), tr(R.string.now_and_then_join_the_telegram, "Now and then: join the Telegram community, star on GitHub, support the app"), reminders,
             { ns.set(context, Key.REMINDERS, it) }, "toggle_notify_reminders")
-        Text(if (pushBuilt && instant) "App updates are always announced, instantly and when you open the app." else "App updates are always announced when you open the app.",
+        Text(if (pushBuilt && instant) tr(R.string.app_updates_are_always_announced_instantly, "App updates are always announced, instantly and when you open the app.") else tr(R.string.app_updates_are_always_announced_when, "App updates are always announced when you open the app."),
             color = TextSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }
@@ -209,17 +210,17 @@ fun BackgroundActivityCard() {
     var battery by remember { mutableStateOf(PermissionCenter.batteryUnrestricted(context)) }
     LifecycleResumeEffect(Unit) { battery = PermissionCenter.batteryUnrestricted(context); onPauseOrDispose { } }
     SettingsCard {
-        SettingsToggleRow("Background checks", "Look for Yumeiro news every 2 hours and new episodes every 4 hours, even when the app is closed. Opening the app catches up right away", bg,
+        SettingsToggleRow(tr(R.string.background_checks, "Background checks"), tr(R.string.look_for_yumeiro_news_every_2, "Look for Yumeiro news every 2 hours and new episodes every 4 hours, even when the app is closed. Opening the app catches up right away"), bg,
             { NotifySettings.set(context, Key.BACKGROUND, it) }, "toggle_background")
         if (bg) {
             SettingsDivider()
-            SettingsToggleRow("Wi-Fi only", "Skip background checks on mobile data", wifi,
+            SettingsToggleRow(tr(R.string.wi_fi_only, "Wi-Fi only"), tr(R.string.skip_background_checks_on_mobile_data, "Skip background checks on mobile data"), wifi,
                 { NotifySettings.set(context, Key.WIFI_ONLY, it) }, "toggle_background_wifi")
         }
         SettingsDivider()
         SettingsActionRow(
-            "Battery optimisation",
-            if (battery) "Unrestricted. Tap for your phone's extra auto-start or battery page, if it has one" else "Optimised. Tap to allow in one step, so notifications arrive while the app is closed",
+            tr(R.string.battery_optimisation, "Battery optimisation"),
+            if (battery) tr(R.string.unrestricted_tap_for_your_phones_extra, "Unrestricted. Tap for your phone's extra auto-start or battery page, if it has one") else tr(R.string.optimised_tap_to_allow_in_one, "Optimised. Tap to allow in one step, so notifications arrive while the app is closed"),
             "settings_battery", status = if (battery) "Unrestricted" else "Optimised", ok = battery,
             onClick = { PermissionCenter.openBatterySettings(context) },
         )
@@ -230,14 +231,14 @@ fun BackgroundActivityCard() {
         val gs = remember(guideTick, guide) { dev.asfakul.yumeiro.notify.ReliabilityGuide.status(context) }
         SettingsDivider()
         SettingsActionRow(
-            "Keep notifications on time",
-            if (gs.vendor.aggressive) "Step-by-step for ${gs.vendor.name}: auto-start, battery and sleeping apps" else "Check everything that can hold notifications back",
+            tr(R.string.keep_notifications_on_time, "Keep notifications on time"),
+            if (gs.vendor.aggressive) "Step-by-step for ${gs.vendor.name}: auto-start, battery and sleeping apps" else tr(R.string.check_everything_that_can_hold_notifications, "Check everything that can hold notifications back"),
             "settings_reliability_guide", status = if (gs.allGood) "All set" else "Check", ok = gs.allGood,
             onClick = { guide = true },
         )
         if (guide) dev.asfakul.yumeiro.ui.screens.extras.ReliabilityGuideDialog(onClose = { guide = false })
-        Text(if (dev.asfakul.yumeiro.notify.FcmPush.configured()) "News, updates and service alerts arrive instantly with Instant alerts. New episodes still rely on these checks being allowed to run; for on-time episode alerts, turn on Reliable alerts under Notifications (free, with ntfy)."
-            else "Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy).", color = TextSecondary,
+        Text(if (dev.asfakul.yumeiro.notify.FcmPush.configured()) tr(R.string.news_updates_and_service_alerts_arrive, "News, updates and service alerts arrive instantly with Instant alerts. New episodes still rely on these checks being allowed to run; for on-time episode alerts, turn on Reliable alerts under Notifications (free, with ntfy).")
+            else tr(R.string.yumeiro_has_no_push_server_of, "Yumeiro has no push server of its own, so notifications rely on these checks being allowed to run. For on-time alerts, turn on Reliable alerts under Notifications (free, with ntfy)."), color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp))
     }
 }
@@ -257,27 +258,27 @@ fun PermissionsCard(onMediaGranted: () -> Unit) {
     val mediaLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
         tick++
         if (r.values.any { it }) onMediaGranted()
-        else PermissionCenter.explainDenied(context, PermissionCenter.mediaPermissions().first(), "Music & videos access")
+        else PermissionCenter.explainDenied(context, PermissionCenter.mediaPermissions().first(), tr(R.string.music_videos_access, "Music & videos access"))
     }
     SettingsCard {
-        SettingsActionRow("Notifications", "New episodes, extensions and app updates", "perm_notifications",
-            status = if (notif) "Allowed" else "Not allowed", ok = notif) {
+        SettingsActionRow("Notifications", tr(R.string.new_episodes_extensions_and_app_updates, "New episodes, extensions and app updates"), "perm_notifications",
+            status = if (notif) "Allowed" else tr(R.string.not_allowed, "Not allowed"), ok = notif) {
             if (notif) PermissionCenter.openNotificationSettings(context)
             else if (Build.VERSION.SDK_INT >= 33) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             else PermissionCenter.openNotificationSettings(context)
         }
         SettingsDivider()
-        SettingsActionRow("Music & videos", "Find the songs and videos on this device", "perm_media",
-            status = if (media) "Allowed" else "Not allowed", ok = media) {
+        SettingsActionRow(tr(R.string.music_videos, "Music & videos"), tr(R.string.find_the_songs_and_videos_on, "Find the songs and videos on this device"), "perm_media",
+            status = if (media) "Allowed" else tr(R.string.not_allowed, "Not allowed"), ok = media) {
             if (media) PermissionCenter.openAppSettings(context) else mediaLauncher.launch(PermissionCenter.mediaPermissions())
         }
         SettingsDivider()
-        SettingsActionRow("Install app updates", "Lets Yumeiro install its own updates after you tap Update", "perm_install",
-            status = if (install) "Allowed" else "Ask when needed", ok = if (install) true else null) {
+        SettingsActionRow(tr(R.string.install_app_updates, "Install app updates"), tr(R.string.lets_yumeiro_install_its_own_updates, "Lets Yumeiro install its own updates after you tap Update"), "perm_install",
+            status = if (install) "Allowed" else tr(R.string.ask_when_needed, "Ask when needed"), ok = if (install) true else null) {
             PermissionCenter.openInstallSettings(context)
         }
         SettingsDivider()
-        SettingsActionRow("All app permissions", "Open Yumeiro in Android settings", "perm_app_settings") {
+        SettingsActionRow(tr(R.string.all_app_permissions, "All app permissions"), tr(R.string.open_yumeiro_in_android_settings, "Open Yumeiro in Android settings"), "perm_app_settings") {
             PermissionCenter.openAppSettings(context)
         }
     }
@@ -321,42 +322,42 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
     }
     val io: suspend (() -> Unit) -> Unit = { f -> withContext(Dispatchers.IO) { f() } }
     SettingsCard {
-        SettingsActionRow("Clear watch history", "Continue watching, resume points and watched marks (device, online and YouTube)", "privacy_clear_watch") {
-            pending = ClearAction("Clear watch history?", "Continue watching, resume positions and watched marks are removed everywhere.", "Watch history cleared") {
+        SettingsActionRow(tr(R.string.clear_watch_history, "Clear watch history"), tr(R.string.continue_watching_resume_points_and_watched, "Continue watching, resume points and watched marks (device, online and YouTube)"), "privacy_clear_watch") {
+            pending = ClearAction(tr(R.string.clear_watch_history_2, "Clear watch history?"), tr(R.string.continue_watching_resume_positions_and_watched, "Continue watching, resume positions and watched marks are removed everywhere."), tr(R.string.watch_history_cleared, "Watch history cleared")) {
                 onClearWatchHistory()
                 io { dev.asfakul.yumeiro.online.OnlineHistory.clear(context); dev.asfakul.yumeiro.youtube.YtHistory.clear(context); WatchHistoryClear.streams(context); dev.asfakul.yumeiro.backup.HistoryWipe.watchExtras(context) }
             }
         }
         if (adultOn) {
             SettingsDivider()
-            SettingsActionRow("Clear 18+ history", "Only the 18+ titles you watched. Everything else stays", "privacy_clear_adult") {
-                pending = ClearAction("Clear 18+ history?", "Every 18+ title is removed from your history. Other history stays.", "18+ history cleared") {
+            SettingsActionRow(tr(R.string.clear_18_history, "Clear 18+ history"), tr(R.string.only_the_18_titles_you_watched, "Only the 18+ titles you watched. Everything else stays"), "privacy_clear_adult") {
+                pending = ClearAction(tr(R.string.clear_18_history_2, "Clear 18+ history?"), tr(R.string.every_18_title_is_removed_from, "Every 18+ title is removed from your history. Other history stays."), "18+ history cleared") {
                     io { dev.asfakul.yumeiro.online.OnlineHistory.clearAdult(context) }
                 }
             }
         }
         SettingsDivider()
-        SettingsActionRow("Clear listening history", "Recently played songs and play counts", "privacy_clear_listening") {
-            pending = ClearAction("Clear listening history?", "Recently played and play counts are reset. Playlists and favourites stay.", "Listening history cleared") {
+        SettingsActionRow(tr(R.string.clear_listening_history, "Clear listening history"), tr(R.string.recently_played_songs_and_play_counts, "Recently played songs and play counts"), "privacy_clear_listening") {
+            pending = ClearAction(tr(R.string.clear_listening_history_2, "Clear listening history?"), tr(R.string.recently_played_and_play_counts_are, "Recently played and play counts are reset. Playlists and favourites stay."), tr(R.string.listening_history_cleared, "Listening history cleared")) {
                 onClearListeningHistory()
                 io { dev.asfakul.yumeiro.backup.HistoryWipe.listeningExtras(context) } // B9: Jump back in and the saved queue too
             }
         }
         SettingsDivider()
-        SettingsActionRow("Clear search history", "Recent searches in every search box", "privacy_clear_search") {
-            pending = ClearAction("Clear search history?", "All recent searches are forgotten.", "Search history cleared") {
+        SettingsActionRow(tr(R.string.clear_search_history, "Clear search history"), tr(R.string.recent_searches_in_every_search_box, "Recent searches in every search box"), "privacy_clear_search") {
+            pending = ClearAction(tr(R.string.clear_search_history_2, "Clear search history?"), tr(R.string.all_recent_searches_are_forgotten, "All recent searches are forgotten."), tr(R.string.search_history_cleared, "Search history cleared")) {
                 io { dev.asfakul.yumeiro.ui.components.RecentSearches.clearAll(context); dev.asfakul.yumeiro.ui.screens.online.SearchHistory.clear(context); dev.asfakul.yumeiro.backup.HistoryWipe.dropSearchCaches(context) }
             }
         }
         SettingsDivider()
-        SettingsActionRow("Clear notifications", "Empty the notification inbox", "privacy_clear_inbox") {
-            pending = ClearAction("Clear notifications?", "The inbox is emptied. Notification settings stay the same.", "Notifications cleared") {
+        SettingsActionRow(tr(R.string.clear_notifications, "Clear notifications"), tr(R.string.empty_the_notification_inbox, "Empty the notification inbox"), "privacy_clear_inbox") {
+            pending = ClearAction(tr(R.string.clear_notifications_2, "Clear notifications?"), tr(R.string.the_inbox_is_emptied_notification_settings, "The inbox is emptied. Notification settings stay the same."), tr(R.string.notifications_cleared, "Notifications cleared")) {
                 Inbox.clear(context)
             }
         }
         SettingsDivider()
-        SettingsActionRow("Clear cache", "Thumbnails and temporary files. Frees space; nothing personal is lost", "privacy_clear_cache") {
-            pending = ClearAction("Clear cache?", "Images and temporary files are downloaded again when needed.", "Cache cleared") {
+        SettingsActionRow(tr(R.string.clear_cache, "Clear cache"), tr(R.string.thumbnails_and_temporary_files_frees_space, "Thumbnails and temporary files. Frees space; nothing personal is lost"), "privacy_clear_cache") {
+            pending = ClearAction(tr(R.string.clear_cache_2, "Clear cache?"), tr(R.string.images_and_temporary_files_are_downloaded, "Images and temporary files are downloaded again when needed."), tr(R.string.cache_cleared, "Cache cleared")) {
                 io { context.cacheDir.listFiles()?.forEach { it.deleteRecursively() } }
                 dev.asfakul.yumeiro.online.OnlineRepository.clearCaches()
             }
@@ -371,7 +372,7 @@ fun SocialMediaCard() {
     SettingsCard {
         Text(
             if (more) "Yumeiro has its own website (yumeiro.click), a Telegram channel and group, a Discord server, and is @${dev.asfakul.yumeiro.notify.SocialLinks.HANDLE} everywhere else."
-            else "Yumeiro has its own website (yumeiro.click) and community on Telegram: news in the channel, help and ideas in the group.", color = TextSecondary,
+            else tr(R.string.yumeiro_has_its_own_website_yumeiro, "Yumeiro has its own website (yumeiro.click) and community on Telegram: news in the channel, help and ideas in the group."), color = TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
         Reminders.Social.entries.forEachIndexed { i, s ->
             if (i > 0) SettingsDivider()
@@ -386,11 +387,11 @@ fun SocialMediaCard() {
             SocialLinkRow(dev.asfakul.yumeiro.notify.SocialLinks.yumeiro, "social_")
         }
         SettingsDivider()
-        SettingsActionRow("Website", "Downloads, news and guides · yumeiro.click", "social_website") {
+        SettingsActionRow("Website", tr(R.string.downloads_news_and_guides_yumeiro_click, "Downloads, news and guides · yumeiro.click"), "social_website") {
             Links.open(context, Reminders.WEBSITE_URL)
         }
         SettingsDivider()
-        SettingsActionRow("Star on GitHub", "github.com/siamform/yumeiro", "social_github") {
+        SettingsActionRow(tr(R.string.star_on_github, "Star on GitHub"), "github.com/siamform/yumeiro", "social_github") {
             if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context)
             else AppMessages.error(context, "Couldn't open GitHub")
         }

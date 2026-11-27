@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.notify
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.app.ActivityManager
 import android.app.usage.UsageStatsManager
 import android.content.ComponentName
@@ -28,15 +30,15 @@ object ReliabilityGuide {
 
     /** (package, activity class): plain strings so the list is testable without Android. */
     private fun cn(pkg: String, cls: String) = pkg to cls
-    private const val LOCK = "Open Recents, then long-press (or pull down on) Yumeiro and tap the lock, so clearing Recents never closes it"
+    private val LOCK: String get() = tr(R.string.open_recents_then_long_press_or, "Open Recents, then long-press (or pull down on) Yumeiro and tap the lock, so clearing Recents never closes it")
 
     /** Brand names as reported by [Build.MANUFACTURER] (and [Build.BRAND]) → the maker's guide. */
     fun vendorFor(manufacturer: String, brand: String = ""): Vendor {
         val m = (manufacturer + " " + brand).lowercase()
         return when {
-            listOf("xiaomi", "redmi", "poco").any { it in m } -> Vendor("xiaomi", "Xiaomi, Redmi and POCO (MIUI / HyperOS)", listOf(
-                "Turn on Autostart for Yumeiro",
-                "App battery saver: choose No restrictions",
+            listOf("xiaomi", "redmi", "poco").any { it in m } -> Vendor("xiaomi", tr(R.string.xiaomi_redmi_and_poco_miui_hyperos, "Xiaomi, Redmi and POCO (MIUI / HyperOS)"), listOf(
+                tr(R.string.turn_on_autostart_for_yumeiro, "Turn on Autostart for Yumeiro"),
+                tr(R.string.app_battery_saver_choose_no_restrictions, "App battery saver: choose No restrictions"),
                 LOCK,
             ), listOf(
                 cn("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
@@ -44,17 +46,17 @@ object ReliabilityGuide {
                 cn("com.miui.securitycenter", "com.miui.powercenter.PowerSettings"),
             ))
             "samsung" in m -> Vendor("samsung", "Samsung (One UI)", listOf(
-                "Battery: choose Unrestricted for Yumeiro",
-                "Battery → Background usage limits: remove Yumeiro from Sleeping apps and Deep sleeping apps",
-                "Optional: add Yumeiro to Never sleeping apps",
+                tr(R.string.battery_choose_unrestricted_for_yumeiro, "Battery: choose Unrestricted for Yumeiro"),
+                tr(R.string.battery_background_usage_limits_remove_yumeiro, "Battery → Background usage limits: remove Yumeiro from Sleeping apps and Deep sleeping apps"),
+                tr(R.string.optional_add_yumeiro_to_never_sleeping, "Optional: add Yumeiro to Never sleeping apps"),
             ), listOf(
                 cn("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity"),
                 cn("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity"),
                 cn("com.samsung.android.sm", "com.samsung.android.sm.ui.battery.BatteryActivity"),
             ))
             "huawei" in m || "honor" in m -> Vendor("huawei", "Huawei and Honor (EMUI / MagicOS)", listOf(
-                "App launch: turn off Manage automatically for Yumeiro",
-                "In the box that opens, allow Auto-launch, Secondary launch and Run in background",
+                tr(R.string.app_launch_turn_off_manage_automatically, "App launch: turn off Manage automatically for Yumeiro"),
+                tr(R.string.in_the_box_that_opens_allow, "In the box that opens, allow Auto-launch, Secondary launch and Run in background"),
                 LOCK,
             ), listOf(
                 cn("com.hihonor.systemmanager", "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
@@ -62,9 +64,9 @@ object ReliabilityGuide {
                 cn("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity"),
                 cn("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"),
             ))
-            listOf("oppo", "realme", "oneplus").any { it in m } -> Vendor("coloros", "OPPO, realme and OnePlus (ColorOS / realme UI / OxygenOS)", listOf(
-                "Allow Auto launch (Auto startup) for Yumeiro",
-                "Battery usage: allow background activity (Don't optimise)",
+            listOf("oppo", "realme", "oneplus").any { it in m } -> Vendor("coloros", tr(R.string.oppo_realme_and_oneplus_coloros_realme, "OPPO, realme and OnePlus (ColorOS / realme UI / OxygenOS)"), listOf(
+                tr(R.string.allow_auto_launch_auto_startup_for, "Allow Auto launch (Auto startup) for Yumeiro"),
+                tr(R.string.battery_usage_allow_background_activity_dont, "Battery usage: allow background activity (Don't optimise)"),
                 LOCK,
             ), listOf(
                 cn("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"),
@@ -74,17 +76,17 @@ object ReliabilityGuide {
                 cn("com.coloros.oppoguardelf", "com.coloros.powermanager.fuelgaue.PowerUsageModelActivity"),
             ))
             "vivo" in m || "iqoo" in m -> Vendor("vivo", "vivo and iQOO (Funtouch OS / OriginOS)", listOf(
-                "Allow Autostart for Yumeiro",
-                "Battery → Background power consumption: allow Yumeiro (High background power usage)",
+                tr(R.string.allow_autostart_for_yumeiro, "Allow Autostart for Yumeiro"),
+                tr(R.string.battery_background_power_consumption_allow_yumei, "Battery → Background power consumption: allow Yumeiro (High background power usage)"),
                 LOCK,
             ), listOf(
                 cn("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),
                 cn("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager"),
                 cn("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"),
             ))
-            listOf("tecno", "infinix", "itel", "transsion").any { it in m } -> Vendor("transsion", "Tecno, Infinix and itel (HiOS / XOS)", listOf(
-                "Phone Master → Auto-start management: allow Yumeiro",
-                "Battery → App power saving: turn it off for Yumeiro",
+            listOf("tecno", "infinix", "itel", "transsion").any { it in m } -> Vendor("transsion", tr(R.string.tecno_infinix_and_itel_hios_xos, "Tecno, Infinix and itel (HiOS / XOS)"), listOf(
+                tr(R.string.phone_master_auto_start_management_allow, "Phone Master → Auto-start management: allow Yumeiro"),
+                tr(R.string.battery_app_power_saving_turn_it, "Battery → App power saving: turn it off for Yumeiro"),
                 LOCK,
             ), listOf(
                 cn("com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity"),
@@ -108,11 +110,11 @@ object ReliabilityGuide {
 
     /** Android-level checks, in the order the guide lists them. */
     enum class Check(val title: String, val fix: String) {
-        NOTIFICATIONS("Notifications allowed", "Turn on notifications for Yumeiro"),
-        BACKGROUND_ON("Background checks on", "Turn on Background checks in Yumeiro"),
-        BATTERY("Battery not optimised", "Let Yumeiro skip battery optimisation"),
-        NOT_RESTRICTED("Background use not restricted", "Remove the Restricted battery setting"),
-        NOT_STANDBY_RESTRICTED("Not put to sleep by Android", "Open Yumeiro once a day or remove the restriction"),
+        NOTIFICATIONS(tr(R.string.notifications_allowed, "Notifications allowed"), tr(R.string.turn_on_notifications_for_yumeiro, "Turn on notifications for Yumeiro")),
+        BACKGROUND_ON(tr(R.string.background_checks_on, "Background checks on"), tr(R.string.turn_on_background_checks_in_yumeiro, "Turn on Background checks in Yumeiro")),
+        BATTERY(tr(R.string.battery_not_optimised, "Battery not optimised"), tr(R.string.let_yumeiro_skip_battery_optimisation, "Let Yumeiro skip battery optimisation")),
+        NOT_RESTRICTED(tr(R.string.background_use_not_restricted, "Background use not restricted"), tr(R.string.remove_the_restricted_battery_setting, "Remove the Restricted battery setting")),
+        NOT_STANDBY_RESTRICTED(tr(R.string.not_put_to_sleep_by_android, "Not put to sleep by Android"), tr(R.string.open_yumeiro_once_a_day_or, "Open Yumeiro once a day or remove the restriction")),
     }
 
     data class Status(val failing: Set<Check>, val stalled: Boolean, val vendor: Vendor, val vendorDone: Boolean) {

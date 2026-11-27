@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.update.ui
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.OnAccent
@@ -163,7 +164,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
             Divider()
 
             Text(
-                "About the Play Protect \"scan app\" prompt: Google shows it for app versions it hasn't seen yet, which " +
+                tr(R.string.about_the_play_protect_scan_app, "About the Play Protect \"scan app\" prompt: Google shows it for app versions it hasn't seen yet, which ") +
                     "happens with every new release installed outside the Play Store. When it appears, choose to always " +
                     "send unknown apps for scanning (Play Protect → Settings → Improve harmful app detection) and it " +
                     "won't ask again.",

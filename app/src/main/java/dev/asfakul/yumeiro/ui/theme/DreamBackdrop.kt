@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.theme
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -43,10 +45,10 @@ import java.io.File
 enum class DreamScene { TSUKI, WASHI, AFTERGLOW, MORNING, NOON, AFTERNOON, EVENING, MIDNIGHT, YOU }
 
 enum class BackdropStyle(val label: String, val detail: String) {
-    SCENE("Yumeiro", "The original gradient and glow"),
-    PHOTO("Your photo", "A picture of yours, softly blurred"),
+    SCENE("Yumeiro", tr(R.string.the_original_gradient_and_glow, "The original gradient and glow")),
+    PHOTO(tr(R.string.your_photo, "Your photo"), tr(R.string.a_picture_of_yours_softly_blurred, "A picture of yours, softly blurred")),
     /** Older saved value; treated as [SCENE]. Not shown in settings. */
-    CALM("Yumeiro", "The original gradient and glow"),
+    CALM("Yumeiro", tr(R.string.the_original_gradient_and_glow, "The original gradient and glow")),
 }
 
 /** Persisted backdrop choice (shares the appearance preferences file). */
@@ -92,7 +94,7 @@ object BackdropSettings {
     internal fun photoFile(context: Context) = File(context.filesDir, FILE)
 
     /** Shown under the picker: what the import accepts. */
-    const val ACCEPTED = "JPEG, PNG, WebP, GIF (first frame), BMP, HEIC/HEIF (Android 9+) and AVIF (Android 12+). Up to 60 MB and at least 200 × 200 px; larger pictures are scaled down."
+    val ACCEPTED: String get() = tr(R.string.jpeg_png_webp_gif_first_frame, "JPEG, PNG, WebP, GIF (first frame), BMP, HEIC/HEIF (Android 9+) and AVIF (Android 12+). Up to 60 MB and at least 200 × 200 px; larger pictures are scaled down.")
 
     /**
      * Round 2, order 8: copies the picked image into app storage, downscaled (the backdrop is
@@ -111,10 +113,10 @@ object BackdropSettings {
         val cr = context.contentResolver
         val type = runCatching { cr.getType(uri) }.getOrNull().orEmpty()
         val size = runCatching { cr.openAssetFileDescriptor(uri, "r")?.use { it.length } }.getOrNull() ?: -1L
-        if (size > 60L * 1024 * 1024) return@withContext "That picture is over 60 MB. Pick a smaller one."
-        if (type.startsWith("video/")) return@withContext "That's a video. Pick a photo instead."
+        if (size > 60L * 1024 * 1024) return@withContext tr(R.string.that_picture_is_over_60_mb, "That picture is over 60 MB. Pick a smaller one.")
+        if (type.startsWith("video/")) return@withContext tr(R.string.thats_a_video_pick_a_photo, "That's a video. Pick a photo instead.")
         val result = runCatching {
-            val bmp = decodeScaled(context, uri, 540) ?: return@runCatching "This picture's format isn't supported here" + (type.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "") + ". Try a JPEG or PNG."
+            val bmp = decodeScaled(context, uri, 540) ?: return@runCatching tr(R.string.this_pictures_format_isnt_supported_here_2, "This picture's format isn't supported here") + (type.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "") + tr(R.string.try_a_jpeg_or_png, ". Try a JPEG or PNG.")
             // R17 (G9 S26): the page says "at least 200 × 200 px"; a 1000 × 100 strip used to pass.
             if (bmp.width < 200 || bmp.height < 200) { bmp.recycle(); return@runCatching "That picture is too small (${bmp.width} × ${bmp.height}). Use one at least 200 × 200 px." }
             val tmp = File(context.filesDir, "$FILE.tmp")
@@ -123,11 +125,11 @@ object BackdropSettings {
             if (!tmp.renameTo(photoFile(context))) { tmp.copyTo(photoFile(context), overwrite = true); tmp.delete() }
             null
         }.getOrElse { e ->
-            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("Backdrop photo import ($type, $size bytes)", e)
+            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal(tr(R.string.backdrop_photo_import_bytes, "Backdrop photo import (%1\$s, %2\$s bytes)", type, size), e)
             when (e) {
-                is java.io.FileNotFoundException, is SecurityException -> "Yumeiro couldn't read that picture. If it's only in the cloud, download it to the phone first."
-                is OutOfMemoryError -> "That picture is too large to open on this phone. Pick a smaller one."
-                is BrokenPicture -> "That picture couldn't be opened: the file is damaged or incomplete. Try another copy."
+                is java.io.FileNotFoundException, is SecurityException -> tr(R.string.yumeiro_couldnt_read_that_picture_if, "Yumeiro couldn't read that picture. If it's only in the cloud, download it to the phone first.")
+                is OutOfMemoryError -> tr(R.string.that_picture_is_too_large_to, "That picture is too large to open on this phone. Pick a smaller one.")
+                is BrokenPicture -> tr(R.string.that_picture_couldnt_be_opened_the, "That picture couldn't be opened: the file is damaged or incomplete. Try another copy.")
                 else -> "That picture couldn't be opened (${e.javaClass.simpleName}). Try a JPEG or PNG."
             }
         }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.watch
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
@@ -110,8 +112,8 @@ object WatchTogether {
         val srv = RoomServer(code).also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true) }
         server = srv
         val ip = localIp() ?: "?"
-        _status.value = Status(Role.HOST, name.ifBlank { "Yumeiro room" }, code, "$ip:${srv.listeningPort}", state = hostState)
-        val info = NsdServiceInfo().apply { serviceName = name.ifBlank { "Yumeiro room" }; serviceType = SERVICE_TYPE; port = srv.listeningPort }
+        _status.value = Status(Role.HOST, name.ifBlank { tr(R.string.yumeiro_room, "Yumeiro room") }, code, "$ip:${srv.listeningPort}", state = hostState)
+        val info = NsdServiceInfo().apply { serviceName = name.ifBlank { tr(R.string.yumeiro_room, "Yumeiro room") }; serviceType = SERVICE_TYPE; port = srv.listeningPort }
         val nsd = app.getSystemService(NsdManager::class.java)
         val reg = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(info: NsdServiceInfo) { _status.value = _status.value.copy(roomName = info.serviceName) }
@@ -199,7 +201,7 @@ object WatchTogether {
         val app = context.applicationContext
         val base = "http://" + address.removePrefix("http://").trim().removeSuffix("/")
         val guestId = java.util.UUID.randomUUID().toString()
-        _status.value = Status(Role.GUEST, name, code, address, message = "Connecting…")
+        _status.value = Status(Role.GUEST, name, code, address, message = tr(R.string.connecting, "Connecting…"))
         val client = NetworkClient.get(app).newBuilder().callTimeout(4, TimeUnit.SECONDS).build()
         guestJob = scope.launch {
             var applied = RoomState()
@@ -223,14 +225,14 @@ object WatchTogether {
                     applied = follow(app, remote, applied, offset)
                 }.onFailure { e ->
                     failures++
-                    _status.value = _status.value.copy(connected = false, message = e.message ?: "Can't reach the room")
+                    _status.value = _status.value.copy(connected = false, message = e.message ?: tr(R.string.cant_reach_the_room, "Can't reach the room"))
                     if (e.message == "Wrong room code") {
                         // N1-1: leave() resets the status, so the guest card (and its message) vanished silently.
                         leave(app)
                         dev.asfakul.yumeiro.ui.components.AppMessages.error(app, "Wrong room code. Check the 4-digit code on the host's screen")
                         return@launch
                     }
-                    if (failures > 30) { _status.value = _status.value.copy(message = "The room closed"); return@launch }
+                    if (failures > 30) { _status.value = _status.value.copy(message = tr(R.string.the_room_closed, "The room closed")); return@launch }
                 }
                 delay(1_000)
             }

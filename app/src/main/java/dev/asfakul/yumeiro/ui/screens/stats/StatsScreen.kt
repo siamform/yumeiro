@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stats
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.Canvas
@@ -88,7 +89,7 @@ fun StatsScreen(onBack: () -> Unit) {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0] ?: Locale.ROOT
 
     LazyColumn(Modifier.fillMaxSize().testTag("stats_screen"), contentPadding = PaddingValues(bottom = 24.dp)) {
-        item("header") { SubPageHeader(title = "Your activity", subtitle = "Kept only on this device", onBack = onBack) }
+        item("header") { SubPageHeader(title = tr(R.string.your_activity, "Your activity"), subtitle = tr(R.string.kept_only_on_this_device, "Kept only on this device"), onBack = onBack) }
         if (days.isEmpty()) {
             item("empty") {
                 Text(stringResource(R.string.play_a_song_or_a_video), color = TextSecondary, fontSize = 15.sp,
@@ -107,9 +108,9 @@ fun StatsScreen(onBack: () -> Unit) {
                 SectionTitle("Activity")
                 ActivityMap(byDay, today, selected, onSelect = { selected = it })
                 val d = byDay[selected]
-                val label = LocalDate.ofEpochDay(selected).format(DateTimeFormatter.ofPattern("EEE d MMM", locale))
+                val label = LocalDate.ofEpochDay(selected).format(DateTimeFormatter.ofPattern(tr(R.string.eee_d_mmm, "EEE d MMM"), locale))
                 Text(
-                    if (d == null || !d.active) "$label: nothing played" else "$label: ${StatsMath.duration(d.totalMs)} · ${plays(d.plays.sum())}",
+                    if (d == null || !d.active) tr(R.string.nothing_played, "%1\$s: nothing played", label) else "$label: ${StatsMath.duration(d.totalMs)} · ${plays(d.plays.sum())}",
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp).testTag("stats_selected_day"),
                 )
                 Legend()
@@ -117,7 +118,7 @@ fun StatsScreen(onBack: () -> Unit) {
         }
         item("split") {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                SectionTitle("All time")
+                SectionTitle(tr(R.string.hx_range_all, "All time"))
                 Bar("Listening", all.musicMs, all.totalMs, StatsMath.duration(all.musicMs), "stats_music_time")
                 Bar("Watching", all.videoMs, all.totalMs, StatsMath.duration(all.videoMs), "stats_video_time")
                 StatsMath.Kind.entries.forEach { k ->
@@ -178,7 +179,7 @@ private fun ActivityMap(byDay: Map<Long, StatsMath.Day>, today: Long, selected: 
         val weeks = ((maxWidth + gap) / (cell + gap)).toInt().coerceIn(4, 53)
         val start = StatsMath.gridStart(today, weeks)
         val active = (0 until weeks * 7).count { (byDay[start + it]?.active) == true }
-        val summary = "Activity map, last $weeks weeks: $active active days. Tap a day to see it."
+        val summary = tr(R.string.activity_map_last_weeks_active_days, "Activity map, last %1\$s weeks: %2\$s active days. Tap a day to see it.", weeks, active)
         val cellPx = with(density) { cell.toPx() }; val gapPx = with(density) { gap.toPx() }
         Canvas(
             Modifier.fillMaxWidth().height(cell * 7 + gap * 6).testTag("stats_activity_map")
@@ -265,4 +266,4 @@ fun StatsEntryCard(onOpen: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 private fun Modifier.androidxClickable(onClick: () -> Unit): Modifier =
-    this.clickable(onClickLabel = "Open your activity", role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+    this.clickable(onClickLabel = tr(R.string.open_your_activity, "Open your activity"), role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)

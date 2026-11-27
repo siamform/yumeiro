@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.anime
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -15,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  * (api.aniskip.com, keyed by MyAnimeList id + episode number).
  */
 object AniSkip {
-    enum class Kind(val label: String) { INTRO("Skip intro"), OUTRO("Skip outro"), RECAP("Skip recap"), MIXED_INTRO("Skip intro"), MIXED_OUTRO("Skip outro") }
+    enum class Kind(val label: String) { INTRO(tr(R.string.skip_intro, "Skip intro")), OUTRO(tr(R.string.skip_outro, "Skip outro")), RECAP(tr(R.string.skip_recap, "Skip recap")), MIXED_INTRO(tr(R.string.skip_intro, "Skip intro")), MIXED_OUTRO(tr(R.string.skip_outro, "Skip outro")) }
 
     /**
      * [episodeLengthMs]: length of the video the times were submitted for (0 = unknown). [fits]: false when

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.text.format.DateUtils
@@ -81,11 +82,11 @@ fun PushAlertsCard() {
 
     SettingsCard {
         SettingsToggleRow(
-            "Reliable alerts (UnifiedPush)",
-            if (st.enabled) "A free push app wakes Yumeiro every few hours, so new-episode and news alerts aren't held back"
-            else "Free and optional. Uses the open-source ntfy app instead of Google services. Best if alerts arrive late",
+            tr(R.string.reliable_alerts_unifiedpush, "Reliable alerts (UnifiedPush)"),
+            if (st.enabled) tr(R.string.a_free_push_app_wakes_yumeiro, "A free push app wakes Yumeiro every few hours, so new-episode and news alerts aren't held back")
+            else tr(R.string.free_and_optional_uses_the_open, "Free and optional. Uses the open-source ntfy app instead of Google services. Best if alerts arrive late"),
             st.enabled,
-            { on -> if (on) turnOn() else { PushWake.disable(context); AppMessages.success(context, "Reliable alerts are off") } },
+            { on -> if (on) turnOn() else { PushWake.disable(context); AppMessages.success(context, tr(R.string.reliable_alerts_are_off, "Reliable alerts are off")) } },
             "toggle_push_alerts",
         )
         if (st.enabled) {
@@ -96,19 +97,19 @@ fun PushAlertsCard() {
                 !st.hasEndpoint -> "Waiting for $app to hand out a push address. Open $app once if this stays" to null
                 st.schedule == PushWake.Schedule.NO -> "Connected through ${st.endpointHost}, but this server can't schedule wake-ups. Use ntfy (ntfy.sh or your own server)" to false
                 else -> buildString {
-                    append("Connected via $app")
+                    append(tr(R.string.connected_via, "Connected via %1\$s", app))
                     st.endpointHost?.let { append(" · $it") }
                     if (st.pending > 0) append(" · ${st.pending} wake-ups planned")
-                    append(". Last wake-up: ")
+                    append(tr(R.string.last_wake_up, ". Last wake-up: "))
                     append(if (st.lastWakeAt > 0) DateUtils.getRelativeTimeSpanString(st.lastWakeAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS) else "not yet")
                 } to true
             }
-            SettingsActionRow("Status", status, "push_status", status = if (ok == true) "On" else if (ok == false) "Check" else "Setting up", ok = ok) {
+            SettingsActionRow("Status", status, "push_status", status = if (ok == true) "On" else if (ok == false) "Check" else tr(R.string.setting_up, "Setting up"), ok = ok) {
                 distributors = PushWake.distributors(context)
                 if (distributors.size > 1) pick = true else PushWake.refillIfDue(context)
             }
             SettingsDivider()
-            SettingsActionRow("Send test", if (testing) "Sending…" else "Sends one wake-up through the push server. The last wake-up time updates within seconds", "push_test") {
+            SettingsActionRow(tr(R.string.send_test, "Send test"), if (testing) "Sending…" else tr(R.string.sends_one_wake_up_through_the, "Sends one wake-up through the push server. The last wake-up time updates within seconds"), "push_test") {
                 if (testing) return@SettingsActionRow
                 testing = true
                 scope.launch {

@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.sources.novel
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 /**
  * NOVEL-2 (field probe 45475470803): an LNReader plugin whose site put up a person check throws its own text, made
  * for LNReader ("Royal Road's bot check could not be passed. Open a novel from Royal Road in WebView, …"). Yumeiro
@@ -63,20 +66,20 @@ object NovelSiteCheck {
 
     /** B7: an empty list because the site's firewall refused the request (no check page to pass). */
     fun blockedMessage(siteName: String): String =
-        "$siteName's firewall refused Yumeiro's request, so it sent no novels. Try again later or on another network, or pick another source."
+        tr(R.string.s_firewall_refused_yumeiros_request_so, "%1\$s's firewall refused Yumeiro's request, so it sent no novels. Try again later or on another network, or pick another source.", siteName)
 
     /** B7: an empty list because the site sent Yumeiro elsewhere. */
     fun movedMessage(siteName: String, host: String): String =
-        "$siteName sent Yumeiro to another site ($host) instead of its novels. The site may have moved or closed; try again later or pick another source."
+        tr(R.string.sent_yumeiro_to_another_site_instead, "%1\$s sent Yumeiro to another site (%2\$s) instead of its novels. The site may have moved or closed; try again later or pick another source.", siteName, host)
 
     /** B7: the error to raise for an empty first page, or null when empty really means empty. */
     fun emptyReason(siteName: String, challenged: Boolean, away: String?, blocked: Boolean = false): String? = when {
-        challenged -> "$siteName: Cloudflare check (just a moment)"
+        challenged -> tr(R.string.cloudflare_check_just_a_moment, "%1\$s: Cloudflare check (just a moment)", siteName)
         blocked -> blockedMessage(siteName)
         away != null -> movedMessage(siteName, away)
         else -> null
     }
 
     fun message(siteName: String): String =
-        "$siteName asks for a quick check that you're a person. Open $siteName, finish the check on the page, and Yumeiro loads it again."
+        tr(R.string.asks_for_a_quick_check_that, "%1\$s asks for a quick check that you're a person. Open %2\$s, finish the check on the page, and Yumeiro loads it again.", siteName, siteName)
 }

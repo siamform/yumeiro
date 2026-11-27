@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.hub
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import com.lagradost.cloudstream3.AnimeLoadResponse
 import com.lagradost.cloudstream3.AnimeSearchResponse
 import com.lagradost.cloudstream3.Episode
@@ -55,7 +57,7 @@ import java.util.concurrent.ConcurrentHashMap
  * opens and says so. Ids: `catalog:movie:603`, `catalog:tv:1396`, episodes `catalog:tv:1396:<season>:<episode>`.
  */
 object YumeiroCatalog {
-    const val NAME = "Yumeiro Catalog"
+    val NAME: String get() = tr(R.string.yumeiro_catalog, "Yumeiro Catalog")
     const val PART = "catalog"
 
     fun on(): Boolean = FeatureFlags.isOn(FeatureFlags.Flag.HUB_CATALOG) && YumeiroHub.on() && BuildConfig.CLOUD_HOST.isNotBlank()
@@ -76,13 +78,13 @@ object YumeiroCatalog {
 
     /** Same keys as server/src/hub.ts SHELVES. */
     val SHELVES = listOf(
-        Shelf("trending_movies", "Trending movies"), Shelf("trending_tv", "Trending series"),
-        Shelf("popular_movies", "Popular movies"), Shelf("top_tv", "Top rated series"),
-        Shelf("anime", "Anime series"), Shelf("anime_movies", "Anime movies"),
-        Shelf("kdrama", "Korean drama"), Shelf("cdrama", "Chinese drama"), Shelf("jdrama", "Japanese drama"),
-        Shelf("thai", "Thai series"), Shelf("turkish", "Turkish series"),
-        Shelf("hindi", "Hindi movies"), Shelf("telugu", "Telugu movies"), Shelf("tamil", "Tamil movies"), Shelf("bangla", "Bangla movies"),
-        Shelf("spanish", "Spanish-language series"), Shelf("documentaries", "Documentaries"), Shelf("kids", "Kids and family"),
+        Shelf("trending_movies", tr(R.string.trending_movies, "Trending movies")), Shelf("trending_tv", tr(R.string.trending_series, "Trending series")),
+        Shelf("popular_movies", tr(R.string.popular_movies, "Popular movies")), Shelf("top_tv", tr(R.string.top_rated_series, "Top rated series")),
+        Shelf("anime", tr(R.string.anime_series, "Anime series")), Shelf("anime_movies", tr(R.string.anime_movies, "Anime movies")),
+        Shelf("kdrama", tr(R.string.korean_drama, "Korean drama")), Shelf("cdrama", tr(R.string.chinese_drama, "Chinese drama")), Shelf("jdrama", tr(R.string.japanese_drama, "Japanese drama")),
+        Shelf("thai", tr(R.string.thai_series, "Thai series")), Shelf("turkish", tr(R.string.turkish_series, "Turkish series")),
+        Shelf("hindi", tr(R.string.hindi_movies, "Hindi movies")), Shelf("telugu", tr(R.string.telugu_movies, "Telugu movies")), Shelf("tamil", tr(R.string.tamil_movies, "Tamil movies")), Shelf("bangla", tr(R.string.bangla_movies, "Bangla movies")),
+        Shelf("spanish", tr(R.string.spanish_language_series, "Spanish-language series")), Shelf("documentaries", "Documentaries"), Shelf("kids", tr(R.string.kids_and_family, "Kids and family")),
     )
 
     data class Ref(val kind: String, val id: Long, val season: Int? = null, val episode: Int? = null)

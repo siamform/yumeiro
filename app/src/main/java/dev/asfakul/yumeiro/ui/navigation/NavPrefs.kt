@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.navigation
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -83,38 +85,38 @@ object NavPrefs {
 
     /** A shortcut the user can pin to the bar; tapping it opens that page. */
     enum class Shortcut(val id: String, val label: String, val detail: String, val item: BottomNavItem, val newer: Boolean = false) {
-        MANGA("manga", "Manga", "Your reading list and manga sources", nav("manga", "Manga", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook)),
-        NOVELS("novels", "Novels", "Web novels from LNReader sources", nav("novels", "Novels", Icons.Filled.AutoStories, Icons.Outlined.AutoStories)),
-        LIVE("live", "Live TV", "Channels and your playlists", nav("live", "Live", Icons.Filled.LiveTv, Icons.Outlined.LiveTv)),
-        DOWNLOADS("downloads", "Downloads", "Everything saved for offline", nav("downloads", "Saved", Icons.Filled.Download, Icons.Outlined.Download)),
-        EXTENSIONS("extensions", "Extensions", "Install and manage extensions", nav("extensions", "Exts", Icons.Filled.Extension, Icons.Outlined.Extension)),
-        SOURCES("sources", "Sources", "Repositories, health and sites", nav("sources", "Sources", Icons.Filled.Hub, Icons.Outlined.Hub)),
-        YOUTUBE("youtube", "YouTube", "Videos from YouTube", nav("youtube", "YouTube", Icons.Filled.SmartDisplay, Icons.Outlined.SmartDisplay)),
-        SEARCH("search", "Search", "Search every extension at once", nav("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)),
-        WEBSITES("websites", "Websites", "Play videos from sites you saved", nav("websites", "Sites", Icons.Filled.Language, Icons.Outlined.Language)),
-        TELEGRAM("telegram", "Telegram", "Videos from public Telegram channels", nav("telegram", "Telegram", Icons.AutoMirrored.Filled.Send, Icons.AutoMirrored.Outlined.Send)),
+        MANGA("manga", "Manga", tr(R.string.your_reading_list_and_manga_sources, "Your reading list and manga sources"), nav("manga", "Manga", Icons.AutoMirrored.Filled.MenuBook, Icons.AutoMirrored.Outlined.MenuBook)),
+        NOVELS("novels", "Novels", tr(R.string.web_novels_from_lnreader_sources, "Web novels from LNReader sources"), nav("novels", "Novels", Icons.Filled.AutoStories, Icons.Outlined.AutoStories)),
+        LIVE("live", tr(R.string.live_tv, "Live TV"), tr(R.string.channels_and_your_playlists, "Channels and your playlists"), nav("live", "Live", Icons.Filled.LiveTv, Icons.Outlined.LiveTv)),
+        DOWNLOADS("downloads", "Downloads", tr(R.string.everything_saved_for_offline, "Everything saved for offline"), nav("downloads", "Saved", Icons.Filled.Download, Icons.Outlined.Download)),
+        EXTENSIONS("extensions", "Extensions", tr(R.string.install_and_manage_extensions, "Install and manage extensions"), nav("extensions", "Exts", Icons.Filled.Extension, Icons.Outlined.Extension)),
+        SOURCES("sources", "Sources", tr(R.string.repositories_health_and_sites, "Repositories, health and sites"), nav("sources", "Sources", Icons.Filled.Hub, Icons.Outlined.Hub)),
+        YOUTUBE("youtube", "YouTube", tr(R.string.videos_from_youtube, "Videos from YouTube"), nav("youtube", "YouTube", Icons.Filled.SmartDisplay, Icons.Outlined.SmartDisplay)),
+        SEARCH("search", "Search", tr(R.string.search_every_extension_at_once, "Search every extension at once"), nav("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)),
+        WEBSITES("websites", "Websites", tr(R.string.play_videos_from_sites_you_saved, "Play videos from sites you saved"), nav("websites", "Sites", Icons.Filled.Language, Icons.Outlined.Language)),
+        TELEGRAM("telegram", "Telegram", tr(R.string.videos_from_public_telegram_channels, "Videos from public Telegram channels"), nav("telegram", "Telegram", Icons.AutoMirrored.Filled.Send, Icons.AutoMirrored.Outlined.Send)),
         // B15: live scores and fixtures (Live TV → Tools → Sports), pinnable like the other tools.
-        SPORTS("sports", "Sports", "Live scores and fixtures", nav("sports", "Sports", Icons.Filled.SportsSoccer, Icons.Outlined.SportsSoccer)),
-        YUMIX("yumix", "Yumix", "Anime, movies and shows from your extensions", nav("yumix", "Yumix", dev.asfakul.yumeiro.ui.components.YumixLogo.Filled, dev.asfakul.yumeiro.ui.components.YumixLogo.Icon)),
-        YTMUSIC("ytmusic", "YouTube Music", "Songs, albums and artists online", nav("ytmusic", "YT Music", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic)),
-        MIX("mix", "Music mix", "Your songs and YouTube Music woven together", nav("mix", "Mix", Icons.Filled.Shuffle, Icons.Outlined.Shuffle)),
-        DEVICE_VIDEOS("device_videos", "Device videos", "Videos and folders on this phone", nav("device_videos", "Device", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary)),
-        MY_LIST("mylist", "My List", "Titles you saved in Yumix", nav("mylist", "My List", Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks)),
-        HISTORY("history", "History", "Continue what you were watching", nav("history", "History", Icons.Filled.History, Icons.Outlined.History)),
-        MARKET("market", "Extension market", "Find and install new extensions", nav("market", "Market", Icons.Filled.Storefront, Icons.Outlined.Storefront)),
-        HEALTH("health", "Source health", "Which sources work right now", nav("health", "Health", Icons.Filled.MonitorHeart, Icons.Outlined.MonitorHeart)),
-        EQUALIZER("equalizer", "Equalizer", "Sound presets and bands", nav("equalizer", "EQ", Icons.Filled.Equalizer, Icons.Outlined.Equalizer)),
-        WATCH_TOGETHER("watch_together", "Watch together", "Watch in sync with friends", nav("watch_together", "Together", Icons.Filled.Groups, Icons.Outlined.Groups)),
-        INBOX("inbox", "Inbox", "News and messages from Yumeiro", nav("inbox", "Inbox", Icons.Filled.Inbox, Icons.Outlined.Inbox)),
-        SETTINGS("settings", "Settings", "Every option in one place", nav("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)),
+        SPORTS("sports", "Sports", tr(R.string.sports_shortcut_detail, "Live scores and fixtures"), nav("sports", "Sports", Icons.Filled.SportsSoccer, Icons.Outlined.SportsSoccer)),
+        YUMIX("yumix", "Yumix", tr(R.string.anime_movies_and_shows_from_your, "Anime, movies and shows from your extensions"), nav("yumix", "Yumix", dev.asfakul.yumeiro.ui.components.YumixLogo.Filled, dev.asfakul.yumeiro.ui.components.YumixLogo.Icon)),
+        YTMUSIC("ytmusic", tr(R.string.youtube_music, "YouTube Music"), tr(R.string.songs_albums_and_artists_online, "Songs, albums and artists online"), nav("ytmusic", tr(R.string.yt_music, "YT Music"), Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic)),
+        MIX("mix", tr(R.string.music_mix, "Music mix"), tr(R.string.your_songs_and_youtube_music_woven, "Your songs and YouTube Music woven together"), nav("mix", "Mix", Icons.Filled.Shuffle, Icons.Outlined.Shuffle)),
+        DEVICE_VIDEOS("device_videos", tr(R.string.device_videos, "Device videos"), tr(R.string.videos_and_folders_on_this_phone, "Videos and folders on this phone"), nav("device_videos", "Device", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary)),
+        MY_LIST("mylist", tr(R.string.my_list, "My List"), tr(R.string.titles_you_saved_in_yumix, "Titles you saved in Yumix"), nav("mylist", tr(R.string.my_list, "My List"), Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks)),
+        HISTORY("history", "History", tr(R.string.continue_what_you_were_watching, "Continue what you were watching"), nav("history", "History", Icons.Filled.History, Icons.Outlined.History)),
+        MARKET("market", tr(R.string.extension_market, "Extension market"), tr(R.string.find_and_install_new_extensions, "Find and install new extensions"), nav("market", "Market", Icons.Filled.Storefront, Icons.Outlined.Storefront)),
+        HEALTH("health", tr(R.string.source_health, "Source health"), tr(R.string.which_sources_work_right_now, "Which sources work right now"), nav("health", "Health", Icons.Filled.MonitorHeart, Icons.Outlined.MonitorHeart)),
+        EQUALIZER("equalizer", "Equalizer", tr(R.string.sound_presets_and_bands, "Sound presets and bands"), nav("equalizer", "EQ", Icons.Filled.Equalizer, Icons.Outlined.Equalizer)),
+        WATCH_TOGETHER("watch_together", tr(R.string.watch_together, "Watch together"), tr(R.string.watch_in_sync_with_friends, "Watch in sync with friends"), nav("watch_together", "Together", Icons.Filled.Groups, Icons.Outlined.Groups)),
+        INBOX("inbox", "Inbox", tr(R.string.news_and_messages_from_yumeiro, "News and messages from Yumeiro"), nav("inbox", "Inbox", Icons.Filled.Inbox, Icons.Outlined.Inbox)),
+        SETTINGS("settings", "Settings", tr(R.string.every_option_in_one_place, "Every option in one place"), nav("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)),
         // OL-10 (owner): the newer pages can be pinned too (shown only with NAV_MORE_DESTINATIONS).
-        PROFILES("profiles", "Profiles", "Who's watching, PIN, 18+ per person", nav("profiles", "Profiles", Icons.Filled.AccountCircle, Icons.Outlined.AccountCircle), newer = true),
-        STATS("stats", "Your statistics", "Streaks, totals and the activity map", nav("stats", "Stats", Icons.Filled.Insights, Icons.Outlined.Insights), newer = true),
-        UPCOMING("upcoming", "Airing soon", "New episodes of what you follow", nav("upcoming", "Airing", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth), newer = true),
-        READING("reading", "Reading", "Manga and books you read", nav("reading", "Reading", Icons.Filled.AutoStories, Icons.Outlined.AutoStories), newer = true),
+        PROFILES("profiles", "Profiles", tr(R.string.whos_watching_pin_18_per_person, "Who's watching, PIN, 18+ per person"), nav("profiles", "Profiles", Icons.Filled.AccountCircle, Icons.Outlined.AccountCircle), newer = true),
+        STATS("stats", tr(R.string.your_statistics, "Your statistics"), tr(R.string.streaks_totals_and_the_activity_map, "Streaks, totals and the activity map"), nav("stats", "Stats", Icons.Filled.Insights, Icons.Outlined.Insights), newer = true),
+        UPCOMING("upcoming", tr(R.string.airing_soon, "Airing soon"), tr(R.string.new_episodes_of_what_you_follow, "New episodes of what you follow"), nav("upcoming", "Airing", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth), newer = true),
+        READING("reading", "Reading", tr(R.string.manga_and_books_you_read, "Manga and books you read"), nav("reading", "Reading", Icons.Filled.AutoStories, Icons.Outlined.AutoStories), newer = true),
         TRACKING("tracking", "Tracking", "AniList and MyAnimeList sync", nav("tracking", "Tracking", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges), newer = true),
         // H-12 (owner item 12): straight to "Play link" (URL, M3U8, MPD, RTSP, magnet), the Network Stream page.
-        NETWORK_STREAM("network_stream", "Network stream", "Play a link: URL, M3U8, DASH, RTSP or magnet", nav("network_stream", "Stream", Icons.Filled.Link, Icons.Outlined.Link)),
+        NETWORK_STREAM("network_stream", tr(R.string.network_stream, "Network stream"), tr(R.string.play_a_link_url_m3u8_dash, "Play a link: URL, M3U8, DASH, RTSP or magnet"), nav("network_stream", "Stream", Icons.Filled.Link, Icons.Outlined.Link)),
         ;
         companion object {
             fun of(id: String?): Shortcut? = entries.firstOrNull { it.id == id }

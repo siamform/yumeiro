@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -122,7 +123,7 @@ fun VideoScreen(
     modifier: Modifier = Modifier
 ) {
     val tabs = listOf(
-        "All videos",
+        tr(R.string.all_videos, "All videos"),
         "Folders",
         if (continueWatching.isEmpty()) "Continue" else "Continue · ${continueWatching.size}",
         if (recentlyWatched.isEmpty()) "Recent" else "Recent · ${recentlyWatched.size}",
@@ -248,13 +249,13 @@ fun VideoScreen(
                             onDismissRequest = { showSortMenu = false }
                         ) {
                             listOf(
-                                VideoSort.DATE_DESC to "Date Added (Newest)",
-                                VideoSort.DATE_ASC to "Date Added (Oldest)",
-                                VideoSort.NAME_ASC to "Name (A to Z)",
-                                VideoSort.NAME_DESC to "Name (Z to A)",
-                                VideoSort.DURATION_DESC to "Duration (Longest)",
-                                VideoSort.DURATION_ASC to "Duration (Shortest)",
-                                VideoSort.SIZE_DESC to "File Size (Largest)"
+                                VideoSort.DATE_DESC to tr(R.string.date_added_newest, "Date Added (Newest)"),
+                                VideoSort.DATE_ASC to tr(R.string.date_added_oldest, "Date Added (Oldest)"),
+                                VideoSort.NAME_ASC to tr(R.string.name_a_to_z, "Name (A to Z)"),
+                                VideoSort.NAME_DESC to tr(R.string.name_z_to_a, "Name (Z to A)"),
+                                VideoSort.DURATION_DESC to tr(R.string.duration_longest, "Duration (Longest)"),
+                                VideoSort.DURATION_ASC to tr(R.string.duration_shortest, "Duration (Shortest)"),
+                                VideoSort.SIZE_DESC to tr(R.string.file_size_largest, "File Size (Largest)")
                             ).forEach { (sort, label) ->
                                 DropdownMenuItem(
                                     text = {
@@ -298,7 +299,7 @@ fun VideoScreen(
                 ) {
                     Icon(
                         imageVector = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
-                        contentDescription = "Toggle Grid/List",
+                        contentDescription = tr(R.string.toggle_grid_list, "Toggle Grid/List"),
                         tint = TextSecondary,
                         modifier = Modifier.size(20.dp)
                     )
@@ -334,8 +335,8 @@ fun VideoScreen(
                     if (folderVideos.isEmpty()) {
                         EmptyMediaView(
                             title = "No videos in ${selectedFolder.name}",
-                            subtitle = "Nothing in this folder matches. Try another folder.",
-                            buttonText = "Back to folders",
+                            subtitle = tr(R.string.nothing_in_this_folder_matches_try, "Nothing in this folder matches. Try another folder."),
+                            buttonText = tr(R.string.back_to_folders, "Back to folders"),
                             onButtonClick = onBackFromFolder,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -354,9 +355,9 @@ fun VideoScreen(
                 activeTab == 0 -> {
                     if (videos.isEmpty()) {
                         EmptyMediaView(
-                            title = "No offline videos found",
-                            subtitle = "Copy MP4, MKV or WebM files to this phone, then scan again.",
-                            buttonText = "Scan again",
+                            title = tr(R.string.no_offline_videos_found, "No offline videos found"),
+                            subtitle = tr(R.string.copy_mp4_mkv_or_webm_files, "Copy MP4, MKV or WebM files to this phone, then scan again."),
+                            buttonText = tr(R.string.scan_again, "Scan again"),
                             onButtonClick = onRescanClick,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -451,9 +452,9 @@ fun VideoScreen(
                         val visibleFolders = folders.filter { !it.isHidden }
                         if (visibleFolders.isEmpty()) {
                             EmptyMediaView(
-                                title = "No video folders found",
-                                subtitle = "Folders that hold videos show up here.",
-                                buttonText = "Scan again",
+                                title = tr(R.string.no_video_folders_found, "No video folders found"),
+                                subtitle = tr(R.string.folders_that_hold_videos_show_up, "Folders that hold videos show up here."),
+                                buttonText = tr(R.string.scan_again, "Scan again"),
                                 onButtonClick = onRescanClick,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -484,9 +485,9 @@ fun VideoScreen(
                 activeTab == 2 -> {
                     if (continueWatching.isEmpty()) {
                         EmptyMediaView(
-                            title = "No videos in progress",
-                            subtitle = "Stop a video part-way and it waits for you here.",
-                            buttonText = "Browse videos",
+                            title = tr(R.string.no_videos_in_progress, "No videos in progress"),
+                            subtitle = tr(R.string.stop_a_video_part_way_and, "Stop a video part-way and it waits for you here."),
+                            buttonText = tr(R.string.browse_videos, "Browse videos"),
                             onButtonClick = { onTabChange(0) },
                             modifier = Modifier.fillMaxSize()
                         )
@@ -505,9 +506,9 @@ fun VideoScreen(
                 activeTab == 3 -> {
                     if (recentlyWatched.isEmpty()) {
                         EmptyMediaView(
-                            title = "No watch history yet",
-                            subtitle = "Videos you play show up here, newest first.",
-                            buttonText = "Browse videos",
+                            title = tr(R.string.no_watch_history_yet, "No watch history yet"),
+                            subtitle = tr(R.string.videos_you_play_show_up_here, "Videos you play show up here, newest first."),
+                            buttonText = tr(R.string.browse_videos, "Browse videos"),
                             onButtonClick = { onTabChange(0) },
                             modifier = Modifier.fillMaxSize()
                         )
@@ -526,9 +527,9 @@ fun VideoScreen(
                 activeTab == 4 -> {
                     if (favorites.isEmpty()) {
                         EmptyMediaView(
-                            title = "No favorite videos yet",
-                            subtitle = "Tap the heart on any video to keep it here.",
-                            buttonText = "Browse videos",
+                            title = tr(R.string.no_favorite_videos_yet, "No favorite videos yet"),
+                            subtitle = tr(R.string.tap_the_heart_on_any_video, "Tap the heart on any video to keep it here."),
+                            buttonText = tr(R.string.browse_videos, "Browse videos"),
                             onButtonClick = { onTabChange(0) },
                             modifier = Modifier.fillMaxSize()
                         )

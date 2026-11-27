@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.api.setContext
 import dev.asfakul.yumeiro.network.NetworkClient
@@ -65,7 +67,7 @@ object OnlineRuntime {
 object OnlineErrors {
     /** G10 ER-21: text for a socket or DNS call that Android or a firewall app blocked. */
     const val NETWORK_BLOCKED =
-        "Android or a firewall app is blocking Yumeiro's internet. Allow Wi-Fi and mobile data for Yumeiro in Settings › Apps"
+        tr(R.string.android_or_a_firewall_app_is, "Android or a firewall app is blocking Yumeiro's internet. Allow Wi-Fi and mobile data for Yumeiro in Settings › Apps")
 
     /** OkHttp's message for a link without http(s) — a site/extension data problem, not an outdated extension. */
     fun isBadLink(e: Throwable): Boolean {
@@ -83,7 +85,7 @@ object OnlineErrors {
             root.javaClass.name.contains("Json", true) || root.javaClass.name.contains("Selector", true))
     }
 
-    fun friendly(e: Throwable, fallback: String = "Something went wrong"): String {
+    fun friendly(e: Throwable, fallback: String = tr(R.string.something_went_wrong, "Something went wrong")): String {
         val chain = generateSequence(e) { it.cause }.take(8).toList()
         val root = chain.last()
         val m = (e.message ?: root.message).orEmpty()
@@ -95,7 +97,7 @@ object OnlineErrors {
             // G10 ER-14: a full disk outside downloads (backup, extension or playlist install) showed
             // the raw "write failed: ENOSPC (No space left on device)".
             chain.any { val t = it.message.orEmpty(); "ENOSPC" in t || "No space left" in t } ->
-                "Not enough storage. Free up some space, then try again"
+                tr(R.string.not_enough_storage_free_up_some, "Not enough storage. Free up some space, then try again")
             // G10 ER-21: EPERM/EACCES on a socket, connect or DNS lookup means Android (data saver,
             // "Allow network access" off, Private DNS) or a firewall app blocks the app's internet.
             // Chromium maps the same errnos to ERR_ACCESS_DENIED (net_errors_posix.cc); this must win
@@ -110,32 +112,32 @@ object OnlineErrors {
             chain.any { val t = it.message.orEmpty(); "EACCES" in t || "EROFS" in t || "EPERM" in t ||
                 "Permission denied" in t || "Read-only file system" in t ||
                 ((it is java.io.FileNotFoundException || "open failed:" in t) && ("/data/" in t || "/storage/" in t)) } ->
-                "The app couldn't use its storage on this device. Restart the app, then try again"
+                tr(R.string.the_app_couldnt_use_its_storage, "The app couldn't use its storage on this device. Restart the app, then try again")
             // G7-L1: an IPTV extension whose site answered with a web page or an error text.
             chain.any { val t = it.message.orEmpty(); "#EXTM3U" in t && ("start" in t || "header" in t.lowercase()) } ->
-                "The site sent something that isn't a playlist. It may be down or blocked; try again later"
+                tr(R.string.the_site_sent_something_that_isnt, "The site sent something that isn't a playlist. It may be down or blocked; try again later")
             chain.any { it is java.net.UnknownHostException } ->
-                if (!dev.asfakul.yumeiro.network.Connectivity.online.value) "No internet connection"
-                else "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off"
+                if (!dev.asfakul.yumeiro.network.Connectivity.online.value) tr(R.string.no_internet_connection, "No internet connection")
+                else tr(R.string.this_site_cant_be_reached_on, "This site can't be reached on your network. It may be blocked — try again, or turn a VPN on or off")
             chain.any { it is java.net.ConnectException || it is java.net.NoRouteToHostException ||
                 (it is java.net.SocketException && it.message.orEmpty().contains("reset", true)) } ->
-                "Your network refused the connection. The site may be blocked here — try a VPN"
+                tr(R.string.your_network_refused_the_connection_the, "Your network refused the connection. The site may be blocked here — try a VPN")
             chain.any { it is java.net.SocketTimeoutException || it is java.io.InterruptedIOException } ||
-                e is kotlinx.coroutines.TimeoutCancellationException -> "The server took too long to answer"
-            chain.any { it is javax.net.ssl.SSLException } -> "Secure connection failed"
-            m.startsWith("HTTP 404") || m.contains("HTTP 404") -> "Not found (404)"
+                e is kotlinx.coroutines.TimeoutCancellationException -> tr(R.string.the_server_took_too_long_to, "The server took too long to answer")
+            chain.any { it is javax.net.ssl.SSLException } -> tr(R.string.secure_connection_failed, "Secure connection failed")
+            m.startsWith("HTTP 404") || m.contains("HTTP 404") -> tr(R.string.not_found_404, "Not found (404)")
             // R17 G10 (ER-1): 4xx answers are not server errors; say what the server said.
             m.startsWith("HTTP") -> when (m.substringAfter("HTTP ").take(3).toIntOrNull()) {
-                401 -> "Access denied: the server needs authorization (HTTP 401)"
-                403 -> "Access denied by the server (HTTP 403)"
-                410 -> "Removed from the server (HTTP 410)"
-                429 -> "Too many requests, wait a minute and retry (HTTP 429)"
-                451 -> "Not available in your country (HTTP 451)"
-                else -> "Server error ($m)"
+                401 -> tr(R.string.access_denied_the_server_needs_authorization, "Access denied: the server needs authorization (HTTP 401)")
+                403 -> tr(R.string.access_denied_by_the_server_http, "Access denied by the server (HTTP 403)")
+                410 -> tr(R.string.removed_from_the_server_http_410, "Removed from the server (HTTP 410)")
+                429 -> tr(R.string.too_many_requests_wait_a_minute, "Too many requests, wait a minute and retry (HTTP 429)")
+                451 -> tr(R.string.not_available_in_your_country_http, "Not available in your country (HTTP 451)")
+                else -> tr(R.string.server_error, "Server error (%1\$s)", m)
             }
-            root is org.json.JSONException -> "The server sent unreadable data"
-            root is NotImplementedError -> "This extension doesn't support that"
-            isBadLink(root) || isBadLink(e) -> "The site sent a broken link for this source — try another source"
+            root is org.json.JSONException -> tr(R.string.the_server_sent_unreadable_data, "The server sent unreadable data")
+            root is NotImplementedError -> tr(R.string.this_extension_doesnt_support_that, "This extension doesn't support that")
+            isBadLink(root) || isBadLink(e) -> tr(R.string.the_site_sent_a_broken_link, "The site sent a broken link for this source — try another source")
             m.isNotBlank() -> m.take(160)
             else -> fallback
         }

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.music
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -165,14 +166,14 @@ fun MusicMixScreen(
         Modifier.fillMaxSize().testTag("music_mix_results"),
         contentPadding = PaddingValues(top = dev.asfakul.yumeiro.ui.screens.youtube.YT_SEARCH_BAR_H, bottom = 170.dp),
     ) {
-        item("dev_head") { MixHeader("On this phone", if (deviceHits.isEmpty()) "No matching songs" else "${deviceHits.size} song${if (deviceHits.size == 1) "" else "s"}") }
+        item("dev_head") { MixHeader(tr(R.string.on_this_phone, "On this phone"), if (deviceHits.isEmpty()) tr(R.string.no_matching_songs, "No matching songs") else "${deviceHits.size} song${if (deviceHits.size == 1) "" else "s"}") }
         itemsIndexed(deviceHits.take(50), key = { _, t -> "sd" + t.id }) { _, t -> MixRow(MixEntry.Device(t), t.id == currentTrackId) { onPlayTrack(t, deviceHits) } }
         item("net_head") {
-            MixHeader("YouTube Music", when {
-                !online -> "Offline: connect to search online"
-                query.trim().length < 2 -> "Type a little more"
+            MixHeader(tr(R.string.youtube_music, "YouTube Music"), when {
+                !online -> tr(R.string.offline_connect_to_search_online, "Offline: connect to search online")
+                query.trim().length < 2 -> tr(R.string.type_a_little_more, "Type a little more")
                 onlineBusy -> "Searching…"
-                onlineHits.isEmpty() -> "No songs found"
+                onlineHits.isEmpty() -> tr(R.string.no_songs_found, "No songs found")
                 else -> "${onlineHits.size} songs"
             })
         }
@@ -202,7 +203,7 @@ fun MusicMixScreen(
                     Text(
                         when {
                             !online -> "Offline: your ${tracks.size} songs on this phone"
-                            loading && onlinePool.isEmpty() -> "Finding online picks…"
+                            loading && onlinePool.isEmpty() -> tr(R.string.finding_online_picks, "Finding online picks…")
                             else -> "${woven.count { it is MixEntry.Device }} of yours, ${woven.count { it is MixEntry.Online }} from YouTube Music"
                         },
                         style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
@@ -212,7 +213,7 @@ fun MusicMixScreen(
                 Box(
                     Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape)
                         .background(if (canMix) p.accent else p.textPrimary.copy(alpha = 0.08f))
-                        .clickable(enabled = canMix, role = Role.Button, onClickLabel = "Play your mix") { playAt(0) }
+                        .clickable(enabled = canMix, role = Role.Button, onClickLabel = tr(R.string.play_your_mix, "Play your mix")) { playAt(0) }
                         .testTag("music_mix_play"),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Default.PlayArrow, stringResource(R.string.play_your_mix), tint = if (canMix) p.onAccent else p.textTertiary, modifier = Modifier.size(28.dp)) }
@@ -222,31 +223,31 @@ fun MusicMixScreen(
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(stringResource(R.string.nothing_to_mix_yet), style = MaterialTheme.typography.titleMedium, color = p.textPrimary)
                 Text(
-                    if (online) "Add songs to this phone or play something on YouTube Music." else "Connect to the internet for online picks, or add songs to this phone.",
+                    if (online) tr(R.string.add_songs_to_this_phone_or, "Add songs to this phone or play something on YouTube Music.") else tr(R.string.connect_to_the_internet_for_online, "Connect to the internet for online picks, or add songs to this phone."),
                     style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MixLink("Device music", Icons.Default.LibraryMusic, onOpenDevice)
-                    MixLink("Online music", Icons.Default.Album, onOpenOnline)
+                    MixLink(tr(R.string.device_music, "Device music"), Icons.Default.LibraryMusic, onOpenDevice)
+                    MixLink(tr(R.string.online_music, "Online music"), Icons.Default.Album, onOpenOnline)
                 }
             }
         }
         if (woven.isNotEmpty()) {
-            item("up_next_head") { MixHeader("Up next in your mix", "Yours and online, woven together") }
+            item("up_next_head") { MixHeader("Up next in your mix", tr(R.string.yours_and_online_woven_together, "Yours and online, woven together")) }
             itemsIndexed(woven.take(12), key = { i, e -> "w$i" + e.key }) { i, e -> MixRow(e, e.key == currentTrackId) { playAt(i) } }
         }
-        if (quick.isNotEmpty()) item("quick") { OnlineShelf("Quick picks", "From YouTube Music", quick.take(16), onOpenOnline, onPlayOnline) }
-        because.forEach { (artist, songs) -> item("because_$artist") { OnlineShelf("Because you play $artist", "On YouTube Music", songs, null, onPlayOnline) } }
+        if (quick.isNotEmpty()) item("quick") { OnlineShelf("Quick picks", tr(R.string.from_youtube_music, "From YouTube Music"), quick.take(16), onOpenOnline, onPlayOnline) }
+        because.forEach { (artist, songs) -> item("because_$artist") { OnlineShelf(tr(R.string.because_you_play, "Because you play %1\$s", artist), tr(R.string.on_youtube_music, "On YouTube Music"), songs, null, onPlayOnline) } }
         if (loading && online && quick.isEmpty()) item("loading") {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 repeat(3) { dev.asfakul.yumeiro.ui.components.SkeletonBlock(128.dp, 128.dp, shape = yuRound(14)) }
             }
         }
-        if (mostPlayed.isNotEmpty()) item("most") { TrackShelf("Most played", "On this phone", mostPlayed.take(12), currentTrackId, onPlayTrack) }
-        if (onlineSongs.isNotEmpty()) item("online") { OnlineShelf("Played online", "Your YouTube Music history", onlineSongs.take(16), onOpenOnline, onPlayOnline) }
-        if (recentlyPlayed.isNotEmpty()) item("recent") { TrackShelf("Played recently", "Device and online", recentlyPlayed.take(12), currentTrackId, onPlayTrack) }
-        if (fresh.isNotEmpty()) item("fresh") { TrackShelf("New on this phone", "Newest files first", fresh, currentTrackId, onPlayTrack) }
+        if (mostPlayed.isNotEmpty()) item("most") { TrackShelf("Most played", tr(R.string.on_this_phone, "On this phone"), mostPlayed.take(12), currentTrackId, onPlayTrack) }
+        if (onlineSongs.isNotEmpty()) item("online") { OnlineShelf("Played online", tr(R.string.your_youtube_music_history, "Your YouTube Music history"), onlineSongs.take(16), onOpenOnline, onPlayOnline) }
+        if (recentlyPlayed.isNotEmpty()) item("recent") { TrackShelf("Played recently", tr(R.string.device_and_online, "Device and online"), recentlyPlayed.take(12), currentTrackId, onPlayTrack) }
+        if (fresh.isNotEmpty()) item("fresh") { TrackShelf("New on this phone", tr(R.string.newest_files_first, "Newest files first"), fresh, currentTrackId, onPlayTrack) }
     }
     androidx.compose.animation.AnimatedVisibility(
         visible = searching,
@@ -255,7 +256,7 @@ fun MusicMixScreen(
         modifier = Modifier.align(Alignment.TopCenter).testTag("music_mix_search_bar"),
     ) {
         dev.asfakul.yumeiro.ui.screens.youtube.YtSearchBar(
-            query, "Search your songs and YouTube Music", music = true, autoFocus = asked == searchKey, floating = true,
+            query, tr(R.string.search_your_songs_and_youtube_music, "Search your songs and YouTube Music"), music = true, autoFocus = asked == searchKey, floating = true,
             onChange = { query = it }, onSearch = { },
             onClear = { query = ""; dev.asfakul.yumeiro.ui.components.TabSearch.close(searchKey) },
         )
@@ -294,7 +295,7 @@ private fun MixRow(e: MixEntry, current: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().combinedClickable(
             onClick = onClick,
-            onLongClickLabel = if (e is MixEntry.Online) "Download song" else null,
+            onLongClickLabel = if (e is MixEntry.Online) tr(R.string.download_song, "Download song") else null,
             onLongClick = if (e is MixEntry.Online) ({ dev.asfakul.yumeiro.online.download.SongDownloads.ask(e.item) }) else null,
         ).padding(horizontal = 16.dp, vertical = 6.dp).testTag("music_mix_row"),
         verticalAlignment = Alignment.CenterVertically,

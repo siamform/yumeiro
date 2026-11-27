@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.Manifest
@@ -120,13 +121,13 @@ fun BackupScreen(onBack: () -> Unit) {
         }
     }
 
-    fun openPreview(open: () -> InputStream?) = work("Reading backup") {
+    fun openPreview(open: () -> InputStream?) = work(tr(R.string.reading_backup, "Reading backup")) {
         val info = Backup.inspect(open)
         preview = info to open
     }
 
     val folder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri != null) { BackupStore.rememberFolder(context, uri); AppMessages.success(context, "Backups will be saved there"); refresh++ }
+        if (uri != null) { BackupStore.rememberFolder(context, uri); AppMessages.success(context, tr(R.string.backups_will_be_saved_there, "Backups will be saved there")); refresh++ }
     }
     val file = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) openPreview { BackupStore.open(context, uri) }
@@ -134,7 +135,7 @@ fun BackupScreen(onBack: () -> Unit) {
     val storage = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { refresh++ }
 
     Column(Modifier.fillMaxSize()) {
-        SubPageHeader(title = "Backup, storage & reset", onBack = onBack)
+        SubPageHeader(title = tr(R.string.backup_storage_reset, "Backup, storage & reset"), onBack = onBack)
         if (busy != null) {
             LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth().testTag("backup_busy"))
         }
@@ -151,7 +152,7 @@ fun BackupScreen(onBack: () -> Unit) {
             // Round 13: Restore gets its own block at the top, so it's never hidden behind the list.
             // After a reinstall Android may hide the old backups from the app; "Choose a backup file"
             // always works because the user picks the file in the system file picker.
-            Block("Restore", "Bring back your settings, lists, sources and extensions from a backup") {
+            Block("Restore", tr(R.string.bring_back_your_settings_lists_sources, "Bring back your settings, lists, sources and extensions from a backup")) {
                 val latest = items.firstOrNull()
                 if (latest != null) {
                     Button(
@@ -179,7 +180,7 @@ fun BackupScreen(onBack: () -> Unit) {
             }
 
             // Make a backup
-            Block("Back up", "Saved to: $location") {
+            Block(tr(R.string.back_up, "Back up"), tr(R.string.saved_to, "Saved to: %1\$s", location)) {
                 Backup.Section.entries.forEach { s ->
                     CheckRow(s.label, s.hint, s in sections, "backup_section_${s.name.lowercase()}") { on ->
                         sections = if (on) sections + s else sections - s
@@ -189,7 +190,7 @@ fun BackupScreen(onBack: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = {
-                            work("Backing up") {
+                            work(tr(R.string.backing_up, "Backing up")) {
                                 val saved = BackupStore.save(context, "manual", sections)
                                 AppMessages.success(context, "Backup saved · ${formatFileSize(saved.size)}")
                             }
@@ -215,7 +216,7 @@ fun BackupScreen(onBack: () -> Unit) {
             }
 
             // Backups on this phone
-            Block("Backups on this phone", if (items.isEmpty()) null else "Tap one to see what's inside and restore it") {
+            Block(tr(R.string.backups_on_this_phone, "Backups on this phone"), if (items.isEmpty()) null else tr(R.string.tap_one_to_see_whats_inside, "Tap one to see what's inside and restore it")) {
                 if (items.isEmpty()) {
                     Text(stringResource(R.string.no_backups_found_yet_after_reinstalling),
                         color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(vertical = 10.dp).testTag("backup_list_empty"))
@@ -235,14 +236,14 @@ fun BackupScreen(onBack: () -> Unit) {
             var autoOn by remember { mutableStateOf(BackupMeta.autoEnabled(context)) }
             var autoDays by remember { mutableIntStateOf(BackupMeta.autoEveryDays(context)) }
             var autoKeep by remember { mutableIntStateOf(BackupMeta.autoKeep(context)) }
-            Block("Automatic backups", BackupMeta.lastAutoAt(context).takeIf { it > 0 }?.let { "Last one: " + whenText(it) }) {
-                SettingsToggleRow("Back up automatically", "Only when something changed, while the phone is idle", autoOn, {
+            Block(tr(R.string.automatic_backups, "Automatic backups"), BackupMeta.lastAutoAt(context).takeIf { it > 0 }?.let { tr(R.string.last_one, "Last one: ") + whenText(it) }) {
+                SettingsToggleRow(tr(R.string.back_up_automatically, "Back up automatically"), tr(R.string.only_when_something_changed_while_the, "Only when something changed, while the phone is idle"), autoOn, {
                     autoOn = it; BackupMeta.setAutoEnabled(context, it); AutoBackupWorker.schedule(context, replace = true)
                 }, "backup_auto")
-                ChoiceRow("How often", listOf(1 to "Daily", 3 to "Every 3 days", 7 to "Weekly"), autoDays, "backup_auto_days", autoOn) {
+                ChoiceRow(tr(R.string.how_often, "How often"), listOf(1 to "Daily", 3 to tr(R.string.every_3_days, "Every 3 days"), 7 to "Weekly"), autoDays, "backup_auto_days", autoOn) {
                     autoDays = it; BackupMeta.setAutoEveryDays(context, it); AutoBackupWorker.schedule(context, replace = true)
                 }
-                ChoiceRow("Keep", listOf(3 to "3", 5 to "5", 10 to "10"), autoKeep, "backup_auto_keep", autoOn) {
+                ChoiceRow(tr(R.string.keep, "Keep"), listOf(3 to "3", 5 to "5", 10 to "10"), autoKeep, "backup_auto_keep", autoOn) {
                     autoKeep = it; BackupMeta.setAutoKeep(context, it)
                 }
             }
@@ -253,47 +254,47 @@ fun BackupScreen(onBack: () -> Unit) {
             var keep by remember { mutableIntStateOf(DataCache.Settings.keepDays) }
             var maxMb by remember { mutableIntStateOf((DataCache.Settings.maxBytes / (1024 * 1024)).toInt()) }
             var cookieDays by remember { mutableIntStateOf(DataCache.Settings.cookieDays) }
-            Block("Saved pages and cache", "Using ${formatFileSize(cacheBytes).let { if (it == "Unknown") "0 MB" else it }}. Home rows, details and searches open instantly instead of loading every time") {
-                SettingsToggleRow("Save loaded pages on the phone", "Opens Yumix pages instantly, refreshes them when they're old", cacheOn, {
+            Block(tr(R.string.saved_pages_and_cache, "Saved pages and cache"), "Using ${formatFileSize(cacheBytes).let { if (it == "Unknown") "0 MB" else it }}. Home rows, details and searches open instantly instead of loading every time") {
+                SettingsToggleRow(tr(R.string.save_loaded_pages_on_the_phone, "Save loaded pages on the phone"), tr(R.string.opens_yumix_pages_instantly_refreshes_them, "Opens Yumix pages instantly, refreshes them when they're old"), cacheOn, {
                     cacheOn = it; DataCache.Settings.set(enabled = it)
                 }, "cache_enabled")
-                ChoiceRow("Refresh after", listOf(1 to "1 h", 6 to "6 h", 12 to "12 h", 24 to "1 day"), fresh, "cache_fresh", cacheOn) {
+                ChoiceRow(tr(R.string.refresh_after, "Refresh after"), listOf(1 to "1 h", 6 to "6 h", 12 to "12 h", 24 to "1 day"), fresh, "cache_fresh", cacheOn) {
                     fresh = it; DataCache.Settings.set(freshHours = it)
                 }
-                ChoiceRow("Delete after", listOf(3 to "3 days", 7 to "7 days", 14 to "14 days", 30 to "30 days"), keep, "cache_keep", cacheOn) {
+                ChoiceRow(tr(R.string.delete_after, "Delete after"), listOf(3 to "3 days", 7 to "7 days", 14 to "14 days", 30 to "30 days"), keep, "cache_keep", cacheOn) {
                     keep = it; DataCache.Settings.set(keepDays = it)
                 }
-                ChoiceRow("Up to", listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB", 512 to "512 MB"), maxMb, "cache_max", cacheOn) {
+                ChoiceRow(tr(R.string.up_to, "Up to"), listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB", 512 to "512 MB"), maxMb, "cache_max", cacheOn) {
                     maxMb = it; DataCache.Settings.set(maxMb = it)
                 }
-                ChoiceRow("Clear website cookies every", listOf(7 to "7 days", 30 to "30 days", 90 to "90 days", 0 to "Never"), cookieDays, "cookie_days", true) {
+                ChoiceRow(tr(R.string.clear_website_cookies_every, "Clear website cookies every"), listOf(7 to "7 days", 30 to "30 days", 90 to "90 days", 0 to "Never"), cookieDays, "cookie_days", true) {
                     cookieDays = it; DataCache.Settings.set(cookieDays = it)
                 }
                 SettingsDivider()
                 SettingsActionRow(ResetCenter.Scope.CACHE.label, ResetCenter.Scope.CACHE.hint, "reset_cache") {
-                    work("Clearing cache") {
+                    work(tr(R.string.clearing_cache, "Clearing cache")) {
                         val freed = ResetCenter.clearCache(context)
                         dev.asfakul.yumeiro.online.OnlineRepository.clearCaches()
                         AppMessages.success(context, "Cache cleared · ${formatFileSize(freed).let { if (it == "Unknown") "0 MB" else it }} freed")
                     }
                 }
                 SettingsActionRow(ResetCenter.Scope.COOKIES.label, ResetCenter.Scope.COOKIES.hint, "reset_cookies") {
-                    ResetCenter.clearCookies(); AppMessages.success(context, "Cookies cleared")
+                    ResetCenter.clearCookies(); AppMessages.success(context, tr(R.string.cookies_cleared, "Cookies cleared"))
                 }
             }
 
             // Reset
-            Block("Reset", "A backup is saved first, then Yumeiro restarts") {
+            Block("Reset", tr(R.string.a_backup_is_saved_first_then, "A backup is saved first, then Yumeiro restarts")) {
                 ResetCenter.Scope.entries.filter { it.needsRestart }.forEach { s ->
                     SettingsActionRow(s.label, s.hint, "reset_${s.id}", danger = true) { resetting = s }
                 }
                 SettingsDivider()
-                SettingsActionRow("Erase everything", "Like a fresh install. Backups in Download › Yumeiro stay", "reset_erase", danger = true) { erase = true }
+                SettingsActionRow(tr(R.string.erase_everything_2, "Erase everything"), tr(R.string.like_a_fresh_install_backups_in, "Like a fresh install. Backups in Download › Yumeiro stay"), "reset_erase", danger = true) { erase = true }
             }
 
             Text(
-                "Never in a backup: downloaded videos, account sign-ins (they're locked to this phone) and the app lock. " +
-                    "Extensions are saved as a list and download again from their own repositories after a restore.",
+                tr(R.string.never_in_a_backup_downloaded_videos, "Never in a backup: downloaded videos, account sign-ins (they're locked to this phone) and the app lock. ") +
+                    tr(R.string.extensions_are_saved_as_a_list, "Extensions are saved as a list and download again from their own repositories after a restore."),
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp),
             )
         }
@@ -332,7 +333,7 @@ fun BackupScreen(onBack: () -> Unit) {
             text = { Text(stringResource(R.string.a_backup_is_saved_first_so, s.hint)) },
             confirmButton = { TextButton(onClick = {
                 resetting = null
-                work("Saving a backup first") {
+                work(tr(R.string.saving_a_backup_first, "Saving a backup first")) {
                     BackupStore.save(context, "safety", Backup.Section.entries.toSet() - Backup.Section.EXTENSION_FILES)
                     ResetCenter.stage(context, setOf(s))
                     Restart.now(context)
@@ -349,7 +350,7 @@ fun BackupScreen(onBack: () -> Unit) {
             text = { Text(stringResource(R.string.every_setting_list_source_and_extension)) },
             confirmButton = { TextButton(onClick = {
                 erase = false
-                work("Saving a backup first") {
+                work(tr(R.string.saving_a_backup_first, "Saving a backup first")) {
                     BackupStore.save(context, "safety", Backup.Section.entries.toSet() - Backup.Section.EXTENSION_FILES)
                     ResetCenter.eraseEverything(context)
                 }
@@ -389,9 +390,9 @@ private fun RestoreDialog(info: Backup.Info, onDismiss: () -> Unit, onRestore: (
                 }
                 if (Backup.Section.SOURCES in chosen && info.extensions > 0) {
                     Text(stringResource(R.string.extensions), fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-                    RadioRow("Download them again (recommended)", "Fresh copies from their own repositories, checked like an update", !useFiles, "restore_ext_redownload") { useFiles = false }
+                    RadioRow(tr(R.string.download_them_again_recommended, "Download them again (recommended)"), tr(R.string.fresh_copies_from_their_own_repositories, "Fresh copies from their own repositories, checked like an update"), !useFiles, "restore_ext_redownload") { useFiles = false }
                     if (info.hasCode) {
-                        RadioRow("Use the copies in this backup", "Works offline. Only for a backup you made yourself", useFiles, "restore_ext_files") { useFiles = true }
+                        RadioRow(tr(R.string.use_the_copies_in_this_backup, "Use the copies in this backup"), tr(R.string.works_offline_only_for_a_backup, "Works offline. Only for a backup you made yourself"), useFiles, "restore_ext_files") { useFiles = true }
                     }
                 }
                 Text(stringResource(R.string.whats_on_this_phone_now_is), fontSize = 12.sp, color = TextTertiary, modifier = Modifier.padding(top = 8.dp))
@@ -480,7 +481,7 @@ private fun BackupRow(item: BackupStore.Item, index: Int, onRestore: () -> Unit,
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                when (item.kind) { "auto" -> "Automatic backup"; "safety" -> "Saved before a restore or reset"; else -> "Backup" },
+                when (item.kind) { "auto" -> tr(R.string.automatic_backup, "Automatic backup"); "safety" -> tr(R.string.saved_before_a_restore_or_reset, "Saved before a restore or reset"); else -> "Backup" },
                 color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
             )
             Text(

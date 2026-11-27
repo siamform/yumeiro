@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sports
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
@@ -36,8 +38,8 @@ object SportsScores {
         FOOTBALL("football", "sport=soccer", "Soccer"),
         CRICKET("cricket", "sport=cricket", "Cricket"),
         BASKETBALL("basketball", "sport=basketball&league=nba", "Basketball"),
-        AMERICAN_FOOTBALL("american_football", "sport=football&league=nfl", "American Football"),
-        HOCKEY("hockey", "sport=hockey&league=nhl", "Ice Hockey"),
+        AMERICAN_FOOTBALL("american_football", "sport=football&league=nfl", tr(R.string.american_football, "American Football")),
+        HOCKEY("hockey", "sport=hockey&league=nhl", tr(R.string.ice_hockey, "Ice Hockey")),
         BASEBALL("baseball", "sport=baseball&league=mlb", "Baseball"),
         TENNIS("tennis", "sport=tennis", "Tennis"),
         RUGBY("rugby", "sport=rugby", "Rugby"),
@@ -179,8 +181,8 @@ object SportsScores {
         return Board(sport, day, sortLeagues(leagues), Source.ESPN, now)
     }
 
-    private val SDB_LIVE = setOf("1H", "2H", "HT", "ET", "BT", "P", "LIVE", "IN PLAY", "Q1", "Q2", "Q3", "Q4", "OT", "INT")
-    private val SDB_DONE = setOf("FT", "AET", "PEN", "AP", "MATCH FINISHED", "FINISHED", "AOT", "FT_PEN")
+    private val SDB_LIVE = setOf("1H", "2H", "HT", "ET", "BT", "P", "LIVE", tr(R.string.in_play, "IN PLAY"), "Q1", "Q2", "Q3", "Q4", "OT", "INT")
+    private val SDB_DONE = setOf("FT", "AET", "PEN", "AP", tr(R.string.match_finished, "MATCH FINISHED"), "FINISHED", "AOT", "FT_PEN")
     private val SDB_OFF = setOf("PST", "POSTPONED", "CANC", "CANCELLED", "ABD", "ABANDONED", "SUSP", "AWD", "WO")
 
     fun parseSportsDb(json: String, sport: Sport, day: LocalDate, now: Long): Board {

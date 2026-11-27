@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
@@ -180,8 +182,8 @@ class MusicPlayerManager(
 
         override fun onPlayerError(error: PlaybackException) {
             val message = when (error.errorCode) {
-                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> "Audio file not found on device"
-                PlaybackException.ERROR_CODE_DECODING_FAILED -> "Unsupported audio format"
+                PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND -> tr(R.string.audio_file_not_found_on_device, "Audio file not found on device")
+                PlaybackException.ERROR_CODE_DECODING_FAILED -> tr(R.string.unsupported_audio_format, "Unsupported audio format")
                 else -> "Playback error: ${error.localizedMessage ?: "File unplayable"}"
             }
             _playbackState.update {

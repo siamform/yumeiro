@@ -5,15 +5,18 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 /** What a URL actually returns, decided from content first, then MIME type, then the URL. */
 enum class MediaKind(val label: String) {
-    HLS("HLS stream"),
-    DASH("MPEG-DASH stream"),
-    SMOOTH("Smooth Streaming"),
-    IPTV_PLAYLIST("IPTV channel list"),
-    VIDEO("Video file / stream"),
-    AUDIO("Audio file / stream"),
-    WEB_PAGE("Web page"),
+    HLS(tr(R.string.hls_stream, "HLS stream")),
+    DASH(tr(R.string.mpeg_dash_stream, "MPEG-DASH stream")),
+    SMOOTH(tr(R.string.smooth_streaming, "Smooth Streaming")),
+    IPTV_PLAYLIST(tr(R.string.iptv_channel_list, "IPTV channel list")),
+    VIDEO(tr(R.string.video_file_stream, "Video file / stream")),
+    AUDIO(tr(R.string.audio_file_stream, "Audio file / stream")),
+    WEB_PAGE(tr(R.string.web_page, "Web page")),
     UNKNOWN("Unknown"),
 }
 
@@ -104,7 +107,7 @@ object StreamSniffer {
         if (ascii(0, 4) == "OggS") return Sniff(MediaKind.AUDIO, if (ascii(28, 8).startsWith("OpusHead")) "Opus" else "Ogg")
         if (ascii(0, 5) == "#!AMR") return Sniff(MediaKind.AUDIO, "AMR")
         if (at(0) == 0x0B && at(1) == 0x77) return Sniff(MediaKind.AUDIO, "AC-3")
-        if (at(0) == 0xFF && (at(1) and 0xF6) == 0xF0) return Sniff(MediaKind.AUDIO, "AAC (ADTS)")
+        if (at(0) == 0xFF && (at(1) and 0xF6) == 0xF0) return Sniff(MediaKind.AUDIO, tr(R.string.aac_adts, "AAC (ADTS)"))
         if (at(0) == 0xFF && (at(1) and 0xE0) == 0xE0) return Sniff(MediaKind.AUDIO, "MP3")
 
         // Text manifests / pages

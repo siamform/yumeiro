@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Context
@@ -110,12 +111,12 @@ internal fun BrowserBar(
                 if (onSaveVault != null) DropdownMenuItem(text = { Text(stringResource(R.string.save_to_vault)) }, leadingIcon = { Icon(Icons.Default.Inventory2, null, tint = accent) }, onClick = { menu = false; onSaveVault() }, modifier = Modifier.testTag("browser_save_vault"))
                 DropdownMenuItem(text = { Text(stringResource(R.string.reload)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onReload() }, modifier = Modifier.testTag("browser_reload"))
                 if (onTabs != null) DropdownMenuItem(
-                    text = { Text(if (tabCount == 1) "Tabs (1 open)" else "Tabs ($tabCount open)") },
+                    text = { Text(if (tabCount == 1) tr(R.string.tabs_1_open, "Tabs (1 open)") else tr(R.string.tabs_open, "Tabs (%1\$s open)", tabCount)) },
                     leadingIcon = { Icon(Icons.Default.Tab, null) },
                     onClick = { menu = false; onTabs() }, modifier = Modifier.testTag("browser_menu_tabs"),
                 )
                 if (onFilter != null) DropdownMenuItem(
-                    text = { Text(if (filterOn) "Ad filter on for this page" else "Ad filter off for this page") },
+                    text = { Text(if (filterOn) tr(R.string.ad_filter_on_for_this_page, "Ad filter on for this page") else tr(R.string.ad_filter_off_for_this_page, "Ad filter off for this page")) },
                     leadingIcon = { Icon(if (filterOn) Icons.Default.Shield else Icons.Default.RemoveModerator, null, tint = if (filterOn) accent else TextTertiary) },
                     trailingIcon = { Switch(filterOn, null) },
                     onClick = { menu = false; onFilter() }, modifier = Modifier.testTag("browser_menu_filter").semantics { stateDescription = if (filterOn) "On" else "Off" },

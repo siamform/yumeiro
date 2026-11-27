@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -101,7 +103,7 @@ object ExtensionGuard {
         swallowed.incrementAndGet()
         lastSwallowed = t.toString()
         Log.e(TAG, "Swallowed a crash from extension code on $where", t)
-        dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("Extension code on $where (the app kept running)", t)
+        dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal(tr(R.string.extension_code_on_the_app_kept, "Extension code on %1\$s (the app kept running)", where), t)
     }
 
     /** True when [error] (or a cause) has a stack frame from extension code. Pure → unit-testable. */

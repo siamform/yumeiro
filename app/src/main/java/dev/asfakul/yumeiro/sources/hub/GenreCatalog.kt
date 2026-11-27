@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.hub
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import java.text.Normalizer
 import java.util.Locale
 
@@ -22,7 +24,7 @@ import java.util.Locale
  * send, and [learned] turns the ones seen often enough into genres of their own (automatic genre creation).
  */
 object GenreCatalog {
-    enum class Group(val label: String) { MAIN("Genres"), ANIME("Anime themes"), THEMES("Themes and moods") }
+    enum class Group(val label: String) { MAIN("Genres"), ANIME(tr(R.string.dw_anime_themes, "Anime themes")), THEMES(tr(R.string.dw_themes, "Themes and moods")) }
 
     /** What the genre is asked for: films, series or anime (Japanese animated series and films). */
     enum class Kind(val label: String) { ALL("All"), MOVIE("Movies"), TV("Series"), ANIME("Anime") }
@@ -67,14 +69,14 @@ object GenreCatalog {
         g("music", "Music", 10402, null, 283297, "musical", "musicals"),
         g("mystery", "Mystery", 9648, 9648, null, "detective", "whodunit"),
         g("romance", "Romance", 10749, null, 9840, "romantic", "love"),
-        g("scifi", "Science Fiction", 878, 10765, null, "sci fi", "scifi", "sf", "science fiction and fantasy"),
+        g("scifi", tr(R.string.science_fiction, "Science Fiction"), 878, 10765, null, "sci fi", "scifi", "sf", "science fiction and fantasy"),
         g("thriller", "Thriller", 53, null, 316362, "suspense", "thrillers"),
         g("war", "War", 10752, 10768, null, "war and politics", "military"),
         g("western", "Western", 37, 37, null, "westerns"),
         g("kids", "Kids", 10751, 10762, null, "children", "kid"),
         g("reality", "Reality", null, 10764, null, "reality tv", "reality show"),
         g("sports", "Sports", null, null, 6075, "sport"),
-        g("tvmovie", "TV Movie", 10770, null, null),
+        g("tvmovie", tr(R.string.tv_movie, "TV Movie"), 10770, null, null),
         g("soap", "Soap", null, 10766, null, "soap opera", "telenovela"),
         g("talk", "Talk", null, 10767, null, "talk show"),
         g("news", "News", null, 10763, null),
@@ -85,15 +87,15 @@ object GenreCatalog {
         a("shoujo", "Shoujo", 206437, "shojo"),
         a("josei", "Josei", 229074),
         a("mecha", "Mecha", 10046, "robots", "giant robot"),
-        a("magical_girl", "Magical Girl", 292887, "mahou shoujo"),
-        a("slice_of_life", "Slice of Life", 9914, "slice-of-life"),
+        a("magical_girl", tr(R.string.magical_girl, "Magical Girl"), 292887, "mahou shoujo"),
+        a("slice_of_life", tr(R.string.slice_of_life, "Slice of Life"), 9914, "slice-of-life"),
         a("iyashikei", "Iyashikei", 291483, "healing"),
         a("school", "School", 10873, "school life"),
-        a("high_school", "High School", 6270),
-        a("martial_arts", "Martial Arts", 779, "kung fu"),
+        a("high_school", tr(R.string.high_school, "High School"), 6270),
+        a("martial_arts", tr(R.string.martial_arts, "Martial Arts"), 779, "kung fu"),
         a("reincarnation", "Reincarnation", 5484, "reincarnated"),
-        a("light_novel", "Based on a Light Novel", 319900, "light novel"),
-        a("manga", "Based on a Manga", 13141),
+        a("light_novel", tr(R.string.based_on_a_light_novel, "Based on a Light Novel"), 319900, "light novel"),
+        a("manga", tr(R.string.based_on_a_manga, "Based on a Manga"), 13141),
         a("idol", "Idols", 287664, "idol"),
         a("harem", "Harem", 9194),
         a("ninja", "Ninja", 10278),
@@ -102,22 +104,22 @@ object GenreCatalog {
         a("kaiju", "Kaiju", 161791),
         a("cooking", "Cooking", 1918, "gourmet", "food"),
         a("wuxia", "Wuxia", 184656, "xianxia", "cultivation"),
-        a("video_game", "Video Games", 282, "game", "games", "gaming"),
-        a("vr", "Virtual Reality", 4563, "vrmmo"),
+        a("video_game", tr(R.string.video_games, "Video Games"), 282, "game", "games", "gaming"),
+        a("vr", tr(R.string.virtual_reality, "Virtual Reality"), 4563, "vrmmo"),
         // Themes and moods (any kind).
         t("superhero", "Superheroes", 9715, "super power", "superpower", "super powers"),
         t("supernatural", "Supernatural", 6152),
-        t("dark_fantasy", "Dark Fantasy", 177895),
+        t("dark_fantasy", tr(R.string.dark_fantasy, "Dark Fantasy"), 177895),
         t("magic", "Magic", 2343),
-        t("sword_sorcery", "Sword and Sorcery", 234213),
+        t("sword_sorcery", tr(R.string.sword_and_sorcery, "Sword and Sorcery"), 234213),
         t("mythology", "Mythology", 2035, "myth", "gods"),
         t("dragons", "Dragons", 12554, "dragon"),
         t("vampires", "Vampires", 3133, "vampire"),
         t("zombies", "Zombies", 12377, "zombie"),
         t("ghosts", "Ghosts", 162846, "ghost"),
         t("witches", "Witches", 616, "witch"),
-        t("time_travel", "Time Travel", 4379),
-        t("space_opera", "Space Opera", 161176, "space"),
+        t("time_travel", tr(R.string.time_travel, "Time Travel"), 4379),
+        t("space_opera", tr(R.string.space_opera, "Space Opera"), 161176, "space"),
         t("cyberpunk", "Cyberpunk", 12190),
         t("post_apocalyptic", "Post-apocalyptic", 4458, "post apocalyptic", "apocalypse"),
         t("dystopia", "Dystopia", 4565, "dystopian"),
@@ -125,13 +127,13 @@ object GenreCatalog {
         t("psychological", "Psychological", 12565, "psychological thriller", "psychological horror"),
         t("revenge", "Revenge", 9748),
         t("heist", "Heist", 10051),
-        t("serial_killer", "Serial Killers", 10714),
+        t("serial_killer", tr(R.string.serial_killers, "Serial Killers"), 10714),
         t("conspiracy", "Conspiracy", 10410),
         t("pirates", "Pirates", 12988, "pirate"),
         t("workplace", "Workplace", 6282, "office"),
-        t("coming_of_age", "Coming of Age", 10683),
-        t("found_family", "Found Family", 248927),
-        t("romcom", "Romantic Comedy", 389245, "rom com", "romcom"),
+        t("coming_of_age", tr(R.string.coming_of_age, "Coming of Age"), 10683),
+        t("found_family", tr(R.string.found_family, "Found Family"), 248927),
+        t("romcom", tr(R.string.romantic_comedy, "Romantic Comedy"), 389245, "rom com", "romcom"),
         t("parody", "Parody", 9755, "spoof"),
         t("gore", "Gore", 10292, "splatter"),
     )
