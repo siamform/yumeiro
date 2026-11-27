@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# GATE-1-FTL body: runs GateOneFtlSuite on Test Lab phones, current and/or baseline (GATE-1-AB), then pulls
+# GATE-1-FTL body: runs GateOneFtlSuite (or $TARGETS) on Test Lab phones, current and/or baseline (GATE-1-AB), then pulls
 # each device's logcat and prints the YuGate1 / YuStall lines into the job log. Never prints credentials.
 set -u
 mkdir -p ftl
@@ -25,7 +25,7 @@ for V in $VS; do
   [ ${#DEV[@]} -gt 0 ] || { echo "::error::no Test Lab device found"; exit 1; }
   echo "::group::Test Lab $V"
   gcloud firebase test android run --type instrumentation --app "$APP" --test "$TEST" "${DEV[@]}" \
-    --test-targets "class dev.asfakul.yumeiro.GateOneFtlSuite" --use-orchestrator \
+    --test-targets "${TARGETS:-class dev.asfakul.yumeiro.GateOneFtlSuite}" --use-orchestrator \
     --environment-variables "clearPackageData=false,gate1Baseline=$B" \
     --timeout 15m --num-flaky-test-attempts 0 --no-record-video --no-performance-metrics \
     --results-dir "gate-$GITHUB_RUN_ID-$V" --format=json > "ftl/result-$V.json" 2> "ftl/run-$V.txt" || RC=1
@@ -35,7 +35,7 @@ for V in $VS; do
     mkdir -p "ftl/$V"
     gcloud storage cp -r "$BUCKET/*" "ftl/$V/" > /dev/null 2>&1 || gsutil -m cp -r "$BUCKET/*" "ftl/$V/" > /dev/null 2>&1 || true
     for L in $(find "ftl/$V" -name "logcat*" 2>/dev/null); do
-      echo "--- $L"; grep -hE "YuGate1|YuStall|STALL_SCHED|GATE1_" "$L" | head -120
+      echo "--- $L"; grep -hE "YuGate1|YuStall|STALL_SCHED|GATE1_|YuGroup|_RESULT" "$L" | head -120
     done
   fi
   echo "::endgroup::"

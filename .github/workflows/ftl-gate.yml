@@ -17,6 +17,9 @@ on:
         default: "both"
         type: choice
         options: [both, current, baseline]
+      targets:
+        description: "Test Lab --test-targets (default: the GATE-1 walk). Example: class dev.asfakul.yumeiro.GroupB17SplashDeviceTest#b_rendersAtSixtyFps"
+        default: "class dev.asfakul.yumeiro.GateOneFtlSuite"
 
 concurrency:
   group: ftl-gate-${{ github.ref }}
@@ -57,6 +60,7 @@ jobs:
         env:
           MODELS: ${{ inputs.models }}
           VARIANTS: ${{ inputs.variants }}
+          TARGETS: ${{ inputs.targets }}
         run: bash scripts/ftl-gate.sh
       - name: Upload results
         if: always()
