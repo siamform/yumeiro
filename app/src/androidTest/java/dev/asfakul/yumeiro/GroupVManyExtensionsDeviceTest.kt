@@ -118,7 +118,8 @@ class GroupVManyExtensionsDeviceTest {
     private fun mem(): String {
         val pssMb = Debug.getPss() / 1024
         val heapMb = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)
-        return "pssMb=$pssMb heapMb=$heapMb threads=${Thread.getAllStackTraces().size}"
+        val maxMb = Runtime.getRuntime().maxMemory() / (1024 * 1024)
+        return "pssMb=$pssMb heapMb=$heapMb heapMaxMb=$maxMb threads=${Thread.getAllStackTraces().size}"
     }
 
     /** Live threads by name (digits dropped), most common first: where the threads per extension come from. */

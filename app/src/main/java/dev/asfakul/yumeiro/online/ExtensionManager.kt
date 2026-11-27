@@ -796,6 +796,22 @@ object ExtensionManager {
         Log.i(TAG, "Unloaded $key (${plugin.filename?.substringAfterLast('/')}) from ${Throwable().stackTrace.drop(1).take(4).joinToString(" < ") { it.methodName + ":" + it.lineNumber }}")
         runCatching { plugin.beforeUnload() }
         plugin.filename?.let { removeRegistrations(it) }
+        keepClassesOnN(plugin)
+    }
+
+    /**
+     * Android 7.0 / 7.1 only: keeps an unloaded extension's classes reachable for the life of the process. ART on
+     * those versions can crash the app in its own "Profile Saver" thread (SIGSEGV in
+     * JitCodeCache::GetProfiledMethods) after a class loader's classes are unloaded while it still profiles them;
+     * Group V hit it on the Android TV 7.0 emulator after 60 extensions were unloaded and loaded again (run
+     * 45954627880). Never letting those classes go costs some memory on 7.x only, and only after an unload
+     * (update, reinstall, remove); newer Android versions unload normally.
+     */
+    private val retainedOnN = mutableListOf<Any>()
+
+    private fun keepClassesOnN(plugin: Any) {
+        if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N_MR1) return
+        synchronized(retainedOnN) { retainedOnN += plugin }
     }
 
     private fun removeRegistrations(filename: String) {

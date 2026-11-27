@@ -76,9 +76,12 @@
         <package android:name="com.brouken.player" />
     </queries>
 
+    <!-- largeHeap: with 60+ extensions searching at once the default heap fills up and the main thread waits for
+         the garbage collector (Group V, B20-PERF-EXT: ~0.8 s on the Android TV 14 emulator, run 45954624585). -->
     <application
         android:name=".MTApplication"
         android:allowBackup="false"
+        android:largeHeap="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
