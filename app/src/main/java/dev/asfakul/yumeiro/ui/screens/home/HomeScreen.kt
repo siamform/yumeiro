@@ -338,7 +338,7 @@ fun HomeScreen(
     val feed = rememberExtensionFeed()
     // Group W (B12): only "is the engine ready" is followed here (one change per app start), for the episodes slot.
     val engineReady by remember { dev.asfakul.yumeiro.online.ExtensionManager.state.map { it.ready }.distinctUntilChanged() }
-        .collectAsState(initial = dev.asfakul.yumeiro.online.ExtensionManager.state.value.ready)
+        .collectAsState(initial = dev.asfakul.yumeiro.online.ExtensionManager.readyNow())
     val channels = feed.ready
     val arrivals = remember(channels) { newArrivals(channels) }
 
