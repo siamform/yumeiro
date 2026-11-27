@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.update
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.network.readAtMost
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.security.TrustedSources
@@ -50,11 +52,11 @@ internal class GitHubReleaseClient(
         } catch (t: Throwable) {
             val reason = when {
                 t is HttpStatusException && t.code == 404 ->
-                    "No published release was found (the repository may be private)."
+                    tr(R.string.no_published_release_was_found_the, "No published release was found (the repository may be private).")
                 t is HttpStatusException && (t.code == 403 || t.code == 429) ->
-                    "Too many update checks right now. Please try again in a few minutes."
-                t is UpdateCheckException -> t.message ?: "Update check failed."
-                else -> "Couldn't reach the update service. Check your internet connection and try again."
+                    tr(R.string.too_many_update_checks_right_now, "Too many update checks right now. Please try again in a few minutes.")
+                t is UpdateCheckException -> t.message ?: tr(R.string.update_check_failed, "Update check failed.")
+                else -> tr(R.string.couldnt_reach_the_update_service_check, "Couldn't reach the update service. Check your internet connection and try again.")
             }
             throw UpdateCheckException(reason, authError ?: t)
         }
@@ -267,7 +269,7 @@ internal class GitHubReleaseClient(
                 if (best == null || name.startsWith("release-", ignoreCase = true)) best = a
             }
             // The device's preferred processor first; the universal APK otherwise.
-            val apk = abis.firstNotNullOfOrNull { byAbi[it] } ?: best ?: byAbi.values.firstOrNull() ?: throw UpdateCheckException(if (tv) "The latest release has no Yumeiro TV file yet." else "The latest release doesn't contain an APK.")
+            val apk = abis.firstNotNullOfOrNull { byAbi[it] } ?: best ?: byAbi.values.firstOrNull() ?: throw UpdateCheckException(if (tv) tr(R.string.the_latest_release_has_no_yumeiro, "The latest release has no Yumeiro TV file yet.") else tr(R.string.the_latest_release_doesnt_contain_an, "The latest release doesn't contain an APK."))
             val tag = obj.optString("tag_name")
             val body = obj.optString("body")
             val digest = apk.optString("digest").takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")

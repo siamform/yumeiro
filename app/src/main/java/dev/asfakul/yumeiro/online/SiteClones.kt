@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
@@ -75,11 +77,11 @@ object SiteClones {
 
     /** Why [url] can't be a clone of [api] (null when it can). */
     fun problem(originUrl: String, url: String, clones: List<Clone>, of: String): String? {
-        val clean = ProviderOverrides.normalize(url) ?: return "That isn't a web address"
-        val host = hostOf(clean) ?: return "That isn't a web address"
-        if (host == hostOf(originUrl)) return "That is the address $of already uses"
-        if (clones.any { it.of == of && hostOf(it.url) == host }) return "$of already has a clone on $host"
-        if (clones.size >= MAX) return "You have $MAX clones already. Remove one first"
+        val clean = ProviderOverrides.normalize(url) ?: return tr(R.string.that_isnt_a_web_address, "That isn't a web address")
+        val host = hostOf(clean) ?: return tr(R.string.that_isnt_a_web_address, "That isn't a web address")
+        if (host == hostOf(originUrl)) return tr(R.string.that_is_the_address_already_uses, "That is the address %1\$s already uses", of)
+        if (clones.any { it.of == of && hostOf(it.url) == host }) return tr(R.string.already_has_a_clone_on, "%1\$s already has a clone on %2\$s", of, host)
+        if (clones.size >= MAX) return tr(R.string.you_have_clones_already_remove_one, "You have %1\$s clones already. Remove one first", MAX)
         return null
     }
 

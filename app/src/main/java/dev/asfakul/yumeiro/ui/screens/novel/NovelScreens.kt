@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.novel
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Context
@@ -155,25 +156,25 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
     }
 
     Column(Modifier.fillMaxSize().testTag("novel_home")) {
-        SubPageHeader(title = "Novels", onBack = onBack, subtitle = if (state.installed.isEmpty()) "Add a source to start reading" else if (choice == NovelFeedMerge.ALL) stringResource(R.string.nx_all_sources) else plugin?.name) {
+        SubPageHeader(title = tr(R.string.novels, "Novels"), onBack = onBack, subtitle = if (state.installed.isEmpty()) tr(R.string.add_a_source_to_start_reading, "Add a source to start reading") else if (choice == NovelFeedMerge.ALL) stringResource(R.string.nx_all_sources) else plugin?.name) {
             // GROUP C: search and the source choice are icons; the box and the sheet open on demand.
             if (ready && state.installed.isNotEmpty()) {
                 dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
                     if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
-                }, "novel_search_open", "Search all novel sources")
+                }, "novel_search_open", tr(R.string.search_all_novel_sources, "Search all novel sources"))
                 if (state.installed.size > 1 && submitted.isEmpty() && (feed == Feed.POPULAR || feed == Feed.LATEST))
-                    dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { sourceSheet = true }, "novel_source_filter", "Choose source")
+                    dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { sourceSheet = true }, "novel_source_filter", tr(R.string.choose_source, "Choose source"))
             }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("novel_manage_sources")) { Icon(Icons.Default.Extension, stringResource(R.string.novel_sources), tint = TextPrimary) }
         }
         if (!ready) { Column(Modifier.fillMaxSize().padding(top = 8.dp)) { repeat(3) { dev.asfakul.yumeiro.ui.components.CoverRowSkeleton() } }; return@Column } // SKELETON-2
         if (state.installed.isEmpty()) {
-            StateMessage(Icons.AutoMirrored.Filled.MenuBook, "No novel sources yet",
-                "Add an LNReader plugin repository, then install a source. Yumeiro doesn't include any novel source.",
+            StateMessage(Icons.AutoMirrored.Filled.MenuBook, tr(R.string.no_novel_sources_yet, "No novel sources yet"),
+                tr(R.string.add_an_lnreader_plugin_repository_then, "Add an LNReader plugin repository, then install a source. Yumeiro doesn't include any novel source."),
                 primary = "Open novel sources" to onOpenSources, testTag = "novel_empty")
             return@Column
         }
-        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it.take(80) }, "Search all novel sources", "novel_search")
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it.take(80) }, tr(R.string.search_all_novel_sources, "Search all novel sources"), "novel_search")
         if (sourceSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(onDismiss = { sourceSheet = false }, onReset = null, resultCount = null, tag = "novel_source_sheet") {
             dev.asfakul.yumeiro.ui.components.FilterGroup("Source") {
                 FilterPill(stringResource(R.string.nx_all_sources), choice == NovelFeedMerge.ALL, { choose(NovelFeedMerge.ALL) }, testTag = "novel_source_all")
@@ -210,8 +211,8 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
             }
         }) {
             when (feed) {
-                Feed.SAVED -> EntryGrid(library.values.filter { it.saved }.sortedByDescending { maxOf(it.readAt, it.addedAt) }, "Nothing saved yet", "Tap the bookmark on a novel to keep it here.", onOpenNovel)
-                Feed.HISTORY -> EntryGrid(library.values.filter { it.readAt > 0 }.sortedByDescending { it.readAt }, "Nothing read yet", "Novels you open are listed here with the chapter you reached.", onOpenNovel)
+                Feed.SAVED -> EntryGrid(library.values.filter { it.saved }.sortedByDescending { maxOf(it.readAt, it.addedAt) }, tr(R.string.nothing_saved_yet, "Nothing saved yet"), tr(R.string.tap_the_bookmark_on_a_novel, "Tap the bookmark on a novel to keep it here."), onOpenNovel)
+                Feed.HISTORY -> EntryGrid(library.values.filter { it.readAt > 0 }.sortedByDescending { it.readAt }, tr(R.string.nothing_read_yet, "Nothing read yet"), tr(R.string.novels_you_open_are_listed_here, "Novels you open are listed here with the chapter you reached."), onOpenNovel)
                 else -> {
                     // GROUP G3: the page opens on a banner: the novel you were reading, then this source's top picks.
                     val reading = remember(library) { library.values.filter { it.readAt > 0 }.maxByOrNull { it.readAt } }
@@ -273,7 +274,7 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
             val got = NovelSources.popular(context, plugin.id, page, latest)
             val fresh = got.filter { g -> items.none { it.path == g.path } }
             if (fresh.isEmpty()) end = true else items.addAll(fresh)
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: "Couldn't load" }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: tr(R.string.couldnt_load, "Couldn't load") }
         loading = false
     }
     // Group X (B4): the first page failed or was empty: with other sources installed, the page switches to them.
@@ -463,16 +464,16 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
     suspend fun addRepoNow(url: String): Boolean {
         busy = "repo"; message = null
         val r = NovelSources.addRepo(context, url)
-        r.onSuccess { message = "Added: $it sources"; repoField = "" }.onFailure { message = it.message ?: "Couldn't add that link" }
+        r.onSuccess { message = "Added: $it sources"; repoField = "" }.onFailure { message = it.message ?: tr(R.string.couldnt_add_that_link, "Couldn't add that link") }
         busy = null
         return r.isSuccess
     }
     fun addRepo(url: String) { scope.launch { addRepoNow(url) } }
     Column(Modifier.fillMaxSize().testTag("novel_sources")) {
-        SubPageHeader(title = "Novel sources", onBack = onBack, subtitle = "${state.installed.size} installed · ${state.repos.size} repositor${if (state.repos.size == 1) "y" else "ies"}") {
+        SubPageHeader(title = tr(R.string.novel_sources, "Novel sources"), onBack = onBack, subtitle = "${state.installed.size} installed · ${state.repos.size} repositor${if (state.repos.size == 1) "y" else "ies"}") {
             // GROUP C: + opens the add sheet, ? explains the page (no link box or paragraph in the page).
-            dev.asfakul.yumeiro.ui.components.AddIconButton("Add a novel repository", "novel_repo_plus", { addOpen = true })
-            dev.asfakul.yumeiro.ui.components.HelpIconButton("About novel sources",
+            dev.asfakul.yumeiro.ui.components.AddIconButton(tr(R.string.add_a_novel_repository, "Add a novel repository"), "novel_repo_plus", { addOpen = true })
+            dev.asfakul.yumeiro.ui.components.HelpIconButton(tr(R.string.about_novel_sources, "About novel sources"),
                 "Novel sources come from an LNReader plugin list (plugins.min.json). Add a list with +, then install the sources you want. Sources are made by others; Yumeiro only runs them.",
                 "novel_sources_help")
         }
@@ -507,10 +508,10 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
                         dev.asfakul.yumeiro.ui.components.YuSectionHeader("Available", lang?.let { "Language: $it" }) {
                             dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || filter.isNotEmpty(), {
                                 if (searchOpen || filter.isNotEmpty()) { searchOpen = false; filter = "" } else searchOpen = true
-                            }, "novel_plugin_search", "Find a source")
+                            }, "novel_plugin_search", tr(R.string.find_a_source, "Find a source"))
                             dev.asfakul.yumeiro.ui.components.FilterIconButton(if (lang != null) 1 else 0, { langSheet = true }, "novel_lang_filter", "Language")
                         }
-                        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || filter.isNotEmpty(), filter, { filter = it.take(40) }, "Find a source", "novel_plugin_filter", horizontalPadding = 0.dp)
+                        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || filter.isNotEmpty(), filter, { filter = it.take(40) }, tr(R.string.find_a_source, "Find a source"), "novel_plugin_filter", horizontalPadding = 0.dp)
                     }
                 }
                 val shown = all.filter { p -> state.installed.none { it.id == p.id } && (lang == null || p.language == lang) && (filter.isBlank() || p.name.contains(filter, true)) }
@@ -577,7 +578,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
         if (details != null && attempt == 0) return@LaunchedEffect
         error = null
         try { details = NovelSources.details(context, pluginId, path); morePage = 1 }
-        catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: "Couldn't load this novel" }
+        catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: tr(R.string.couldnt_load_this_novel, "Couldn't load this novel") }
     }
     val d = details
     val item = NovelItem(pluginId, d?.name ?: name, path, d?.cover ?: cover)
@@ -590,7 +591,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
         }
         if (d == null) {
             val e = error
-            if (e != null) NovelError(pluginId, "Couldn't open this novel", e, "novel_detail_error", onRetry = { attempt++ })
+            if (e != null) NovelError(pluginId, tr(R.string.couldnt_open_this_novel, "Couldn't open this novel"), e, "novel_detail_error", onRetry = { attempt++ })
             else dev.asfakul.yumeiro.ui.components.CoverDetailSkeleton() // SKELETON-2
             return@Column
         }
@@ -612,14 +613,14 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
                 d.summary?.let { s ->
                     var open by remember { mutableStateOf(false) }
                     Text(s, color = TextSecondary, fontSize = 14.sp, maxLines = if (open) Int.MAX_VALUE else 5, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 12.dp).clickable(onClickLabel = if (open) "Show less" else "Show more") { open = !open })
+                        modifier = Modifier.padding(top = 12.dp).clickable(onClickLabel = if (open) tr(R.string.show_less, "Show less") else tr(R.string.show_more_2, "Show more")) { open = !open })
                 }
                 val resume = entry?.chapterPath?.let { p -> d.chapters.firstOrNull { it.path == p } }
                 val start = resume ?: d.chapters.firstOrNull()
                 if (start != null) Button(
                     onClick = { onRead(item, start) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp).heightIn(min = 48.dp).testTag("novel_read"),
-                ) { Text(if (resume != null) "Continue · ${resume.name}" else "Start reading", maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold) }
+                ) { Text(if (resume != null) "Continue · ${resume.name}" else tr(R.string.start_reading, "Start reading"), maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold) }
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.chapters), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     TextButton(onClick = { newestFirst = !newestFirst }, modifier = Modifier.testTag("novel_order")) { Text(if (newestFirst) "Newest first" else "First first", color = TextSecondary) }
@@ -702,7 +703,7 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
             NovelSpot.restore(list, at, inPara)
             spot = if (saved?.chapterPath == current) saved.position.coerceIn(0f, 1f) else 0f
             restoredFor = current
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: "Couldn't load this chapter" }
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: tr(R.string.couldnt_load_this_chapter, "Couldn't load this chapter") }
     }
     // The spot follows the reading (also while the text grows or shrinks), saved 0.5 s after the list settles.
     LaunchedEffect(current, paras, restoredFor) {
@@ -743,10 +744,10 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
     LaunchedEffect(tlOn, paras) {
         val ps = paras ?: return@LaunchedEffect
         if (!tlOn) { translated = null; return@LaunchedEffect }
-        if (!MangaTranslate.allowedOn(context)) { tlNote = "Translation isn't available on this device"; tlOn = false; return@LaunchedEffect }
+        if (!MangaTranslate.allowedOn(context)) { tlNote = tr(R.string.translation_isnt_available_on_this_device, "Translation isn't available on this device"); tlOn = false; return@LaunchedEffect }
         val s = MangaTranslate.settings(context)
         val from = NovelSources.plugin(pluginId)?.languageCode ?: MangaTlPlan.detect(ps.take(20).joinToString(" ") { it.text })
-        if (from == s.dst) { tlNote = "This chapter is already in your language"; tlOn = false; return@LaunchedEffect }
+        if (from == s.dst) { tlNote = tr(R.string.this_chapter_is_already_in_your, "This chapter is already in your language"); tlOn = false; return@LaunchedEffect }
         translating = true; tlNote = null
         try {
             val out = ArrayList<String>(ps.size)
@@ -754,7 +755,7 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
                 out += MangaTranslate.texts(context, chunk.map { it.text }, from, s.dst, s.wifiOnly)
                 translated = out.toList() + ps.drop(out.size).map { it.text }
             }
-            if (out.all { it.isBlank() }) { tlNote = "Translation failed. Check the language pack in Manga translation settings."; translated = null; tlOn = false }
+            if (out.all { it.isBlank() }) { tlNote = tr(R.string.translation_failed_check_the_language_pack, "Translation failed. Check the language pack in Manga translation settings."); translated = null; tlOn = false }
         } catch (e: CancellationException) { throw e } catch (e: Exception) { tlNote = "Translation failed: ${e.message ?: "error"}"; translated = null; tlOn = false }
         translating = false
     }
@@ -776,7 +777,7 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
         tlNote?.let { Text(it, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("novel_tl_note")) }
         val ps = paras
         when {
-            error != null -> NovelError(pluginId, "Couldn't load this chapter", error!!, "novel_reader_error", onRetry = { attempt++ },
+            error != null -> NovelError(pluginId, tr(R.string.couldnt_load_this_chapter, "Couldn't load this chapter"), error!!, "novel_reader_error", onRetry = { attempt++ },
                 secondary = NovelSources.webUrl(context, pluginId, current)?.let { url -> "Open in browser" to { runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }; Unit } })
             ps == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { dev.asfakul.yumeiro.ui.components.YuLoader() }
             else -> LazyColumn(Modifier.fillMaxSize().testTag("novel_text"), state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 32.dp)) {

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.feed
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -72,7 +74,7 @@ class LivePaged<T, P : Any>(
     private val scope: CoroutineScope = FeedScope.main,
     private val maxFails: Int = 3,
     private val backoffMs: (fails: Int) -> Long = { f -> (1_500L shl (f - 1).coerceIn(0, 3)).coerceAtMost(12_000L) },
-    private val describe: (Throwable) -> String = { it.message ?: "Couldn't load more" },
+    private val describe: (Throwable) -> String = { it.message ?: tr(R.string.couldnt_load_more, "Couldn't load more") },
 ) {
     val items: SnapshotStateList<T> = mutableStateListOf()
     var loading by mutableStateOf(false); private set

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -79,8 +81,8 @@ enum class SourcePage(val tag: String, val title: String) {
     MIHON("mihon", "Mihon"),
     STREMIO("stremio", "Stremio"),
     JS("js", "JavaScript"),
-    SERVERS("servers", "Home servers"),
-    SCRIPTS("scripts", "Script repos"),
+    SERVERS("servers", tr(R.string.home_servers, "Home servers")),
+    SCRIPTS("scripts", tr(R.string.script_repos, "Script repos")),
 }
 
 data class SourceRoute(val page: SourcePage, val part: HubPart? = null) {
@@ -120,13 +122,13 @@ object SourcesNav {
     fun restore(keys: List<String>): List<SourceRoute> = keys.mapNotNull { SourceRoute.parse(it) }.ifEmpty { listOf(home) }
 
     /** Page help ("?") text, also shown on TV where long paragraphs would push the list off screen. */
-    const val HOME_HELP = "Yumeiro plays from many kinds of sources. Each row opens its own page:\n\n" +
-        "• CloudStream: extensions for movies, series, anime and live TV.\n" +
-        "• Aniyomi and Mihon: anime and manga extensions from repositories you add.\n" +
-        "• Stremio: add-ons with catalogs and streams.\n" +
-        "• JavaScript: Mangayomi-format sources in a sandbox.\n" +
-        "• Script repos: Vega provider repositories.\n" +
-        "• Home servers: Jellyfin, Emby, Plex, DLNA, WebDAV and SMB.\n\n" +
+    val HOME_HELP: String get() = tr(R.string.yumeiro_plays_from_many_kinds_of, "Yumeiro plays from many kinds of sources. Each row opens its own page:\n\n") +
+        tr(R.string.cloudstream_extensions_for_movies_series_anime, "• CloudStream: extensions for movies, series, anime and live TV.\n") +
+        tr(R.string.aniyomi_and_mihon_anime_and_manga, "• Aniyomi and Mihon: anime and manga extensions from repositories you add.\n") +
+        tr(R.string.stremio_add_ons_with_catalogs_and, "• Stremio: add-ons with catalogs and streams.\n") +
+        tr(R.string.javascript_mangayomi_format_sources_in_a, "• JavaScript: Mangayomi-format sources in a sandbox.\n") +
+        tr(R.string.script_repos_vega_provider_repositories, "• Script repos: Vega provider repositories.\n") +
+        tr(R.string.home_servers_jellyfin_emby_plex_dlna, "• Home servers: Jellyfin, Emby, Plex, DLNA, WebDAV and SMB.\n\n") +
         "+ adds anything: paste a repository, add-on or server link and Yumeiro works out what it is."
 }
 
@@ -207,7 +209,7 @@ internal fun SourcesHome(lastOpened: SourcePage?, onOpenCloudStream: (() -> Unit
         val repos = tachi.repos.count { it.kind == kind }
         if (inst.isEmpty() && repos == 0) return "Not set up" to null
         val untrusted = inst.count { !it.trusted || it.error != null }
-        return "${count(inst.size, "extension")} · ${count(repos, "repository", "repositories")}" to (if (untrusted > 0) "$untrusted to check" else null)
+        return "${count(inst.size, "extension")} · ${count(repos, "repository", "repositories")}" to (if (untrusted > 0) tr(R.string.to_check, "%1\$s to check", untrusted) else null)
     }
 
     LazyColumn(Modifier.fillMaxSize().testTag("src_home"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("src_home"),
@@ -225,23 +227,23 @@ internal fun SourcesHome(lastOpened: SourcePage?, onOpenCloudStream: (() -> Unit
             SourcePageRow("src_page_mihon", Icons.Filled.MenuBook, "Mihon", "Manga extensions", s, a, focus.getValue(SourcePage.MIHON)) { onOpen(SourcePage.MIHON) }
         }
         item("js") {
-            val s = if (js.installed.isEmpty() && js.repos.isEmpty()) "Not set up" else "${count(js.installed.size, "source")} · ${count(js.repos.size, "repository", "repositories")}"
+            val s = if (js.installed.isEmpty() && js.repos.isEmpty()) tr(R.string.not_set_up, "Not set up") else "${count(js.installed.size, "source")} · ${count(js.repos.size, "repository", "repositories")}"
             SourcePageRow("src_page_js", Icons.Filled.Code, "JavaScript", "Mangayomi-format sources", s, null, focus.getValue(SourcePage.JS)) { onOpen(SourcePage.JS) }
         }
-        item("h_add") { SectionTitle("Add-ons and scripts") }
+        item("h_add") { SectionTitle(tr(R.string.add_ons_and_scripts, "Add-ons and scripts")) }
         item("stremio") {
-            val s = if (addons.isEmpty()) "Not set up" else count(addons.size, "add-on")
+            val s = if (addons.isEmpty()) tr(R.string.not_set_up, "Not set up") else count(addons.size, "add-on")
             SourcePageRow("src_page_stremio", Icons.Filled.Hub, "Stremio", "Catalogs and streams", s, null, focus.getValue(SourcePage.STREMIO)) { onOpen(SourcePage.STREMIO) }
         }
         item("scripts") {
-            val s = if (scripts.repos.isEmpty()) "Not set up" else "${count(scripts.installed.size, "source")} · ${count(scripts.repos.size, "repository", "repositories")}"
+            val s = if (scripts.repos.isEmpty()) tr(R.string.not_set_up, "Not set up") else "${count(scripts.installed.size, "source")} · ${count(scripts.repos.size, "repository", "repositories")}"
             val bad = scripts.installed.count { scriptProblems[it.key] != null }
-            SourcePageRow("src_page_scripts", Icons.Filled.Terminal, "Script repos", "Vega provider repositories", s, if (bad > 0) "$bad not loaded" else null, focus.getValue(SourcePage.SCRIPTS)) { onOpen(SourcePage.SCRIPTS) }
+            SourcePageRow("src_page_scripts", Icons.Filled.Terminal, tr(R.string.script_repos, "Script repos"), tr(R.string.vega_provider_repositories, "Vega provider repositories"), s, if (bad > 0) tr(R.string.not_loaded, "%1\$s not loaded", bad) else null, focus.getValue(SourcePage.SCRIPTS)) { onOpen(SourcePage.SCRIPTS) }
         }
-        item("h_own") { SectionTitle("Your media") }
+        item("h_own") { SectionTitle(tr(R.string.your_media, "Your media")) }
         item("servers") {
-            val s = if (servers.isEmpty()) "None added" else count(servers.size, "server")
-            SourcePageRow("src_page_servers", Icons.Filled.Dns, "Home servers", "Jellyfin, Emby, Plex, DLNA, WebDAV, SMB", s, null, focus.getValue(SourcePage.SERVERS)) { onOpen(SourcePage.SERVERS) }
+            val s = if (servers.isEmpty()) tr(R.string.none_added, "None added") else count(servers.size, "server")
+            SourcePageRow("src_page_servers", Icons.Filled.Dns, tr(R.string.home_servers, "Home servers"), tr(R.string.jellyfin_emby_plex_dlna_webdav_smb, "Jellyfin, Emby, Plex, DLNA, WebDAV, SMB"), s, null, focus.getValue(SourcePage.SERVERS)) { onOpen(SourcePage.SERVERS) }
         }
     }
 }

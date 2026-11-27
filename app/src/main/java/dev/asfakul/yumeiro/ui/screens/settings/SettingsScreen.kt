@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -263,12 +264,12 @@ private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
         SubPageHeader(title = "Settings", onBack = onBack, subtitle = "Yumeiro ${BuildConfig.VERSION_NAME}", handleBack = false, modifier = Modifier.testTag("settings_back_button")) {
             dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
                 if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
-            }, "settings_search_open", "Search settings")
+            }, "settings_search_open", tr(R.string.search_settings, "Search settings"))
             IconButton(onClick = { onOpen(Category.GUIDE) }, modifier = Modifier.testTag("open_user_guide")) {
                 Icon(Icons.AutoMirrored.Filled.MenuBook, stringResource(R.string.user_guide), tint = BrandGold)
             }
         }
-        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search settings", "settings_search")
+        dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, tr(R.string.search_settings, "Search settings"), "settings_search")
         LazyColumn(
             Modifier.fillMaxSize().testTag("settings_home"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("settings_home"),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 110.dp),
@@ -386,52 +387,52 @@ private fun CategoryPage(
                 Category.PLAYER -> {
                     item("c") { VideoPlayerSettingsCard() }
                     // PC-1 (owner list 11): the player's buttons are set where the player is (was under Video quality).
-                    item("controls") { GroupLabel("Player controls"); SettingsCard { PlayerControlsCard() } }
-                    item("info") { GroupLabel("Player info overlay"); PlayerInfoOverlayCard() }
+                    item("controls") { GroupLabel(tr(R.string.player_controls, "Player controls")); SettingsCard { PlayerControlsCard() } }
+                    item("info") { GroupLabel(tr(R.string.player_info_overlay, "Player info overlay")); PlayerInfoOverlayCard() }
                 }
                 Category.NAVIGATION -> item("c") { NavigationBarSettingsCard() }
                 Category.PROFILES -> {
                     item("p") {
-                        GroupLabel("Who's watching")
+                        GroupLabel(tr(R.string.whos_watching_2, "Who's watching"))
                         SettingsCard { dev.asfakul.yumeiro.ui.screens.profiles.ProfilesSettings(context as? android.app.Activity) }
                     }
                     item("adult") { GroupLabel("18+ content (this profile)"); OnlineSettingsCard(OnlinePart.ADULT) }
                 }
                 Category.VIDEO_QUALITY -> {
                     item("q") { QualityAndAudioCard() }
-                    item("torrent") { GroupLabel("Torrent streaming"); TorrServerCard() }
+                    item("torrent") { GroupLabel(tr(R.string.torrent_streaming, "Torrent streaming")); TorrServerCard() }
                 }
                 Category.SUBTITLES -> {
                     item("cc") { GroupLabel("Captions"); SubtitleDisplayCard() }
-                    item("search") { GroupLabel("Subtitle search"); OnlineSettingsCard(OnlinePart.SUBTITLES) }
-                    item("skip") { GroupLabel("Intros and outros"); OnlineSettingsCard(OnlinePart.SKIP) }
+                    item("search") { GroupLabel(tr(R.string.subtitle_search, "Subtitle search")); OnlineSettingsCard(OnlinePart.SUBTITLES) }
+                    item("skip") { GroupLabel(tr(R.string.intros_and_outros, "Intros and outros")); OnlineSettingsCard(OnlinePart.SKIP) }
                 }
                 Category.MUSIC -> {
                     item("q") { GroupLabel("Quality"); AudioQualityCard() }
                     item("c") {
                         GroupLabel("Sound")
                         SettingsCard {
-                        SettingsActionRow("Equalizer & sound effects", "5 bands, presets, bass boost and 3D virtualizer", "setting_equalizer_selector") { onNavigateToEqualizer() }
+                        SettingsActionRow(tr(R.string.equalizer_sound_effects, "Equalizer & sound effects"), "5 bands, presets, bass boost and 3D virtualizer", "setting_equalizer_selector") { onNavigateToEqualizer() }
                         Text(stringResource(R.string.songs_already_play_back_to_back),
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
                         }
                     }
                     item("lyrics") {
-                        GroupLabel("Lyrics and scrobbling")
+                        GroupLabel(tr(R.string.lyrics_and_scrobbling, "Lyrics and scrobbling"))
                         SettingsCard {
                             LyricsOnlineRow()
                             SettingsDivider()
-                            SettingsActionRow("Last.fm scrobbling", "Sign in to Last.fm in Tracking", "music_open_lastfm") { onOpenPage("tracking") }
+                            SettingsActionRow(tr(R.string.last_fm_scrobbling, "Last.fm scrobbling"), tr(R.string.sign_in_to_last_fm_in, "Sign in to Last.fm in Tracking"), "music_open_lastfm") { onOpenPage("tracking") }
                         }
                     }
                 }
                 Category.DOWNLOADS -> {
                     item("c") { DownloadSettingsCard() }
-                    item("v") { GroupLabel("Private downloads"); SettingsCard { PrivateDownloadsRows() } }
+                    item("v") { GroupLabel(tr(R.string.private_downloads, "Private downloads")); SettingsCard { PrivateDownloadsRows() } }
                 }
                 Category.LIBRARY -> item("c") {
                     SettingsCard {
-                        SettingsActionRow("Rescan this device", "Look for new music and videos right now", "setting_manual_rescan") { onRescanClick() }
+                        SettingsActionRow(tr(R.string.rescan_this_device, "Rescan this device"), tr(R.string.look_for_new_music_and_videos, "Look for new music and videos right now"), "setting_manual_rescan") { onRescanClick() }
                         Text(stringResource(R.string.yumeiro_reads_androids_media_index_every),
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
                     }
@@ -440,7 +441,7 @@ private fun CategoryPage(
                     item("c") { NotificationSettingsCard() }
                     item("push") {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            GroupLabel("On-time alerts")
+                            GroupLabel(tr(R.string.on_time_alerts, "On-time alerts"))
                             PushAlertsCard()
                             GuideCard(SetupGuides.unifiedPush)
                         }
@@ -454,14 +455,14 @@ private fun CategoryPage(
                 Category.PRIVACY -> {
                     item("lock") { PrivacyLockSections() }
                     item("perm") { GroupLabel("Permissions"); PermissionsCard(onMediaGranted = onRescanClick) }
-                    item("data") { GroupLabel("Clear data"); PrivacyDataCard(onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory) }
+                    item("data") { GroupLabel(tr(R.string.clear_data, "Clear data")); PrivacyDataCard(onClearWatchHistory = onClearWatchHistory, onClearListeningHistory = onClearListeningHistory) }
                 }
                 Category.UPDATES -> item("c") { UpdateSettingsCard() }
                 Category.CRASHES -> item("c") { CrashReportsCard() }
                 Category.ABOUT -> {
                     item("dev") { DeveloperCard() }
                     item("social") { GroupLabel("Community"); SocialMediaCard() }
-                    item("support") { GroupLabel("Support Yumeiro"); dev.asfakul.yumeiro.ui.screens.extras.SupportYumeiroCard(full = true) }
+                    item("support") { GroupLabel(tr(R.string.support_yumeiro, "Support Yumeiro")); dev.asfakul.yumeiro.ui.screens.extras.SupportYumeiroCard(full = true) }
                     item("guide") { UserGuideEntryCard(onOpen = { onOpenCategory(Category.GUIDE) }) }
                 }
                 // Categories with their own screens never open here; offer the jump just in case.

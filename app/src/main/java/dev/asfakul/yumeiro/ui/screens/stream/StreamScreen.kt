@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -205,7 +206,7 @@ fun StreamScreen(
 
     /** Runs [block] off the main thread; any failure becomes a short message instead of a crash. */
     fun launchSafe(onError: (String) -> Unit = ::toastError, block: suspend () -> Unit) = scope.launch {
-        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Something went wrong. Try again.")) }
+        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, tr(R.string.something_went_wrong_try_again, "Something went wrong. Try again."))) }
     }
 
     /** Opens a saved playlist on its own page; [force] re-downloads it first (card menu → Refresh now). */
@@ -243,14 +244,14 @@ fun StreamScreen(
                 toast("Exported ${StreamRepository.playlist.value.size} streams")
             } else {
                 val n = PlaylistStore.export(app, id, uri)
-                toast("Exported $n streams")
+                toast(tr(R.string.exported_streams, "Exported %1\$s streams", n))
             }
         }
     }
 
     fun exportPlaylist(id: String?, name: String?) {
         pendingExport = id ?: TEMP_EXPORT
-        runCatching { exportLauncher.launch(fileNameFor(name)) }.onFailure { pendingExport = null; toast("No app available to save files") }
+        runCatching { exportLauncher.launch(fileNameFor(name)) }.onFailure { pendingExport = null; toast(tr(R.string.no_app_available_to_save_files, "No app available to save files")) }
     }
 
     fun sync() {
@@ -287,7 +288,7 @@ fun StreamScreen(
         scope.launch {
             runCatching { StreamRepository.loadPlaylist(context, source, currentRequest().takeIf { source.startsWith("http") }) }
                 .onSuccess { StreamRepository.setPlaylist(name, it); onOpenPlaylist(OPENED_PLAYLIST_SLUG) }
-                .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't load this playlist.") }
+                .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, tr(R.string.couldnt_load_this_playlist, "Couldn't load this playlist.")) }
             loading = false
         }
     }
@@ -311,7 +312,7 @@ fun StreamScreen(
         loading = true
         scope.launch {
             val r = runCatching { StreamResolver.resolve(context, request, thorough = true) }
-                .getOrElse { Resolution.Failed("Couldn't open the link", dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Check the link and try again.")) }
+                .getOrElse { Resolution.Failed(tr(R.string.couldnt_open_the_link, "Couldn't open the link"), dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, tr(R.string.check_the_link_and_try_again, "Check the link and try again."))) }
             loading = false
             when (r) {
                 is Resolution.Playable -> IncomingMedia.open(context, r.request, recent = IncomingMedia.Recent.LINK)
@@ -330,7 +331,7 @@ fun StreamScreen(
     fun download() {
         val u = url.trim()
         error = null
-        if (u.isBlank()) { error = "Paste a link first"; return }
+        if (u.isBlank()) { error = tr(R.string.paste_a_link_first, "Paste a link first"); return }
         loading = true
         scope.launch {
             val r = runCatching { StreamResolver.resolve(context, currentRequest(), thorough = true) }.getOrNull()
@@ -340,9 +341,9 @@ fun StreamScreen(
                 is Resolution.Playable -> dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, r.request, u) { error = it }
                 is Resolution.NeedsBrowser -> pageFinder = r
                 is Resolution.Handoff -> { handoff = r; error = r.reason }
-                is Resolution.Playlist -> error = "This is a playlist. Open it and download a single channel or file."
+                is Resolution.Playlist -> error = tr(R.string.this_is_a_playlist_open_it, "This is a playlist. Open it and download a single channel or file.")
                 is Resolution.Failed -> error = "${r.title}. ${r.message}"
-                null -> error = "Couldn't open the link."
+                null -> error = tr(R.string.couldnt_open_the_link_2, "Couldn't open the link.")
             }
         }
     }
@@ -386,7 +387,7 @@ fun StreamScreen(
                 val list = PlaylistStore.channels(app, p.id, forceRefresh = force)
                 if (LiveTvMemory.gen[p.id] == g) loads[p.id] = LiveLoad(loading = false, channels = list)
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
-                if (LiveTvMemory.gen[p.id] == g) loads[p.id] = LiveLoad(loading = false, channels = loads[p.id]?.channels.orEmpty(), error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't load this playlist."))
+                if (LiveTvMemory.gen[p.id] == g) loads[p.id] = LiveLoad(loading = false, channels = loads[p.id]?.channels.orEmpty(), error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, tr(R.string.couldnt_load_this_playlist, "Couldn't load this playlist.")))
             }
         }
     }
@@ -533,7 +534,7 @@ fun StreamScreen(
                     )
                     if (url.isNotBlank() && format == StreamFormat.AUTO) {
                         val detected = when {
-                            looksLikeM3uPlaylist(url) -> "M3U playlist"
+                            looksLikeM3uPlaylist(url) -> tr(R.string.m3u_playlist, "M3U playlist")
                             PlatformRules.ruleFor(url.trim()) is PlatformRules.Handoff -> "${PlatformRules.ruleFor(url.trim())?.platform} (opens in its app)"
                             PlatformRules.ruleFor(url.trim()) is PlatformRules.WebSession -> "${PlatformRules.ruleFor(url.trim())?.platform} web page"
                             else -> StreamSniffer.fromUrl(url.trim())?.label ?: "checked when you press Play"
@@ -633,19 +634,19 @@ fun StreamScreen(
     // Round 8: the hub (channels first, tools as shortcuts) and the link player on its own page.
     val tools = listOf(
         LiveTool("live_tool_playlists", "Playlists", "${playlists.size} lists", Icons.AutoMirrored.Filled.PlaylistPlay, liveHue("playlists")) { pane = "playlists" },
-        LiveTool("live_tool_link", "Play link", "URL · magnet", Icons.Default.ContentPaste, liveHue("link")) { advanced = false; pane = "link" },
-        LiveTool("live_tool_file", "M3U file", "From storage", Icons.Default.FolderOpen, liveHue("file")) {
+        LiveTool("live_tool_link", tr(R.string.play_link, "Play link"), tr(R.string.url_magnet, "URL · magnet"), Icons.Default.ContentPaste, liveHue("link")) { advanced = false; pane = "link" },
+        LiveTool("live_tool_file", tr(R.string.m3u_file, "M3U file"), tr(R.string.from_storage, "From storage"), Icons.Default.FolderOpen, liveHue("file")) {
             runCatching { filePicker.launch(arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "application/vnd.apple.mpegurl", "text/plain", "*/*")) }
-                .onFailure { toast("No app available to pick files") }
+                .onFailure { toast(tr(R.string.no_app_available_to_pick_files, "No app available to pick files")) }
         },
         LiveTool("market_entry", "Market", "${playlists.count { it.isMarket }} installed", Icons.Default.Storefront, liveHue("market"), onOpenMarket),
         LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
         LiveTool("stream_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, liveHue("telegram"), onOpenTelegram),
         LiveTool("live_tool_sports", stringResource(R.string.sports_title), stringResource(R.string.sports_tool_status), Icons.Default.SportsSoccer, liveHue("sports"), onOpenSports),
-        LiveTool("live_tool_add_url", "Add URL", "Remote list", Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
-        LiveTool("live_tool_new", "New list", "Your own", Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
-        LiveTool("live_tool_sync", "Update all", if (syncing) "Updating…" else "Every playlist", Icons.Default.Sync, liveHue("sync")) { sync() },
-        LiveTool("live_tool_recent", "Recent links", if (history.isEmpty()) "Headers · DRM" else "${history.size} streams", Icons.Default.History, liveHue("recent")) { pane = "link" },
+        LiveTool("live_tool_add_url", tr(R.string.add_url, "Add URL"), tr(R.string.remote_list, "Remote list"), Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
+        LiveTool("live_tool_new", tr(R.string.new_list, "New list"), tr(R.string.your_own, "Your own"), Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
+        LiveTool("live_tool_sync", tr(R.string.update_all_2, "Update all"), if (syncing) "Updating…" else tr(R.string.every_playlist, "Every playlist"), Icons.Default.Sync, liveHue("sync")) { sync() },
+        LiveTool("live_tool_recent", tr(R.string.recent_links, "Recent links"), if (history.isEmpty()) tr(R.string.headers_drm_2, "Headers · DRM") else "${history.size} streams", Icons.Default.History, liveHue("recent")) { pane = "link" },
     )
     dev.asfakul.yumeiro.ui.components.TabSwap(pane, { when (it) { "hub" -> 0; "playlists" -> 1; else -> 2 } }, modifier.fillMaxSize(), label = "live_pane") { pn ->
     if (pn == "playlists") {
@@ -668,13 +669,13 @@ fun StreamScreen(
                     PlaylistsHeader(
                         lastSync = lastSync, syncing = syncing, onMarket = onOpenMarket,
                         onAddUrl = { addingRemote = true }, onNew = { creatingLocal = true }, onSync = ::sync,
-                        onRestore = { launchSafe { val n = PlaylistStore.restoreDefaults(app); toast(if (n > 0) "Restored $n default playlists" else "Default playlists enabled") } },
+                        onRestore = { launchSafe { val n = PlaylistStore.restoreDefaults(app); toast(if (n > 0) tr(R.string.restored_default_playlists, "Restored %1\$s default playlists", n) else tr(R.string.default_playlists_enabled, "Default playlists enabled")) } },
                         searchOpen = if (playlists.size >= PLAYLIST_SEARCH_FROM) playlistSearchOpen || playlistQuery.isNotEmpty() else null,
                         onToggleSearch = { if (playlistSearchOpen || playlistQuery.isNotEmpty()) { playlistSearchOpen = false; playlistQuery = "" } else playlistSearchOpen = true },
                     )
                 }
                 if (playlists.size >= PLAYLIST_SEARCH_FROM && (playlistSearchOpen || playlistQuery.isNotEmpty())) item(key = "playlists_search") {
-                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(true, playlistQuery, { playlistQuery = it.take(60) }, "Search playlists", "playlists_search", horizontalPadding = 0.dp)
+                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(true, playlistQuery, { playlistQuery = it.take(60) }, tr(R.string.search_playlists, "Search playlists"), "playlists_search", horizontalPadding = 0.dp)
                 }
                 if (channels.isNotEmpty() && openPlaylistId == null) item(key = "opened_list") {
                     OpenedListCard(name = playlistName, count = channels.size, onOpen = { onOpenPlaylist(OPENED_PLAYLIST_SLUG) }, onClose = { StreamRepository.setPlaylist(null, emptyList()) })
@@ -776,20 +777,20 @@ fun StreamScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (activePlaylists.isNotEmpty()) {
                             LiveIconButton(
-                                Icons.Default.Search, if (liveSearching) "Close channel search" else "Search channels", "live_search_button",
+                                Icons.Default.Search, if (liveSearching) tr(R.string.close_channel_search, "Close channel search") else tr(R.string.search_channels, "Search channels"), "live_search_button",
                                 onClick = { if (liveSearching) { liveSearching = false; liveQuery = "" } else liveSearching = true }, active = liveSearching,
                             )
                             if (liveCountries.size > 1) LiveIconButton(
-                                Icons.Default.Public, countryPicked?.let { "Showing ${it.label}. Change country" } ?: "Pick a country", "live_country_button",
+                                Icons.Default.Public, countryPicked?.let { "Showing ${it.label}. Change country" } ?: tr(R.string.pick_a_country, "Pick a country"), "live_country_button",
                                 onClick = { countryOpen = true }, active = countryPicked != null,
                                 label = countryPicked?.let { c -> listOfNotNull(dev.asfakul.yumeiro.stream.LiveFind.flag(c.code), c.label).joinToString(" ") },
                             )
                             LiveIconButton(
-                                Icons.Default.FilterList, if (selName != null) "Showing $selName. Change filter" else "Show videos from", "live_filter_button",
+                                Icons.Default.FilterList, if (selName != null) tr(R.string.showing_change_filter, "Showing %1\$s. Change filter", selName) else tr(R.string.show_videos_from, "Show videos from"), "live_filter_button",
                                 onClick = { filterOpen = true }, active = selName != null, label = selName,
                             )
                         }
-                        LiveIconButton(Icons.Default.Apps, "Tools and playlists", "live_tools_button", onClick = { toolsOpen = true })
+                        LiveIconButton(Icons.Default.Apps, tr(R.string.tools_and_playlists, "Tools and playlists"), "live_tools_button", onClick = { toolsOpen = true })
                     }
                 },
             )
@@ -829,7 +830,7 @@ fun StreamScreen(
                 feed.size == 0 && feedLoading > 0 -> items(3, key = { "live_skel_$it" }) {
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(liveColumns) { LiveTileSkeleton(Modifier.weight(1f)) } }
                 }
-                feed.size == 0 -> { if (feedFailed.isEmpty()) item(key = "live_empty") { LiveProblem("No channels in these playlists right now", onRetry = { feedIds.forEach { id -> activePlaylists.firstOrNull { it.id == id }?.let { loadLive(it, force = true) } } }) } }
+                feed.size == 0 -> { if (feedFailed.isEmpty()) item(key = "live_empty") { LiveProblem(tr(R.string.no_channels_in_these_playlists_right, "No channels in these playlists right now"), onRetry = { feedIds.forEach { id -> activePlaylists.firstOrNull { it.id == id }?.let { loadLive(it, force = true) } } }) } }
                 liveQuery.isNotBlank() && feedShown.isEmpty() -> item(key = "live_search_empty") {
                     val scoped = listOfNotNull(activePlaylists.firstOrNull { it.id == liveSel }?.name, countryPicked?.label, liveGroup?.takeIf { !countriesByCategory }, liveGenre)
                     LiveSearchEmpty(
@@ -845,15 +846,15 @@ fun StreamScreen(
             }
         } else item(key = "live_none") {
             Column(Modifier.fillMaxWidth().clip(yuRound(20)).background(GlassFill).padding(18.dp).testTag("live_none")) {
-                Text(if (playlists.isEmpty()) "No playlists yet" else "All playlists are off", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(if (playlists.isEmpty()) tr(R.string.no_playlists_yet, "No playlists yet") else tr(R.string.all_playlists_are_off, "All playlists are off"), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Text(
-                    if (playlists.isEmpty()) "Get channels from the market, add a playlist URL or play a link." else "Turn a playlist on in Tools → Playlists to see its channels here.",
+                    if (playlists.isEmpty()) tr(R.string.get_channels_from_the_market_add, "Get channels from the market, add a playlist URL or play a link.") else tr(R.string.turn_a_playlist_on_in_tools, "Turn a playlist on in Tools → Playlists to see its channels here."),
                     color = TextSecondary, fontSize = 12.sp,
                 )
                 Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (playlists.isEmpty()) {
                         LiveHeaderButton("Market", Icons.Default.Storefront, "live_none_market", onClick = onOpenMarket)
-                        LiveHeaderButton("Add URL", Icons.Default.AddLink, "live_none_add", onClick = { addingRemote = true })
+                        LiveHeaderButton(tr(R.string.add_url, "Add URL"), Icons.Default.AddLink, "live_none_add", onClick = { addingRemote = true })
                     } else LiveHeaderButton("Playlists", Icons.AutoMirrored.Filled.PlaylistPlay, "live_none_playlists", onClick = { pane = "playlists" })
                 }
             }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sports
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
@@ -36,8 +38,8 @@ object SportsScores {
         FOOTBALL("football", "sport=soccer", "Soccer"),
         CRICKET("cricket", "sport=cricket", "Cricket"),
         BASKETBALL("basketball", "sport=basketball&league=nba", "Basketball"),
-        AMERICAN_FOOTBALL("american_football", "sport=football&league=nfl", "American Football"),
-        HOCKEY("hockey", "sport=hockey&league=nhl", "Ice Hockey"),
+        AMERICAN_FOOTBALL("american_football", "sport=football&league=nfl", tr(R.string.american_football, "American Football")),
+        HOCKEY("hockey", "sport=hockey&league=nhl", tr(R.string.ice_hockey, "Ice Hockey")),
         BASEBALL("baseball", "sport=baseball&league=mlb", "Baseball"),
         TENNIS("tennis", "sport=tennis", "Tennis"),
         RUGBY("rugby", "sport=rugby", "Rugby"),

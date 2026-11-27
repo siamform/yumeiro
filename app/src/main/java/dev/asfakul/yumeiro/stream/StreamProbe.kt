@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.network.NetworkClient
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -54,7 +56,7 @@ object StreamProbe {
     fun probe(request: StreamRequest, defaultUserAgent: String, client: OkHttpClient = NetworkClient.get()): ProbeResult {
         val url = request.url.trim()
         val builder = try { Request.Builder().url(url) } catch (e: IllegalArgumentException) {
-            return failed(url, NetworkFailure.OTHER, "Not a valid http(s) URL")
+            return failed(url, NetworkFailure.OTHER, tr(R.string.not_a_valid_http_s_url, "Not a valid http(s) URL"))
         }
         builder.header("User-Agent", request.userAgent ?: defaultUserAgent)
         builder.header("Accept", "*/*")

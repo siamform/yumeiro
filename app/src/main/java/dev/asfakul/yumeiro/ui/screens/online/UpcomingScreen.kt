@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -154,11 +155,11 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
         UpcomingFilter.scheduleCountries(java.util.Locale.getDefault().country, TvmazeSchedule.COUNTRIES, options.countries, TvmazeSchedule.STREAMING)
     }.let { all -> if (kind == Upcoming.Kind.MOVIES) all.filter { it != TvmazeSchedule.STREAMING } else all }
     Column(Modifier.fillMaxSize().testTag("upcoming_screen")) {
-        SubPageHeader(title = "Upcoming", subtitle = "${if (from == dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB) "Next two months" else "Next two weeks"} · ${kind.label}", onBack = onBack) {
+        SubPageHeader(title = tr(R.string.upcoming, "Upcoming"), subtitle = "${if (from == dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB) "Next two months" else "Next two weeks"} · ${kind.label}", onBack = onBack) {
             // GROUP C catch-all: search is an icon; the field opens under the header only when asked for.
             dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
                 if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
-            }, "upcoming_search_open", "Search upcoming")
+            }, "upcoming_search_open", tr(R.string.search_upcoming, "Search upcoming"))
         }
         // UP-FILTER-1 (owner list R21, item 16B): search, then three filter buttons (Category, Country, Date) that
         // open their own sheets. Every choice comes from what is loaded (genres, channel countries, days) or from
@@ -178,7 +179,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
             ) { sheet = "country" }
             UpcomingFilterButton(
                 androidx.compose.material.icons.Icons.Default.DateRange, "Date",
-                v.day?.let { Upcoming.dayLabel(it, today) } ?: "Any day", on = v.day != null, tag = "upcoming_date_button", modifier = Modifier.weight(1f),
+                v.day?.let { Upcoming.dayLabel(it, today) } ?: tr(R.string.any_day, "Any day"), on = v.day != null, tag = "upcoming_date_button", modifier = Modifier.weight(1f),
             ) { sheet = "date" }
         }
         val close = { sheet = null }
@@ -202,10 +203,10 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                             OnlineChip(UpcomingCountries.label(c), c == source, { country = c }, Modifier.testTag("upcoming_country_${c.lowercase()}"))
                         }
                     }
-                    dev.asfakul.yumeiro.ui.components.YuSearchField(cq, { cq = it.take(40) }, "Another country", "upcoming_country_search", Modifier.fillMaxWidth())
+                    dev.asfakul.yumeiro.ui.components.YuSearchField(cq, { cq = it.take(40) }, tr(R.string.another_country, "Another country"), "upcoming_country_search", Modifier.fillMaxWidth())
                     if (cq.isNotBlank() && more.isEmpty()) Text("No country called \"${cq.trim()}\"", color = TextSecondary, fontSize = 13.sp)
                 }
-                if (options.countries.size > 1) dev.asfakul.yumeiro.ui.components.FilterGroup("Channel country") {
+                if (options.countries.size > 1) dev.asfakul.yumeiro.ui.components.FilterGroup(tr(R.string.channel_country, "Channel country")) {
                     OnlineChip("All", v.country == null, { channel = null }, Modifier.testTag("upcoming_channel_all"))
                     options.countries.forEach { c -> OnlineChip(UpcomingCountries.label(c), c == channel, { channel = c }, Modifier.testTag("upcoming_channel_${c.lowercase()}")) }
                 }
@@ -236,7 +237,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 val movies = kind == Upcoming.Kind.MOVIES
                 Text(
                     if (from == dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB) "No ${if (movies) "films" else "new series"} from $name are listed for the next two months."
-                    else if (movies) "Wikidata lists no films from $name in the next two weeks." else "TVmaze lists no TV episodes for $name in the next two weeks. Many of its shows are on streaming services.",
+                    else if (movies) tr(R.string.wikidata_lists_no_films_from_in, "Wikidata lists no films from %1\$s in the next two weeks.", name) else tr(R.string.tvmaze_lists_no_tv_episodes_for, "TVmaze lists no TV episodes for %1\$s in the next two weeks. Many of its shows are on streaming services.", name),
                     color = TextSecondary, fontSize = 14.sp,
                 )
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -269,10 +270,10 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 }
                 item("credit") {
                     Text(when (from) {
-                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB -> "Release data: TMDB (themoviedb.org) through Yumeiro Cloud. This product uses the TMDB API but is not endorsed or certified by TMDB. Tap a title to look for it in your sources."
-                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.WIKIDATA -> "Release data: Wikidata (wikidata.org), CC0. Tap a title to look for it in your sources."
-                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.TVMAZE -> "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources."
-                        else -> "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources."
+                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.HUB -> tr(R.string.release_data_tmdb_themoviedb_org_through, "Release data: TMDB (themoviedb.org) through Yumeiro Cloud. This product uses the TMDB API but is not endorsed or certified by TMDB. Tap a title to look for it in your sources.")
+                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.WIKIDATA -> tr(R.string.release_data_wikidata_wikidata_org_cc0, "Release data: Wikidata (wikidata.org), CC0. Tap a title to look for it in your sources.")
+                        dev.asfakul.yumeiro.online.upcoming.UpcomingHub.From.TVMAZE -> tr(R.string.schedule_data_tvmaze_tvmaze_com_cc, "Schedule data: TVmaze (tvmaze.com), CC BY-SA. Tap a title to look for it in your sources.")
+                        else -> tr(R.string.calendar_data_simkl_simkl_com_tap, "Calendar data: Simkl (simkl.com). Tap a title to look for it in your sources.")
                     }, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(16.dp).navigationBarsPadding().testTag("upcoming_credit"))
                 }
             }
@@ -291,7 +292,7 @@ private fun UpcomingFilterButton(
         modifier.heightIn(min = 52.dp).clip(yuRound(16))
             .background(if (on) p.accent.copy(alpha = 0.16f) else GlassFill)
             .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = "$title: $value. Change" }
+            .semantics(mergeDescendants = true) { contentDescription = tr(R.string.change_2, "%1\$s: %2\$s. Change", title, value) }
             .padding(horizontal = 10.dp, vertical = 8.dp).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {

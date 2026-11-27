@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -106,7 +108,7 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
     val act: (Boolean) -> Unit = { favorite ->
         val c = if (favorite) OnlineBookmarks.toggleFavorite(context, item) else OnlineBookmarks.toggleWatchLater(context, item)
         val what = if (favorite) "Favorites" else "Watch later"
-        AppMessages.show(context, if (c == OnlineBookmarks.Change.ADDED) "Added to $what" else "Removed from $what")
+        AppMessages.show(context, if (c == OnlineBookmarks.Change.ADDED) tr(R.string.added_to, "Added to %1\$s", what) else tr(R.string.removed_from, "Removed from %1\$s", what))
         onDismiss()
     }
     val body: @Composable (FocusRequester?) -> Unit = { first ->
@@ -116,7 +118,7 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
             Spacer(Modifier.size(12.dp))
             ActionRow(
                 if (mark?.watchLater == true) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                if (mark?.watchLater == true) "Remove from Watch later" else "Watch later",
+                if (mark?.watchLater == true) tr(R.string.remove_from_watch_later, "Remove from Watch later") else tr(R.string.watch_later, "Watch later"),
                 SpotifyGreen, "poster_actions_watch_later", first,
             ) { act(false) }
             ActionRow(
@@ -196,4 +198,4 @@ internal fun Modifier.posterPress(onClick: () -> Unit, onActions: (() -> Unit)?)
     else onPreviewKeyEvent { e ->
         if (e.key == androidx.compose.ui.input.key.Key.Menu && e.type == androidx.compose.ui.input.key.KeyEventType.KeyUp) { onActions(); true }
         else e.key == androidx.compose.ui.input.key.Key.Menu
-    }.combinedClickable(onClick = onClick, onLongClick = onActions, onLongClickLabel = "Watch later or Favorite")
+    }.combinedClickable(onClick = onClick, onLongClick = onActions, onLongClickLabel = tr(R.string.watch_later_or_favorite, "Watch later or Favorite"))

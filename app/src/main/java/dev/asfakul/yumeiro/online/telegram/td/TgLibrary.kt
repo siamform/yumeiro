@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.telegram.td
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
@@ -49,7 +51,7 @@ data class TgCounts(val videos: Int, val photos: Int, val audio: Int) {
             .map { (n, w) -> "%,d".format(n) + " " + if (n == 1 || w == "audio") w else w + "s" }
         return when {
             parts.isNotEmpty() -> parts.joinToString(" · ")
-            videos == 0 && photos == 0 && audio == 0 -> "No videos, photos or audio"
+            videos == 0 && photos == 0 && audio == 0 -> tr(R.string.no_videos_photos_or_audio, "No videos, photos or audio")
             else -> ""
         }
     }
@@ -153,7 +155,7 @@ class TgLibrary(private val client: TdClient) {
             if (o.type() != "user") return null
             val name = listOf(o.str("first_name"), o.str("last_name")).filter { it.isNotBlank() }.joinToString(" ")
             val username = (o.obj("usernames")?.get("active_usernames") as? JsonArray)?.firstOrNull()?.jsonPrimitive?.content.orEmpty()
-            return TgMe(name.ifBlank { username.ifBlank { "Telegram user" } }, username, o.obj("profile_photo")?.obj("small")?.int("id") ?: 0)
+            return TgMe(name.ifBlank { username.ifBlank { tr(R.string.telegram_user, "Telegram user") } }, username, o.obj("profile_photo")?.obj("small")?.int("id") ?: 0)
         }
 
         fun parseChat(o: JsonObject): TgChat? {

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.net.Uri
 
@@ -32,8 +34,8 @@ object StreamDownload {
 
     /** Why [req] can't be saved, or null when it can. Pure (unit-tested). */
     fun refusal(req: StreamRequest): String? = when {
-        req.drmScheme != DrmScheme.NONE || !req.clearKeys.isNullOrBlank() -> "Protected video, can't be saved. You can still play it."
-        req.resolvedFormat() == StreamFormat.SMOOTH -> "This stream type (Smooth Streaming) can't be saved. You can still play it."
+        req.drmScheme != DrmScheme.NONE || !req.clearKeys.isNullOrBlank() -> tr(R.string.protected_video_cant_be_saved_you, "Protected video, can't be saved. You can still play it.")
+        req.resolvedFormat() == StreamFormat.SMOOTH -> tr(R.string.this_stream_type_smooth_streaming_cant, "This stream type (Smooth Streaming) can't be saved. You can still play it.")
         else -> null
     }
 

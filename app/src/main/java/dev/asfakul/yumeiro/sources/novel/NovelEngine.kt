@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.novel
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.sources.js.QuickJsGuard
 import android.content.Context
 import com.dokar.quickjs.QuickJs
@@ -155,7 +157,7 @@ class NovelEngine(
         const val LOAD_TIMEOUT_MS = 25_000L
         const val CALL_TIMEOUT_MS = 60_000L
         const val MAX_BODY = 8L * 1024 * 1024
-        const val STOPPED = "This source took too long and was stopped"
+        val STOPPED: String get() = tr(R.string.this_source_took_too_long_and, "This source took too long and was stopped")
 
         /** Plugin errors are written for developers; say what the reader can do. */
         fun friendly(raw: String): String {

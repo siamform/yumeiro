@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.stream.torrent
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.DeviceClass
 import dev.asfakul.yumeiro.FeatureFlags
@@ -58,8 +60,8 @@ object TorrentStreams {
     fun allowed(offered: Boolean, accepted: Boolean): Boolean = offered && accepted
 
     /** The notice shown before the engine turns on (peers see the IP; pieces are shared while playing). */
-    const val PRIVACY_NOTICE =
-        "Torrents are shared between the people who have them. While a torrent plays, other people sharing it can see " +
+    val PRIVACY_NOTICE: String get() =
+        tr(R.string.torrents_are_shared_between_the_people, "Torrents are shared between the people who have them. While a torrent plays, other people sharing it can see ") +
             "your IP address, and Yumeiro sends them the parts you already have. Downloading or sharing some files is " +
             "illegal in some countries. Use a VPN if your network or country restricts torrents. Pieces are kept in the " +
             "app's cache and removed when it is full."
@@ -71,7 +73,7 @@ object TorrentStreams {
 
     suspend fun open(context: Context, link: String, title: String?, http: OkHttpClient): Opened = withContext(Dispatchers.IO) {
         val app = context.applicationContext
-        if (!TorrentEngine.ensure(app, http)) throw TorrentFailure((TorrentEngine.state.value as? TorrentEngine.State.Failed)?.message ?: "The torrent engine didn't start.")
+        if (!TorrentEngine.ensure(app, http)) throw TorrentFailure((TorrentEngine.state.value as? TorrentEngine.State.Failed)?.message ?: tr(R.string.the_torrent_engine_didnt_start, "The torrent engine didn't start."))
         val lowEnd = DeviceClass.lowEnd
         val c = core ?: synchronized(this@TorrentStreams) { core ?: coreFactory(lowEnd).also { core = it } }
         val root = File(app.cacheDir, "torrents")
@@ -87,17 +89,17 @@ object TorrentStreams {
                 val bytes = http.newCall(Request.Builder().url(link.trim()).build()).execute().use { r ->
                     if (!r.isSuccessful) throw TorrentFailure("The .torrent file didn't download (HTTP ${r.code}).")
                     val body = r.body
-                    if (body.contentLength() > MAX_TORRENT_FILE) throw TorrentFailure("That .torrent file is too large.")
-                    body.byteStream().readNBytesCompat(MAX_TORRENT_FILE + 1).also { if (it.size > MAX_TORRENT_FILE) throw TorrentFailure("That .torrent file is too large.") }
+                    if (body.contentLength() > MAX_TORRENT_FILE) throw TorrentFailure(tr(R.string.that_torrent_file_is_too_large, "That .torrent file is too large."))
+                    body.byteStream().readNBytesCompat(MAX_TORRENT_FILE + 1).also { if (it.size > MAX_TORRENT_FILE) throw TorrentFailure(tr(R.string.that_torrent_file_is_too_large, "That .torrent file is too large.")) }
                 }
-                runCatching { c.addTorrentFile(bytes, root) }.getOrElse { throw TorrentFailure("That isn't a valid .torrent file.") }
+                runCatching { c.addTorrentFile(bytes, root) }.getOrElse { throw TorrentFailure(tr(R.string.that_isnt_a_valid_torrent_file, "That isn't a valid .torrent file.")) }
             }
-            else -> throw TorrentFailure("That isn't a torrent link.")
+            else -> throw TorrentFailure(tr(R.string.that_isnt_a_torrent_link, "That isn't a torrent link."))
         }
         synchronized(this@TorrentStreams) { active.keys.filter { it != hash }.forEach { pauseNow(c, it, root) } }
         c.resume(hash)
         val meta = awaitMeta(c, hash)
-        val file = TorrentPlan.pickFile(meta.files, TorrentPlan.selectOnly(link), title) ?: throw TorrentFailure("This torrent has no playable file.")
+        val file = TorrentPlan.pickFile(meta.files, TorrentPlan.selectOnly(link), title) ?: throw TorrentFailure(tr(R.string.this_torrent_has_no_playable_file, "This torrent has no playable file."))
         c.onlyFile(hash, file.index, meta.files.size)
         val source = TorrentSource(c, meta, file, TorrentPlan.readAheadBytes(lowEnd), touched = { touch(c, hash, root) },
             window = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.B31_STREAM_WINDOW),
@@ -118,7 +120,7 @@ object TorrentStreams {
                 c.error(hash)?.let { throw TorrentFailure("The torrent failed: $it") }
                 val left = deadline - System.currentTimeMillis()
                 if (left <= 0) throw TorrentFailure(
-                    if (c.stats(hash).first == 0) "No peers found for this torrent. It may have no seeders right now." else "Peers were found but didn't send the torrent's file list in time.",
+                    if (c.stats(hash).first == 0) tr(R.string.no_peers_found_for_this_torrent, "No peers found for this torrent. It may have no seeders right now.") else tr(R.string.peers_were_found_but_didnt_send, "Peers were found but didn't send the torrent's file list in time."),
                 )
                 c.signal.wait(minOf(left, 1_000))
             }

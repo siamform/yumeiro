@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.feed.feedCard
@@ -140,7 +141,7 @@ internal fun LiveRecentRow(recent: List<StreamRequest>, onPlay: (StreamRequest) 
             }
             Text(
                 stringResource(R.string.clear), color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                modifier = Modifier.clip(yuRound(10)).clickable(role = Role.Button, onClickLabel = "Clear recently played", onClick = onClear)
+                modifier = Modifier.clip(yuRound(10)).clickable(role = Role.Button, onClickLabel = tr(R.string.clear_recently_played, "Clear recently played"), onClick = onClear)
                     .padding(horizontal = 8.dp, vertical = 6.dp).testTag("live_recent_clear"),
             )
         }

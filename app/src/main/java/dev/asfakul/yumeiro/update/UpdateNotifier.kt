@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.update
 
+import dev.asfakul.yumeiro.l10n.tr
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -33,8 +34,8 @@ internal object UpdateNotifier {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return // no channels before Android 8
         if (nm.getNotificationChannel(CHANNEL_ID) == null) {
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "App updates", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Notifies you when a new Yumeiro version is ready to install"
+                NotificationChannel(CHANNEL_ID, tr(R.string.app_updates, "App updates"), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = tr(R.string.notifies_you_when_a_new_yumeiro, "Notifies you when a new Yumeiro version is ready to install")
                     setShowBadge(true)
                     setSound(
                         dev.asfakul.yumeiro.notify.AppNotifier.soundUri(context),
@@ -70,8 +71,8 @@ internal object UpdateNotifier {
         ensureChannel(context)
         val n = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_update)
-            .setContentTitle("Yumeiro v$versionName is ready")
-            .setContentText("Download complete. Tap to install the update.")
+            .setContentTitle(tr(R.string.yumeiro_v_is_ready, "Yumeiro v%1\$s is ready", versionName))
+            .setContentText(tr(R.string.download_complete_tap_to_install_the, "Download complete. Tap to install the update."))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setContentIntent(openAppIntent(context))
@@ -104,7 +105,7 @@ internal object UpdateNotifier {
         ensureChannel(context)
         val n = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_update)
-            .setContentTitle("Update download failed")
+            .setContentTitle(tr(R.string.update_download_failed, "Update download failed"))
             .setContentText(message)
             .setContentIntent(openAppIntent(context))
             .setAutoCancel(true)

@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Context
@@ -201,7 +202,7 @@ object AudioSplit {
             val base = when {
                 kind == Kind.DUB && a?.language != null -> "${label(version, kind)} · ${AL.displayName(a.language)}"
                 // A version called "Sub" whose links say nothing: don't promise subtitles only.
-                onlyVersion && kind == Kind.SUB && explicit(version) == Kind.SUB && texts.none { AL.classify(it).kind != null } -> "Sub & Dub"
+                onlyVersion && kind == Kind.SUB && explicit(version) == Kind.SUB && texts.none { AL.classify(it).kind != null } -> tr(R.string.sub_dub, "Sub & Dub")
                 else -> label(version.ifBlank { "Sources" }, kind)
             }
             return listOf(Group(kind, a?.language, key, base, texts.indices.toList()))
@@ -213,8 +214,8 @@ object AudioSplit {
         return order.map { k ->
             val idx = byKey.getValue(k)
             when (k) {
-                AL.ORIG -> Group(Kind.SUB, null, k, "Sub · original audio", idx)
-                AL.DUB_OTHER -> Group(Kind.DUB, null, k, "Dub · other", idx)
+                AL.ORIG -> Group(Kind.SUB, null, k, tr(R.string.sub_original_audio, "Sub · original audio"), idx)
+                AL.DUB_OTHER -> Group(Kind.DUB, null, k, tr(R.string.dub_other, "Dub · other"), idx)
                 "" -> Group(null, null, k, "More sources", idx)
                 else -> Group(Kind.DUB, k, k, "Dub · ${AL.displayName(k)}", idx)
             }
@@ -261,7 +262,7 @@ fun WatchControlBar(
             ControlToggle(Icons.Default.DarkMode, "Dim", lightsOff, "watch_light") { WatchPrefs.setLightsOff(!lightsOff) }
             ControlToggle(Icons.Default.PlayCircle, "Autoplay", autoPlay, "watch_autoplay") { WatchPrefs.setAutoPlay(context, !autoPlay) }
             ControlToggle(Icons.Default.SkipNext, autoNextLabel, autoNext, "watch_autonext") { WatchPrefs.setAutoNext(context, !autoNext) }
-            if (autoSkip != null) ControlToggle(Icons.Default.FastForward, "Skip intros", autoSkip, "watch_autoskip") { onAutoSkip(!autoSkip) }
+            if (autoSkip != null) ControlToggle(Icons.Default.FastForward, tr(R.string.skip_intros, "Skip intros"), autoSkip, "watch_autoskip") { onAutoSkip(!autoSkip) }
         }
         Spacer(Modifier.width(6.dp))
         StepButton(Icons.Default.SkipPrevious, previousLabel, onPrevious, "watch_prev", filled = false)
@@ -404,7 +405,7 @@ fun AudioFilterRow(options: List<AudioFilterOption>, selected: String?, onSelect
                     Modifier.heightIn(min = 34.dp).clip(CircleShape)
                         .background(if (sel) p.accent else ink.copy(alpha = 0.06f))
                         .border(1.dp, if (sel) p.accent else ink.copy(alpha = 0.12f), CircleShape)
-                        .clickable(onClickLabel = "Show $label sources") { onSelect(if (sel) null else key) }
+                        .clickable(onClickLabel = tr(R.string.show_sources, "Show %1\$s sources", label)) { onSelect(if (sel) null else key) }
                         .semantics { this.selected = sel }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                         .testTag("watch_audio_" + (key ?: "all")),
@@ -534,7 +535,7 @@ fun WatchNumberGrid(
     numberOf: (Int) -> Int,
     onPick: (Int) -> Unit,
     watched: (Int) -> Boolean = { false },
-    searchHint: String = "Jump to #",
+    searchHint: String = tr(R.string.jump_to, "Jump to #"),
 ) {
     val p = LocalMtPalette.current
     val gridBrush = dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush()

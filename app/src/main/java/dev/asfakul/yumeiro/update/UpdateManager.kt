@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.update
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.security.TrustedSources
 import android.app.DownloadManager
 import android.content.Context
@@ -152,8 +154,8 @@ class UpdateManager private constructor(context: Context) {
                     runCatching {
                         dev.asfakul.yumeiro.notify.Inbox.add(app, dev.asfakul.yumeiro.notify.Inbox.Item(
                             id = "update-${release.versionName}", kind = dev.asfakul.yumeiro.notify.Inbox.Kind.UPDATE,
-                            title = if (GitHubReleaseClient.isTvAsset(release.asset.name) && !dev.asfakul.yumeiro.Edition.isTv) "Yumeiro TV is ready for this TV" else "Yumeiro v${release.versionName} is available",
-                            body = "Tap to see what's new and update. Nothing installs without your OK.",
+                            title = if (GitHubReleaseClient.isTvAsset(release.asset.name) && !dev.asfakul.yumeiro.Edition.isTv) tr(R.string.yumeiro_tv_is_ready_for_this, "Yumeiro TV is ready for this TV") else "Yumeiro v${release.versionName} is available",
+                            body = tr(R.string.tap_to_see_whats_new_and, "Tap to see what's new and update. Nothing installs without your OK."),
                             at = System.currentTimeMillis(), link = "update",
                         ))
                     }
@@ -165,7 +167,7 @@ class UpdateManager private constructor(context: Context) {
             } catch (t: Throwable) {
                 // Silent on automatic checks: never bother the user with a popup for a failed check.
                 _state.value = if (userInitiated) {
-                    UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "Update check failed."))
+                    UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, tr(R.string.update_check_failed, "Update check failed.")))
                 } else UpdateState.Idle
             }
         }
@@ -230,7 +232,7 @@ class UpdateManager private constructor(context: Context) {
                 }
                 val request = DownloadManager.Request(Uri.parse(resolved.url))
                     .setTitle("Yumeiro ${release.tagName}")
-                    .setDescription("Downloading update…")
+                    .setDescription(tr(R.string.downloading_update, "Downloading update…"))
                     .setMimeType(APK_MIME)
                     // Always visible: an update download is never hidden from the user (no
                     // DOWNLOAD_WITHOUT_NOTIFICATION permission; see docs/security/AUDIT.md).
@@ -250,7 +252,7 @@ class UpdateManager private constructor(context: Context) {
                 pollDownload(id, release)
             } catch (t: Throwable) {
                 prefs.clearDownload()
-                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "Couldn't start the download."), release)
+                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, tr(R.string.couldnt_start_the_download, "Couldn't start the download.")), release)
             }
         }
     }
@@ -334,7 +336,7 @@ class UpdateManager private constructor(context: Context) {
         } catch (t: Throwable) {
             withContext(Dispatchers.IO) { file.delete() }
             prefs.clearDownload()
-            val msg = t.message ?: "The downloaded update could not be verified."
+            val msg = t.message ?: tr(R.string.the_downloaded_update_could_not_be, "The downloaded update could not be verified.")
             if (silentFlow) {
                 _state.value = UpdateState.Idle
             } else {
@@ -381,7 +383,7 @@ class UpdateManager private constructor(context: Context) {
                 UpdateNotifier.cancel(app)
             } catch (t: Throwable) {
                 prefs.pendingUpdatedVersion = null
-                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "The update couldn't be installed."), s.release)
+                _state.value = UpdateState.Failed(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, tr(R.string.the_update_couldnt_be_installed, "The update couldn't be installed.")), s.release)
             }
         }
     }

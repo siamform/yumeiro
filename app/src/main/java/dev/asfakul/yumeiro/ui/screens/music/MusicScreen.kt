@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.music
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.PillTabRow
@@ -181,7 +182,7 @@ fun MusicScreen(
                     ) {
                         Icon(
                             imageVector = if (isSelectionMode) Icons.Default.CheckCircle else Icons.Default.SelectAll,
-                            contentDescription = "Select mode",
+                            contentDescription = tr(R.string.select_mode, "Select mode"),
                             tint = if (isSelectionMode) SpotifyGreen else TextSecondary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -208,9 +209,9 @@ fun MusicScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             val sortLabel = when (currentSort) {
-                                TrackSort.TITLE_ASC -> "A to Z"
-                                TrackSort.TITLE_DESC -> "Z to A"
-                                TrackSort.RECENTLY_ADDED -> "Recently added"
+                                TrackSort.TITLE_ASC -> tr(R.string.a_to_z, "A to Z")
+                                TrackSort.TITLE_DESC -> tr(R.string.z_to_a, "Z to A")
+                                TrackSort.RECENTLY_ADDED -> tr(R.string.recently_added, "Recently added")
                                 TrackSort.DURATION -> "Duration"
                                 TrackSort.ARTIST -> "Artist"
                                 TrackSort.ALBUM -> "Album"
@@ -230,9 +231,9 @@ fun MusicScreen(
                         ) {
                             TrackSort.values().forEach { sortOption ->
                                 val label = when (sortOption) {
-                                    TrackSort.TITLE_ASC -> "Title (A to Z)"
-                                    TrackSort.TITLE_DESC -> "Title (Z to A)"
-                                    TrackSort.RECENTLY_ADDED -> "Recently added"
+                                    TrackSort.TITLE_ASC -> tr(R.string.title_a_to_z, "Title (A to Z)")
+                                    TrackSort.TITLE_DESC -> tr(R.string.title_z_to_a, "Title (Z to A)")
+                                    TrackSort.RECENTLY_ADDED -> tr(R.string.recently_added, "Recently added")
                                     TrackSort.DURATION -> "Duration"
                                     TrackSort.ARTIST -> "Artist"
                                     TrackSort.ALBUM -> "Album"
@@ -303,10 +304,10 @@ fun MusicScreen(
                     Spacer(Modifier.weight(1f))
                 } else if (currentTrackList.isEmpty()) {
                     EmptyMediaView(
-                        title = if (activeTab == 4) "No favorite songs yet" else "No audio files detected",
-                        subtitle = if (activeTab == 4) "Tap the heart icon on any song to add it to your favorites."
-                        else "Place MP3, FLAC, M4A, OGG, or WAV files in local storage and tap Rescan.",
-                        buttonText = if (activeTab == 4) "Browse songs" else "Scan storage",
+                        title = if (activeTab == 4) tr(R.string.no_favorite_songs_yet, "No favorite songs yet") else tr(R.string.no_audio_files_detected, "No audio files detected"),
+                        subtitle = if (activeTab == 4) tr(R.string.tap_the_heart_icon_on_any, "Tap the heart icon on any song to add it to your favorites.")
+                        else tr(R.string.place_mp3_flac_m4a_ogg_or, "Place MP3, FLAC, M4A, OGG, or WAV files in local storage and tap Rescan."),
+                        buttonText = if (activeTab == 4) tr(R.string.browse_songs, "Browse songs") else tr(R.string.scan_storage, "Scan storage"),
                         onButtonClick = if (activeTab == 4) { { onTabChange(0) } } else onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -345,9 +346,9 @@ fun MusicScreen(
                 // Albums Tab
                 if (albums.isEmpty()) {
                     EmptyMediaView(
-                        title = "No albums found",
-                        subtitle = "Albums appear here once songs are on this phone.",
-                        buttonText = "Scan again",
+                        title = tr(R.string.no_albums_found, "No albums found"),
+                        subtitle = tr(R.string.albums_appear_here_once_songs_are, "Albums appear here once songs are on this phone."),
+                        buttonText = tr(R.string.scan_again, "Scan again"),
                         onButtonClick = onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -478,9 +479,9 @@ fun MusicScreen(
                 // Artists Tab
                 if (artists.isEmpty()) {
                     EmptyMediaView(
-                        title = "No artists found",
-                        subtitle = "Artists appear here once songs are on this phone.",
-                        buttonText = "Scan again",
+                        title = tr(R.string.no_artists_found, "No artists found"),
+                        subtitle = tr(R.string.artists_appear_here_once_songs_are, "Artists appear here once songs are on this phone."),
+                        buttonText = tr(R.string.scan_again, "Scan again"),
                         onButtonClick = onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -600,9 +601,9 @@ fun MusicScreen(
                 // Folders Tab
                 if (folders.isEmpty()) {
                     EmptyMediaView(
-                        title = "No music folders found",
-                        subtitle = "Folders that hold songs show up here.",
-                        buttonText = "Scan again",
+                        title = tr(R.string.no_music_folders_found, "No music folders found"),
+                        subtitle = tr(R.string.folders_that_hold_songs_show_up, "Folders that hold songs show up here."),
+                        buttonText = tr(R.string.scan_again, "Scan again"),
                         onButtonClick = onRescanClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -767,7 +768,7 @@ fun musicSourceOptions(songCount: Int, online: Boolean): List<dev.asfakul.yumeir
     ),
     dev.asfakul.yumeiro.ui.components.SourceOption(
         "mix", "Mix", "Your songs and online picks in one place",
-        if (online) "Device + online" else "Device part only",
+        if (online) tr(R.string.device_online, "Device + online") else tr(R.string.device_part_only, "Device part only"),
         androidx.compose.material.icons.Icons.Default.Album, "music_source_mix",
     ),
 )
@@ -778,7 +779,7 @@ internal fun shortFolderPath(path: String): String? {
     // MediaStore sometimes reports "<unknown>" for a segment; drop those rather than show them.
     val p = path.trim().split('/').filterNot { it.equals("<unknown>", true) }.joinToString("/").trimEnd('/')
     if (p.isBlank()) return null
-    val short = p.replace(RX_MUSICSCREEN_1, "").replace(RX_MUSICSCREEN_2, "SD card/")
+    val short = p.replace(RX_MUSICSCREEN_1, "").replace(RX_MUSICSCREEN_2, tr(R.string.sd_card, "SD card/"))
     return short.trimEnd('/').ifBlank { null }
 }
 

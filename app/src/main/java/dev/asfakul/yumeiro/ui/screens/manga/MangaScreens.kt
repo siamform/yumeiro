@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.manga
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.verticalScroll
@@ -180,8 +181,8 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
 
     Column(Modifier.fillMaxSize().testTag("manga_home")) {
         SubPageHeader(
-            title = "Manga", onBack = onBack,
-            subtitle = if (providers.isEmpty()) "Add a source to start reading"
+            title = tr(R.string.manga, "Manga"), onBack = onBack,
+            subtitle = if (providers.isEmpty()) tr(R.string.add_a_source_to_start_reading, "Add a source to start reading")
                 else (provider?.name.orEmpty() + (provider?.lang?.takeIf { it.isNotBlank() && it != "all" }?.let { " · ${it.uppercase()}" } ?: "")),
         ) {
             // GROUP C catch-all (same pattern as the Novel home): search and the source choice are header icons.
@@ -189,18 +190,18 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                 dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
                     if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
                 }, "manga_search_open", "Search ${provider?.name.orEmpty()}")
-                if (providers.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { showSources = true }, "manga_source_pick", "Change source")
+                if (providers.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { showSources = true }, "manga_source_pick", tr(R.string.change_source, "Change source"))
             }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("manga_manage_sources")) { Icon(Icons.Default.Extension, stringResource(R.string.manage_sources), tint = TextPrimary) }
         }
         if (providers.isEmpty()) {
-            StateMessage(Icons.AutoMirrored.Filled.MenuBook, "No manga sources yet",
-                "Add a Mihon / Tachiyomi repository or a JavaScript (Mangayomi) repository, then install a source.",
+            StateMessage(Icons.AutoMirrored.Filled.MenuBook, tr(R.string.no_manga_sources_yet, "No manga sources yet"),
+                tr(R.string.add_a_mihon_tachiyomi_repository_or, "Add a Mihon / Tachiyomi repository or a JavaScript (Mangayomi) repository, then install a source."),
                 primary = "Open sources" to onOpenSources, testTag = "manga_empty")
             return@Column
         }
         val online by dev.asfakul.yumeiro.network.Connectivity.online.collectAsState()
-        if (!online) dev.asfakul.yumeiro.ui.components.OfflineNotice("Reading from manga sources", tag = "offline_notice_manga")
+        if (!online) dev.asfakul.yumeiro.ui.components.OfflineNotice(tr(R.string.reading_from_manga_sources, "Reading from manga sources"), tag = "offline_notice_manga")
         // B2/B3: the search field and filter chips move with the scroll (no expand/shrink layout animation).
         dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(Modifier.fillMaxSize(), state = barHide, enabled = query.isEmpty(), showKey = feed to savedOnly, header = {
                 Column {
@@ -272,7 +273,7 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
                 tag = "manga_source_search", modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
             )
             if (langs.size > 1) LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item("l_all") { FilterPill("All languages", lang == null, { lang = null }) }
+                item("l_all") { FilterPill(tr(R.string.all_languages, "All languages"), lang == null, { lang = null }) }
                 items(langs, key = { it }) { l -> FilterPill(if (l == "all") "Multi" else l.uppercase(), lang == l, { lang = l }) }
             }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
@@ -390,7 +391,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.load(context) } }
     LaunchedEffect(providerId, url, attempt) {
         if (provider == null) {
-            error = "This source isn't installed any more"
+            error = tr(R.string.this_source_isnt_installed_any_more, "This source isn't installed any more")
             // F-13: chapters saved on the phone still open without the source.
             // MANGA-ORDER-1: in chapter order, not download order.
             chapters = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaOffline.chapters(context, providerId, url) }.takeIf { it.isNotEmpty() }
@@ -451,7 +452,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                         (resume ?: first)?.let { ch ->
                             Button(onClick = { onRead(item, ch) }, shape = yuRound(20),
                                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("manga_read")) {
-                                Text(if (resume != null) "Continue · ${ch.name}" else "Start reading", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(if (resume != null) "Continue · ${ch.name}" else tr(R.string.start_reading, "Start reading"), maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -498,9 +499,9 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                             onClick = {
                                 when {
                                     pct != null -> MangaOffline.cancel(providerId, ch.url)
-                                    isSaved -> { MangaOffline.delete(context, providerId, ch.url); android.widget.Toast.makeText(context, "Removed from this device", android.widget.Toast.LENGTH_SHORT).show() }
+                                    isSaved -> { MangaOffline.delete(context, providerId, ch.url); android.widget.Toast.makeText(context, tr(R.string.removed_from_this_device, "Removed from this device"), android.widget.Toast.LENGTH_SHORT).show() }
                                     provider != null -> MangaOffline.enqueue(context, provider, item, ch) { e ->
-                                        android.widget.Toast.makeText(context, if (e == null) "Saved for offline reading" else "Couldn't save: ${OnlineErrors.friendly(e)}", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, if (e == null) tr(R.string.saved_for_offline_reading, "Saved for offline reading") else "Couldn't save: ${OnlineErrors.friendly(e)}", android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },
@@ -624,21 +625,21 @@ private fun MangaReaderChapter(
         val toName = MangaTlPlan.TARGETS[tlEff.dst] ?: tlEff.dst
         if (tlEff.from == tlEff.dst) {
             // The first version did nothing here (an English chapter on an English phone): say why.
-            tlStatus = "This chapter is already in $toName. Tap to pick another language."
+            tlStatus = tr(R.string.this_chapter_is_already_in_tap, "This chapter is already in %1\$s. Tap to pick another language.", toName)
             return@LaunchedEffect
         }
         val pair = "${MangaTlPlan.FROM[tlEff.from] ?: tlEff.from} → $toName"
-        tlStatus = if (MangaTranslate.ready(context, tlEff)) null else "Getting the $pair language pack…"
+        tlStatus = if (MangaTranslate.ready(context, tlEff)) null else tr(R.string.getting_the_language_pack, "Getting the %1\$s language pack…", pair)
         MangaTranslate.prepare(context, tlEff)
             .onSuccess { tlReady = true; tlStatus = null }
-            .onFailure { tlStatus = "Couldn't get the $pair language pack. Check the connection, then tap to try again." }
+            .onFailure { tlStatus = tr(R.string.couldnt_get_the_language_pack_check, "Couldn't get the %1\$s language pack. Check the connection, then tap to try again.", pair) }
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { MangaTranslate.release() } }
     val tlUse = if (tlAllowed && tlEff.on && tlReady) tlEff else null
     val item = MangaItem(providerId, mangaUrl, mangaTitle, MangaLibrary.get(providerId, mangaUrl)?.cover)
     val chapter = MangaChapter(chapterUrl, chapterName)
     LaunchedEffect(attempt) {
-        if (provider == null) { error = "This source isn't installed any more"; return@LaunchedEffect }
+        if (provider == null) { error = tr(R.string.this_source_isnt_installed_any_more, "This source isn't installed any more"); return@LaunchedEffect }
         error = null
         try { pages = provider.pages(chapterUrl) }
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
@@ -726,10 +727,10 @@ private fun MangaReaderChapter(
                     Icon(Icons.Default.SkipNext, stringResource(R.string.next_chapter), tint = if (next != null) Color.White else Color.White.copy(alpha = 0.3f))
                 }
                 if (tlAllowed) IconButton(onClick = { tlSheet = true }, modifier = Modifier.testTag("reader_translate")) {
-                    Icon(Icons.Default.Translate, if (tl.on) "Translate pages: on" else "Translate pages: off", tint = if (tl.on) SpotifyGreen else Color.White)
+                    Icon(Icons.Default.Translate, if (tl.on) tr(R.string.translate_pages_on, "Translate pages: on") else tr(R.string.translate_pages_off, "Translate pages: off"), tint = if (tl.on) SpotifyGreen else Color.White)
                 }
                 IconButton(onClick = { anchor = current to within; vertical = !vertical; context.getSharedPreferences("manga_reader", 0).edit().putBoolean("vertical", vertical).apply() }, modifier = Modifier.testTag("reader_mode")) {
-                    Icon(if (vertical) Icons.Default.ViewCarousel else Icons.Default.SwapVert, if (vertical) "Paged mode" else "Vertical mode", tint = Color.White)
+                    Icon(if (vertical) Icons.Default.ViewCarousel else Icons.Default.SwapVert, if (vertical) tr(R.string.paged_mode, "Paged mode") else tr(R.string.vertical_mode, "Vertical mode"), tint = Color.White)
                 }
             }
         }
@@ -813,7 +814,7 @@ private fun TranslateSheet(s: MangaTranslate.Settings, sourceLang: String?, onCh
                 Text(stringResource(R.string.from), color = TextSecondary, fontSize = 12.sp)
                 androidx.compose.foundation.layout.FlowRow {
                     for ((code, label) in MangaTlPlan.FROM) {
-                        val shown = if (code == MangaTlPlan.AUTO) sourceLang?.let { "Auto · ${MangaTlPlan.FROM[it]}" } ?: "Auto · from the page" else label
+                        val shown = if (code == MangaTlPlan.AUTO) sourceLang?.let { "Auto · ${MangaTlPlan.FROM[it]}" } ?: tr(R.string.auto_from_the_page, "Auto · from the page") else label
                         Chip(shown, s.from == code, "tl_src_$code") { onChange(s.copy(from = code)) }
                     }
                 }
@@ -860,7 +861,7 @@ private sealed interface TlPage {
 private fun TlPill(state: TlPage, pageIndex: Int, modifier: Modifier, onRetry: () -> Unit) {
     val text = when (state) {
         TlPage.Working -> "Translating…"
-        TlPage.Failed -> "Couldn't translate · tap to retry"
+        TlPage.Failed -> tr(R.string.couldnt_translate_tap_to_retry, "Couldn't translate · tap to retry")
         is TlPage.Same -> "Already in ${state.language}"
         else -> return
     }

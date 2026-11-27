@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.diagnostics
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
@@ -51,7 +53,7 @@ object CrashLog {
             val oom = generateSequence(error) { it.cause }.any { it is OutOfMemoryError }
             runCatching {
                 val f = write(d, if (oom) "Out of memory" else "Crash", "Thread: ${thread.name}", error,
-                    body = "\n\n--- Last memory / thread samples ---\n" + runCatching { MemoryWatch.currentTrail() }.getOrDefault(""))
+                    body = tr(R.string.last_memory_thread_samples, "\n\n--- Last memory / thread samples ---\n") + runCatching { MemoryWatch.currentTrail() }.getOrDefault(""))
                 // R15 (Phase 5): the report is copied to Downloads right away; the user doesn't have to open Settings.
                 appContext?.let { CrashExport.export(it, f) }
             }
@@ -85,7 +87,7 @@ object CrashLog {
         val sw = StringWriter()
         error?.printStackTrace(PrintWriter(sw))
         val text = buildString {
-            append("Yumeiro crash report\n")
+            append(tr(R.string.yumeiro_crash_report, "Yumeiro crash report\n"))
             append("Kind: ").append(kind).append('\n')
             append("Error: ").append(scrub(error?.let { it.javaClass.name + (it.message?.let { m -> ": $m" } ?: "") } ?: body?.lineSequence()?.firstOrNull().orEmpty()).take(300)).append('\n')
             append("When: ").append(stamp(at)).append('\n')
@@ -121,9 +123,9 @@ object CrashLog {
      */
     internal fun exitKind(reason: Int, importance: Int): String? = when (reason) {
         ApplicationExitInfo.REASON_ANR -> "Freeze"
-        ApplicationExitInfo.REASON_CRASH_NATIVE -> "Native crash"
+        ApplicationExitInfo.REASON_CRASH_NATIVE -> tr(R.string.native_crash, "Native crash")
         ApplicationExitInfo.REASON_LOW_MEMORY ->
-            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) "Out of memory" else null
+            if (importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) tr(R.string.out_of_memory, "Out of memory") else null
         else -> null
     }
 
@@ -153,9 +155,9 @@ object CrashLog {
             // R15: how big the process was and whether the user was looking at it — a background
             // kill to free memory is normal Android behaviour, a foreground one is our bug.
             val facts = "Importance at exit: ${importanceName(e.importance)} · PSS ${e.pss / 1024} MB · RSS ${e.rss / 1024} MB · status ${e.status}"
-            val body = (e.description ?: kind) + "\n" + facts + "\n\n" + (trace ?: "Android kept no trace for this one.") +
+            val body = (e.description ?: kind) + "\n" + facts + "\n\n" + (trace ?: tr(R.string.android_kept_no_trace_for_this, "Android kept no trace for this one.")) +
                 // FREEZE-4: freezes get the trail too (it holds the "draws home=…" counts before the freeze).
-                (if (trail != null && (e.reason == ApplicationExitInfo.REASON_LOW_MEMORY || e.reason == ApplicationExitInfo.REASON_ANR)) "\n\n--- Last memory / thread samples before the kill ---\n$trail" else "")
+                (if (trail != null && (e.reason == ApplicationExitInfo.REASON_LOW_MEMORY || e.reason == ApplicationExitInfo.REASON_ANR)) tr(R.string.last_memory_thread_samples_before_the, "\n\n--- Last memory / thread samples before the kill ---\n%1\$s", trail) else "")
             write(d, kind, "process ${e.processName} · ${e.description.orEmpty()}", null, body, e.timestamp)
         }
         if (newest > seen) prefs.edit().putLong("last_exit", newest).apply()

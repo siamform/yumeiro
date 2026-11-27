@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +74,7 @@ fun NetworkSettingsCard() {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             items(DnsProvider.entries, key = { it.name }) { p ->
                 Chip(
-                    if (p == DnsProvider.SYSTEM) "System default" else "${p.label} ${p.primaryIp}",
+                    if (p == DnsProvider.SYSTEM) tr(R.string.system_default, "System default") else "${p.label} ${p.primaryIp}",
                     config.provider == p, "dns_provider_${p.name.lowercase()}",
                 ) { NetworkSettings.setDns(context, config.copy(provider = p)); testResult = null }
             }
@@ -81,8 +82,8 @@ fun NetworkSettingsCard() {
         if (!config.usesAlternative) {
             SettingsDivider()
             SettingsToggleRow(
-                title = "Get around blocked sites automatically",
-                subtitle = "If your network blocks a site's name (no answer, a block page or a reset connection), Yumeiro looks it up over encrypted DNS instead — Cloudflare, then Quad9, then Google — and remembers it. Sites that work are untouched",
+                title = tr(R.string.get_around_blocked_sites_automatically, "Get around blocked sites automatically"),
+                subtitle = tr(R.string.if_your_network_blocks_a_sites, "If your network blocks a site's name (no answer, a block page or a reset connection), Yumeiro looks it up over encrypted DNS instead — Cloudflare, then Quad9, then Google — and remembers it. Sites that work are untouched"),
                 checked = config.auto,
                 onCheckedChange = { NetworkSettings.setDns(context, config.copy(auto = it)) },
                 testTag = "toggle_dns_auto",
@@ -91,8 +92,8 @@ fun NetworkSettingsCard() {
             if (remember { dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.DNS_FALLBACK) }) {
                 SettingsDivider()
                 SettingsToggleRow(
-                    title = "Automatic DNS fallback",
-                    subtitle = "If your network's DNS stops answering, Yumeiro asks Cloudflare (1.1.1.1), then Quad9 (9.9.9.9), one at a time, and keeps the one that works until the network changes. Off: system DNS only",
+                    title = tr(R.string.automatic_dns_fallback, "Automatic DNS fallback"),
+                    subtitle = tr(R.string.if_your_networks_dns_stops_answering, "If your network's DNS stops answering, Yumeiro asks Cloudflare (1.1.1.1), then Quad9 (9.9.9.9), one at a time, and keeps the one that works until the network changes. Off: system DNS only"),
                     checked = config.fallback,
                     onCheckedChange = { NetworkSettings.setDns(context, config.copy(fallback = it)) },
                     testTag = "toggle_dns_fallback_auto",
@@ -101,7 +102,7 @@ fun NetworkSettingsCard() {
             val vpn = remember { dev.asfakul.yumeiro.network.Connectivity.vpnActive(context) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (vpn) "A VPN is on. If an extension fails only with it, turn it off here." else "Some sources block whole regions; DNS can't fix that — a VPN can.",
+                    if (vpn) tr(R.string.a_vpn_is_on_if_an, "A VPN is on. If an extension fails only with it, turn it off here.") else tr(R.string.some_sources_block_whole_regions_dns, "Some sources block whole regions; DNS can't fix that — a VPN can."),
                     color = TextTertiary, fontSize = 11.sp, modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { dev.asfakul.yumeiro.network.Connectivity.openVpnSettings(context) }, modifier = Modifier.testTag("dns_vpn_settings")) {
@@ -122,7 +123,7 @@ fun NetworkSettingsCard() {
             Text(config.transport.description, color = TextTertiary, fontSize = 11.sp)
             SettingsDivider()
             SettingsToggleRow(
-                title = "Only when system DNS fails",
+                title = tr(R.string.only_when_system_dns_fails, "Only when system DNS fails"),
                 subtitle = "Recommended. Lookups go to the system DNS first; ${config.provider.label} is asked only if a host can't be resolved. Off: ${config.provider.label} answers every lookup",
                 checked = config.mode == DnsMode.FALLBACK,
                 onCheckedChange = { NetworkSettings.setDns(context, config.copy(mode = if (it) DnsMode.FALLBACK else DnsMode.ALWAYS)) },
@@ -132,7 +133,7 @@ fun NetworkSettingsCard() {
         SettingsDivider()
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                testResult ?: "Check that the selected resolver answers on this network.",
+                testResult ?: tr(R.string.check_that_the_selected_resolver_answers, "Check that the selected resolver answers on this network."),
                 color = if (testResult?.startsWith("Failed") == true) MaterialTheme.colorScheme.error else TextSecondary,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f).testTag("dns_test_result"),
@@ -160,9 +161,9 @@ fun NetworkSettingsCard() {
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "This only changes name lookups — it isn't a VPN and doesn't change your IP address or region. " +
-                "Cloudflare DNS (1.1.1.1) is free and separate from Cloudflare WARP; no account or subscription is needed. " +
-                "For the whole device, use Android's Settings → Network → Private DNS.",
+            tr(R.string.this_only_changes_name_lookups_it, "This only changes name lookups — it isn't a VPN and doesn't change your IP address or region. ") +
+                tr(R.string.cloudflare_dns_1_1_1_1, "Cloudflare DNS (1.1.1.1) is free and separate from Cloudflare WARP; no account or subscription is needed. ") +
+                tr(R.string.for_the_whole_device_use_androids, "For the whole device, use Android's Settings → Network → Private DNS."),
             color = TextTertiary, fontSize = 11.sp,
         )
     }

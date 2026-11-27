@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.lookup
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import com.lagradost.cloudstream3.HomePageResponse
@@ -64,7 +66,7 @@ import org.json.JSONObject
 object StreamLookup {
     private const val TAG = "StreamLookup"
     const val NUVIO_NAME = "Nuvio"
-    const val STREMIO_NAME = "Stremio streams"
+    val STREMIO_NAME: String get() = tr(R.string.stremio_streams, "Stremio streams")
     const val PLUGIN_PREFIX = "yumeiro-lookup:"
     const val CINEMETA_BASE = "https://v3-cinemeta.strem.io"
 

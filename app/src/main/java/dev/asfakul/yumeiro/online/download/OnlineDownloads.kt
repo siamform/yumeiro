@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.download
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.os.Environment
 import android.util.Log
@@ -139,7 +141,7 @@ object OnlineDownloads {
 
     /** Human-readable place on the phone for [folder] (app storage). */
     fun storagePath(context: Context, folder: String): String {
-        val base = dir(context).absolutePath.substringAfter("/emulated/0/", dir(context).absolutePath).let { if (it.startsWith("/")) it else "Internal storage/$it" }
+        val base = dir(context).absolutePath.substringAfter("/emulated/0/", dir(context).absolutePath).let { if (it.startsWith("/")) it else tr(R.string.internal_storage, "Internal storage/%1\$s", it) }
         return if (folder.isBlank()) base else "$base/$folder"
     }
 
@@ -186,8 +188,8 @@ object OnlineDownloads {
 
     /** Downloads what's playing now (current source of the online session). */
     fun downloadCurrent(context: Context, keep: Boolean? = null): String? {
-        val s = OnlineSession.state.value ?: return "Nothing is playing"
-        val link = s.link ?: return "No source yet"
+        val s = OnlineSession.state.value ?: return tr(R.string.nothing_is_playing, "Nothing is playing")
+        val link = s.link ?: return tr(R.string.no_source_yet, "No source yet")
         val folder = if (s.episode != null) DownloadNaming.seriesFolder(s.detail.name, s.api, s.version) else ""
         return enqueue(context, s.title, s.api, s.detail.url, s.episode?.label, s.detail.posterUrl, s.detail.posterHeaders, link, folder, s.version, keep)
     }
@@ -199,8 +201,8 @@ object OnlineDownloads {
     fun sendCurrentToExternal(context: Context): String? {
         DownloadSettings.init(context)
         val choice = DownloadSettings.downloader.value
-        val s = OnlineSession.state.value ?: return "Nothing is playing"
-        val link = s.link ?: return "No source yet"
+        val s = OnlineSession.state.value ?: return tr(R.string.nothing_is_playing, "Nothing is playing")
+        val link = s.link ?: return tr(R.string.no_source_yet, "No source yet")
         ExternalDownloader.unsupportedReason(choice, link.isHls, link.isDash, splitAudio = link.audioTracks.isNotEmpty())?.let { return it }
         if (choice != ExternalDownloader.CHOOSER && ExternalDownloader.installed(context).none { it.pkg == choice }) return "${ExternalDownloader.label(choice)} isn't installed"
         return ExternalDownloader.send(context, choice, link.url, headersFor(link), ExternalDownloader.fileName(s.title, s.episode?.label, link.isHls))
@@ -216,7 +218,7 @@ object OnlineDownloads {
         ensureLoaded(context)
         // R15 forced download: DASH and split video/audio sources are saved too (ForceGrab).
         val id = own((api + "|" + titleUrl + "|" + (episodeLabel ?: "")).hashCode().toUInt().toString(16))
-        get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
+        get(id)?.let { old -> if (isSaved(context, old)) return tr(R.string.already_downloaded, "Already downloaded"); if (old.active) return tr(R.string.already_downloading, "Already downloading") }
         val ext = DownloadNaming.extensionFor(link)
         val name = safeName(listOfNotNull(title.takeIf { it.isNotBlank() }, link.qualityLabel.takeIf { it.isNotBlank() }).joinToString(" ")) + "-" + id + "." + ext
         val item = Item(id, title, api, titleUrl, episodeLabel, posterUrl, posterHeaders, link.url, link.isHls, headersFor(link), name,
@@ -268,7 +270,7 @@ object OnlineDownloads {
     fun enqueueYouTube(context: Context, ytId: String, title: String, channel: String?, thumbnail: String?, music: Boolean, choice: YtDownloadOptions.Choice, keep: Boolean = true): String? {
         ensureLoaded(context); DownloadSettings.init(context)
         val id = own(("yt|" + ytId + "|" + choice.videoItag + "|" + choice.audioItag).hashCode().toUInt().toString(16))
-        get(id)?.let { old -> if (isSaved(context, old)) return "Already downloaded"; if (old.active) return "Already downloading" }
+        get(id)?.let { old -> if (isSaved(context, old)) return tr(R.string.already_downloaded, "Already downloaded"); if (old.active) return tr(R.string.already_downloading, "Already downloading") }
         val item = ytItem(ytId, title, channel, thumbnail, music, choice, keep)
         update { list -> listOf(item) + list.filterNot { it.id == id } }
         start(context, id)

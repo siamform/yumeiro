@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.util.Log
 import com.lagradost.cloudstream3.AnimeLoadResponse
 import com.lagradost.cloudstream3.DubStatus
@@ -592,8 +594,8 @@ object OnlineRepository {
                 .filter { it.value.isNotEmpty() }
                 .sortedBy { when (it.key) { DubStatus.Subbed -> 0; DubStatus.Dubbed -> 1; else -> 2 } }
                 .associate { (status, list) -> versionLabel(status) to list.map { it.toEpisode() } }
-            is TorrentLoadResponse -> { unsupported = "Torrent sources aren't supported"; emptyMap() }
-            else -> { unsupported = "This kind of title isn't supported yet"; emptyMap() }
+            is TorrentLoadResponse -> { unsupported = tr(R.string.torrent_sources_arent_supported, "Torrent sources aren't supported"); emptyMap() }
+            else -> { unsupported = tr(R.string.this_kind_of_title_isnt_supported, "This kind of title isn't supported yet"); emptyMap() }
         }
         val kind = when {
             r is LiveStreamLoadResponse || r.type == TvType.Live -> OnlineKind.LIVE
@@ -663,9 +665,9 @@ object OnlineRepository {
 
     private fun mapLinkFixed(link: ExtractorLink, url: String): LinkEvent = when {
         // Protected streams aren't played: this app doesn't bypass DRM.
-        link is DrmExtractorLink -> LinkEvent.Skipped("DRM-protected source skipped")
-        link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET -> LinkEvent.Skipped("Torrent source skipped", link.url)
-        !UrlFix.isHttp(url) -> LinkEvent.Skipped("Unsupported link")
+        link is DrmExtractorLink -> LinkEvent.Skipped(tr(R.string.drm_protected_source_skipped, "DRM-protected source skipped"))
+        link.type == ExtractorLinkType.TORRENT || link.type == ExtractorLinkType.MAGNET -> LinkEvent.Skipped(tr(R.string.torrent_source_skipped, "Torrent source skipped"), link.url)
+        !UrlFix.isHttp(url) -> LinkEvent.Skipped(tr(R.string.unsupported_link, "Unsupported link"))
         else -> LinkEvent.Link(
             OnlineLink(
                 name = link.name.ifBlank { link.source }, source = link.source, url = url,

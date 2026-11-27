@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.web
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,14 +66,14 @@ object SavedSites {
         return when {
             // TG-PAGE-1: an invite link or private chat was refused as "not a t.me link". Say what it is instead.
             link == dev.asfakul.yumeiro.online.telegram.TelegramPublic.Private -> PRIVATE_LINK
-            kind == Kind.TELEGRAM && !tg -> "Type @channel or a t.me link. Websites go on the Websites page."
-            kind == Kind.WEBSITE && tg -> "That's a Telegram channel. Add it on the Telegram page."
+            kind == Kind.TELEGRAM && !tg -> tr(R.string.type_channel_or_a_t_me, "Type @channel or a t.me link. Websites go on the Websites page.")
+            kind == Kind.WEBSITE && tg -> tr(R.string.thats_a_telegram_channel_add_it, "That's a Telegram channel. Add it on the Telegram page.")
             else -> null
         }
     }
 
     /** TG-PAGE-1: private chats and invite links are never opened without the user's own signed-in membership. */
-    const val PRIVATE_LINK = "That's a private chat or invite link. Only members can see it, so it opens only in your own " +
+    val PRIVATE_LINK: String get() = tr(R.string.thats_a_private_chat_or_invite, "That's a private chat or invite link. Only members can see it, so it opens only in your own ") +
         "signed-in Telegram account (Your Telegram account, above), and only if you have already joined it. Yumeiro never joins chats for you."
 
     fun ordered(list: List<Site>): List<Site> = list.filter { it.pinned } + list.filterNot { it.pinned }
@@ -170,7 +172,7 @@ object SavedSites {
         // FINAL-3 (F-02): "@name", tg://resolve or a t.me channel link saves the channel's public page,
         // here rather than only in the Sites screen, so every caller saves the same thing.
         val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(input) as? dev.asfakul.yumeiro.online.telegram.TelegramPublic.Channel
-        val url = tg?.let { dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelUrl(it.name) } ?: normalize(input) ?: return "That doesn't look like a web address"
+        val url = tg?.let { dev.asfakul.yumeiro.online.telegram.TelegramPublic.channelUrl(it.name) } ?: normalize(input) ?: return tr(R.string.that_doesnt_look_like_a_web, "That doesn't look like a web address")
         val n = name?.trim()?.takeIf { it.isNotEmpty() } ?: defaultName(url)
         val key = keyOf(url)
         val old = _sites.value.firstOrNull { keyOf(it.url) == key }
@@ -207,8 +209,8 @@ object SavedSites {
 
     /** Why [input] can't be the copy's address, or null. Pure. */
     fun duplicateError(sites: List<Site>, input: String): String? {
-        val url = normalize(input) ?: return "That doesn't look like a web address"
-        if (kindOf(url) != Kind.WEBSITE) return "A website copy needs a web address"
+        val url = normalize(input) ?: return tr(R.string.that_doesnt_look_like_a_web, "That doesn't look like a web address")
+        if (kindOf(url) != Kind.WEBSITE) return tr(R.string.a_website_copy_needs_a_web, "A website copy needs a web address")
         val key = keyOf(url)
         sites.firstOrNull { keyOf(it.url) == key }?.let { return "Already saved as ${it.name}. Change the address, for example a mirror domain" }
         return null

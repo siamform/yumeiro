@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
@@ -123,13 +124,13 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
         startFailed = null
         val s = runCatching { TgAccounts.session(context) }.getOrNull()
         if (s == null) startFailed = (TdEngine.state.value as? TdEngine.State.Failed)?.message
-            ?: "Telegram could not start on this device." else session = s
+            ?: tr(R.string.telegram_could_not_start_on_this, "Telegram could not start on this device.") else session = s
     }
 
     Column(Modifier.fillMaxSize().background(p.background).testTag("tg_account")) {
         val s = session
         if (s == null) {
-            SubPageHeader(title = "Your Telegram account", subtitle = "Getting ready", onBack = onBack)
+            SubPageHeader(title = tr(R.string.your_telegram_account, "Your Telegram account"), subtitle = tr(R.string.getting_ready, "Getting ready"), onBack = onBack)
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 when {
                     startFailed != null -> {
@@ -157,8 +158,8 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
             state is TgAuthState.WaitPhone -> PhoneStep(s, onBack, onOwnKeys = { keysForm = true })
             editingPhone && state is TgAuthState.WaitCode -> PhoneStep(s, onBack = { s.cancelPhoneEdit() })
             else -> {
-                val title = "Sign in to Telegram"
-                SubPageHeader(title = title, subtitle = "Your account stays on this phone", onBack = onBack)
+                val title = tr(R.string.sign_in_to_telegram, "Sign in to Telegram")
+                SubPageHeader(title = title, subtitle = tr(R.string.your_account_stays_on_this_phone, "Your account stays on this phone"), onBack = onBack)
                 Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
                     when (val st = state) {
                         is TgAuthState.WaitCode -> CodeStep(s, st)
@@ -208,7 +209,7 @@ private fun PhoneStep(s: TgSession, onBack: () -> Unit, onOwnKeys: (() -> Unit)?
     val p = LocalMtPalette.current
     var phone by rememberSaveable { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    SubPageHeader(title = "Sign in to Telegram", subtitle = "Your account stays on this phone", onBack = onBack)
+    SubPageHeader(title = tr(R.string.sign_in_to_telegram, "Sign in to Telegram"), subtitle = tr(R.string.your_account_stays_on_this_phone, "Your account stays on this phone"), onBack = onBack)
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text(stringResource(R.string.phone_number), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         Text(stringResource(R.string.with_the_country_code_for_example), color = p.textSecondary, fontSize = 13.sp)
@@ -220,13 +221,13 @@ private fun PhoneStep(s: TgSession, onBack: () -> Unit, onOwnKeys: (() -> Unit)?
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.PhoneNumber }.testTag("tg_phone"),
         )
         ErrorLine(s)
-        SubmitButton("Send code", s, TgAuth.normalizePhone(phone) != null, "tg_phone_go") { s.submitPhone(phone) }
+        SubmitButton(tr(R.string.send_code, "Send code"), s, TgAuth.normalizePhone(phone) != null, "tg_phone_go") { s.submitPhone(phone) }
         Text(
             stringResource(R.string.yumeiro_signs_in_with_telegrams_official),
             color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp),
         )
         if (onOwnKeys != null) TextButton(onClick = onOwnKeys, modifier = Modifier.padding(top = 4.dp).testTag("tg_own_keys")) {
-            Text(if (dev.asfakul.yumeiro.online.telegram.td.TgKeys.hasOwn(LocalContext.current)) "Change your API ID and hash" else "Use your own API ID and hash")
+            Text(if (dev.asfakul.yumeiro.online.telegram.td.TgKeys.hasOwn(LocalContext.current)) tr(R.string.change_your_api_id_and_hash, "Change your API ID and hash") else tr(R.string.use_your_own_api_id_and, "Use your own API ID and hash"))
         }
     }
     BackHandler { onBack() }
@@ -253,7 +254,7 @@ private fun CodeStep(s: TgSession, st: TgAuthState.WaitCode) {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.SmsOtpCode }.testTag("tg_code"),
     )
     ErrorLine(s)
-    SubmitButton("Sign in", s, code.isNotEmpty(), "tg_code_go") { s.submitCode(code) }
+    SubmitButton(tr(R.string.sign_in, "Sign in"), s, code.isNotEmpty(), "tg_code_go") { s.submitCode(code) }
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         TextButton(onClick = { s.backToPhone() }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_change_phone")) { Text(stringResource(R.string.change_number)) }
         if (st.next != null) TextButton(onClick = { scope.launch { s.resendCode() } }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_resend")) { Text(stringResource(R.string.send_again)) }
@@ -275,7 +276,7 @@ private fun PasswordStep(s: TgSession, st: TgAuthState.WaitPassword) {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.Password }.testTag("tg_password"),
     )
     ErrorLine(s)
-    SubmitButton("Sign in", s, pass.isNotEmpty(), "tg_password_go") { s.submitPassword(pass) }
+    SubmitButton(tr(R.string.sign_in, "Sign in"), s, pass.isNotEmpty(), "tg_password_go") { s.submitPassword(pass) }
     Text(stringResource(R.string.forgot_it_reset_it_in_the), color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
 }
 
@@ -291,7 +292,7 @@ private fun RegisterStep(s: TgSession, st: TgAuthState.WaitRegistration) {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.PersonLastName }.testTag("tg_last"))
     if (st.termsText.isNotBlank()) Text(st.termsText.take(600), color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
     ErrorLine(s)
-    SubmitButton("Create account", s, first.isNotBlank(), "tg_register_go") { s.register(first, last) }
+    SubmitButton(tr(R.string.create_account, "Create account"), s, first.isNotBlank(), "tg_register_go") { s.register(first, last) }
 }
 
 /** Signed in: chats (filtered on the phone), then a chat's videos (searched by Telegram). */
@@ -371,7 +372,7 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
                     val known = videos.map { it.messageId }.toHashSet()
                     videos.addAll(page.videos.filter { it.messageId !in known })
                     next = page.next
-                    if (videos.isEmpty() && page.next == 0L) error = if (q.isNotBlank()) "No videos or audio match \"$q\" in this chat." else "No videos or audio in this chat."
+                    if (videos.isEmpty() && page.next == 0L) error = if (q.isNotBlank()) tr(R.string.no_videos_or_audio_match_in, "No videos or audio match \"%1\$s\" in this chat.", q) else tr(R.string.no_videos_or_audio_in_this, "No videos or audio in this chat.")
                 }
                 .onFailure { if (it !is kotlinx.coroutines.CancellationException) error = TgAuth.errorText(it) }
             loading = false
@@ -399,7 +400,7 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
         TgSearchHeader(
             title = chat.title.ifBlank { "Chat" }, subtitle = counts?.label()?.ifBlank { null } ?: "Videos and audio",
             searching = searchOpen, onSearching = { searchOpen = it },
-            query = input, onQuery = { input = it }, placeholder = "Search this chat",
+            query = input, onQuery = { input = it }, placeholder = tr(R.string.search_this_chat, "Search this chat"),
             onBack = onBack, onSubmit = { search(it) },
         )
         // TG-GRID-1 (owner list 8C): a gallery. Each video shows its own preview frame with the length on it; tap plays
@@ -497,11 +498,11 @@ private fun TelegramKeysStep(onBack: () -> Unit, onSaved: () -> Unit) {
     val hasOwn = remember { dev.asfakul.yumeiro.online.telegram.td.TgKeys.hasOwn(context) }
     val hasBuild = remember { dev.asfakul.yumeiro.online.telegram.td.TgKeys.build() != null }
     Column(Modifier.fillMaxSize().background(p.background).testTag("tg_keys")) {
-        SubPageHeader(title = "Telegram API keys", subtitle = "From my.telegram.org", onBack = onBack)
+        SubPageHeader(title = tr(R.string.telegram_api_keys, "Telegram API keys"), subtitle = tr(R.string.from_my_telegram_org, "From my.telegram.org"), onBack = onBack)
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
             Text(
-                "Telegram asks every app for its own keys. Get yours in a minute: sign in at my.telegram.org, open " +
-                    "\"API development tools\", create an app (any name), then copy the App api_id and App api_hash here.",
+                tr(R.string.telegram_asks_every_app_for_its, "Telegram asks every app for its own keys. Get yours in a minute: sign in at my.telegram.org, open ") +
+                    tr(R.string.api_development_tools_create_an_app, "\"API development tools\", create an app (any name), then copy the App api_id and App api_hash here."),
                 color = p.textSecondary, fontSize = 13.sp,
             )
             TextButton(onClick = { runCatching { uri.openUri("https://my.telegram.org/apps") } }, modifier = Modifier.testTag("tg_keys_site")) { Text(stringResource(R.string.open_my_telegram_org)) }
@@ -531,7 +532,7 @@ private fun TelegramKeysStep(onBack: () -> Unit, onSaved: () -> Unit) {
                 dev.asfakul.yumeiro.online.telegram.td.TgKeys.clear(context); onSaved()
             }, modifier = Modifier.testTag("tg_keys_reset")) { Text(stringResource(R.string.use_yumeiros_keys_again)) }
             Text(
-                "The hash is kept encrypted on this phone and never leaves it except to Telegram. Saving new keys signs " +
+                tr(R.string.the_hash_is_kept_encrypted_on, "The hash is kept encrypted on this phone and never leaves it except to Telegram. Saving new keys signs ") +
                     "every profile out of Telegram on this phone.",
                 color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp),
             )

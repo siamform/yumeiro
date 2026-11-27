@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -188,15 +189,15 @@ internal fun HeroCarousel(
                             }
                             val entry = saved.firstOrNull { it.api == item.api && it.url == item.url }
                             val isSaved = entry?.listed == true
-                            HeroRoundButton(if (isSaved) Icons.Default.Check else Icons.Default.Add, if (isSaved) "Remove from My List" else "Add to My List") {
+                            HeroRoundButton(if (isSaved) Icons.Default.Check else Icons.Default.Add, if (isSaved) tr(R.string.remove_from_my_list, "Remove from My List") else tr(R.string.add_to_my_list, "Add to My List")) {
                                 val now = OnlineBookmarks.toggle(context, item)
-                                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) "Added to My List" else "Removed from My List")
+                                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) tr(R.string.added_to_my_list, "Added to My List") else tr(R.string.removed_from_my_list, "Removed from My List"))
                             }
                             // F-09: Favorite next to My List.
                             val fav = entry?.favorite == true
-                            HeroRoundButton(if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder, if (fav) "Remove from Favorites" else "Add to Favorites") {
+                            HeroRoundButton(if (fav) Icons.Default.Favorite else Icons.Default.FavoriteBorder, if (fav) tr(R.string.remove_from_favorites, "Remove from Favorites") else tr(R.string.add_to_favorites, "Add to Favorites")) {
                                 val c = OnlineBookmarks.toggleFavorite(context, item)
-                                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (c == OnlineBookmarks.Change.ADDED) "Added to Favorites" else "Removed from Favorites")
+                                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (c == OnlineBookmarks.Change.ADDED) tr(R.string.added_to_favorites, "Added to Favorites") else tr(R.string.removed_from_favorites, "Removed from Favorites"))
                             }
                             HeroRoundButton(androidx.compose.material.icons.Icons.Outlined.Description, "Details") { onInfo(item) }
                         }
@@ -243,7 +244,7 @@ private fun ResumeSlide(e: OnlineHistory.Entry, modifier: Modifier, offset: Floa
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.15f), 0.45f to Color.Black.copy(alpha = 0.35f), 1f to Color.Black.copy(alpha = 0.92f))))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(16.dp)) {
             Text(
-                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) "続き · " else "") + "CONTINUE WATCHING",
+                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) "続き · " else "") + tr(R.string.widget_overline, "CONTINUE WATCHING"),
                 color = p.accentBright, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, maxLines = 1,
             )
             Spacer(Modifier.height(4.dp))
@@ -327,7 +328,7 @@ internal fun TopTenRow(title: String, items: List<OnlineItem>, onClick: (OnlineI
 internal fun ContinueRow(entries: List<OnlineHistory.Entry>, onClick: (OnlineItem) -> Unit, onSeeAll: () -> Unit, edgePadding: androidx.compose.ui.unit.Dp = 16.dp) {
     if (entries.isEmpty()) return
     Column(Modifier.testTag("online_continue")) {
-        SectionHeader("Continue watching") { SeeAllButton(onSeeAll) }
+        SectionHeader(tr(R.string.widget_name, "Continue watching")) { SeeAllButton(onSeeAll) }
         LazyRow(contentPadding = PaddingValues(horizontal = edgePadding), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             itemsIndexed(entries.take(15), key = { i, it -> "${i}_${it.key}" }) { _, e ->
                 // F-09-FEED: long press / Menu key: Watch later / Favorite for the title being watched.

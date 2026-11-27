@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.stream.PlaylistStore
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +92,7 @@ object BackgroundUpdates {
         val s = o.stuck
         if (s.isNotEmpty()) add(
             (if (s.size == 1) "${s[0]} couldn't update after $FAIL_STREAK tries" else "${s.size} extensions couldn't update after $FAIL_STREAK tries") +
-                ". Open Extensions to update or reinstall",
+                tr(R.string.open_extensions_to_update_or_reinstall, ". Open Extensions to update or reinstall"),
         )
     }
 

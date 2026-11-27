@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -44,8 +45,8 @@ internal fun TrackingV2Card() {
     Card(Modifier.fillMaxWidth().testTag("tracking_v2_card"), shape = yuRound(14), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SettingsToggleRow(
-                "Tracking V2",
-                if (on) "Episodes and manga / novel chapters are queued and sent until every tracker has them, even after being offline"
+                tr(R.string.tracking_v2, "Tracking V2"),
+                if (on) tr(R.string.episodes_and_manga_novel_chapters_are, "Episodes and manga / novel chapters are queued and sent until every tracker has them, even after being offline")
                 else "Off: episodes are sent once while you watch (classic tracking)",
                 on, { TrackV2.setEnabled(context, it) }, "tracking_v2_toggle",
             )
@@ -56,7 +57,7 @@ internal fun TrackingV2Card() {
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        if (queue.isEmpty()) "Nothing waiting" else "${queue.size} waiting to sync",
+                        if (queue.isEmpty()) tr(R.string.nothing_waiting, "Nothing waiting") else "${queue.size} waiting to sync",
                         color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                         modifier = Modifier.weight(1f).testTag("tracking_v2_waiting"),
                     )

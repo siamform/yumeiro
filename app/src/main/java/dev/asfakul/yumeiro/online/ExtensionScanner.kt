@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import java.io.ByteArrayInputStream
 import java.util.zip.ZipInputStream
 
@@ -40,10 +42,10 @@ object ExtensionScanner {
         val readable: Boolean = true,
     ) {
         val summary: String get() = when {
-            !readable -> "This file couldn't be checked — it isn't a valid extension"
-            level == Level.DANGER -> "Possibly harmful code found"
-            level == Level.CAUTION -> "Nothing harmful found, but some things are worth knowing"
-            else -> "No risky code found"
+            !readable -> tr(R.string.this_file_couldnt_be_checked_it, "This file couldn't be checked — it isn't a valid extension")
+            level == Level.DANGER -> tr(R.string.possibly_harmful_code_found, "Possibly harmful code found")
+            level == Level.CAUTION -> tr(R.string.nothing_harmful_found_but_some_things, "Nothing harmful found, but some things are worth knowing")
+            else -> tr(R.string.no_risky_code_found, "No risky code found")
         }
     }
 
@@ -140,32 +142,32 @@ object ExtensionScanner {
     }
 
     private val RULES = listOf(
-        rule(Level.DANGER, "Runs system commands", "Can start shell commands on your phone (Runtime.exec / ProcessBuilder)."),
-        rule(Level.DANGER, "Loads hidden code", "Downloads or unpacks extra code at run time, which this check can't see."),
-        rule(Level.DANGER, "Loads native code", "Loads native libraries (System.loadLibrary / System.load)."),
-        rule(Level.DANGER, "Reads or sends SMS", "Uses the SMS manager or SMS inbox."),
-        rule(Level.DANGER, "Reads contacts or call log", "Reads your contacts or call history."),
-        rule(Level.DANGER, "Tracks location", "Asks Android for your location."),
-        rule(Level.DANGER, "Records camera or microphone", "Uses the camera or records audio."),
-        rule(Level.DANGER, "Installs apps or controls the device", "Uses the app installer, device admin or accessibility control."),
-        rule(Level.DANGER, "Reads your accounts", "Lists the accounts on this phone."),
-        rule(Level.DANGER, "Crypto miner", "Contains crypto-mining code or pool addresses."),
-        Rule(Level.DANGER, "Deletes files on your storage", "Deletes files in shared storage (not just its own cache).") {
+        rule(Level.DANGER, tr(R.string.runs_system_commands, "Runs system commands"), tr(R.string.can_start_shell_commands_on_your, "Can start shell commands on your phone (Runtime.exec / ProcessBuilder).")),
+        rule(Level.DANGER, tr(R.string.loads_hidden_code, "Loads hidden code"), tr(R.string.downloads_or_unpacks_extra_code_at, "Downloads or unpacks extra code at run time, which this check can't see.")),
+        rule(Level.DANGER, tr(R.string.loads_native_code, "Loads native code"), tr(R.string.loads_native_libraries_system_loadlibrary_system, "Loads native libraries (System.loadLibrary / System.load).")),
+        rule(Level.DANGER, tr(R.string.reads_or_sends_sms, "Reads or sends SMS"), tr(R.string.uses_the_sms_manager_or_sms, "Uses the SMS manager or SMS inbox.")),
+        rule(Level.DANGER, tr(R.string.reads_contacts_or_call_log, "Reads contacts or call log"), tr(R.string.reads_your_contacts_or_call_history, "Reads your contacts or call history.")),
+        rule(Level.DANGER, tr(R.string.tracks_location, "Tracks location"), tr(R.string.asks_android_for_your_location, "Asks Android for your location.")),
+        rule(Level.DANGER, tr(R.string.records_camera_or_microphone, "Records camera or microphone"), tr(R.string.uses_the_camera_or_records_audio, "Uses the camera or records audio.")),
+        rule(Level.DANGER, tr(R.string.installs_apps_or_controls_the_device, "Installs apps or controls the device"), tr(R.string.uses_the_app_installer_device_admin, "Uses the app installer, device admin or accessibility control.")),
+        rule(Level.DANGER, tr(R.string.reads_your_accounts, "Reads your accounts"), tr(R.string.lists_the_accounts_on_this_phone, "Lists the accounts on this phone.")),
+        rule(Level.DANGER, tr(R.string.crypto_miner, "Crypto miner"), tr(R.string.contains_crypto_mining_code_or_pool, "Contains crypto-mining code or pool addresses.")),
+        Rule(Level.DANGER, tr(R.string.deletes_files_on_your_storage, "Deletes files on your storage"), tr(R.string.deletes_files_in_shared_storage_not, "Deletes files in shared storage (not just its own cache).")) {
             (it.method("Ljava/io/File;", "delete", "deleteRecursively") || it.ownerAny("Lkotlin/io/FilesKt") && it.str("deleteRecursively")) &&
                 (it.method("Landroid/os/Environment;", "getExternalStorageDirectory", "getExternalStoragePublicDirectory") || it.str("/sdcard/", "/storage/emulated/"))
         },
-        rule(Level.CAUTION, "Reads device identifiers", "Reads the Android ID or phone details, which can identify your device.") {
+        rule(Level.CAUTION, tr(R.string.reads_device_identifiers, "Reads device identifiers"), tr(R.string.reads_the_android_id_or_phone, "Reads the Android ID or phone details, which can identify your device.")) {
             it.method("Landroid/provider/Settings\$Secure;", "getString") && it.has(PRINTS.getValue("Android ID"))
         },
-        rule(Level.CAUTION, "Lists your installed apps", "Reads which apps are installed."),
-        rule(Level.CAUTION, "Reads the clipboard", "Can read what you copied."),
-        rule(Level.CAUTION, "Defines code at run time", "Builds classes at run time (often a JavaScript engine for a site's player)."),
-        Rule(Level.CAUTION, "Reaches into Yumeiro itself", "References Yumeiro's own classes, which extensions normally never do.") {
+        rule(Level.CAUTION, tr(R.string.lists_your_installed_apps, "Lists your installed apps"), tr(R.string.reads_which_apps_are_installed, "Reads which apps are installed.")),
+        rule(Level.CAUTION, tr(R.string.reads_the_clipboard, "Reads the clipboard"), tr(R.string.can_read_what_you_copied, "Can read what you copied.")),
+        rule(Level.CAUTION, tr(R.string.defines_code_at_run_time, "Defines code at run time"), tr(R.string.builds_classes_at_run_time_often, "Builds classes at run time (often a JavaScript engine for a site's player).")),
+        Rule(Level.CAUTION, tr(R.string.reaches_into_yumeiro_itself, "Reaches into Yumeiro itself"), tr(R.string.references_yumeiros_own_classes_which_extensions, "References Yumeiro's own classes, which extensions normally never do.")) {
             it.types.any { t -> t.startsWith("Ldev/asfakul/yumeiro/") } || it.str("dev.asfakul.yumeiro")
         },
-        rule(Level.CAUTION, "Analytics or ad trackers", "Contains analytics / ad-network addresses."),
-        rule(Level.CAUTION, "JavaScript bridge in a web page", "Exposes code to web pages (addJavascriptInterface)."),
-        rule(Level.CAUTION, "Shows its own notifications or starts services", "Posts notifications or runs background work."),
+        rule(Level.CAUTION, tr(R.string.analytics_or_ad_trackers, "Analytics or ad trackers"), tr(R.string.contains_analytics_ad_network_addresses, "Contains analytics / ad-network addresses.")),
+        rule(Level.CAUTION, tr(R.string.javascript_bridge_in_a_web_page, "JavaScript bridge in a web page"), "Exposes code to web pages (addJavascriptInterface)."),
+        rule(Level.CAUTION, tr(R.string.shows_its_own_notifications_or_starts, "Shows its own notifications or starts services"), tr(R.string.posts_notifications_or_runs_background_work, "Posts notifications or runs background work.")),
     )
 
     private const val MAX_DEX = 48 * 1024 * 1024
@@ -186,24 +188,24 @@ object ExtensionScanner {
                             val d = zip.readBytes()
                             if (d.size <= MAX_DEX) dexes += d
                         }
-                        lower.endsWith(".so") -> entryFindings += Finding(Level.DANGER, "Ships native code", "Contains a native library ($name) this check can't read.")
+                        lower.endsWith(".so") -> entryFindings += Finding(Level.DANGER, tr(R.string.ships_native_code, "Ships native code"), tr(R.string.contains_a_native_library_this_check, "Contains a native library (%1\$s) this check can't read.", name))
                         lower.endsWith(".dex") || lower.endsWith(".apk") || lower.endsWith(".jar") || lower.endsWith(".odex") ->
-                            entryFindings += Finding(Level.DANGER, "Hides extra code", "Contains another code file ($name) that could be loaded later.")
+                            entryFindings += Finding(Level.DANGER, tr(R.string.hides_extra_code, "Hides extra code"), tr(R.string.contains_another_code_file_that_could, "Contains another code file (%1\$s) that could be loaded later.", name))
                         lower.endsWith(".sh") || lower.endsWith(".elf") || lower == "busybox" ->
-                            entryFindings += Finding(Level.DANGER, "Ships a program", "Contains an executable ($name).")
+                            entryFindings += Finding(Level.DANGER, tr(R.string.ships_a_program, "Ships a program"), tr(R.string.contains_an_executable, "Contains an executable (%1\$s).", name))
                     }
                 }
             }
         } catch (_: Exception) {
-            return Report(Level.DANGER, listOf(Finding(Level.DANGER, "Unreadable file", "The extension file is damaged or not a .cs3.")), readable = false)
+            return Report(Level.DANGER, listOf(Finding(Level.DANGER, tr(R.string.unreadable_file, "Unreadable file"), tr(R.string.the_extension_file_is_damaged_or, "The extension file is damaged or not a .cs3."))), readable = false)
         }
         if (entries == 0 || dexes.isEmpty()) {
-            return Report(Level.DANGER, entryFindings + Finding(Level.DANGER, "No code found", "The file has no classes.dex — it isn't a CloudStream extension."),
+            return Report(Level.DANGER, entryFindings + Finding(Level.DANGER, tr(R.string.no_code_found, "No code found"), tr(R.string.the_file_has_no_classes_dex, "The file has no classes.dex — it isn't a CloudStream extension.")),
                 sizeBytes = bytes.size, readable = false)
         }
         val parsed = dexes.mapNotNull { runCatching { parseDex(it) }.getOrNull() }
         if (parsed.isEmpty()) {
-            return Report(Level.DANGER, entryFindings + Finding(Level.DANGER, "Unreadable code", "classes.dex couldn't be read."), sizeBytes = bytes.size, readable = false)
+            return Report(Level.DANGER, entryFindings + Finding(Level.DANGER, tr(R.string.unreadable_code, "Unreadable code"), "classes.dex couldn't be read."), sizeBytes = bytes.size, readable = false)
         }
         val dex = Dex(parsed.flatMap { it.types }.toSet(), parsed.flatMap { it.methods }.toSet(), parsed.flatMap { it.strings })
         return report(dex, entryFindings, bytes.size)
@@ -213,7 +215,7 @@ object ExtensionScanner {
     fun report(dex: Dex, extra: List<Finding> = emptyList(), size: Int = 0): Report {
         val findings = extra + RULES.filter { r -> runCatching { r.match(dex) }.getOrDefault(false) }.map { Finding(it.level, it.title, it.detail) }
         val plainHttp = dex.strings.count { s -> s.startsWith("http://") && !s.startsWith("http://localhost") && !s.startsWith("http://127.") && !s.startsWith("http://schemas.") && !s.startsWith("http://www.w3.org") }
-        val all = if (plainHttp > 0) findings + Finding(Level.SAFE, "Unencrypted links", "Uses $plainHttp plain http:// address${if (plainHttp == 1) "" else "es"} that others on your network could read.") else findings
+        val all = if (plainHttp > 0) findings + Finding(Level.SAFE, tr(R.string.unencrypted_links, "Unencrypted links"), "Uses $plainHttp plain http:// address${if (plainHttp == 1) "" else "es"} that others on your network could read.") else findings
         val level = when {
             all.any { it.level == Level.DANGER } -> Level.DANGER
             all.any { it.level == Level.CAUTION } -> Level.CAUTION

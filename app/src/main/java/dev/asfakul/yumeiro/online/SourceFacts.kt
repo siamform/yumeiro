@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import java.util.Locale
 
 /**
@@ -48,7 +50,7 @@ object SourceFacts {
     /** Audio facts: language (when [withLanguage]), "Multi audio", codec and channels. */
     fun audio(text: String, version: String = "", withLanguage: Boolean = true): List<String> {
         val out = ArrayList<String>()
-        if (multiRx.containsMatchIn(text)) out += "Multi audio"
+        if (multiRx.containsMatchIn(text)) out += tr(R.string.multi_audio, "Multi audio")
         else if (withLanguage) AudioLanguages.classify(text, version).language?.let { code ->
             if (code != AudioLanguages.MULTI) out += AudioLanguages.displayName(code)
         }

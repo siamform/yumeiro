@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -49,9 +50,9 @@ internal fun ExtensionPopupsCard() {
             Text(stringResource(R.string.pop_ups_from_extensions), color = TextPrimary, fontWeight = FontWeight.SemiBold)
             Text(
                 when (mode) {
-                    ExtensionPopups.Mode.SHOW -> "Every window an extension opens is shown."
-                    ExtensionPopups.Mode.QUIET -> "Logins and choices are shown. Donation and promo messages wait in a quiet note, at most once a week per extension, never during a video."
-                    ExtensionPopups.Mode.BLOCK_PROMOTIONAL -> "Logins and choices are shown. Donation and promo messages are not shown."
+                    ExtensionPopups.Mode.SHOW -> tr(R.string.every_window_an_extension_opens_is, "Every window an extension opens is shown.")
+                    ExtensionPopups.Mode.QUIET -> tr(R.string.logins_and_choices_are_shown_donation, "Logins and choices are shown. Donation and promo messages wait in a quiet note, at most once a week per extension, never during a video.")
+                    ExtensionPopups.Mode.BLOCK_PROMOTIONAL -> tr(R.string.logins_and_choices_are_shown_donation_2, "Logins and choices are shown. Donation and promo messages are not shown.")
                 },
                 color = TextTertiary, fontSize = 12.sp, lineHeight = 16.sp,
             )

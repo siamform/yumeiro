@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.vault
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Intent
@@ -151,8 +152,8 @@ fun VaultSaveDialog(draft: VaultDraft, onDismiss: () -> Unit, onSaved: (String) 
                 scope.launch {
                     val r = runCatching { VaultStore.save(context, e) }
                     saving = false
-                    r.onSuccess { where -> onSaved(if (where != null) "Saved to Vault · $where" else "Saved to Vault") }
-                        .onFailure { AppMessages.show(context, it.message ?: "Couldn't save to the Vault") }
+                    r.onSuccess { where -> onSaved(if (where != null) tr(R.string.saved_to_vault, "Saved to Vault · %1\$s", where) else tr(R.string.saved_to_vault_2, "Saved to Vault")) }
+                        .onFailure { AppMessages.show(context, it.message ?: tr(R.string.couldnt_save_to_the_vault, "Couldn't save to the Vault")) }
                 }
             }, modifier = Modifier.testTag("vault_save_confirm")) { Text(if (saving) "Saving…" else "Save") }
         },
@@ -172,11 +173,11 @@ fun VaultScreen(onBack: () -> Unit) {
     var deleting by remember { mutableStateOf<VaultEntry?>(null) }
     var page by remember { mutableStateOf<Pair<VaultEntry, VaultSource>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) { runCatching { VaultStore.refresh(context) }.onFailure { error = it.message ?: "Couldn't read the Vault" } }
+    LaunchedEffect(Unit) { runCatching { VaultStore.refresh(context) }.onFailure { error = it.message ?: tr(R.string.couldnt_read_the_vault, "Couldn't read the Vault") } }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) scope.launch {
             val n = VaultStore.import(context, uris)
-            AppMessages.show(context, when (n) { 0 -> "Those files are not Vault files"; 1 -> "1 title added"; else -> "$n titles added" })
+            AppMessages.show(context, when (n) { 0 -> tr(R.string.those_files_are_not_vault_files, "Those files are not Vault files"); 1 -> "1 title added"; else -> tr(R.string.titles_added, "%1\$s titles added", n) })
         }
     }
 
@@ -208,7 +209,7 @@ fun VaultScreen(onBack: () -> Unit) {
         SubPageHeader(
             title = open?.title ?: "Vault", onBack = { if (openId != null) openId = null else onBack() }, handleBack = openId == null,
             subtitle = if (open != null) (VaultLinks.hostOf(open.pageUrl) ?: "") + " · " + sourcesLabel(open.sources.size)
-                else entries?.let { if (it.isEmpty()) "Titles you save from websites" else androidx.compose.ui.res.pluralStringResource(R.plurals.vault_titles, it.size, it.size) },
+                else entries?.let { if (it.isEmpty()) tr(R.string.titles_you_save_from_websites, "Titles you save from websites") else androidx.compose.ui.res.pluralStringResource(R.plurals.vault_titles, it.size, it.size) },
         ) {
             if (open == null) IconButton(onClick = { importer.launch(arrayOf("text/html", "application/octet-stream")) }, modifier = Modifier.testTag("vault_import")) {
                 Icon(Icons.Default.Download, stringResource(R.string.import_vault_files), tint = p.textSecondary)
@@ -229,11 +230,11 @@ fun VaultScreen(onBack: () -> Unit) {
                     primary = open.pageUrl.takeIf(VaultLinks::isSafeUrl)?.let { u -> "Open page" to { page = open to VaultSource("Page", u, VaultSource.Kind.LINK) } }) }
                 items(open.sources, key = { it.url + it.kind }) { s -> SourceRow(s) { play(open, s) } }
                 if (open.pageUrl.isNotBlank() && open.sources.none { it.url == open.pageUrl }) item {
-                    SourceRow(VaultSource("Saved page", open.pageUrl, VaultSource.Kind.LINK)) { page = open to VaultSource("Saved page", open.pageUrl, VaultSource.Kind.LINK) }
+                    SourceRow(VaultSource(tr(R.string.saved_page, "Saved page"), open.pageUrl, VaultSource.Kind.LINK)) { page = open to VaultSource(tr(R.string.saved_page, "Saved page"), open.pageUrl, VaultSource.Kind.LINK) }
                 }
             }
-            list.isEmpty() -> StateMessage(Icons.Default.Inventory2, "Your Vault is empty",
-                "Open a website, play the title, then choose Save to Vault in the page menu. Each title is kept as a small page in Download › Yumeiro › Vault.",
+            list.isEmpty() -> StateMessage(Icons.Default.Inventory2, tr(R.string.your_vault_is_empty, "Your Vault is empty"),
+                tr(R.string.open_a_website_play_the_title, "Open a website, play the title, then choose Save to Vault in the page menu. Each title is kept as a small page in Download › Yumeiro › Vault."),
                 testTag = "vault_empty", primary = "Import files" to { importer.launch(arrayOf("text/html", "application/octet-stream")) })
             else -> LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("vault_list")) {
                 items(list, key = { it.id }) { e -> EntryRow(e, onOpen = { openId = e.id }, onRename = { renaming = e }, onShare = { share(context, e) }, onDelete = { deleting = e }) }
@@ -266,7 +267,7 @@ private fun sourcesLabel(n: Int) = androidx.compose.ui.res.pluralStringResource(
 private fun share(context: android.content.Context, e: VaultEntry) {
     val f = VaultStore.appFile(context, e.id) ?: return
     val uri = runCatching { androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".files", f) }.getOrNull()
-    if (uri == null) { AppMessages.show(context, "Couldn't share the file"); return }
+    if (uri == null) { AppMessages.show(context, tr(R.string.couldnt_share_the_file, "Couldn't share the file")); return }
     val send = Intent(Intent.ACTION_SEND).setType("text/html").putExtra(Intent.EXTRA_STREAM, uri).putExtra(Intent.EXTRA_SUBJECT, e.title)
         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     runCatching { context.startActivity(Intent.createChooser(send, e.title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }

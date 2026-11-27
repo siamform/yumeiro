@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Context
@@ -82,12 +83,12 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
 /** One thing the setup guide helps with. Status is read from the real feature, never faked. */
 enum class SetupStep(val title: String, val detail: String, val action: String, val icon: ImageVector) {
     MEDIA("Play your music and videos", "Allow media access so Yumeiro can find songs and videos on this phone.", "Allow", Icons.Default.MusicNote),
-    EXTENSIONS("Add Yumix sources", "Install extensions for anime, movies and shows. They appear in Videos → Yumix.", "Add sources", Icons.Default.Extension),
-    MANGA("Add manga sources", "Install Mihon or JavaScript sources to read manga, manhwa and comics.", "Add manga", Icons.AutoMirrored.Filled.MenuBook),
+    EXTENSIONS(tr(R.string.add_yumix_sources, "Add Yumix sources"), tr(R.string.install_extensions_for_anime_movies_and, "Install extensions for anime, movies and shows. They appear in Videos → Yumix."), tr(R.string.add_sources, "Add sources"), Icons.Default.Extension),
+    MANGA(tr(R.string.add_manga_sources, "Add manga sources"), tr(R.string.install_mihon_or_javascript_sources_to, "Install Mihon or JavaScript sources to read manga, manhwa and comics."), tr(R.string.add_manga, "Add manga"), Icons.AutoMirrored.Filled.MenuBook),
     SEARCH("Search for a video", "One search box looks through every Yumix source at once.", "Search", Icons.Default.Search),
-    DNS("Set up DNS", "Smart DNS opens sites your network blocks. Pick a provider in Network.", "Open Network", Icons.Default.Dns),
-    NOTIFICATIONS("Turn on notifications", "Get new-episode alerts, download progress and reminders.", "Turn on", Icons.Default.Notifications),
-    LIVE("Watch Live TV", "Add an IPTV / M3U playlist or pick one from the playlist market.", "Open Live TV", Icons.Default.LiveTv),
+    DNS(tr(R.string.set_up_dns, "Set up DNS"), tr(R.string.smart_dns_opens_sites_your_network, "Smart DNS opens sites your network blocks. Pick a provider in Network."), tr(R.string.open_network, "Open Network"), Icons.Default.Dns),
+    NOTIFICATIONS(tr(R.string.turn_on_notifications, "Turn on notifications"), tr(R.string.get_new_episode_alerts_download_progress, "Get new-episode alerts, download progress and reminders."), tr(R.string.turn_on, "Turn on"), Icons.Default.Notifications),
+    LIVE(tr(R.string.watch_live_tv, "Watch Live TV"), tr(R.string.add_an_iptv_m3u_playlist_or, "Add an IPTV / M3U playlist or pick one from the playlist market."), tr(R.string.open_live_tv, "Open Live TV"), Icons.Default.LiveTv),
     EQUALIZER("Tune the sound", "Equalizer, bass boost and 3D presets for every song.", "Equalizer", Icons.Default.GraphicEq),
 }
 
@@ -286,7 +287,7 @@ private fun WelcomePage(onExplore: () -> Unit, onSkip: () -> Unit, onChecklist: 
                 ) {
                     androidx.compose.foundation.Image(
                         painter = androidx.compose.ui.res.painterResource(dev.asfakul.yumeiro.R.drawable.ic_app_logo),
-                        contentDescription = "Yumeiro",
+                        contentDescription = tr(R.string.app_name, "Yumeiro"),
                         modifier = Modifier.size(96.dp).scale(markScale).clip(yuRound(28)),
                     )
                 }

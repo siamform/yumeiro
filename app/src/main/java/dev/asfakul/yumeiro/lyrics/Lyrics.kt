@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.lyrics
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
+
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_LYRICS_1 = Regex("""<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>""")
 
@@ -12,9 +15,9 @@ private val RX_LYRICS_1 = Regex("""<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>""")
 data class LyricLine(val timeMs: Long?, val text: String)
 
 enum class LyricsSource(val label: String) {
-    EMBEDDED("Embedded in file"),
+    EMBEDDED(tr(R.string.embedded_in_file, "Embedded in file")),
     SIDECAR(".lrc file"),
-    IMPORTED("Imported .lrc"),
+    IMPORTED(tr(R.string.imported_lrc, "Imported .lrc")),
     ONLINE("LRCLIB"),
 }
 

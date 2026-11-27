@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +35,7 @@ object VideoPrefs {
         // H-3 (owner item 3): Auto is the default. It is Hardware+ that also switches to the software decoder on its
         // own when a video fails to decode (DecoderAuto), so a video Hardware+ can't play still plays.
         AUTO("Auto", "Recommended. Phone decoders first, FFmpeg for audio the phone can't play, and the software decoder on its own when a video won't decode"),
-        HARDWARE_PLUS("Hardware+", "Phone decoders first, FFmpeg for audio the phone can't play (AC-3, E-AC-3, DTS, TrueHD)"),
+        HARDWARE_PLUS("Hardware+", tr(R.string.phone_decoders_first_ffmpeg_for_audio, "Phone decoders first, FFmpeg for audio the phone can't play (AC-3, E-AC-3, DTS, TrueHD)")),
         HARDWARE("Hardware", "Only the phone's own decoders"),
         SOFTWARE("Software", "FFmpeg and software decoders first. Slower, but plays files the phone's decoders get wrong"),
     }
@@ -52,8 +54,8 @@ object VideoPrefs {
 
     enum class DefaultPlayer(val label: String, val detail: String) {
         YUMEIRO("Yumeiro", "Play inside Yumeiro"),
-        ASK("Ask every time", "Choose Yumeiro or another app for each video"),
-        EXTERNAL("Another app", "Hand videos to an installed player such as VLC or MX Player"),
+        ASK(tr(R.string.ask_every_time, "Ask every time"), tr(R.string.choose_yumeiro_or_another_app_for, "Choose Yumeiro or another app for each video")),
+        EXTERNAL(tr(R.string.another_app, "Another app"), tr(R.string.hand_videos_to_an_installed_player, "Hand videos to an installed player such as VLC or MX Player")),
     }
 
     /** Buttons in the player's top bar, in the user's order. */
@@ -61,7 +63,7 @@ object VideoPrefs {
         QUALITY("Quality"), AUDIO("Audio track"), SUBTITLES("Subtitles"), SPEED("Speed"),
         ASPECT("Aspect ratio"), PIP("Picture-in-picture"), LOCK("Lock"), INFO("Video info"),
         // ROT-1: new entries go last, so a saved order keeps its bar and this one starts in More.
-        ROTATE("Rotate video"),
+        ROTATE(tr(R.string.rotate_video, "Rotate video")),
     }
 
     /**
@@ -69,9 +71,9 @@ object VideoPrefs {
      * Off = not drawn; the gestures (double tap to seek, swipe) and the keys keep working.
      */
     enum class Extra(val label: String, val hint: String) {
-        PREV_NEXT("Previous and next video", "The skip buttons beside rewind and forward"),
-        SEEK("Rewind and forward 10 s", "The round 10 s buttons beside play; double tap still seeks"),
-        FULLSCREEN("Fullscreen button", "The button at the end of the seek bar; turning the phone still works"),
+        PREV_NEXT(tr(R.string.previous_and_next_video, "Previous and next video"), tr(R.string.the_skip_buttons_beside_rewind_and, "The skip buttons beside rewind and forward")),
+        SEEK(tr(R.string.rewind_and_forward_10_s, "Rewind and forward 10 s"), tr(R.string.the_round_10_s_buttons_beside, "The round 10 s buttons beside play; double tap still seeks")),
+        FULLSCREEN(tr(R.string.fullscreen_button, "Fullscreen button"), tr(R.string.the_button_at_the_end_of, "The button at the end of the seek bar; turning the phone still works")),
     }
 
     /** PC-1: how many top-bar buttons stay on the bar before the rest go into More (OWN-19 default 3). */
@@ -82,10 +84,10 @@ object VideoPrefs {
     /** Fields the "Stats for nerds" style overlay can show. */
     enum class InfoField(val label: String) {
         RESOLUTION("Resolution"), SOURCE("Source"), PROVIDER("Provider"), QUALITY("Quality"),
-        VIDEO_CODEC("Video codec"), AUDIO_CODEC("Audio codec"), FRAME_RATE("Frame rate"),
+        VIDEO_CODEC(tr(R.string.video_codec, "Video codec")), AUDIO_CODEC(tr(R.string.audio_codec, "Audio codec")), FRAME_RATE(tr(R.string.frame_rate, "Frame rate")),
         VIDEO_BITRATE("Video bitrate"), BUFFER("Buffer"), DROPPED_FRAMES("Dropped frames"),
         DECODER("Decoder"), SPEED("Speed"), AUDIO_TRACK("Audio track"), SUBTITLE_TRACK("Subtitle track"),
-        AUDIO_BOOST("Audio boost"),
+        AUDIO_BOOST(tr(R.string.audio_boost, "Audio boost")),
     }
 
     val DEFAULT_INFO_FIELDS: Set<InfoField> = setOf(

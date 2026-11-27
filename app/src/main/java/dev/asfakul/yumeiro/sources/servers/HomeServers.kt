@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.servers
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import com.lagradost.cloudstream3.MainAPI
@@ -33,9 +35,9 @@ object HomeServers {
         JELLYFIN("Jellyfin", SourceHub.Ecosystem.JELLYFIN),
         EMBY("Emby", SourceHub.Ecosystem.EMBY),
         PLEX("Plex", SourceHub.Ecosystem.PLEX),
-        DLNA("DLNA / UPnP", SourceHub.Ecosystem.DLNA),
+        DLNA(tr(R.string.dlna_upnp, "DLNA / UPnP"), SourceHub.Ecosystem.DLNA),
         WEBDAV("WebDAV", SourceHub.Ecosystem.WEBDAV),
-        SMB("SMB share", SourceHub.Ecosystem.SMB),
+        SMB(tr(R.string.smb_share, "SMB share"), SourceHub.Ecosystem.SMB),
     }
 
     /** Saved connection. [secret] is sealed (password, access token or Plex token). */

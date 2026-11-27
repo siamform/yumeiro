@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.download
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -113,7 +115,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 runCatching { SubtitleSaver.save(client, OnlineDownloads.get(id) ?: item, out) }
             YtDownloads.afterDownload(applicationContext, item, out)
             OnlineDownloads.finished(id, bytes)
-            done(notifId, label, if (OnlineDownloads.get(id)?.keep == true) "Saved · Permanent · tap to open Downloads" else "Saved · Offline · tap to open Downloads")
+            done(notifId, label, if (OnlineDownloads.get(id)?.keep == true) tr(R.string.saved_permanent_tap_to_open_downloads, "Saved · Permanent · tap to open Downloads") else tr(R.string.saved_offline_tap_to_open_downloads, "Saved · Offline · tap to open Downloads"))
             return Result.success()
         } catch (e: CancellationException) {
             // R16 (G8): a stop by the system (network lost, quota) used to mark the item PAUSED, so the
@@ -128,19 +130,19 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             Log.w(LOG, "download ${item.title}", e)
             val diskFull = e is DiskFull || DiskFull.isDiskFull(e)
             val msg = when {
-                diskFull -> (e as? DiskFull)?.message ?: "Storage full — free up space, then tap retry"
+                diskFull -> (e as? DiskFull)?.message ?: tr(R.string.storage_full_free_up_space_then, "Storage full — free up space, then tap retry")
                 else -> when (e) {
                 is HttpStatus -> "Server answered HTTP ${e.code}" + if (e.code == 401 || e.code == 403) {
                     if (item.kind == OnlineDownloads.Kind.LINK) " — the link may have expired; play the episode again and retry" else " — tap retry for a fresh link"
                 } else ""
-                is NoLink -> e.message ?: "No downloadable source"
+                is NoLink -> e.message ?: tr(R.string.no_downloadable_source, "No downloadable source")
                 is IOException -> e.message?.takeIf { it.isNotBlank() && !it.startsWith("HTTP") }?.let { "Network error — $it" } ?: "Network error — will retry"
-                else -> e.message ?: "Download failed"
+                else -> e.message ?: tr(R.string.download_failed, "Download failed")
             } }
             // A full disk doesn't get better by retrying; the partial file stays for a later resume.
             if (!diskFull && e is IOException && e !is HttpStatus && e !is NoLink && runAttemptCount < 3) return Result.retry()
             OnlineDownloads.failed(id, msg)
-            done(notifId, label, "Download failed: $msg · tap to retry in Downloads")
+            done(notifId, label, tr(R.string.download_failed_tap_to_retry_in, "Download failed: %1\$s · tap to retry in Downloads", msg))
             return Result.failure()
         }
     }
@@ -156,7 +158,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     /** Finds a fresh link for a queued episode and names its file. */
     private suspend fun resolveEpisode(item: OnlineDownloads.Item): OnlineDownloads.Item {
-        val data = item.data ?: throw NoLink("Episode data missing")
+        val data = item.data ?: throw NoLink(tr(R.string.episode_data_missing, "Episode data missing"))
         ExtensionManager.ensureLoaded(applicationContext)
         val provider = ExtensionManager.provider(item.api) ?: throw NoLink("Extension \"${item.api}\" isn't installed")
         val links = ArrayList<OnlineLink>()
@@ -182,7 +184,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             ?: DownloadNaming.pickLink(sorted, item.heightWanted())
             ?: DownloadNaming.pickLink(sorted, item.heightWanted(), allowDash = true)
             ?: torrents.firstOrNull()?.let { t -> OnlineLink("Torrent", "Torrent", t, null, -1, false, false, emptyMap()) }
-            ?: throw NoLink(error ?: if (links.isEmpty()) "No sources found for this episode" else "No downloadable source")
+            ?: throw NoLink(error ?: if (links.isEmpty()) tr(R.string.no_sources_found_for_this_episode, "No sources found for this episode") else tr(R.string.no_downloadable_source, "No downloadable source"))
         val ext = DownloadNaming.extensionFor(link)
         val base = item.baseName ?: DownloadNaming.clean(item.episodeLabel ?: "Episode ${item.order + 1}", 90)
         // Same file name on retries so a partial file resumes.
@@ -253,7 +255,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(item.url) -> {
                 dev.asfakul.yumeiro.stream.TorrentSettings.init(applicationContext)
                 val server = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
-                if (server.isBlank()) throw NoLink("This is a torrent. Add your TorrServer address in Settings › Video quality & playback › Torrent streaming to download it")
+                if (server.isBlank()) throw NoLink(tr(R.string.this_is_a_torrent_add_your, "This is a torrent. Add your TorrServer address in Settings › Video quality & playback › Torrent streaming to download it"))
                 direct(dev.asfakul.yumeiro.stream.LinkHosts.torrServerUrl(server, item.url, item.title, m3u = false), emptyMap(), part, p = progress)()
             }
             else -> direct(item.url, item.headers, part, p = progress)()

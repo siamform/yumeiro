@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import com.lagradost.cloudstream3.MainAPI
@@ -47,8 +49,8 @@ object OtherSources {
     private const val PREFS = "yu_other_sources"
 
     enum class Mode(val label: String, val detail: String) {
-        PARALLEL("At the same time", "Other extensions are searched while the title's own one loads. The first working source plays"),
-        WHEN_NEEDED("When needed", "Other extensions are searched only when the title's own one is slow, empty or fails"),
+        PARALLEL(tr(R.string.at_the_same_time, "At the same time"), tr(R.string.other_extensions_are_searched_while_the, "Other extensions are searched while the title's own one loads. The first working source plays")),
+        WHEN_NEEDED(tr(R.string.when_needed, "When needed"), tr(R.string.other_extensions_are_searched_only_when, "Other extensions are searched only when the title's own one is slow, empty or fails")),
         OFF("Off", "Only the title's own extension is used"),
     }
 

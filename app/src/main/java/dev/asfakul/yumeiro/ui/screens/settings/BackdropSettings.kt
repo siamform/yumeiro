@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -123,8 +124,8 @@ fun BackdropSettingsSection() {
     }
     if (style == BackdropStyle.PHOTO && photoV != 0L) {
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SmallTextButton("Change photo", p.accent, "backdrop_photo_change", pick)
-            SmallTextButton("Remove photo", p.textSecondary, "backdrop_photo_remove") { BackdropSettings.removePhoto(context) }
+            SmallTextButton(tr(R.string.change_photo, "Change photo"), p.accent, "backdrop_photo_change", pick)
+            SmallTextButton(tr(R.string.remove_photo, "Remove photo"), p.textSecondary, "backdrop_photo_remove") { BackdropSettings.removePhoto(context) }
         }
     }
     run {

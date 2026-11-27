@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -163,7 +164,7 @@ fun AddLinkSheet(
                 val m = kotlinx.coroutines.withTimeoutOrNull(1_500) {
                     AppMessages.current.first { it != null && it.id > before && it.kind == AppMessages.Kind.ERROR }
                 } ?: AppMessages.current.value?.takeIf { it.kind == AppMessages.Kind.ERROR && it.id > before }
-                error = m?.text ?: "Couldn't add this link."
+                error = m?.text ?: tr(R.string.couldnt_add_this_link, "Couldn't add this link.")
                 m?.let { AppMessages.dismiss(it.id) }
             }
         }

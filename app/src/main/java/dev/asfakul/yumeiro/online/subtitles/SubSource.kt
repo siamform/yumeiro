@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online.subtitles
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.online.OnlineSettings
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
@@ -93,7 +95,7 @@ object SubSource {
             }?.ifBlank { null }
             SubtitleHit(
                 provider = NAME, id = id.toString(), language = SubtitleLanguages.normalize(language),
-                release = releases.firstOrNull() ?: commentary.ifBlank { "SubSource subtitle" },
+                release = releases.firstOrNull() ?: commentary.ifBlank { tr(R.string.subsource_subtitle, "SubSource subtitle") },
                 downloads = s.optInt("downloads", 0),
                 hearingImpaired = s.optBoolean("hearingImpaired") || RX_SUBSOURCE_1.containsMatchIn(commentary) && !commentary.contains("non", ignoreCase = true),
                 uploader = uploader,

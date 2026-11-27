@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.screens.watch.StreamPlayerOverlay
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusProperties
@@ -389,7 +391,7 @@ fun MTPlayerApp(
         val audioPerm = dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.audioPermission()
         if (musicAccessAsked && audioPerm in results) {
             musicAccessAsked = false
-            if (results[audioPerm] != true) dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.explainDenied(context, audioPerm, "Music access")
+            if (results[audioPerm] != true) dev.asfakul.yumeiro.ui.screens.extras.PermissionCenter.explainDenied(context, audioPerm, tr(R.string.music_access, "Music access"))
         }
     }
 
@@ -591,7 +593,7 @@ fun MTPlayerApp(
                             else -> null
                         },
                         overline = when (tabRoute) {
-                            Screen.Home.route -> "夢色 · YUMEIRO"
+                            Screen.Home.route -> tr(R.string.yumeiro_4, "夢色 · YUMEIRO")
                             Screen.Music.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("音楽", "LISTEN", kanaOn)
                             Screen.Videos.route -> dev.asfakul.yumeiro.ui.components.Kana.overline("映像", "WATCH", kanaOn)
                             else -> dev.asfakul.yumeiro.ui.components.Kana.overline(androidx.compose.runtime.remember(topBarTitle) { dev.asfakul.yumeiro.ui.components.Kana.forTitle(topBarTitle) }, null, kanaOn)
@@ -626,12 +628,12 @@ fun MTPlayerApp(
                             else -> null
                         },
                         searchDescription = when {
-                            tabRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE -> "Search every extension"
-                            tabRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> "Search YouTube"
-                            tabRoute == Screen.Music.route && musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE -> "Search YouTube Music"
-                            tabRoute == Screen.Music.route && musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX -> "Search your songs and YouTube Music"
-                            tabRoute == Screen.Videos.route -> "Search videos on this phone"
-                            else -> "Search your library"
+                            tabRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE -> tr(R.string.search_every_extension, "Search every extension")
+                            tabRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> tr(R.string.search_youtube, "Search YouTube")
+                            tabRoute == Screen.Music.route && musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE -> tr(R.string.search_youtube_music, "Search YouTube Music")
+                            tabRoute == Screen.Music.route && musicMode == dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX -> tr(R.string.search_your_songs_and_youtube_music, "Search your songs and YouTube Music")
+                            tabRoute == Screen.Videos.route -> tr(R.string.search_videos_on_this_phone, "Search videos on this phone")
+                            else -> tr(R.string.search_your_library, "Search your library")
                         },
                         offline = !isOnline,
                         onSearchOnline = if (onlineSearchFlag) ({ q ->
@@ -936,7 +938,7 @@ fun MTPlayerApp(
                                 )
                             } else if (mm == dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE) {
                                 Column(Modifier.fillMaxSize()) {
-                                if (!isOnline) dev.asfakul.yumeiro.ui.components.OfflineNotice("YouTube Music", tag = "offline_notice_music")
+                                if (!isOnline) dev.asfakul.yumeiro.ui.components.OfflineNotice(tr(R.string.youtube_music, "YouTube Music"), tag = "offline_notice_music")
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeMusicScreen(onPlay = { item, list ->
                                     dev.asfakul.yumeiro.youtube.YtHistory.record(context, item.copy(music = true))
                                     val queue = list.map { dev.asfakul.yumeiro.youtube.YouTubePlayback.toTrack(it) }
@@ -992,7 +994,7 @@ fun MTPlayerApp(
                             if (!isOnline && videoSource != dev.asfakul.yumeiro.ui.screens.online.VideoSource.DEVICE) {
                                 dev.asfakul.yumeiro.ui.components.OfflineNotice(
                                     when (videoSource) {
-                                        dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE -> "Live TV"
+                                        dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE -> tr(R.string.live_tv, "Live TV")
                                         dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> "YouTube"
                                         else -> "Yumix"
                                     },
@@ -1398,7 +1400,7 @@ fun MTPlayerApp(
                     page(subPad, Screen.OnlineLibrary.route) {
                         OpaquePage {
                             Column(Modifier.fillMaxSize()) {
-                                dev.asfakul.yumeiro.ui.screens.library.LibraryTopBar("My videos", onBack = popSub)
+                                dev.asfakul.yumeiro.ui.screens.library.LibraryTopBar(tr(R.string.my_videos, "My videos"), onBack = popSub)
                                 dev.asfakul.yumeiro.ui.screens.library.VideoLibraryContent(
                                     deviceContinue = continueWatchingVideos,
                                     onOpenTitle = openOnline,
@@ -1509,7 +1511,7 @@ fun MTPlayerApp(
                 Box(Modifier.fillMaxSize().padding(tabPad.value)) {
                 dev.asfakul.yumeiro.ui.components.SourceMenu(
                     visible = menuOpen,
-                    heading = if (musicMenu) "Listen from" else "Watch from",
+                    heading = if (musicMenu) tr(R.string.listen_from, "Listen from") else tr(R.string.watch_from, "Watch from"),
                     // R16 (ST-7): rebuilt only when its inputs change. It ran in every recomposition of the
                     // shell, menu hidden or not, and the first call built the menu icons on main (run 43671209244).
                     options = remember(musicMenu, stats.audioCount, stats.videoCount, sourceExtCount, isOnline) {
@@ -1768,6 +1770,8 @@ fun MTPlayerApp(
                 "downloads" -> dev.asfakul.yumeiro.ui.screens.downloads.DownloadsNav.open()
                 "inbox" -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.INBOX)
                 "support" -> dev.asfakul.yumeiro.ui.screens.extras.AppPages.open(dev.asfakul.yumeiro.ui.screens.extras.AppPages.Page.SUPPORT)
+                // F19: back on Settings after the restart a language change makes.
+                "settings" -> navigateSub(Screen.Settings.route)
             }
         }
         val pendingAction by dev.asfakul.yumeiro.ui.screens.extras.AppPages.action.collectAsState()
@@ -1950,7 +1954,7 @@ fun MTPlayerApp(
             } else {
                 exitArmed = true
                 android.util.Log.i("YuBack", "home back: exit armed for ${EXIT_WINDOW_MS} ms")
-                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "Press back again to exit")
+                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, tr(R.string.press_back_again_to_exit, "Press back again to exit"))
             }
         }
     }

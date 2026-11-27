@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -110,8 +111,8 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
         Column(Modifier.fillMaxSize()) {
             val unread = items.count { !it.read }
             SubPageHeader(
-                title = "Notifications",
-                subtitle = if (items.isEmpty()) "Nothing new yet" else if (unread > 0) "$unread new" else "${items.size} in your inbox",
+                title = tr(R.string.notifications, "Notifications"),
+                subtitle = if (items.isEmpty()) tr(R.string.nothing_new_yet, "Nothing new yet") else if (unread > 0) "$unread new" else "${items.size} in your inbox",
                 onBack = onBack,
             ) {
                 if (unread > 0) IconButton(onClick = { Inbox.markAllRead(context) }, modifier = Modifier.testTag("inbox_mark_read")) {
@@ -127,7 +128,7 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
                     // G10 ER-12: the reason and a Retry, not a bare "Try again later".
                     fun sync(): Unit { scope.launch {
                         refreshing = true
-                        if (!Connectivity.isOnline(context)) AppMessages.show(context, "You're offline. Showing saved notifications")
+                        if (!Connectivity.isOnline(context)) AppMessages.show(context, tr(R.string.youre_offline_showing_saved_notifications, "You're offline. Showing saved notifications"))
                         else runCatching { AppFeed.sync(context) }.onFailure {
                             AppMessages.error(context, "Couldn't check for news. " + dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Try again later"), "Retry") { sync() }
                         }
@@ -151,8 +152,8 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
                     }
                     if (items.isEmpty()) item("empty") {
                         StateMessage(
-                            Icons.Default.NotificationsNone, "You're all caught up",
-                            "New episodes, extensions, streams and Yumeiro news show up here. Pull down to check now.",
+                            Icons.Default.NotificationsNone, tr(R.string.youre_all_caught_up_2, "You're all caught up"),
+                            tr(R.string.new_episodes_extensions_streams_and_yumeiro, "New episodes, extensions, streams and Yumeiro news show up here. Pull down to check now."),
                             tint = TextSecondary, testTag = "inbox_empty",
                         )
                     }

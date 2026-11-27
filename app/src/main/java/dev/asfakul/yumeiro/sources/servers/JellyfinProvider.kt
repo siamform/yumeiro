@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.servers
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -158,7 +160,7 @@ class JellyfinProvider(val server: HomeServers.Server, displayName: String) : Ma
         val source = o.arr("MediaSources").firstOrNull()
         val sourceId = source?.s("Id") ?: id
         callback(newExtractorLink(name, "Original", "${server.url}/Videos/$id/stream?static=true&MediaSourceId=$sourceId&api_key=$token", ExtractorLinkType.VIDEO) { quality = 0 })
-        callback(newExtractorLink(name, "Transcoded (HLS)", "${server.url}/Videos/$id/master.m3u8?MediaSourceId=$sourceId&VideoCodec=h264&AudioCodec=aac&api_key=$token&DeviceId=${HomeServers.deviceId(ctx)}", ExtractorLinkType.M3U8) { quality = 0 })
+        callback(newExtractorLink(name, tr(R.string.transcoded_hls, "Transcoded (HLS)"), "${server.url}/Videos/$id/master.m3u8?MediaSourceId=$sourceId&VideoCodec=h264&AudioCodec=aac&api_key=$token&DeviceId=${HomeServers.deviceId(ctx)}", ExtractorLinkType.M3U8) { quality = 0 })
         (source?.arr("MediaStreams") ?: o.arr("MediaStreams")).filter { it.s("Type") == "Subtitle" && it.s("IsTextSubtitleStream") == "true" }.forEach { s ->
             val index = s.n("Index") ?: return@forEach
             val label = s.s("DisplayTitle") ?: s.s("Language") ?: "Subtitle $index"

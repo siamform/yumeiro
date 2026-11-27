@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.servers
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.MainAPI
@@ -116,7 +118,7 @@ class TreeProvider(val tree: MediaTree, displayName: String) : MainAPI() {
             plot = listOfNotNull(
                 "${videos.size} videos".takeIf { videos.isNotEmpty() },
                 "${folders.size} folders".takeIf { folders.isNotEmpty() },
-            ).joinToString(" · ").ifBlank { "Empty folder" }
+            ).joinToString(" · ").ifBlank { tr(R.string.empty_folder, "Empty folder") }
             posterUrl = videos.firstOrNull { it.thumb != null }?.thumb
             recommendations = folders.map { it.toResult() }
         }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +21,7 @@ object PlayerSettings {
     val autoPip: StateFlow<Boolean> = _autoPip.asStateFlow()
     /** What Back does while a video plays: shrink to the floating player, system PiP, or close. */
     enum class BackAction(val label: String, val detail: String) {
-        MINIMIZE("Floating player", "Shrink into a small player over the app so you can keep browsing (like YouTube). Leaving the app turns it into picture-in-picture"),
+        MINIMIZE(tr(R.string.floating_player, "Floating player"), tr(R.string.shrink_into_a_small_player_over, "Shrink into a small player over the app so you can keep browsing (like YouTube). Leaving the app turns it into picture-in-picture")),
         PIP("Picture-in-picture", "Send the whole app into Android's picture-in-picture window right away"),
         CLOSE("Close", "Stop the video and close the player"),
     }

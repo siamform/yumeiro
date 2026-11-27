@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.stream
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.security.TrustedSources
 import android.content.Context
 import android.net.Uri
@@ -130,13 +132,13 @@ object DefaultPlaylists {
 
     private val yumeiroLive = StreamPlaylist(
         id = YUMEIRO_LIVE, name = "Yumeiro Live", url = "$MIRROR_BASE/playlists/$YUMEIRO_LIVE.m3u", fallbackUrl = YUMEIRO_LIVE_UPSTREAM,
-        category = "Live TV", description = "All-in-one free Live TV: every country, checked daily, dead channels removed", isDefault = true,
+        category = tr(R.string.live_tv, "Live TV"), description = tr(R.string.all_in_one_free_live_tv, "All-in-one free Live TV: every country, checked daily, dead channels removed"), isDefault = true,
     )
 
     val all: List<StreamPlaylist>
         get() = listOfNotNull(
             if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.LIVE_DEFAULT)) yumeiroLive else null,
-            d("mrgify_bdix", "Mrgify BDIX", "Bangladesh TV", "BDIX IPTV channels (Bangladesh)", "Mrgify-BDIX-IPTV/main/playlist.m3u"),
+            d("mrgify_bdix", tr(R.string.mrgify_bdix, "Mrgify BDIX"), tr(R.string.bangladesh_tv, "Bangladesh TV"), tr(R.string.bdix_iptv_channels_bangladesh, "BDIX IPTV channels (Bangladesh)"), "Mrgify-BDIX-IPTV/main/playlist.m3u"),
         )
 
     /** Former defaults (≤ v1.6) that now live in the Playlist Market. Removed on upgrade unless edited. */
@@ -313,8 +315,8 @@ object PlaylistStore {
     /** Creates a playlist stored only on this device, optionally pre-filled with [channels]. */
     suspend fun createLocal(context: Context, name: String, channels: List<StreamRequest> = emptyList()): StreamPlaylist {
         val p = StreamPlaylist(
-            id = "l_" + UUID.randomUUID().toString().take(8), name = name.ifBlank { "My playlist" },
-            category = "My playlist", channelCount = channels.size, lastUpdated = System.currentTimeMillis(),
+            id = "l_" + UUID.randomUUID().toString().take(8), name = name.ifBlank { tr(R.string.my_playlist, "My playlist") },
+            category = tr(R.string.my_playlist, "My playlist"), channelCount = channels.size, lastUpdated = System.currentTimeMillis(),
         )
         edit(context) {
             writeAtomic(channelsFile(context, p.id), M3uWriter.write(channels, p.name))
@@ -427,7 +429,7 @@ object PlaylistStore {
                 lastError = e
             }
         }
-        val msg = lastError?.message ?: "Download failed"
+        val msg = lastError?.message ?: tr(R.string.download_failed, "Download failed")
         edit(context) { replace(id) { it.copy(lastError = msg) } }
         throw IllegalStateException(msg, lastError)
     }
@@ -585,7 +587,7 @@ object PlaylistStore {
                 } finally { part.delete() }
             } catch (e: Exception) { lastError = e }
         }
-        throw IllegalStateException(lastError?.message ?: "Download failed", lastError)
+        throw IllegalStateException(lastError?.message ?: tr(R.string.download_failed, "Download failed"), lastError)
     }
 
     suspend fun setAutoUpdate(context: Context, id: String, auto: Boolean) = edit(context) { replace(id) { it.copy(autoUpdate = auto) } }

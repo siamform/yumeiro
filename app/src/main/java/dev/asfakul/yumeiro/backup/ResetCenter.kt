@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.backup
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.app.ActivityManager
 import android.content.Context
 import android.webkit.CookieManager
@@ -21,11 +23,11 @@ import java.io.File
  */
 object ResetCenter {
     enum class Scope(val id: String, val label: String, val hint: String, val needsRestart: Boolean) {
-        CACHE("cache", "Clear cache", "Saved pages, posters and temporary files. Everything loads fresh once", false),
-        COOKIES("cookies", "Clear cookies", "Website sign-ins and Cloudflare checks. Some sources may ask for a check again", false),
-        HISTORY("history", "Clear watch and search history", "Continue watching, recent searches, play counts", true),
-        SETTINGS("settings", "Reset settings", "Every switch back to default. Your library, sources and extensions stay", true),
-        EXTENSIONS("extensions", "Remove all extensions and sources", "Extensions, repositories, playlists, servers, add-ons", true),
+        CACHE("cache", tr(R.string.clear_cache, "Clear cache"), tr(R.string.saved_pages_posters_and_temporary_files, "Saved pages, posters and temporary files. Everything loads fresh once"), false),
+        COOKIES("cookies", tr(R.string.clear_cookies, "Clear cookies"), tr(R.string.website_sign_ins_and_cloudflare_checks, "Website sign-ins and Cloudflare checks. Some sources may ask for a check again"), false),
+        HISTORY("history", tr(R.string.clear_watch_and_search_history, "Clear watch and search history"), "Continue watching, recent searches, play counts", true),
+        SETTINGS("settings", tr(R.string.reset_settings, "Reset settings"), "Every switch back to default. Your library, sources and extensions stay", true),
+        EXTENSIONS("extensions", tr(R.string.remove_all_extensions_and_sources, "Remove all extensions and sources"), "Extensions, repositories, playlists, servers, add-ons", true),
     }
 
     fun labelOf(id: String) = Scope.entries.firstOrNull { it.id == id }?.label?.lowercase() ?: id

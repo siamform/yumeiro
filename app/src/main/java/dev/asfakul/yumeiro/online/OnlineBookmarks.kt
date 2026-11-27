@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +30,7 @@ object OnlineBookmarks {
      * PLAN + "nostatus" so older builds still read the title. NONE is never offered as a status chip or menu row.
      */
     enum class Status(val label: String) { WATCHING("Watching"), PLAN("Watch later"), ON_HOLD("On hold"), COMPLETED("Completed"), DROPPED("Dropped"), NONE("No status");
-        companion object { /** The statuses a user picks from (NONE is implied by "Favorite only"). */ val picks: List<Status> get() = entries.filter { it != NONE } }
+        companion object { /** The statuses a user picks from (NONE is implied by tr(R.string.favorite_only, "Favorite only")). */ val picks: List<Status> get() = entries.filter { it != NONE } }
     }
 
     /** F-09: what a poster shows for a saved title. */

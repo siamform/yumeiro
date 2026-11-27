@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,14 +44,14 @@ object PictureLook {
     enum class Look(val label: String, val detail: String, val base: Grade) {
         ORIGINAL("Original", "The source picture, unchanged", NEUTRAL),
         VIVID("Vivid", "Richer colour and a little more contrast", Grade(contrast = 1.08f, saturation = 1.22f, vibrance = 0.3f)),
-        WARM("Warm Tone", "Warmer whites and skin tones", Grade(temperature = 0.45f, saturation = 1.04f)),
-        COOL("Cool Tone", "Cooler, crisper whites", Grade(temperature = -0.45f, contrast = 1.03f)),
-        PASTEL("Soft Pastel", "Softer contrast, lifted shadows, gentle colour", Grade(brightness = 0.03f, contrast = 0.88f, saturation = 0.82f, lift = 0.05f)),
+        WARM(tr(R.string.warm_tone, "Warm Tone"), tr(R.string.warmer_whites_and_skin_tones, "Warmer whites and skin tones"), Grade(temperature = 0.45f, saturation = 1.04f)),
+        COOL(tr(R.string.cool_tone, "Cool Tone"), tr(R.string.cooler_crisper_whites, "Cooler, crisper whites"), Grade(temperature = -0.45f, contrast = 1.03f)),
+        PASTEL(tr(R.string.soft_pastel, "Soft Pastel"), tr(R.string.softer_contrast_lifted_shadows_gentle_colour, "Softer contrast, lifted shadows, gentle colour"), Grade(brightness = 0.03f, contrast = 0.88f, saturation = 0.82f, lift = 0.05f)),
         CINEMATIC("Cinematic", "Deeper contrast, calmer colour, warm highlights", Grade(contrast = 1.12f, saturation = 0.9f, temperature = 0.12f, tint = -0.05f, black = 0.03f)),
-        NIGHT("Night Mode", "Dimmer and warmer for dark rooms", Grade(brightness = -0.08f, contrast = 0.95f, temperature = 0.6f, saturation = 0.95f)),
-        GHIBLI("Ghibli Style", "Bright mid-tones, warm and lush colour", Grade(contrast = 0.96f, saturation = 1.12f, gamma = 0.94f, temperature = 0.18f, lift = 0.03f, vibrance = 0.2f)),
-        NEON("Neon Pop", "Bold colour and strong contrast", Grade(contrast = 1.15f, saturation = 1.42f, vibrance = 0.4f, tint = 0.05f)),
-        DEEP_BLACK("Deep Black", "Inky blacks, best on OLED screens", Grade(contrast = 1.1f, gamma = 1.05f, black = 0.06f)),
+        NIGHT(tr(R.string.night_mode, "Night Mode"), tr(R.string.dimmer_and_warmer_for_dark_rooms, "Dimmer and warmer for dark rooms"), Grade(brightness = -0.08f, contrast = 0.95f, temperature = 0.6f, saturation = 0.95f)),
+        GHIBLI(tr(R.string.ghibli_style, "Ghibli Style"), tr(R.string.bright_mid_tones_warm_and_lush, "Bright mid-tones, warm and lush colour"), Grade(contrast = 0.96f, saturation = 1.12f, gamma = 0.94f, temperature = 0.18f, lift = 0.03f, vibrance = 0.2f)),
+        NEON(tr(R.string.neon_pop, "Neon Pop"), tr(R.string.bold_colour_and_strong_contrast, "Bold colour and strong contrast"), Grade(contrast = 1.15f, saturation = 1.42f, vibrance = 0.4f, tint = 0.05f)),
+        DEEP_BLACK(tr(R.string.deep_black, "Deep Black"), tr(R.string.inky_blacks_best_on_oled_screens, "Inky blacks, best on OLED screens"), Grade(contrast = 1.1f, gamma = 1.05f, black = 0.06f)),
         CUSTOM("Custom", "Your own picture controls", NEUTRAL),
     }
 

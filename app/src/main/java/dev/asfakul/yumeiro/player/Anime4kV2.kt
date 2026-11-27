@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.player
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.opengl.GLES20
 import androidx.annotation.OptIn
@@ -33,14 +35,14 @@ import kotlinx.coroutines.flow.asStateFlow
 object Anime4kV2 {
     enum class Engine(val label: String, val detail: String) {
         CLASSIC("Classic", "The original Yumeiro pass with its GPU tier"),
-        V2("V2 presets", "Presets, styles and a custom profile; switch them in the player"),
+        V2(tr(R.string.v2_presets, "V2 presets"), tr(R.string.presets_styles_and_a_custom_profile, "Presets, styles and a custom profile; switch them in the player")),
     }
 
     enum class Preset(val label: String, val detail: String) {
         PERFORMANCE("Performance", "Lightest: 5 samples per pixel, for older phones and TV boxes"),
         BALANCED("Balanced", "Clear lines at low cost; good on most phones"),
         QUALITY("Quality", "Stronger restore with diagonal samples"),
-        HIGH_QUALITY("High quality", "Strongest restore and line darkening; needs a recent GPU"),
+        HIGH_QUALITY(tr(R.string.high_quality, "High quality"), tr(R.string.strongest_restore_and_line_darkening_needs, "Strongest restore and line darkening; needs a recent GPU")),
         CUSTOM("Custom", "Your own strength, lines, denoise and reach"),
     }
 

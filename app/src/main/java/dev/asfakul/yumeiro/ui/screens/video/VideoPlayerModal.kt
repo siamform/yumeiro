@@ -7,6 +7,7 @@
 
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.ui.focus.focusProperties
@@ -495,11 +496,11 @@ private fun VideoPlayerModalContent(
             dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees = d
             applyEngineLevel(exoPlayer, engineHeight, engineUpscale)
         }
-        showToast(if (d == 0) "Rotation reset" else "Rotated ${d}°")
+        showToast(if (d == 0) tr(R.string.rotation_reset, "Rotation reset") else "Rotated ${d}°")
     }
     // R17 (G3 proposal): video sleep timer, shared with the next episode (VideoSleepTimer).
     val sleepState by dev.asfakul.yumeiro.player.VideoSleepTimer.timer.state.collectAsState()
-    val sleepLabel = dev.asfakul.yumeiro.ui.screens.player.rememberSleepRemaining(sleepState, "End of this video")
+    val sleepLabel = dev.asfakul.yumeiro.ui.screens.player.rememberSleepRemaining(sleepState, tr(R.string.end_of_this_video, "End of this video"))
     val a4kOn by dev.asfakul.yumeiro.player.VideoPrefs.anime4k.collectAsState()
     val a4kEngine by dev.asfakul.yumeiro.player.Anime4kV2.engine.collectAsState()
     val a4kPreset by dev.asfakul.yumeiro.player.Anime4kV2.preset.collectAsState()
@@ -531,7 +532,7 @@ private fun VideoPlayerModalContent(
             return
         }
         if (!exoPlayer.isCurrentMediaItemSeekable && !exoPlayer.isCurrentMediaItemLive) {
-            showToast("This source can't skip ahead — try another source to jump")
+            showToast(tr(R.string.this_source_cant_skip_ahead_try, "This source can't skip ahead — try another source to jump"))
             currentPositionMs = exoPlayer.currentPosition
             return
         }
@@ -548,8 +549,8 @@ private fun VideoPlayerModalContent(
         PlaybackHealthMonitor(exoPlayer, onLowBandwidth = { action ->
             showToast(
                 when (action) {
-                    PlaybackHealthMonitor.LowBandwidthAction.REVERTED_TO_AUTO -> "Slow connection — quality set to Auto"
-                    PlaybackHealthMonitor.LowBandwidthAction.CAPPED_BITRATE -> "Slow connection — lowering quality"
+                    PlaybackHealthMonitor.LowBandwidthAction.REVERTED_TO_AUTO -> tr(R.string.slow_connection_quality_set_to_auto, "Slow connection — quality set to Auto")
+                    PlaybackHealthMonitor.LowBandwidthAction.CAPPED_BITRATE -> tr(R.string.slow_connection_lowering_quality, "Slow connection — lowering quality")
                 }
             )
         })
@@ -611,7 +612,7 @@ private fun VideoPlayerModalContent(
             is Resolution.Playlist -> {
                 StreamRepository.setPlaylist(r.name, r.channels)
                 showErrorCard(
-                    "Channel list opened",
+                    tr(R.string.channel_list_opened, "Channel list opened"),
                     "This link is an IPTV playlist with ${r.channels.size} channel${if (r.channels.size == 1) "" else "s"}, not a single stream. The channels are now listed in Videos → Live TV under Opened list — pick one there.",
                     canRetry = false,
                 )
@@ -621,7 +622,7 @@ private fun VideoPlayerModalContent(
             is Resolution.NeedsBrowser -> {
                 if (r.auto) pageFinder = r
                 showErrorCard(
-                    r.title ?: "This is a web page",
+                    r.title ?: tr(R.string.this_is_a_web_page, "This is a web page"),
                     r.reason,
                     canRetry = false,
                     action = "Find the video" to { pageFinder = r },
@@ -633,7 +634,7 @@ private fun VideoPlayerModalContent(
                 canRetry = false,
                 action = "Open in app" to {
                     runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(r.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                        .onFailure { showToast("No app can open this link") }
+                        .onFailure { showToast(tr(R.string.no_app_can_open_this_link, "No app can open this link")) }
                     Unit
                 },
             )
@@ -647,7 +648,7 @@ private fun VideoPlayerModalContent(
         // The player only accepts calls on the main thread, so the result is always handled there.
         coroutineScope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) {
             val r = runCatching { StreamResolver.resolve(context, request, thorough) }
-                .getOrElse { Resolution.Failed("Couldn't open the link", dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Check the link and try again.")) }
+                .getOrElse { Resolution.Failed(tr(R.string.couldnt_open_the_link, "Couldn't open the link"), dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, tr(R.string.check_the_link_and_try_again, "Check the link and try again."))) }
             handleResolution(r, positionMs)
         }
     }
@@ -672,7 +673,7 @@ private fun VideoPlayerModalContent(
         val alts = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             runCatching { dev.asfakul.yumeiro.player.QualityEngine.alternatives(context, req, playingHeight, engineHeight) }.getOrDefault(emptyList())
         }
-        altQualities = alts.map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = if (a.current) "Playing now" else a.note) }
+        altQualities = alts.map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = if (a.current) tr(R.string.playing_now, "Playing now") else a.note) }
     }
 
     // Online sources: a link that never shows a picture (stuck loading, or audio without video)
@@ -698,10 +699,10 @@ private fun VideoPlayerModalContent(
             if (!d.firstFrame && playerError == null) {
                 val tracks = exoPlayer.currentTracks
                 val audioOnly = tracks.groups.any { it.type == androidx.media3.common.C.TRACK_TYPE_AUDIO } && tracks.groups.none { it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO }
-                showToast(if (audioOnly) "This source has no picture — trying another" else "This source isn't responding — trying another")
+                showToast(if (audioOnly) tr(R.string.this_source_has_no_picture_trying, "This source has no picture — trying another") else tr(R.string.this_source_isnt_responding_trying_another, "This source isn't responding — trying another"))
                 if (!onFatalError(exoPlayer.currentPosition.coerceAtLeast(video.playbackPositionMs))) {
-                    if (audioOnly) showToast("Only an audio version is available")
-                    else showErrorCard("Couldn't start this video", "The source didn't send any picture. Try another source or episode.", canRetry = false)
+                    if (audioOnly) showToast(tr(R.string.only_an_audio_version_is_available, "Only an audio version is available"))
+                    else showErrorCard(tr(R.string.couldnt_start_this_video, "Couldn't start this video"), tr(R.string.the_source_didnt_send_any_picture, "The source didn't send any picture. Try another source or episode."), canRetry = false)
                 }
             }
         }
@@ -718,7 +719,7 @@ private fun VideoPlayerModalContent(
                     bufferedPositionMs = exoPlayer.bufferedPosition,
                 )
                 if (dead) {
-                    showToast("This source stopped sending video — trying another")
+                    showToast(tr(R.string.this_source_stopped_sending_video_trying, "This source stopped sending video — trying another"))
                     if (onFatalError(exoPlayer.currentPosition)) return@LaunchedEffect
                 }
             }
@@ -775,7 +776,7 @@ private fun VideoPlayerModalContent(
                 // refuses the shader): play without it instead of failing.
                 runCatching { dev.asfakul.yumeiro.stream.StreamMediaFactory.setEffects(exoPlayer, emptyList()) }
                 if (dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees != 0) { dev.asfakul.yumeiro.player.VideoRotation.gpuDegrees = 0; chrome.rotation = 0 }
-                showToast("Anime4K is off for this video (not supported here)")
+                showToast(tr(R.string.anime4k_is_off_for_this_video, "Anime4K is off for this video (not supported here)"))
                 exoPlayer.prepare(); exoPlayer.playWhenReady = true
                 return
             }
@@ -794,8 +795,8 @@ private fun VideoPlayerModalContent(
             dev.asfakul.yumeiro.player.RecoveryRouter.Step.LocalFailure -> {
                 if (onFatalError?.invoke(exoPlayer.currentPosition) == true) return
                 playerError = when {
-                    error.errorCodeName.contains("FILE_NOT_FOUND") -> "This file was moved or deleted."
-                    error.errorCodeName.contains("NO_PERMISSION") -> "Yumeiro can't read this file. Allow media access in Settings."
+                    error.errorCodeName.contains("FILE_NOT_FOUND") -> tr(R.string.this_file_was_moved_or_deleted, "This file was moved or deleted.")
+                    error.errorCodeName.contains("NO_PERMISSION") -> tr(R.string.yumeiro_cant_read_this_file_allow, "Yumeiro can't read this file. Allow media access in Settings.")
                     error.errorCodeName.contains("DECOD") || error.errorCodeName.contains("FORMAT") -> "This phone can't decode this video's format. It may play in another app or after converting to MP4."
                     else -> "This video couldn't play (${error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')})."
                 }
@@ -806,18 +807,18 @@ private fun VideoPlayerModalContent(
                 // The connection is gone (not the source): wait for it instead of burning attempts.
                 waitingForNetwork = true
                 isBuffering = true
-                showToast("You're offline — playback resumes when the connection is back")
+                showToast(tr(R.string.youre_offline_playback_resumes_when_the, "You're offline — playback resumes when the connection is back"))
                 return
             }
             dev.asfakul.yumeiro.player.RecoveryRouter.Step.RefreshLink -> {
                 // Signed URLs expire (YouTube): fetch a fresh one, keep the position.
                 refreshAttempts++
                 isBuffering = true
-                showToast("Refreshing the stream link")
+                showToast(tr(R.string.refreshing_the_stream_link, "Refreshing the stream link"))
                 coroutineScope.launch {
                     val fresh = runCatching { dev.asfakul.yumeiro.stream.StreamRefreshers.refresh(context, originalRequest) }.getOrNull()
                     if (lease.revoked) return@launch
-                    if (fresh != null) startResolved(fresh, pos0) else showErrorCard("Couldn't refresh the stream", "The video's link expired and a new one couldn't be fetched. Check your connection and retry.")
+                    if (fresh != null) startResolved(fresh, pos0) else showErrorCard(tr(R.string.couldnt_refresh_the_stream, "Couldn't refresh the stream"), tr(R.string.the_videos_link_expired_and_a, "The video's link expired and a new one couldn't be fetched. Check your connection and retry."))
                 }
                 return
             }
@@ -841,7 +842,7 @@ private fun VideoPlayerModalContent(
                     showErrorCard("Access denied (HTTP ${facts.httpStatus})", onlineRefusedDetail("Access denied (HTTP ${facts.httpStatus})"), canRetry = false)
                     return
                 }
-                showToast("This source failed — trying the next one")
+                showToast(tr(R.string.this_source_failed_trying_the_next, "This source failed — trying the next one"))
                 if (onFatalError?.invoke(pos0) == true) return
                 // No other source: the generic recovery below gets its chance.
             }
@@ -865,7 +866,7 @@ private fun VideoPlayerModalContent(
                 resolveAndPlay(source, pos, thorough = true)
             }
             RecoveryAction.JumpToLive -> {
-                showToast("Rejoining the live stream")
+                showToast(tr(R.string.rejoining_the_live_stream, "Rejoining the live stream"))
                 exoPlayer.seekToDefaultPosition()
                 exoPlayer.prepare()
             }
@@ -943,8 +944,8 @@ private fun VideoPlayerModalContent(
         if (enabled) {
             val hasSelected = exoPlayer.currentTracks.groups.any { it.type == C.TRACK_TYPE_TEXT && it.isSelected }
             val picked = hasSelected || pickBestTextTrack()
-            showToast(if (picked) "Captions on" else "No captions in this video — load a file or search online")
-        } else showToast("Captions off")
+            showToast(if (picked) tr(R.string.captions_on, "Captions on") else tr(R.string.no_captions_in_this_video_load, "No captions in this video — load a file or search online"))
+        } else showToast(tr(R.string.captions_off, "Captions off"))
     }
 
     /**
@@ -972,7 +973,7 @@ private fun VideoPlayerModalContent(
             exoPlayer.trackSelectionParameters = previous
             if (exoPlayer.playbackState == Player.STATE_IDLE) exoPlayer.prepare()
             if (!exoPlayer.isCurrentMediaItemLive && exoPlayer.isCurrentMediaItemSeekable) exoPlayer.seekTo(exoPlayer.currentPosition)
-            showToast("That audio track didn't load — switched back")
+            showToast(tr(R.string.that_audio_track_didnt_load_switched, "That audio track didn't load — switched back"))
         }
         audioSwitchRevert = revert
         audioSwitchJob?.cancel()
@@ -982,7 +983,7 @@ private fun VideoPlayerModalContent(
             if (stuck && audioSwitchRevert === revert) revert()
             audioSwitchRevert = null
         }
-        showToast("Switched audio track")
+        showToast(tr(R.string.switched_audio_track, "Switched audio track"))
     }
 
     /** Round 13: language picks from the source list land here (same video, other audio track). */
@@ -1028,7 +1029,7 @@ private fun VideoPlayerModalContent(
 
             val filename = queryDisplayName(context, uri) ?: uri.lastPathSegment ?: "subtitle"
             addExternalSubtitle(uri, mimeFor(filename.substringAfterLast('.', "srt")), "und", filename)
-            showToast("Subtitle loaded: $filename")
+            showToast(tr(R.string.subtitle_loaded, "Subtitle loaded: %1\$s", filename))
         }
     }
 
@@ -1213,10 +1214,10 @@ private fun VideoPlayerModalContent(
         val id = video.id
         val report = currentOnProgressUpdateForHandOff
         val onBack: (dev.asfakul.yumeiro.player.ExternalPlayers.Watched) -> Unit = { w -> if (w.durationMs > 0) report(id, w.positionMs, w.durationMs) }
-        var ok = dev.asfakul.yumeiro.player.ExternalPlayerHost.launch(context, i, if (app == null) "Play with" else null, onBack)
+        var ok = dev.asfakul.yumeiro.player.ExternalPlayerHost.launch(context, i, if (app == null) tr(R.string.play_with, "Play with") else null, onBack)
         // VLC renamed its player activity once; fall back to the package without a component.
         if (!ok && app != null) ok = dev.asfakul.yumeiro.player.ExternalPlayerHost.launch(context, i.setComponent(null), null, onBack)
-        if (!ok) { showToast("No other video player is installed"); return }
+        if (!ok) { showToast(tr(R.string.no_other_video_player_is_installed, "No other video player is installed")); return }
         if (headers.isNotEmpty() && !dev.asfakul.yumeiro.player.ExternalPlayers.passesHeaders(app)) showToast("${app?.label ?: "That app"} can't receive this link's headers; it may not play there")
         exoPlayer.pause()
         closeNow()
@@ -1668,7 +1669,7 @@ private fun VideoPlayerModalContent(
             K.MediaPause -> { exoPlayer.pause(); return@handler true }
             K.MediaFastForward -> { keyForward(); return@handler true }
             K.MediaRewind -> { keyRewind(); return@handler true }
-            K.MediaNext -> { if (nextVideo != null) onNextVideo() else showToast("No next video"); return@handler true }
+            K.MediaNext -> { if (nextVideo != null) onNextVideo() else showToast(tr(R.string.no_next_video, "No next video")); return@handler true }
             K.MediaPrevious -> { if (hasPreviousVideo) onPreviousVideo() else { exoPlayer.seekTo(0L); currentPositionMs = 0L }; return@handler true }
         }
         if (isAnyDialogOpen) return@handler false
@@ -1733,7 +1734,7 @@ private fun VideoPlayerModalContent(
             dev.asfakul.yumeiro.ui.screens.watch.PlayerBrandBar(
                 onMinimize = leavePlayer,
                 onClose = onClose,
-                minimizeLabel = if (backAction == PlayerSettings.BackAction.CLOSE || onMinimize == null) "Close player" else "Minimize player",
+                minimizeLabel = if (backAction == PlayerSettings.BackAction.CLOSE || onMinimize == null) tr(R.string.close_player, "Close player") else tr(R.string.minimize_player, "Minimize player"),
             )
         }
     }
@@ -2096,7 +2097,7 @@ private fun VideoPlayerModalContent(
                 isScreenLocked = false
                 chrome.isLockedUnlockPillVisible = false
                 isControlsVisible = true
-                showToast("Screen unlocked")
+                showToast(tr(R.string.screen_unlocked, "Screen unlocked"))
             },
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -2195,10 +2196,10 @@ private fun VideoPlayerModalContent(
                     hasNext = nextVideo != null,
                     onPrevious = {
                         if (hasPreviousVideo) onPreviousVideo()
-                        else { exoPlayer.seekTo(0L); currentPositionMs = 0L; showToast("Start of the list") }
+                        else { exoPlayer.seekTo(0L); currentPositionMs = 0L; showToast(tr(R.string.start_of_the_list, "Start of the list")) }
                     },
                     onNext = {
-                        if (nextVideo != null) onNextVideo() else showToast("No next video")
+                        if (nextVideo != null) onNextVideo() else showToast(tr(R.string.no_next_video, "No next video"))
                     },
                     onRewind10s = {
                         seekPlayer(dev.asfakul.yumeiro.player.SeekMath.rewind(exoPlayer.currentPosition, SEEK_STEP_MS))
@@ -2264,7 +2265,7 @@ private fun VideoPlayerModalContent(
                     exoPlayer.seekTo(0L)
                     currentPositionMs = 0L
                     showResumePill = false
-                    showToast("Restarted from beginning")
+                    showToast(tr(R.string.restarted_from_beginning, "Restarted from beginning"))
                 },
                 onDismiss = { showResumePill = false },
                 modifier = Modifier
@@ -2324,7 +2325,7 @@ private fun VideoPlayerModalContent(
                 onClose = onClose,
                 onNextVideo = if (nextVideo != null) onNextVideo else null,
                 modifier = Modifier.align(Alignment.Center),
-                title = errorTitle ?: "Can't play this video",
+                title = errorTitle ?: tr(R.string.cant_play_this_video, "Can't play this video"),
                 detail = errorDetail,
                 actionLabel = errorAction?.first,
                 onAction = errorAction?.second,
@@ -2337,14 +2338,14 @@ private fun VideoPlayerModalContent(
         dev.asfakul.yumeiro.ui.theme.AppThemeLayer {
         if (chrome.showQualityDialog && qualityList.size <= 1) {
             val h = activeVideoFormat?.let { f -> minOf(f.width, f.height).takeIf { f.width > 0 && f.height > 0 } }
-            val only = h?.let { listOf(QualityOption(dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(it)), -1, -1, it, activeVideoFormat?.bitrate ?: 0, note = "The quality this stream has")) }.orEmpty()
+            val only = h?.let { listOf(QualityOption(dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(it)), -1, -1, it, activeVideoFormat?.bitrate ?: 0, note = tr(R.string.the_quality_this_stream_has, "The quality this stream has"))) }.orEmpty()
             QualityDialog(
                 options = altQualities.ifEmpty { only },
                 selected = null,
                 autoLabel = null,
                 footer = when {
-                    altQualities.any { it.alt?.engineHeight != null } -> "This source sends one quality. Yumeiro renders the other levels from it on your GPU."
-                    altQualities.isEmpty() -> "Quality options appear when the first frame is shown."
+                    altQualities.any { it.alt?.engineHeight != null } -> tr(R.string.this_source_sends_one_quality_yumeiro, "This source sends one quality. Yumeiro renders the other levels from it on your GPU.")
+                    altQualities.isEmpty() -> tr(R.string.quality_options_appear_when_the_first, "Quality options appear when the first frame is shown.")
                     else -> null
                 },
                 onSelect = { option ->
@@ -2367,7 +2368,7 @@ private fun VideoPlayerModalContent(
             // R15: the stream's ladder + the downloader's / other sources' heights it lacks, so the
             // list matches the download sheet (Video, YouTube and Yumix alike).
             val extras = dev.asfakul.yumeiro.player.QualityEngine.extraHeights(qualityList.filter { it.playable }.map { it.height }, altQualities.mapNotNull { it.alt })
-                .map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = a.note ?: "Another stream of this video") }
+                .map { a -> QualityOption(a.label, -1, -1, a.height, 0, alt = a, note = a.note ?: tr(R.string.another_stream_of_this_video, "Another stream of this video")) }
             QualityDialog(
                 // An unplayable track (F4) gives way to another stream of the same height.
                 options = (qualityList.filterNot { q -> !q.playable && extras.any { it.label == q.label } } + extras).sortedByDescending { it.height },
@@ -2403,7 +2404,7 @@ private fun VideoPlayerModalContent(
                 titleKey = dev.asfakul.yumeiro.player.PictureLook.titleKey(video.title),
                 onChanged = { on ->
                     // Live: the same path the engine levels use (keeps Presentation, respects HeatGuard).
-                    if (on && !dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) showToast("Anime4K waits until the phone cools down")
+                    if (on && !dev.asfakul.yumeiro.player.HeatGuard.allowGpuUpscale()) showToast(tr(R.string.anime4k_waits_until_the_phone_cools, "Anime4K waits until the phone cools down"))
                     applyEngineLevel(exoPlayer, engineHeight, upscale = engineUpscale, previewing = true)
                 },
                 onPreview = {
@@ -2453,7 +2454,7 @@ private fun VideoPlayerModalContent(
                 onCancel = t::cancel,
                 onDismiss = { chrome.showSleepSheet = false },
                 subject = "Video",
-                endLabel = "End of this video",
+                endLabel = tr(R.string.end_of_this_video, "End of this video"),
                 endIcon = androidx.compose.material.icons.Icons.Default.Movie,
             )
         }
@@ -2520,7 +2521,7 @@ private fun VideoPlayerModalContent(
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                             .setOverrideForType(override)
                             .build()
-                        showToast("Selected subtitle track")
+                        showToast(tr(R.string.selected_subtitle_track, "Selected subtitle track"))
                     }
                 },
                 onDisableSubtitles = {
@@ -2529,7 +2530,7 @@ private fun VideoPlayerModalContent(
                         .buildUpon()
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                         .build()
-                    showToast("Subtitles turned off")
+                    showToast(tr(R.string.subtitles_turned_off, "Subtitles turned off"))
                 },
                 moreFromSource = lateSubs.map { sub ->
                     sub.language to {
@@ -2574,7 +2575,7 @@ private fun VideoPlayerModalContent(
                 health = if (isNetworkStream) ({ healthMonitor.snapshot() }) else null,
                 dnsSource = { host ->
                     when (SmartDns.lastSourceFor(host)) {
-                        DnsSource.SYSTEM -> "System DNS"
+                        DnsSource.SYSTEM -> tr(R.string.system_dns, "System DNS")
                         DnsSource.ALTERNATIVE -> NetworkSettings.dns.value.let { "${it.provider.label} · ${it.transport.label}" }
                         null -> null
                     }
@@ -2608,7 +2609,7 @@ private fun queryDisplayName(context: Context, uri: Uri): String? = runCatching 
 
 /** Error text when every link of an online title was refused (401/403). */
 internal fun onlineRefusedDetail(title: String): String =
-    "Every source for this video refused playback ($title). Yumeiro already retried each link with browser, site and player " +
+    tr(R.string.every_source_for_this_video_refused, "Every source for this video refused playback (%1\$s). Yumeiro already retried each link with browser, site and player ", title) +
         "headers, re-extracted fresh links and tried the site's own page. The host is blocking this title right now: retry later, " +
         "pick another episode, or update the extension under Online → Extensions."
 

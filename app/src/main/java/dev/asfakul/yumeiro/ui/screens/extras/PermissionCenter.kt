@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -81,9 +83,9 @@ object PermissionCenter {
     /** [what] is the user's word for it, e.g. "Notifications". */
     fun explainDenied(c: Context, permission: String, what: String, openSettings: () -> Unit = { openAppSettings(c) }) {
         when (denial(c, permission)) {
-            Denial.ONCE -> dev.asfakul.yumeiro.ui.components.AppMessages.info(c, "$what not allowed. Tap again when you want to allow it")
+            Denial.ONCE -> dev.asfakul.yumeiro.ui.components.AppMessages.info(c, tr(R.string.not_allowed_tap_again_when_you, "%1\$s not allowed. Tap again when you want to allow it", what))
             Denial.BLOCKED -> dev.asfakul.yumeiro.ui.components.AppMessages.error(
-                c, "$what blocked for Yumeiro. Android won't ask again; allow it in Android settings", "Open settings", openSettings,
+                c, tr(R.string.blocked_for_yumeiro_android_wont_ask, "%1\$s blocked for Yumeiro. Android won't ask again; allow it in Android settings", what), tr(R.string.open_settings, "Open settings"), openSettings,
             )
         }
     }

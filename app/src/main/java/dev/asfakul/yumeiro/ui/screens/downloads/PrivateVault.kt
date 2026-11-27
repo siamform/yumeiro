@@ -1,5 +1,6 @@
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.app.Activity
@@ -50,7 +51,7 @@ internal fun VaultUnlock(onDismiss: () -> Unit, onOpen: () -> Unit) {
     val profile = remember { Profiles.current(context) }
     val device = remember { activity != null && Privacy.canAuthenticate(activity) }
     var error by remember { mutableStateOf<String?>(null) }
-    fun bio() { if (activity != null) Privacy.verify(activity, "Open Private") { ok -> if (ok) onOpen() else if (!profile.hasPin) onDismiss() } }
+    fun bio() { if (activity != null) Privacy.verify(activity, tr(R.string.open_private, "Open Private")) { ok -> if (ok) onOpen() else if (!profile.hasPin) onDismiss() } }
     LaunchedEffect(Unit) {
         when {
             !device && !profile.hasPin -> {
@@ -61,12 +62,12 @@ internal fun VaultUnlock(onDismiss: () -> Unit, onOpen: () -> Unit) {
         }
     }
     if (profile.hasPin) PinPadDialog(
-        title = "Open Private", subtitle = "Enter ${profile.name}'s PIN", error = error,
+        title = tr(R.string.open_private, "Open Private"), subtitle = "Enter ${profile.name}'s PIN", error = error,
         onBiometric = if (device) ({ bio() }) else null, onDismiss = onDismiss,
         onPin = { pin ->
             when (Profiles.checkPin(context, profile.id, pin)) {
                 Profiles.PinCheck.OK, Profiles.PinCheck.NO_PIN -> onOpen()
-                Profiles.PinCheck.WRONG -> error = "Wrong PIN"
+                Profiles.PinCheck.WRONG -> error = tr(R.string.wrong_pin, "Wrong PIN")
                 Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, profile.id))}"
             }
         },

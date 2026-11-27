@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -233,12 +234,12 @@ internal fun HuePage(
             }
         }
         when {
-            api != null && !runCatching { api.hasMainPage }.getOrDefault(false) -> item("nomain") { HueNotice("$name is search-only — use search to find titles") }
+            api != null && !runCatching { api.hasMainPage }.getOrDefault(false) -> item("nomain") { HueNotice(tr(R.string.is_search_only_use_search_to, "%1\$s is search-only — use search to find titles", name)) }
             rows == null && loading -> item("load") { PosterGridSkeleton(3) }
             needsSetup && api != null -> item("setup") {
                 // EXT-SETUP-1 (A3): not a failure; its own settings make it work.
                 val ctx = androidx.compose.ui.platform.LocalContext.current
-                HueNotice("$name needs setting up before it shows anything (a server, sign-in or sections to show)", "Set up", {
+                HueNotice(tr(R.string.needs_setting_up_before_it_shows, "%1\$s needs setting up before it shows anything (a server, sign-in or sections to show)", name), tr(R.string.set_up, "Set up"), {
                     if (!dev.asfakul.yumeiro.online.ExtensionSetup.open(ctx, api)) dev.asfakul.yumeiro.ui.components.AppMessages.error(ctx, "$name's settings couldn't open. Try updating the extension.")
                 }, "Retry", onRetry)
             }
@@ -262,7 +263,7 @@ internal fun HuePage(
                 }
                 HueNotice("$name didn't load: $error", "Retry", onRetry, second?.first, second?.second)
             }
-            feeds.isEmpty() -> item("empty") { HueNotice("Nothing to show on $name right now") }
+            feeds.isEmpty() -> item("empty") { HueNotice(tr(R.string.nothing_to_show_on_right_now, "Nothing to show on %1\$s right now", name)) }
             else -> {
                 if (feeds.size > 1) item("tabs") {
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("hue_tabs")) {

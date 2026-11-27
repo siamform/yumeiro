@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.lyrics
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -226,9 +228,9 @@ object TrackDetailsRepository {
             mime?.contains("flac") == true || ext == "flac" -> "FLAC"
             mime?.contains("mpeg") == true || ext == "mp3" -> "MP3"
             mime?.contains("opus") == true || ext == "opus" -> "Opus"
-            mime?.contains("ogg") == true || ext == "ogg" -> "OGG Vorbis"
+            mime?.contains("ogg") == true || ext == "ogg" -> tr(R.string.ogg_vorbis, "OGG Vorbis")
             mime?.contains("wav") == true || ext == "wav" -> "WAV"
-            ext == "m4a" || ext == "aac" || mime?.contains("mp4") == true || mime?.contains("aac") == true -> "AAC / M4A"
+            ext == "m4a" || ext == "aac" || mime?.contains("mp4") == true || mime?.contains("aac") == true -> tr(R.string.aac_m4a, "AAC / M4A")
             ext.isNotEmpty() -> ext.uppercase(Locale.US)
             else -> mime
         }

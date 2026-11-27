@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources.stremio
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import dev.asfakul.yumeiro.FeatureFlags
@@ -45,7 +47,7 @@ object StremioStreams : StreamAddon {
     private const val TAG = "StremioStreams"
     const val TIMEOUT_MS = 20_000L
     override val id = "stremio"
-    override val label = "Stremio add-ons"
+    override val label = tr(R.string.stremio_add_ons, "Stremio add-ons")
 
     /** The add-ons that have no catalog but answer streams. */
     fun streamOnly(all: List<StremioAddons.Addon>): List<StremioAddons.Addon> =
@@ -95,7 +97,7 @@ object StremioStreams : StreamAddon {
         if (!any.get()) send(LinkEvent.Done(false, NO_STREAMS))
     }.flowOn(Dispatchers.IO)
 
-    const val NO_STREAMS = "No Stremio add-on returned a stream"
+    val NO_STREAMS: String get() = tr(R.string.no_stremio_add_on_returned_a, "No Stremio add-on returned a stream")
 
     /**
      * One add-on's answer as link events: web links become links (source "Stremio · <add-on>"),

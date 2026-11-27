@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -120,7 +121,7 @@ fun OnlineSubtitleDialog(
                 val merged = mutableListOf<OnlineSubtitle>()
                 for (i in 0 until (all.maxOfOrNull { it.size } ?: 0)) all.forEach { l -> l.getOrNull(i)?.let(merged::add) }
                 merged.sortedByDescending { it.hashMatch }
-            }.onSuccess { results = it }.onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Subtitle search failed. Try again.") }
+            }.onSuccess { results = it }.onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, tr(R.string.subtitle_search_failed_try_again, "Subtitle search failed. Try again.")) }
             loading = false; searched = true
         }
     }
@@ -170,7 +171,7 @@ fun OnlineSubtitleDialog(
                 }
                 Box(Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 340.dp)) {
                     when {
-                        loading -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center), size = 48.dp, label = "Looking for subtitles")
+                        loading -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center), size = 48.dp, label = tr(R.string.looking_for_subtitles, "Looking for subtitles"))
                         error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
                         searched && results.isEmpty() -> Text(
                             stringResource(R.string.no_subtitles_found_try_a_shorter),
@@ -184,7 +185,7 @@ fun OnlineSubtitleDialog(
                                     scope.launch {
                                         runCatching { (sites.firstOrNull { it.name == sub.provider } ?: provider).download(context, sub) }
                                             .onSuccess { onLoaded(it) }
-                                            .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't download that subtitle.") }
+                                            .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, tr(R.string.couldnt_download_that_subtitle, "Couldn't download that subtitle.")) }
                                         downloadingId = null
                                     }
                                 }

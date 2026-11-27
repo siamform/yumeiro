@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.network
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.os.Looper
 import android.util.Log
@@ -119,7 +121,7 @@ object AppProxy : ProxySelector(), okhttp3.Authenticator {
         val c = context.applicationContext ?: context
         val clean = cfg.copy(host = cfg.host.trim(), user = cfg.user.trim())
         if (clean.type != Type.OFF) validate(clean.type, clean.host, clean.port)?.let { return it }
-        val sealed = if (clean.pass.isEmpty()) null else SecretBox.seal(clean.pass) ?: return "Couldn't store the password safely on this device."
+        val sealed = if (clean.pass.isEmpty()) null else SecretBox.seal(clean.pass) ?: return tr(R.string.couldnt_store_the_password_safely_on, "Couldn't store the password safely on this device.")
         c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("proxy_type", clean.type.name).putString("proxy_host", clean.host)
             .putInt("proxy_port", clean.port).putString("proxy_user", clean.user).commit()
@@ -146,10 +148,10 @@ object AppProxy : ProxySelector(), okhttp3.Authenticator {
     /** User-facing check of host and port; null when fine. */
     fun validate(type: Type, host: String, port: Int): String? = when {
         type == Type.OFF -> null
-        host.isBlank() -> "Enter the proxy's address."
+        host.isBlank() -> tr(R.string.enter_the_proxys_address, "Enter the proxy's address.")
         host.length > 253 || host.any { it.isWhitespace() || it == '/' || it == '@' || it == '?' || it == '#' } || "://" in host ->
             "Enter only the address, like proxy.example.com or 192.168.1.5 (no http:// or path)."
-        port !in 1..65535 -> "Port must be a number from 1 to 65535."
+        port !in 1..65535 -> tr(R.string.port_must_be_a_number_from, "Port must be a number from 1 to 65535.")
         else -> null
     }
 
@@ -283,7 +285,7 @@ object AppProxy : ProxySelector(), okhttp3.Authenticator {
         return runCatching {
             client.newCall(Request.Builder().url(TEST_URL).build()).execute().use { r ->
                 when {
-                    r.code == 407 -> "Failed · the proxy wants a login (or the login is wrong)."
+                    r.code == 407 -> tr(R.string.failed_the_proxy_wants_a_login, "Failed · the proxy wants a login (or the login is wrong).")
                     r.code in 200..399 -> "Works · through ${cfg.type.label} ${cfg.host.trim()}:${cfg.port} in ${System.currentTimeMillis() - t0} ms"
                     else -> "Failed · the proxy answered HTTP ${r.code}."
                 }

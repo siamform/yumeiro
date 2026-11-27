@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -180,15 +182,15 @@ object AudioLanguages {
 
     /** Human label for a filter key. */
     fun keyLabel(key: String): String = when (key) {
-        ORIG -> "Original · Sub"
+        ORIG -> tr(R.string.original_sub, "Original · Sub")
         DUB_OTHER -> "Dub"
-        MULTI -> "Multi audio"
+        MULTI -> tr(R.string.multi_audio, "Multi audio")
         "" -> "Unlabelled"
         else -> displayName(key)
     }
 
     fun displayName(code: String): String = when (code) {
-        MULTI -> "Multi audio"
+        MULTI -> tr(R.string.multi_audio, "Multi audio")
         else -> Locale.forLanguageTag(code).getDisplayLanguage(Locale.ENGLISH).ifBlank { code.uppercase() }
     }
 

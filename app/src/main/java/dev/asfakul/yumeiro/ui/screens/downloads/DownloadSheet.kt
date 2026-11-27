@@ -1,5 +1,6 @@
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
@@ -95,9 +96,9 @@ object DownloadSheet {
 
     /** The single line under the Offline / Permanent switch. */
     fun keepNote(keep: Boolean, days: Int): String = when {
-        keep -> "Kept until you delete it. The timer never touches it."
+        keep -> tr(R.string.kept_until_you_delete_it_the, "Kept until you delete it. The timer never touches it.")
         days > 0 -> "Deleted by itself ${DownloadSettings.autoDeleteLabel(days)} after it finishes."
-        else -> "Stays until you delete it. Pick a timer to clean it up by itself."
+        else -> tr(R.string.stays_until_you_delete_it_pick, "Stays until you delete it. Pick a timer to clean it up by itself.")
     }
 
     fun startLabel(count: Int): String = if (count > 1) "Download $count" else "Download"
@@ -259,7 +260,7 @@ internal fun DownloadSheetContent(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(stringResource(R.string.where_it_goes_and_tips), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(if (details) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (details) "Hide details" else "Show details", tint = p.textTertiary)
+                Icon(if (details) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (details) tr(R.string.hide_details, "Hide details") else tr(R.string.show_details, "Show details"), tint = p.textTertiary)
             }
             // The requester sits on the AnimatedVisibility itself: its height grows every frame while it unfolds
             // (the inner column has its full size from the first frame), so the scroll follows to the end.

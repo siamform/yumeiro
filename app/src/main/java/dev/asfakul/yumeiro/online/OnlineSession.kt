@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.online
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import dev.asfakul.yumeiro.data.model.VideoItem
@@ -239,7 +241,7 @@ object OnlineSession {
         val index = if (detail.playData != null && episodes.isEmpty()) -1 else episodeIndex.coerceIn(0, (episodes.size - 1).coerceAtLeast(0))
         val s = State(detail.api, detail, version, episodes, if (episodes.isEmpty()) -1 else index)
         if (s.data == null) {
-            _state.value = s.copy(phase = Phase.FAILED, message = detail.unsupportedReason ?: "There's nothing to play for this title.")
+            _state.value = s.copy(phase = Phase.FAILED, message = detail.unsupportedReason ?: tr(R.string.theres_nothing_to_play_for_this, "There's nothing to play for this title."))
             return
         }
         _state.value = s
@@ -305,7 +307,7 @@ object OnlineSession {
                     val keep = cur.link?.url
                     val idx = keep?.let { u -> sorted.indexOfFirst { it.url == u } }?.takeIf { it >= 0 } ?: cur.linkIndex
                     cur.copy(links = sorted, subtitles = subList, linkIndex = idx, linksDone = done, skipped = skipped, others = matched.toList(),
-                        message = if (done && sorted.isEmpty()) error ?: "No playable sources were found." else cur.message)
+                        message = if (done && sorted.isEmpty()) error ?: tr(R.string.no_playable_sources_were_found, "No playable sources were found.") else cur.message)
                 }
                 resumeAwaiting(context, data, done)
             }
@@ -373,9 +375,9 @@ object OnlineSession {
             ticker.cancel()
             need.complete(false)
             if (ok == true && _state.value?.let { it.data == data && !it.linksDone } == true) publish(true, ownError)
-            if (ok == null) publish(true, "The source took too long to answer.")
+            if (ok == null) publish(true, tr(R.string.the_source_took_too_long_to, "The source took too long to answer."))
             startIfReady(true)
-            if (!started) _state.update { it?.copy(phase = Phase.FAILED, message = it.message ?: "No playable sources were found.") }
+            if (!started) _state.update { it?.copy(phase = Phase.FAILED, message = it.message ?: tr(R.string.no_playable_sources_were_found, "No playable sources were found.")) }
         }
     }
 
@@ -392,7 +394,7 @@ object OnlineSession {
         scope.launch {
             if (_state.value?.data != data) return@launch
             if (i >= 0) { Log.w(TAG, "failover (late source) → ${cur.links[i].name}"); playCurrent(context, i, cur.awaitPos) }
-            else if (!failover(context, cur.awaitPos)) _state.update { it?.copy(phase = Phase.FAILED, message = it.message ?: "Every source failed to play.") }
+            else if (!failover(context, cur.awaitPos)) _state.update { it?.copy(phase = Phase.FAILED, message = it.message ?: tr(R.string.every_source_failed_to_play, "Every source failed to play.")) }
         }
     }
 
@@ -517,7 +519,7 @@ object OnlineSession {
         // B17: other extensions are still answering; the next link that arrives plays (see resumeAwaiting).
         if (!s.linksDone) {
             Log.w(TAG, "failover: no link left yet, waiting for the sources still answering")
-            _state.update { cur -> (cur ?: s).copy(failed = failed, awaiting = true, awaitPos = positionMs, phase = Phase.RESOLVING, message = "Trying other sources…") }
+            _state.update { cur -> (cur ?: s).copy(failed = failed, awaiting = true, awaitPos = positionMs, phase = Phase.RESOLVING, message = tr(R.string.trying_other_sources, "Trying other sources…")) }
             return true
         }
         // Every link refused. Signed links expire / bind to the extraction session, so extract
@@ -525,7 +527,7 @@ object OnlineSession {
         if (!s.refreshed && s.linksDone) {
             Log.w(TAG, "all links failed → fresh loadLinks")
             _state.value = s.copy(phase = Phase.RESOLVING, links = emptyList(), linkIndex = 0, linksDone = false,
-                message = "Refreshing sources…", failed = emptySet(), refreshed = true)
+                message = tr(R.string.refreshing_sources, "Refreshing sources…"), failed = emptySet(), refreshed = true)
             resolve(app, positionMs)
             return true
         }
@@ -535,7 +537,7 @@ object OnlineSession {
         val page = pageFor(s)
         if (!s.captured && page != null) {
             Log.w(TAG, "fresh links failed too → source page $page")
-            _state.value = s.copy(phase = Phase.RESOLVING, message = "Opening the source page…", failed = failed, captured = true)
+            _state.value = s.copy(phase = Phase.RESOLVING, message = tr(R.string.opening_the_source_page, "Opening the source page…"), failed = failed, captured = true)
             job?.cancel()
             job = scope.launch {
                 val site = runCatching { ExtensionManager.provider(s.api)?.mainUrl }.getOrNull()
@@ -545,7 +547,7 @@ object OnlineSession {
                 val cur = _state.value ?: return@launch
                 if (cur.data != s.data) return@launch
                 if (req == null) {
-                    _state.value = cur.copy(phase = Phase.FAILED, message = "Every source refused playback, even from the site's own page.")
+                    _state.value = cur.copy(phase = Phase.FAILED, message = tr(R.string.every_source_refused_playback_even_from, "Every source refused playback, even from the site's own page."))
                     dev.asfakul.yumeiro.ui.components.AppMessages.error(app, "Every source refused playback (HTTP 403), even from the site's own page. Try another episode or update the extension.")
                     return@launch
                 }

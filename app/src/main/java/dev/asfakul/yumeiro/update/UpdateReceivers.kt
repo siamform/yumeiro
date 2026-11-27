@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.update
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -50,12 +52,12 @@ class InstallResultReceiver : BroadcastReceiver() {
 
     private fun describeFailure(status: Int, msg: String?): String = when (status) {
         PackageInstaller.STATUS_FAILURE_CONFLICT ->
-            "Install conflict. The installed app was signed with a different key — uninstall it once, then install this update."
-        PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> "This update isn't compatible with your device."
-        PackageInstaller.STATUS_FAILURE_STORAGE -> "Not enough storage to install the update."
-        PackageInstaller.STATUS_FAILURE_BLOCKED -> "Installation was blocked by the system."
-        PackageInstaller.STATUS_FAILURE_INVALID -> "The update package is invalid."
-        else -> msg?.takeIf { it.isNotBlank() } ?: "Installation failed."
+            tr(R.string.install_conflict_the_installed_app_was, "Install conflict. The installed app was signed with a different key — uninstall it once, then install this update.")
+        PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> tr(R.string.this_update_isnt_compatible_with_your, "This update isn't compatible with your device.")
+        PackageInstaller.STATUS_FAILURE_STORAGE -> tr(R.string.not_enough_storage_to_install_the, "Not enough storage to install the update.")
+        PackageInstaller.STATUS_FAILURE_BLOCKED -> tr(R.string.installation_was_blocked_by_the_system, "Installation was blocked by the system.")
+        PackageInstaller.STATUS_FAILURE_INVALID -> tr(R.string.the_update_package_is_invalid, "The update package is invalid.")
+        else -> msg?.takeIf { it.isNotBlank() } ?: tr(R.string.installation_failed, "Installation failed.")
     }
 }
 

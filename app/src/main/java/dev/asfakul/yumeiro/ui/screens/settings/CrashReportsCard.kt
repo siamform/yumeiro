@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Intent
@@ -80,7 +81,7 @@ internal fun CrashReportsCard() {
         send.setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, subject)
             .putExtra(Intent.EXTRA_TEXT, subject)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        context.startActivity(Intent.createChooser(send, "Share crash report").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        context.startActivity(Intent.createChooser(send, tr(R.string.share_crash_report, "Share crash report")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION))
     }
     SettingsCard {
         if (reports.isEmpty()) {
@@ -90,12 +91,12 @@ internal fun CrashReportsCard() {
             reports.forEachIndexed { i, r ->
                 SettingsActionRow(r.headline.take(90), "${r.kind} · ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(r.time))}", "crash_item_$i") { open = r }
             }
-            SettingsActionRow("Share all", "Every report, attached as files", "crash_share_all") {
+            SettingsActionRow(tr(R.string.share_all, "Share all"), tr(R.string.every_report_attached_as_files, "Every report, attached as files"), "crash_share_all") {
                 share(reports.map { it.file }, "Yumeiro crash reports (${reports.size})")
             }
             // G12 X6: this used to delete at once, and said "from this phone" while the copies in
             // Download/Yumeiro/Crash reports stay. Now it asks first and says what it removes.
-            SettingsActionRow("Delete all", "Remove them from Yumeiro; copies in Download stay", "crash_clear", danger = true) { confirmClear = true }
+            SettingsActionRow(tr(R.string.delete_all, "Delete all"), tr(R.string.remove_them_from_yumeiro_copies_in, "Remove them from Yumeiro; copies in Download stay"), "crash_clear", danger = true) { confirmClear = true }
         }
         Text(stringResource(R.string.reports_stay_on_this_phone_until),
             color = TextTertiary, fontSize = 11.5.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
@@ -105,7 +106,7 @@ internal fun CrashReportsCard() {
         dev.asfakul.yumeiro.ui.components.TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmClear = false },
-            title = { Text(if (n == 1) "Delete this crash report?" else "Delete all $n crash reports?") },
+            title = { Text(if (n == 1) tr(R.string.delete_this_crash_report, "Delete this crash report?") else tr(R.string.delete_all_crash_reports, "Delete all %1\$s crash reports?", n)) },
             text = { Text(stringResource(R.string.they_are_removed_from_yumeiro_copies)) },
             confirmButton = {
                 dev.asfakul.yumeiro.ui.components.DialogConfirmButton("Delete", modifier = Modifier.testTag("crash_clear_confirm"), onClick = {

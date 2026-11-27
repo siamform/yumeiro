@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.yuEntrance
@@ -228,7 +229,7 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
         .onPreviewKeyEvent { e ->
             if (e.key == Key.Menu && e.type == KeyEventType.KeyUp) { sheet = true; true } else e.key == Key.Menu
         }
-        .combinedClickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick, onLongClick = { sheet = true }, onLongClickLabel = "Watch later or Favorite")
+        .combinedClickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick, onLongClick = { sheet = true }, onLongClickLabel = tr(R.string.watch_later_or_favorite, "Watch later or Favorite"))
     else Modifier.clickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick)
     if (sheet) PosterActionsSheet(item) { sheet = false }
     Column((modifier ?: Modifier.width(w)).yuEntrance("poster_" + item.key).yuPressScale(pressSource).clip(yuRound(14)).then(press).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {

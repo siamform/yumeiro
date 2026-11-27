@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.annotation.SuppressLint
@@ -106,7 +107,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
     if (pasting) {
         PasteCookiePage(onDone = { ok ->
             pasting = false
-            if (ok) AppMessages.success(context, "Signed in to YouTube with your cookie")
+            if (ok) AppMessages.success(context, tr(R.string.signed_in_to_youtube_with_your, "Signed in to YouTube with your cookie"))
         })
         return
     }
@@ -115,14 +116,14 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
         GoogleSignInPage(
             onDone = { ok ->
                 signingIn = false
-                if (ok) AppMessages.success(context, "Signed in to YouTube")
+                if (ok) AppMessages.success(context, tr(R.string.signed_in_to_youtube, "Signed in to YouTube"))
             },
         )
         return
     }
 
     Column(Modifier.fillMaxSize().testTag("youtube_account")) {
-        SubPageHeader(title = "YouTube account", onBack = onBack, subtitle = "Optional · off unless you sign in")
+        SubPageHeader(title = tr(R.string.youtube_account, "YouTube account"), onBack = onBack, subtitle = tr(R.string.optional_off_unless_you_sign_in, "Optional · off unless you sign in"))
         Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -133,7 +134,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
                             Text(if (st.signedIn) "Signed in" else "Not signed in", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                             Text(
                                 if (st.signedIn) "Since " + DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(st.since.takeIf { it > 0 } ?: System.currentTimeMillis()))
-                                else "YouTube plays anonymously, like NewPipe",
+                                else tr(R.string.youtube_plays_anonymously_like_newpipe, "YouTube plays anonymously, like NewPipe"),
                                 color = TextTertiary, fontSize = 12.sp,
                             )
                         }
@@ -165,7 +166,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
                 }
             }
 
-            GroupLabel("Use my account")
+            GroupLabel(tr(R.string.use_my_account, "Use my account"))
             GlassGroup {
                 YtAccount.Mode.entries.forEach { m ->
                     Row(
@@ -226,7 +227,7 @@ private fun GoogleSignInPage(onDone: (Boolean) -> Unit) {
     BackHandler { if (web?.canGoBack() == true) web?.goBack() else onDone(false) }
 
     Column(Modifier.fillMaxSize().testTag("yt_login_page")) {
-        SubPageHeader(title = "Sign in with Google", onBack = { onDone(false) }, subtitle = "Google's own page · Yumeiro never sees your password", handleBack = false)
+        SubPageHeader(title = tr(R.string.sign_in_with_google, "Sign in with Google"), onBack = { onDone(false) }, subtitle = tr(R.string.googles_own_page_yumeiro_never_sees, "Google's own page · Yumeiro never sees your password"), handleBack = false)
         if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         if (gone) {
             Text(stringResource(R.string.the_sign_in_page_stopped_responding), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
@@ -291,7 +292,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
     BackHandler(enabled = !busy) { onDone(false) }
 
     fun save(cookie: String) {
-        if (YtAccount.save(context, cookie)) { text = ""; onDone(true) } else error = "Couldn't save the cookie. Try again"
+        if (YtAccount.save(context, cookie)) { text = ""; onDone(true) } else error = tr(R.string.couldnt_save_the_cookie_try_again, "Couldn't save the cookie. Try again")
     }
 
     fun check() {
@@ -304,14 +305,14 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
             busy = false
             when (live) {
                 true -> save(ok.cookie)
-                false -> error = "YouTube says this cookie is signed out. It may have expired or been cancelled by signing out. Copy a fresh one"
+                false -> error = tr(R.string.youtube_says_this_cookie_is_signed, "YouTube says this cookie is signed out. It may have expired or been cancelled by signing out. Copy a fresh one")
                 null -> unverified = ok.cookie
             }
         }
     }
 
     Column(Modifier.fillMaxSize().testTag("yt_paste_page")) {
-        SubPageHeader(title = "Paste cookie", onBack = { if (!busy) onDone(false) }, subtitle = "Advanced · for when Google blocks the sign-in page", handleBack = false)
+        SubPageHeader(title = tr(R.string.paste_cookie, "Paste cookie"), onBack = { if (!busy) onDone(false) }, subtitle = tr(R.string.advanced_for_when_google_blocks_the, "Advanced · for when Google blocks the sign-in page"), handleBack = false)
         Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account_2")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
@@ -340,7 +341,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                     onClick = {
                         val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
                         val clip = runCatching { cm?.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString() }.getOrNull()
-                        if (clip.isNullOrBlank()) error = "The clipboard is empty" else { text = clip; error = null }
+                        if (clip.isNullOrBlank()) error = tr(R.string.the_clipboard_is_empty, "The clipboard is empty") else { text = clip; error = null }
                     },
                     enabled = !busy,
                     modifier = Modifier.weight(1f).testTag("yt_cookie_from_clipboard"),

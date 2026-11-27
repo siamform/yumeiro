@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -160,7 +161,7 @@ private fun EpisodeDownloadSheet(
             }
             if (ordered.isEmpty()) {
                 val movie = d.playData
-                if (movie != null) SheetOption(Icons.Default.Movie, "Download movie", d.name) {
+                if (movie != null) SheetOption(Icons.Default.Movie, tr(R.string.download_movie, "Download movie"), d.name) {
                     queue(listOf(0 to OnlineEpisode(movie, d.name, null, null, d.posterUrl, null, d.durationMin)), "title")
                 } else Text(stringResource(R.string.nothing_to_download_here), color = TextTertiary)
             } else {
@@ -168,23 +169,23 @@ private fun EpisodeDownloadSheet(
                 // OL-11: "This episode only" = the episode Play / Continue opens.
                 if (scopes) ordered.getOrNull(current ?: -1)?.let { cur ->
                     val one = EpisodeScope.single(ordered, current, have)
-                    SheetOption(Icons.Default.Download, "This episode only", if (one == null) "${cur.label} · already saved or queued" else cur.label, enabled = one != null, tag = "episode_scope_this") {
+                    SheetOption(Icons.Default.Download, tr(R.string.this_episode_only, "This episode only"), if (one == null) "${cur.label} · already saved or queued" else cur.label, enabled = one != null, tag = "episode_scope_this") {
                         one?.let { queue(listOf(it), "episodes") }
                     }
                 }
                 val seasonLeft = season.filter { it.value.data !in have }
                 val allLeft = ordered.withIndex().filter { it.value.data !in have }
                 if (seasonTitle != null && season.size != ordered.size) {
-                    SheetOption(Icons.Default.Download, "This season", "$seasonTitle · ${seasonLeft.size} of ${season.size} left", enabled = seasonLeft.isNotEmpty()) {
+                    SheetOption(Icons.Default.Download, tr(R.string.this_season, "This season"), "$seasonTitle · ${seasonLeft.size} of ${season.size} left", enabled = seasonLeft.isNotEmpty()) {
                         queue(seasonLeft.map { it.index to it.value }, "episodes")
                     }
                 }
-                SheetOption(Icons.Default.Download, "All episodes", "${allLeft.size} of ${ordered.size} left", enabled = allLeft.isNotEmpty()) {
+                SheetOption(Icons.Default.Download, tr(R.string.all_episodes, "All episodes"), "${allLeft.size} of ${ordered.size} left", enabled = allLeft.isNotEmpty()) {
                     queue(allLeft.map { it.index to it.value }, "episodes")
                 }
                 // OL-11: a from–to range over the season shown (all episodes when there is one season).
                 if (scopes) EpisodeRangePicker(season, have) { picked -> queue(picked, "episodes") }
-                if (allLeft.size > 5) SheetOption(Icons.Default.Download, "Next 5 episodes", "Starting from the first one not saved") {
+                if (allLeft.size > 5) SheetOption(Icons.Default.Download, tr(R.string.next_5_episodes, "Next 5 episodes"), tr(R.string.starting_from_the_first_one_not, "Starting from the first one not saved")) {
                     queue(allLeft.take(5).map { it.index to it.value }, "episodes")
                 }
             }
@@ -207,7 +208,7 @@ internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: S
     var open by remember(list) { mutableStateOf(false) }
     var fromText by remember(list) { mutableStateOf(b.first.toString()) }
     var toText by remember(list) { mutableStateOf(b.last.toString()) }
-    SheetOption(Icons.Default.Download, "Episode range", "Pick from and to (E${b.first}–E${b.last})", tag = "episode_scope_range") { open = !open }
+    SheetOption(Icons.Default.Download, tr(R.string.episode_range, "Episode range"), "Pick from and to (E${b.first}–E${b.last})", tag = "episode_scope_range") { open = !open }
     if (!open) return
     val from = EpisodeScope.parse(fromText); val to = EpisodeScope.parse(toText)
     val inRange = if (from != null && to != null) EpisodeScope.range(list, from, to) else emptyList()
@@ -221,7 +222,7 @@ internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: S
     val skipped = inRange.size - picked.size
     Text(
         when {
-            from == null || to == null -> "Type both episode numbers"
+            from == null || to == null -> tr(R.string.type_both_episode_numbers, "Type both episode numbers")
             inRange.isEmpty() -> "No episodes between E${minOf(from, to)} and E${maxOf(from, to)}"
             skipped > 0 -> "${picked.size} to download · $skipped already saved or queued"
             else -> "${picked.size} episodes"
@@ -231,7 +232,7 @@ internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: S
     androidx.compose.material3.Button(
         onClick = { onPick(picked) }, enabled = picked.isNotEmpty(), shape = yuRound(24),
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp).testTag("episode_range_start"),
-    ) { Text(if (picked.size == 1) "Download 1 episode" else "Download ${picked.size} episodes", fontWeight = FontWeight.SemiBold) }
+    ) { Text(if (picked.size == 1) tr(R.string.download_1_episode, "Download 1 episode") else "Download ${picked.size} episodes", fontWeight = FontWeight.SemiBold) }
 }
 
 /** Asks where/how (see [DownloadPrompt]) before queuing [list] of [d]. */
@@ -247,7 +248,7 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
         facts = listOfNotNull(version.trim().takeIf { it.isNotEmpty() && !it.equals("default", true) }, if (movie) "Movie" else "${list.size} ${if (list.size == 1) "episode" else "episodes"}", "Source: ${d.api}"),
         sizeNote = if (list.size > 1) "each episode's size shows in Downloads when it starts" else "shown in Downloads when it starts (the source gives its link then)",
         // NF-2b: the prompt offers a quality for this download; -1 keeps the Settings value.
-        startAt = { keep, h -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, h) == 0) "Already downloaded or queued" else null },
+        startAt = { keep, h -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, h) == 0) tr(R.string.already_downloaded_or_queued, "Already downloaded or queued") else null },
         // OL-5: extensions name their subtitles only when each episode's link is fetched, so the popup offers "save all".
         // OWN-8: one language for the whole batch (the Settings subtitle language, English), or all, or none.
         offer = if (tracks) dev.asfakul.yumeiro.online.download.DownloadTracks.Offer(
@@ -255,8 +256,8 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
             subtitleLanguages = if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.BATCH_SUB_LANGUAGE))
                 dev.asfakul.yumeiro.online.download.DownloadTracks.batchLanguages(dev.asfakul.yumeiro.online.OnlineSettings.subtitleLang.value) else emptyList(),
         ) else null,
-        startWith = if (tracks) { keep, pick -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, pick.maxHeight, pick.subtitles) == 0) "Already downloaded or queued" else null } else null,
-    ) { keep -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep) == 0) "Already downloaded or queued" else null })
+        startWith = if (tracks) { keep, pick -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep, pick.maxHeight, pick.subtitles) == 0) tr(R.string.already_downloaded_or_queued, "Already downloaded or queued") else null } else null,
+    ) { keep -> if (OnlineDownloads.enqueueEpisodes(context, d, version, list, keep) == 0) tr(R.string.already_downloaded_or_queued, "Already downloaded or queued") else null })
 }
 
 @Composable
@@ -287,8 +288,8 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
     LaunchedEffect(item.id) {
         DownloadSettings.init(context)
         runCatching { YtDownloads.optionsFor(context, item.id).second }
-            .onSuccess { choices = it; if (it.isEmpty()) error = "No downloadable formats for this video" }
-            .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, "Couldn't load qualities.") }
+            .onSuccess { choices = it; if (it.isEmpty()) error = tr(R.string.no_downloadable_formats_for_this_video, "No downloadable formats for this video") }
+            .onFailure { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(it, tr(R.string.couldnt_load_qualities, "Couldn't load qualities.")) }
     }
     // DL-ONE: with the qualities known, hand over to the one shared download popup (same as every other source).
     val oneSheet = remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DL_ONE_SHEET) }
@@ -335,7 +336,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
                 Spacer(Modifier.width(6.dp))
                 Text(
                     if (toPhone) "Saved to your phone's ${if (audioTab) "Music" else "Movies"}/Yumeiro folder and to Downloads (Home or Library → Videos)."
-                    else "Saved in Downloads (Home or Library → Videos), app storage.",
+                    else tr(R.string.saved_in_downloads_home_or_library, "Saved in Downloads (Home or Library → Videos), app storage."),
                     color = TextTertiary, fontSize = 11.sp,
                 )
             }
@@ -361,7 +362,7 @@ internal fun askYouTubeInSharedPopup(context: android.content.Context, item: YtI
         facts = listOf("YouTube", if (best.audioOnly) "Audio only" else "Video + audio"),
         startWith = { keep, pick ->
             val c = one.choose(choices, item.music, pick)
-            if (c == null) "No downloadable formats for this video"
+            if (c == null) tr(R.string.no_downloadable_formats_for_this_video, "No downloadable formats for this video")
             else OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, c, keep)
         },
     ) { keep -> OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, best, keep) })

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.tracking
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineSettings
@@ -89,7 +91,7 @@ object Simkl {
             "slow_down" -> Poll.SlowDown
             "expired_token" -> Poll.Fail("The code expired. Try again.")
             "invalid_client" -> Poll.Fail("Simkl rejected the Client ID (it must be an AUTH V2 app).")
-            else -> Poll.Fail("Simkl answered HTTP $status")
+            else -> Poll.Fail(tr(R.string.simkl_answered_http, "Simkl answered HTTP %1\$s", status))
         }
     }
 

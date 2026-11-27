@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -86,7 +88,7 @@ fun MoonSectionHeader(
     modifier: Modifier = Modifier,
     overline: String? = null,
     count: Int? = null,
-    actionLabel: String = "See all",
+    actionLabel: String = tr(R.string.see_all, "See all"),
     onAction: (() -> Unit)? = null,
     testTag: String? = null,
 ) {

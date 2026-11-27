@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.sources
 
+import dev.asfakul.yumeiro.l10n.tr
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.text.RegexCache
 
 import android.content.Context
@@ -47,23 +49,23 @@ private val RX_UNIVERSALADD_1 = Regex("""^https?://github\.com/([^/]+)/([^/?#]+?
  */
 object UniversalAdd {
     enum class Kind(val label: String) {
-        CS_PLUGIN("CloudStream extension"),
-        CS_REPO("CloudStream repository"),
-        CS_LIST("CloudStream plugin list"),
-        ANIYOMI_REPO("Aniyomi repository"),
-        MIHON_REPO("Mihon repository"),
-        TACHI_REPO("Aniyomi or Mihon repository"),
-        TACHI_APK("Aniyomi or Mihon extension"),
-        STREMIO("Stremio add-on"),
-        JS_REPO("JavaScript (Mangayomi) repository"),
-        JELLYFIN("Jellyfin server"),
-        EMBY("Emby server"),
-        PLEX("Plex server"),
+        CS_PLUGIN(tr(R.string.cloudstream_extension, "CloudStream extension")),
+        CS_REPO(tr(R.string.cloudstream_repository, "CloudStream repository")),
+        CS_LIST(tr(R.string.cloudstream_plugin_list, "CloudStream plugin list")),
+        ANIYOMI_REPO(tr(R.string.aniyomi_repository, "Aniyomi repository")),
+        MIHON_REPO(tr(R.string.mihon_repository, "Mihon repository")),
+        TACHI_REPO(tr(R.string.aniyomi_or_mihon_repository, "Aniyomi or Mihon repository")),
+        TACHI_APK(tr(R.string.aniyomi_or_mihon_extension, "Aniyomi or Mihon extension")),
+        STREMIO(tr(R.string.stremio_add_on, "Stremio add-on")),
+        JS_REPO(tr(R.string.javascript_mangayomi_repository, "JavaScript (Mangayomi) repository")),
+        JELLYFIN(tr(R.string.jellyfin_server, "Jellyfin server")),
+        EMBY(tr(R.string.emby_server, "Emby server")),
+        PLEX(tr(R.string.plex_server, "Plex server")),
         // F-05 step 1 (ADR-032): recognised so they are not mistaken for CloudStream; running them comes later.
-        SKYSTREAM_REPO("SkyStream repository"),
-        SKY_PLUGIN("SkyStream plugin (.sky)"),
-        NUVIO_REPO("Nuvio scrapers repository"),
-        VEGA_REPO("Vega providers repository"),
+        SKYSTREAM_REPO(tr(R.string.skystream_repository, "SkyStream repository")),
+        SKY_PLUGIN(tr(R.string.skystream_plugin_sky, "SkyStream plugin (.sky)")),
+        NUVIO_REPO(tr(R.string.nuvio_scrapers_repository, "Nuvio scrapers repository")),
+        VEGA_REPO(tr(R.string.vega_providers_repository, "Vega providers repository")),
         ;
 
         /** F-05: formats Yumeiro recognises but can't run in this version (Nuvio runs once `scripts_nuvio` is on, ADR-057). */
@@ -233,8 +235,8 @@ object UniversalAdd {
                 return@runCatching addAs(context, kind, url, body)
             }
             throw IllegalStateException(
-                if (lastError != null && candidates(h.url).size == 1) "Couldn't open that link: " + dev.asfakul.yumeiro.online.OnlineErrors.friendly(lastError!!, "it didn't answer")
-                else "Yumeiro couldn't find an extension, repository, add-on or server at that link",
+                if (lastError != null && candidates(h.url).size == 1) tr(R.string.couldnt_open_that_link, "Couldn't open that link: ") + dev.asfakul.yumeiro.online.OnlineErrors.friendly(lastError!!, "it didn't answer")
+                else tr(R.string.yumeiro_couldnt_find_an_extension_repository, "Yumeiro couldn't find an extension, repository, add-on or server at that link"),
             )
         }
     }
@@ -288,7 +290,7 @@ object UniversalAdd {
         }
         Kind.TACHI_APK -> Outcome(kind, installApk(context, body ?: download(context, url)))
         Kind.STREMIO -> StremioAddons.add(context, url).getOrThrow().let { Outcome(kind, "${it.name} added") }
-        Kind.JS_REPO -> JsSources.addRepo(context, url).getOrThrow().let { Outcome(kind, "JavaScript repository added ($it sources)") }
+        Kind.JS_REPO -> JsSources.addRepo(context, url).getOrThrow().let { Outcome(kind, tr(R.string.javascript_repository_added_sources, "JavaScript repository added (%1\$s sources)", it)) }
         // ADR-047: Vega runs through the shared ecosystem registry; Nuvio too (ADR-057) when its flag is on;
         // SkyStream repositories too (ADR-058) when `scripts_skystream` is on; a lone .sky file is recognised only.
         Kind.VEGA_REPO -> dev.asfakul.yumeiro.sources.ecosystem.EcosystemRegistry.addRepo(context, url).getOrThrow()

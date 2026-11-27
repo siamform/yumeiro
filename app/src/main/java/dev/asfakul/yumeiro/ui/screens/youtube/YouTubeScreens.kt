@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.feed.feedCard
@@ -120,15 +121,15 @@ private sealed interface Load<out T> {
 internal fun friendly(t: Throwable): String = when {
     YtAccount.accountCanHelp(t) -> YtAccount.blockedHint()
     t.javaClass.simpleName.contains("ReCaptcha") -> "YouTube is rate-limiting this network. Try again in a few minutes or switch networks."
-    !dev.asfakul.yumeiro.network.Connectivity.online.value -> "You're offline. Your downloads and songs on this phone still play."
-    t is java.io.IOException -> "Couldn't reach YouTube. Check your connection and try again."
-    else -> readable(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, "YouTube didn't answer. Try again in a moment."))
+    !dev.asfakul.yumeiro.network.Connectivity.online.value -> tr(R.string.youre_offline_your_downloads_and_songs, "You're offline. Your downloads and songs on this phone still play.")
+    t is java.io.IOException -> tr(R.string.couldnt_reach_youtube_check_your_connection, "Couldn't reach YouTube. Check your connection and try again.")
+    else -> readable(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, tr(R.string.youtube_didnt_answer_try_again_in, "YouTube didn't answer. Try again in a moment.")))
 }
 
 /** Internal library or resource messages are never shown to people as-is. */
 internal fun readable(m: String): String {
     val internal = listOf("resource", "Exception", "null", "PublicSuffix", "java.", "kotlin.", "Unable to load")
-    return if (m.isBlank() || internal.any { m.contains(it, ignoreCase = false) }) "YouTube didn't answer. Try again in a moment." else m
+    return if (m.isBlank() || internal.any { m.contains(it, ignoreCase = false) }) tr(R.string.youtube_didnt_answer_try_again_in, "YouTube didn't answer. Try again in a moment.") else m
 }
 
 /** Videos → YouTube: a login-free home planned from what you watch, pin and search. */
@@ -140,7 +141,7 @@ fun YouTubeVideoScreen(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier) 
     YtBrowse(
         music = false,
         searchFilter = YouTube.Filter.VIDEOS,
-        placeholder = "Search YouTube",
+        placeholder = tr(R.string.search_youtube, "Search YouTube"),
         onPlay = { item, list ->
             val queue = list.filter { it.isShort() }
             val on = dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.SHORTS_PLAYER)
@@ -166,7 +167,7 @@ fun YouTubeMusicScreen(onPlay: (YtItem, List<YtItem>) -> Unit, modifier: Modifie
     YtBrowse(
         music = true,
         searchFilter = YouTube.Filter.SONGS,
-        placeholder = "Songs, artists, anime OSTs…",
+        placeholder = tr(R.string.songs_artists_anime_osts, "Songs, artists, anime OSTs…"),
         onPlay = onPlay,
         modifier = modifier.testTag("youtube_music_home"),
     )
@@ -250,7 +251,7 @@ private fun YtBrowse(
     var channelName by rememberSaveable { mutableStateOf("") }
     val openChannel: ((YtItem) -> Unit)? = if (music) null else { item ->
         // BUG-2: a card without a channel link used to do nothing at all on tap.
-        if (item.channelUrl == null) dev.asfakul.yumeiro.ui.components.AppMessages.info(context, "Channel not known yet. Play the video once to learn it")
+        if (item.channelUrl == null) dev.asfakul.yumeiro.ui.components.AppMessages.info(context, tr(R.string.channel_not_known_yet_play_the, "Channel not known yet. Play the video once to learn it"))
         else { channelName = item.channel; channelUrl = item.channelUrl }
     }
     LaunchedEffect(Unit) { YtHistory.load(context) }
@@ -302,7 +303,7 @@ private fun YtBrowse(
                 }
                 val r = gate.withPermit {
                     runCatching { YouTube.feed(app, f, force = force) }.fold(
-                        { if (it.items.isEmpty()) Load.Failed("Nothing here right now.") else Load.Ready(it.items) },
+                        { if (it.items.isEmpty()) Load.Failed(tr(R.string.nothing_here_right_now, "Nothing here right now.")) else Load.Ready(it.items) },
                         { Load.Failed(friendly(it)) },
                     )
                 }
@@ -370,7 +371,7 @@ private fun YtBrowse(
         topics = YtDiscovery.withoutTopic(topics, topic)
         YtTopics.save(context, music, topics)
         if (chip.endsWith(YtDiscovery.fold(topic))) chip = FOR_YOU
-        dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "“$topic” removed from your topics", actionLabel = "Undo", action = {
+        dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "“$topic” removed from your topics", actionLabel = tr(R.string.hx_undo, "Undo"), action = {
             topics = YtDiscovery.withTopic(topics, topic); YtTopics.save(context, music, topics)
         })
     }
@@ -400,7 +401,7 @@ private fun YtBrowse(
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_results"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 item("res_head") {
                     YtFeedHeader(
-                        title = sub, overline = if (music) "Songs · 検索" else "Results · 検索",
+                        title = sub, overline = if (music) tr(R.string.songs_2, "Songs · 検索") else tr(R.string.results, "Results · 検索"),
                         pinned = isTopic(sub), onPin = { pin(sub) }, onUnpin = { unpin(sub) },
                     )
                 }
@@ -418,7 +419,7 @@ private fun YtBrowse(
                     }
                 }
                 if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), yuRound(22)) }
-                if (res.items.isEmpty() && !res.loading && res.error == null) item("none") { YtProblem("No results for “$sub”.", null) }
+                if (res.items.isEmpty() && !res.loading && res.error == null) item("none") { YtProblem(tr(R.string.no_results_for_2, "No results for “%1\$s”.", sub), null) }
                 if (rcols > 1) itemsIndexed(res.items.chunked(rcols), key = { _, r -> "rr_${r.first().id}" }) { _, row ->
                     YtVideoRow(row, rcols, openChannel) { item -> onPlay(item, res.items) }
                 } else itemsIndexed(res.items, key = { _, it -> "r_${it.id}" }) { _, item ->
@@ -531,7 +532,7 @@ private fun YtBrowse(
                         }
                     }
                     if (ri == 1 && mine.isNotEmpty()) {
-                        YtShelfRow("Watch again", null, Icons.Default.History, mine.take(20), music = false, onSeeAll = null) { onPlay(it, mine) }
+                        YtShelfRow(tr(R.string.watch_again, "Watch again"), null, Icons.Default.History, mine.take(20), music = false, onSeeAll = null) { onPlay(it, mine) }
                     }
                 }
                 if (rows == null) itemsIndexed(videos, key = { _, it -> "h_${it.id}" }) { i, item ->
@@ -545,7 +546,7 @@ private fun YtBrowse(
                         }
                     }
                     if (i == 4 && mine.isNotEmpty()) {
-                        YtShelfRow("Watch again", null, Icons.Default.History, mine.take(20), music = false, onSeeAll = null) { onPlay(it, mine) }
+                        YtShelfRow(tr(R.string.watch_again, "Watch again"), null, Icons.Default.History, mine.take(20), music = false, onSeeAll = null) { onPlay(it, mine) }
                     }
                 }
                 if (videos.isNotEmpty() && paged.any { it.loading }) item("home_more") { YtLoadingMore() }
@@ -562,7 +563,7 @@ private fun YtBrowse(
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.for_you), color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
                         Text(
-                            if (mine.isEmpty()) "Play a few things and this page learns what you like" else "Picked from what you play, your topics and today's mix",
+                            if (mine.isEmpty()) tr(R.string.play_a_few_things_and_this, "Play a few things and this page learns what you like") else tr(R.string.picked_from_what_you_play_your, "Picked from what you play, your topics and today's mix"),
                             color = TextSecondary, fontSize = 12.sp,
                         )
                     }
@@ -573,7 +574,7 @@ private fun YtBrowse(
                 }
             }
             if (mine.isNotEmpty()) item("history") {
-                YtShelfRow(if (music) "Listen again" else "Watch again", null, Icons.Default.History, mine.take(20), music, onSeeAll = null) { onPlay(it, mine) }
+                YtShelfRow(if (music) tr(R.string.listen_again, "Listen again") else tr(R.string.watch_again, "Watch again"), null, Icons.Default.History, mine.take(20), music, onSeeAll = null) { onPlay(it, mine) }
             }
             // Featured: the first planned feed as quick picks (music) or big cards (video).
             val featured = feeds.firstOrNull()
@@ -663,7 +664,7 @@ private fun YtFeedHeader(title: String, overline: String, pinned: Boolean, onPin
         if (canPin) TextButton(onClick = if (pinned) onUnpin else onPin, modifier = Modifier.testTag("youtube_pin_topic")) {
             Icon(if (pinned) Icons.Default.Close else Icons.Default.Add, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
-            Text(if (pinned) "Remove topic" else "Add as topic", color = SpotifyGreen, fontSize = 13.sp)
+            Text(if (pinned) tr(R.string.remove_topic, "Remove topic") else tr(R.string.add_as_topic, "Add as topic"), color = SpotifyGreen, fontSize = 13.sp)
         }
     }
 }
@@ -677,8 +678,8 @@ private fun YtAddTopicDialog(music: Boolean, onDismiss: () -> Unit, onAdd: (Stri
         text = {
             Column {
                 Text(
-                    if (music) "Any artist, genre, anime or mood. It becomes a chip and a shelf on this page."
-                    else "Any show, game, creator or interest. It becomes a chip and a shelf on this page.",
+                    if (music) tr(R.string.any_artist_genre_anime_or_mood, "Any artist, genre, anime or mood. It becomes a chip and a shelf on this page.")
+                    else tr(R.string.any_show_game_creator_or_interest, "Any show, game, creator or interest. It becomes a chip and a shelf on this page."),
                     color = TextSecondary, fontSize = 13.sp,
                 )
                 Spacer(Modifier.height(12.dp))
@@ -834,7 +835,7 @@ internal fun YtVideoCard(item: YtItem, wide: Boolean, showChannel: Boolean = tru
                 modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
             ) { Text(badge, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)) }
         }
-        val channelTap = if (onChannel != null && !item.channelUrl.isNullOrBlank()) Modifier.clickable(onClickLabel = "Open channel") { onChannel(item) } else Modifier
+        val channelTap = if (onChannel != null && !item.channelUrl.isNullOrBlank()) Modifier.clickable(onClickLabel = tr(R.string.open_channel, "Open channel")) { onChannel(item) } else Modifier
         Row(Modifier.padding(top = 10.dp, start = 2.dp, end = 2.dp)) {
             if (wide && showChannel) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(Brush.linearGradient(listOf(SpotifyGreen, AccentSecondary))).then(channelTap).testTag("youtube_card_avatar"), contentAlignment = Alignment.Center) {

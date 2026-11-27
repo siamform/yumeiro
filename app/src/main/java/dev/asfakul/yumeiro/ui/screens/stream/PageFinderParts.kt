@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -71,7 +72,7 @@ internal fun PageFinderHint(text: String, onHide: () -> Unit, modifier: Modifier
     }
     Surface(color = GlassFill, shape = yuRound(12), modifier = modifier.fillMaxWidth().padding(8.dp).clickable { hide.value() }.testTag("page_finder_hint")) {
         Text(
-            text + "\n\nStart playback on the page; detected streams appear below. Tap to hide.",
+            text + tr(R.string.start_playback_on_the_page_detected, "\n\nStart playback on the page; detected streams appear below. Tap to hide."),
             color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(10.dp),
         )
     }
@@ -118,7 +119,7 @@ internal fun DetectedStreamsPanel(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        if (found.isEmpty()) "No stream detected yet — start the video on the page." else "Detected streams",
+                        if (found.isEmpty()) tr(R.string.no_stream_detected_yet_start_the, "No stream detected yet — start the video on the page.") else tr(R.string.detected_streams, "Detected streams"),
                         color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                     )
                     // OL-3: which video these streams belong to.
