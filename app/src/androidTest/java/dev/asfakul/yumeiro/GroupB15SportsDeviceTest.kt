@@ -44,7 +44,7 @@ class GroupB15SportsDeviceTest {
     private fun has(tag: String) = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty()
     private fun waitFor(ms: Long, ok: () -> Boolean): Boolean =
         runCatching { rule.waitUntil(ms) { runCatching(ok).getOrDefault(false) }; true }.getOrDefault(false)
-    private fun texts(tag: String): List<String> = rule.onAllNodesWithTag(tag, true).fetchSemanticsNodes().flatMap { n ->
+    private fun texts(tag: String, merged: Boolean = false): List<String> = rule.onAllNodesWithTag(tag, !merged).fetchSemanticsNodes().flatMap { n ->
         n.config.getOrElse(SemanticsProperties.Text) { emptyList() }.map { it.text }
     }
     private fun click(tag: String) {
@@ -95,7 +95,8 @@ class GroupB15SportsDeviceTest {
         waitBoard("football today")
         SystemClock.sleep(600); rule.waitForIdle()
         FirstRun.shot("gb15_a_football")
-        val source = texts("sports_source").joinToString(" ")
+        // The source line merges its two texts into one TalkBack node, so read the merged tree.
+        val source = texts("sports_source", merged = true).joinToString(" ")
         log("GB15 skeleton=$skeleton source=$source")
         assertTrue("no source line: '$source'", source.contains("ESPN") || source.contains("TheSportsDB"))
         if (source.contains("ESPN")) {
