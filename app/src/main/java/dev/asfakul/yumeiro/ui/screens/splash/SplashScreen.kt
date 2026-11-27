@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -66,6 +67,18 @@ object SplashTiming {
     const val HOLD_REDUCED_MS = 1500L
     const val EXIT_MS = 420
     const val EXIT_REDUCED_MS = 200
+    /**
+     * B17: before the motion starts the splash waits (still, on its first frame, which matches the
+     * system splash) until Home's first heavy composition is done and the main thread draws calmly:
+     * [CALM_FRAMES] frames in a row each under [CALM_GAP_MS], or [SETTLE_MAX_MS] at most.
+     * Otherwise start-up work froze the 1.5 s motion (2 frames drawn of 90 on an emulator).
+     */
+    const val CALM_FRAMES = 3
+    const val CALM_GAP_MS = 25L
+    const val SETTLE_MAX_MS = 1200L
+    /** Pure → unit-tested: true once the last [CALM_FRAMES] frame gaps (ns) are all calm. */
+    fun calm(gapsNs: List<Long>): Boolean =
+        gapsNs.size >= CALM_FRAMES && gapsNs.takeLast(CALM_FRAMES).all { it < CALM_GAP_MS * 1_000_000L }
     /** Android 12+ starts from the system splash's full mark. */
     fun startsFromSystemMark(sdk: Int = android.os.Build.VERSION.SDK_INT): Boolean = sdk >= 31
     fun hold(reduced: Boolean, sdk: Int = android.os.Build.VERSION.SDK_INT): Long =
@@ -145,7 +158,9 @@ object SplashProbe {
     @Volatile var shownAtNs = 0L
     @Volatile var finishedAtNs = 0L
     @Volatile var disposedAtNs = 0L
-    fun reset() { shownAtNs = 0L; finishedAtNs = 0L; disposedAtNs = 0L }
+    /** When the motion started (after the main thread calmed down, see [SplashTiming.calm]). */
+    @Volatile var motionAtNs = 0L
+    fun reset() { shownAtNs = 0L; finishedAtNs = 0L; disposedAtNs = 0L; motionAtNs = 0L }
 }
 
 object SplashGate {
@@ -176,6 +191,16 @@ fun SplashScreen(
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { SplashProbe.disposedAtNs = System.nanoTime() } }
     LaunchedEffect(Unit) {
         SplashProbe.shownAtNs = System.nanoTime()
+        if (!reduced) {
+            val gaps = ArrayList<Long>()
+            var last = withFrameNanos { it }
+            val until = last + SplashTiming.SETTLE_MAX_MS * 1_000_000L
+            while (!SplashTiming.calm(gaps) && last < until) {
+                val t = withFrameNanos { it }
+                gaps += t - last; last = t
+            }
+        }
+        SplashProbe.motionAtNs = System.nanoTime()
         if (!reduced) launch { clock.animateTo(1f, tween(SplashTiming.ANIM_MS, easing = LinearEasing)) }
         delay(SplashTiming.hold(reduced))
         finish.value()

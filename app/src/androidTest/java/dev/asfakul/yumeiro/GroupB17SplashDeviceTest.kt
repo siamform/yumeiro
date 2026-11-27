@@ -175,9 +175,10 @@ class GroupB17SplashDeviceTest {
             waitProbe("the splash to finish", 20_000) { SplashProbe.finishedAtNs != 0L }
             SystemClock.sleep(300)
         } finally { app.unregisterActivityLifecycleCallbacks(cb) }
-        val shown = SplashProbe.shownAtNs
-        // The animated part: from the first 100 ms (first frames carry start-up work) to the end of the motion.
-        val from = shown + 100_000_000; val to = shown + dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.ANIM_MS * 1_000_000L
+        // The animated part starts once start-up work is done (SplashTiming.calm), not when the splash appears.
+        val shown = SplashProbe.motionAtNs.takeIf { it != 0L } ?: SplashProbe.shownAtNs
+        log("GB17 b settle=${ms(SplashProbe.shownAtNs, shown)}ms")
+        val from = shown; val to = shown + dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.ANIM_MS * 1_000_000L
         val w = synchronized(frames) { frames.filter { it[0] in from..to }.sortedBy { it[0] } }
         val gaps = w.zipWithNext { x, y -> (y[0] - x[0]) / 1_000_000.0 }.sorted()
         val median = gaps.getOrNull(gaps.size / 2) ?: 999.0

@@ -15,6 +15,7 @@ import dev.asfakul.yumeiro.ui.screens.splash.SplashTiming
 import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -99,5 +100,15 @@ class GroupB17SplashTest {
         assertEquals(0, done)
         rule.mainClock.advanceTimeBy(300)
         assertEquals(1, done)
+    }
+
+    /** B17 fail-before: the motion started with the first frame, while Home's first composition blocked the main thread. */
+    @Test fun motionWaitsForACalmMainThread() {
+        val ms = 1_000_000L
+        assertFalse(SplashTiming.calm(emptyList()))
+        assertFalse("one slow frame in the last three", SplashTiming.calm(listOf(16 * ms, 16 * ms, 400 * ms)))
+        assertFalse("too few frames", SplashTiming.calm(listOf(16 * ms, 16 * ms)))
+        assertTrue(SplashTiming.calm(listOf(900 * ms, 16 * ms, 17 * ms, 16 * ms)))
+        assertTrue("cap keeps the splash from waiting forever", SplashTiming.SETTLE_MAX_MS in 500L..1500L)
     }
 }
