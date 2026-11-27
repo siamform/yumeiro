@@ -31,8 +31,26 @@ object NovelSiteCheck {
     fun awayHost(requested: String, final: String, site: String): String? {
         fun host(u: String) = runCatching { java.net.URI(u).host?.lowercase()?.removePrefix("www.") }.getOrNull()
         val f = host(final) ?: return null
+        // A secure page that hops to a different plain-http host is a parked or taken-over domain, even on a
+        // sub-domain of the same site (MTL Novel 2026-11-27: https://www.mtlnovels.com → http://ww19.mtlnovels.com/).
+        val downgraded = requested.startsWith("https:", true) && final.startsWith("http:", true) && f != host(requested)
+        if (downgraded) return f
         val same = { h: String? -> h != null && (f == h || f.endsWith(".$h") || h.endsWith(".$f")) }
         return if (same(host(requested)) || same(host(site))) null else f
+    }
+
+    private val scriptHop = Regex("""(?:location\.replace\(|location\.href\s*=|location\s*=)\s*['"]([^'"]+)['"]""")
+    private val metaHop = Regex("""<meta[^>]+http-equiv=["']?refresh["']?[^>]*content=["'][^"']*url=([^"'>\s]+)""", RegexOption.IGNORE_CASE)
+
+    /**
+     * B7: the address a tiny "Loading..." page sends the browser to by script or meta refresh (MTL Novel answers its
+     * list with one), resolved against [base]; null for a real page. Only small bodies count, so a real page that
+     * happens to contain a script redirect is never followed. Pure.
+     */
+    fun interstitialTarget(body: String, base: String): String? {
+        if (body.length > 4_096) return null
+        val raw = scriptHop.find(body)?.groupValues?.get(1) ?: metaHop.find(body)?.groupValues?.get(1) ?: return null
+        return runCatching { java.net.URI(base).resolve(raw.replace("\\/", "/")).toString() }.getOrNull()?.takeIf { it.startsWith("http") }
     }
 
     private val cleartext = Regex("""CLEARTEXT communication to (\S+) not permitted""")

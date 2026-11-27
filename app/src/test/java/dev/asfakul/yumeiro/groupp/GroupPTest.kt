@@ -54,6 +54,22 @@ class GroupPTest {
         assertTrue("firewall" in blocked); assertTrue(!s.isSiteCheck(blocked))
     }
 
+    @Test fun b7_interstitialAndParkedDomain() {
+        val s = dev.asfakul.yumeiro.sources.novel.NovelSiteCheck
+        // MTL Novel 2026-11-27: the list answers with a "Loading..." page that moves on by script.
+        val loading = "<html><head><title>Loading...</title></head><body><script type='text/javascript'>window.location.replace('https://www.mtlnovels.com/novel-list/?ch=1&js=abc&pg=1');</script></body></html>"
+        assertEquals("https://www.mtlnovels.com/novel-list/?ch=1&js=abc&pg=1", s.interstitialTarget(loading, "https://www.mtlnovels.com/novel-list/?pg=1"))
+        assertEquals("https://a.example/next", s.interstitialTarget("<meta http-equiv=\"refresh\" content=\"0;url=/next\">", "https://a.example/list"))
+        // A real page with a script redirect somewhere in a big body is never followed.
+        assertEquals(null, s.interstitialTarget("x".repeat(5_000) + "location.href='https://ads.example/'", "https://a.example/"))
+        assertEquals(null, s.interstitialTarget("<html><body>Novels</body></html>", "https://a.example/"))
+        // Then it lands on a parked plain-http sub-domain: that is "moved", not "listed no novels".
+        assertEquals("ww19.mtlnovels.com", s.awayHost("https://www.mtlnovels.com/novel-list/?pg=1", "http://ww19.mtlnovels.com/", "https://www.mtlnovels.com/"))
+        // www and https sub-domains of the same site still count as the same site.
+        assertEquals(null, s.awayHost("https://www.mtlnovels.com/a", "https://mtlnovels.com/b", "https://www.mtlnovels.com/"))
+        assertEquals(null, s.awayHost("https://site.example/a", "https://cdn.site.example/b", "https://site.example/"))
+    }
+
     @Test fun b8_chatFilter() {
         val chats = listOf(TgChat(1, "Anime News", TgChat.Kind.CHANNEL, 0), TgChat(2, "Movie Club", TgChat.Kind.GROUP, 0), TgChat(3, "Sam", TgChat.Kind.PRIVATE, 0))
         assertEquals(listOf(1L), TelegramChatFilter.apply(chats, " anime ", TelegramChatFilter.Kind.ALL).map { it.id })

@@ -116,16 +116,31 @@ class NovelEngine(
         }
         val out = JSONObject()
         try {
-            client.newCall(b.build()).execute().use { r ->
-                out.put("status", r.code)
-                out.put("url", r.request.url.toString())
-                NovelSiteCheck.awayHost(url, r.request.url.toString(), site)?.let { awayHost = it }
-                val hs = JSONObject()
-                for (name in r.headers.names()) hs.put(name, r.headers(name).joinToString(", "))
-                out.put("headers", hs)
-                val src = r.body.source()
-                src.request(MAX_BODY)
-                out.put("body", src.buffer.readUtf8(minOf(src.buffer.size, MAX_BODY)))
+            var req = b.build()
+            var hops = 0
+            while (true) {
+                val next: String? = client.newCall(req).execute().use { r ->
+                    val finalUrl = r.request.url.toString()
+                    val src = r.body.source()
+                    src.request(MAX_BODY)
+                    val text = src.buffer.readUtf8(minOf(src.buffer.size, MAX_BODY))
+                    // B7: a tiny "Loading..." page that moves on by script or meta refresh is followed like a browser
+                    // would (GET only, at most twice); everything else goes to the plugin as it came.
+                    val hop = if (method == "GET" && hops < 2 && r.isSuccessful) NovelSiteCheck.interstitialTarget(text, finalUrl)?.takeIf { it != finalUrl } else null
+                    if (hop == null) {
+                        out.put("status", r.code)
+                        out.put("url", finalUrl)
+                        NovelSiteCheck.awayHost(url, finalUrl, site)?.let { awayHost = it }
+                        val hs = JSONObject()
+                        for (name in r.headers.names()) hs.put(name, r.headers(name).joinToString(", "))
+                        out.put("headers", hs)
+                        out.put("body", text)
+                    }
+                    hop
+                }
+                if (next == null) break
+                hops++
+                req = req.newBuilder().url(next).header("Referer", req.url.toString()).build()
             }
         } catch (e: java.io.IOException) {
             NovelSiteCheck.cleartextHost(e.message)?.let { h -> NovelSiteCheck.awayHost(url, "http://$h/", site)?.let { awayHost = it } }
