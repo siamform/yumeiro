@@ -846,7 +846,7 @@
     <string name="bs_subtitle">Genres, tags and demographic · AniList and your sources</string>
     <string name="bs_open">BlackSource</string>
     <string name="bs_optin_title">Turn on BlackSource?</string>
-    <string name="bs_optin_text">BlackSource sends the words, genres, tags and demographic you pick to Yumeiro Cloud, which asks AniList (nothing else about you is sent or kept). Then it looks for each title in your own sources. That takes longer than a normal search, often 10 to 40 seconds, and uses more data.</string>
+    <string name="bs_optin_text">BlackSource sends the words and filters you pick to AniList (if AniList can\'t be reached, Yumeiro Cloud asks it for you). Nothing else about you is sent or kept. Then it looks for each title in the sources you choose. That takes longer than a normal search, often 10 to 40 seconds, and uses more data.</string>
     <string name="bs_optin_accept">Turn on</string>
     <string name="bs_optin_decline">Not now</string>
     <string name="bs_turn_off">Turn off</string>
@@ -857,7 +857,7 @@
     <string name="bs_search">Search with BlackSource</string>
     <string name="bs_idle">Pick at least one genre, tag, demographic or word.</string>
     <string name="bs_loading">Asking AniList…</string>
-    <string name="bs_error">BlackSource couldn\'t reach Yumeiro Cloud. Check your connection and try again.</string>
+    <string name="bs_error">BlackSource couldn\'t reach AniList or Yumeiro Cloud. Check your connection and try again.</string>
     <string name="bs_error_busy">AniList is busy right now. Try again in a minute.</string>
     <string name="bs_none">No titles match these filters.</string>
     <string name="bs_checking">Checking your sources… %1$d of %2$d</string>

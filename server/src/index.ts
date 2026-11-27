@@ -154,7 +154,7 @@ async function blacksource(req: Request, env: Env, url: URL, ctx?: ExecutionCont
   try {
     r = await fetch(ANILIST, {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers: { "content-type": "application/json", accept: "application/json", "user-agent": "Yumeiro-Cloud/2.0 (+https://github.com/siamform/yumeiro)" },
       body: JSON.stringify(meta ? { query: TAGS_QUERY } : { query: SEARCH_QUERY, variables: p!.variables }),
       signal: AbortSignal.timeout(8000),
     });
@@ -162,7 +162,10 @@ async function blacksource(req: Request, env: Env, url: URL, ctx?: ExecutionCont
     return fail(504, "upstream_timeout");
   }
   if (r.status === 429) return fail(503, "upstream_busy");
-  if (!r.ok) return fail(502, "upstream");
+  if (!r.ok) {
+    console.warn("blacksource upstream", r.status, (await r.text().catch(() => "")).slice(0, 200));
+    return fail(502, "upstream");
+  }
   const raw = await r.json<unknown>().catch(() => null);
   const body = meta
     ? (() => { const t = bsTags(raw); return t && { genres: GENRES, demographics: DEMOGRAPHICS, sorts: Object.keys(SORTS), formats: FORMATS, statuses: STATUSES, tags: t.tags }; })()

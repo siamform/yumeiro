@@ -8,6 +8,8 @@ package dev.asfakul.yumeiro.groups
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import dev.asfakul.yumeiro.online.blacksource.BlackSource
+import dev.asfakul.yumeiro.online.blacksource.BlackSourceAniList
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -88,5 +90,46 @@ class GroupB9BlackSourceTest {
         assertEquals(39, BlackSource.lookups(30, 3, words = true))
         assertEquals(10, BlackSource.lookups(5, 2, words = false))
         assertEquals(0, BlackSource.lookups(30, 0, words = true))
+    }
+
+    @Test fun phoneAsksAniListWithTheFixedQueryAndChosenValuesOnly() {
+        val b = BlackSourceAniList.body(BlackSource.Filter(
+            words = "  frieren ", genres = setOf("Fantasy", "Nope"), tags = listOf("Magic", "<script>"), demographic = "Shounen",
+            without = setOf("Romance"), formats = setOf("TV"), statuses = setOf("FINISHED"), yearFrom = 2023, yearTo = 2020, minScore = 80, sort = "score",
+        ), page = 2)!!
+        assertEquals(BlackSourceAniList.QUERY, b.getString("query"))
+        val v = b.getJSONObject("variables")
+        assertEquals(2, v.getInt("page")); assertEquals("frieren", v.getString("search"))
+        assertEquals("[\"SEARCH_MATCH\",\"SCORE_DESC\"]", v.getJSONArray("sort").toString())
+        assertEquals("[\"Fantasy\"]", v.getJSONArray("genres").toString())
+        assertEquals("[\"Magic\",\"Shounen\"]", v.getJSONArray("tags").toString())
+        assertEquals("[\"Romance\"]", v.getJSONArray("without").toString())
+        assertEquals(20191231, v.getInt("after")); assertEquals(20240101, v.getInt("before")); assertEquals(79, v.getInt("score"))
+        assertEquals(null, BlackSourceAniList.body(BlackSource.Filter()))
+    }
+
+    private fun media(id: Int, genres: String, fmt: String = "MOVIE", status: String = "FINISHED", start: Int = 2016, score: Int = 85, extra: String = "") =
+        """{"id":$id,"title":{"romaji":"T$id","english":"E$id"},"genres":[$genres],"format":"$fmt","status":"$status",
+           "seasonYear":$start,"startDate":{"year":$start},"averageScore":$score,"episodes":1,"coverImage":{"large":"https://c/$id.jpg"},
+           "tags":[{"name":"Shounen","category":"Demographic","rank":90},{"name":"Secret","rank":90,"isAdult":true}$extra]}"""
+
+    @Test fun everyAniListTitleIsCheckedAgainOnThePhone() {
+        val f = BlackSource.Filter(genres = setOf("Drama"), without = setOf("Romance"), formats = setOf("MOVIE"), statuses = setOf("FINISHED"),
+            yearFrom = 2015, yearTo = 2020, minScore = 80)
+        val rows = listOf(
+            media(1, "\"Drama\""), media(2, "\"Drama\",\"Romance\""), media(3, "\"Drama\"", fmt = "TV"),
+            media(4, "\"Drama\"", status = "RELEASING"), media(5, "\"Drama\"", start = 2021), media(6, "\"Drama\"", score = 79),
+            media(7, "\"Drama\",\"Hentai\""), media(8, "\"Action\""), """{"id":0,"title":{"romaji":"bad"}}""", "\"junk\"",
+        )
+        val p = BlackSourceAniList.shape("""{"data":{"Page":{"pageInfo":{"hasNextPage":true},"media":[${rows.joinToString(",")}]}}}""", f)!!
+        assertEquals(listOf(1), p.items.map { it.id })
+        val t = p.items[0]
+        assertEquals("T1", t.title); assertEquals("E1", t.english); assertEquals("Shounen", t.demographic)
+        assertEquals("FINISHED", t.status); assertEquals(85, t.score); assertEquals(2016, t.year); assertEquals("https://c/1.jpg", t.cover)
+        assertFalse("adult tags never reach the phone list", t.tags.contains("Secret"))
+        assertTrue(p.more)
+        assertEquals(null, BlackSourceAniList.shape("""{"errors":[{"message":"blocked"}]}""", f))
+        assertEquals(null, BlackSourceAniList.shape("not json", f))
+        assertTrue(JSONObject(media(9, "\"Drama\"")).has("id"))
     }
 }

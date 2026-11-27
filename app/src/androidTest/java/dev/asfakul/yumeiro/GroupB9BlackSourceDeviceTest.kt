@@ -48,7 +48,8 @@ import org.junit.runners.MethodSorters
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * B9 BlackSource on a device, against the real beta Worker and real AniList data (no recorded answers):
+ * B9 BlackSource on a device, against real AniList data (no recorded answers). The phone asks AniList itself; the beta
+ * Worker is the fallback (AniList refuses Cloudflare Workers, see BlackSourceAniList).
  *  a: More filters → Movie, Finished, 2015–2020, score 80+, Drama, leave out Romance, Top rated: every title listed
  *     is a finished movie that started in 2015–2020 with a score of at least 80.
  *  b: three installed sources in two ecosystems; the CloudStream switch turns both CloudStream sources off: only the
@@ -99,7 +100,7 @@ class GroupB9BlackSourceDeviceTest {
     }
 
     @After fun tearDown() {
-        BlackSource.baseForTest = null
+        BlackSource.baseForTest = null; BlackSource.aniListForTest = null
         runCatching { SourceHub.remove("yu_b9_cs") }; runCatching { SourceHub.remove("yu_b9_ani") }
         ctx.getSharedPreferences("blacksource", Context.MODE_PRIVATE).edit().clear().commit()
     }

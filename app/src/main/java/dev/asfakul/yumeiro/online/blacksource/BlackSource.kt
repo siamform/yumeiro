@@ -28,8 +28,8 @@ import java.net.URLEncoder
 
 /**
  * F14 BlackSource (Group U, app-docs/BLACKSOURCE.md): advanced search by genre, tags and demographic.
- *  1. Yumeiro Cloud (`/v1/blacksource/…`, the owner's Cloudflare Worker) asks AniList with one fixed query and
- *     returns checked titles with their genres, tags and demographic. No third-party code runs there.
+ *  1. The phone asks AniList with one fixed query and checks every title (BlackSourceAniList); when AniList can't be
+ *     reached, Yumeiro Cloud (`/v1/blacksource/…`, the owner's Worker) runs the same query. No third-party code runs there.
  *  2. The phone then looks for those titles in the user's own sources (their extensions, which already run here),
  *     and, when words were typed, keeps source results that AniList does not know by the source's own genres.
  * Opt-in: step 2 asks every source several times, so the first use explains the extra time.
@@ -146,7 +146,35 @@ object BlackSource {
         return Page(items, o.optBoolean("more", false))
     }
 
+    @Volatile internal var aniListForTest: String? = null
+
+    /**
+     * B9: the phone asks AniList first (AniList blocks Cloudflare Workers); the Worker is the fallback when AniList
+     * can't be reached from here. Busy (429) is reported, not retried.
+     */
     suspend fun search(f: Filter, page: Int = 1): Page = withContext(Dispatchers.IO) {
+        val direct = runCatching { direct(f, page) }
+        direct.getOrNull()?.let { return@withContext it }
+        if ((direct.exceptionOrNull() as? Failure)?.message == "busy") throw Failure("busy")
+        viaCloud(f, page)
+    }
+
+    private fun direct(f: Filter, page: Int): Page {
+        val body = BlackSourceAniList.body(f, page) ?: throw Failure("no filter")
+        val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(aniListForTest ?: BlackSourceAniList.URL)) as HttpURLConnection).apply {
+            connectTimeout = 10_000; readTimeout = 15_000; requestMethod = "POST"; doOutput = true
+            setRequestProperty("Content-Type", "application/json"); setRequestProperty("Accept", "application/json")
+        }
+        try {
+            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val code = conn.responseCode
+            if (code == 429) throw Failure("busy")
+            if (code !in 200..299) throw Failure("anilist $code")
+            return BlackSourceAniList.shape(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }, f) ?: throw Failure("anilist shape")
+        } finally { conn.disconnect() }
+    }
+
+    private fun viaCloud(f: Filter, page: Int): Page {
         val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(searchUrl(f, page))) as HttpURLConnection).apply {
             connectTimeout = 10_000; readTimeout = 15_000
             setRequestProperty("Accept", "application/json")
@@ -155,7 +183,7 @@ object BlackSource {
             val code = conn.responseCode
             if (code == 429 || code == 503) throw Failure("busy")
             if (code !in 200..299) throw Failure("http $code")
-            parse(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+            return parse(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
         } finally { conn.disconnect() }
     }
 
