@@ -75,9 +75,11 @@ class GroupB11NavDeviceTest {
                 fun lum(x: Float, y: Float): Float = px[(x * px.width).toInt().coerceIn(0, px.width - 1), (y * px.height).toInt().coerceIn(0, px.height - 1)]
                     .let { 0.2126f * it.red + 0.7152f * it.green + 0.0722f * it.blue }
                 val solid = lum(5f / 24f, 12f / 24f)
-                val hole = lum(11.6f / 24f, 12f / 24f)
-                log("GB11_$label videos glyph solid=$solid hole=$hole size=${px.width}x${px.height}")
-                if (kotlin.math.abs(hole - solid) < 0.25f) bad += "videos: play cut-out not visible (solid=$solid hole=$hole)"
+                // The whole triangle must be open, not only its centre: the old stroke left a pinhole there
+                // (fail-before 46068811587 passed on hole=0.91 at the centre). Points near its three corners.
+                val holes = listOf(10.4f to 10f, 10.4f to 14f, 14.4f to 12f, 11.8f to 12f).map { (x, y) -> lum(x / 24f, y / 24f) }
+                log("GB11_$label videos glyph solid=$solid holes=$holes size=${px.width}x${px.height}")
+                if (holes.any { kotlin.math.abs(it - solid) < 0.25f }) bad += "videos: play cut-out not visible (solid=$solid holes=$holes)"
             }
         }
         assertTrue("B11 $label: ${bad.joinToString("; ")}", bad.isEmpty())
