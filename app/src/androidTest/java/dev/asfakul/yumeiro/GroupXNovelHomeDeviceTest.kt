@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -127,7 +126,7 @@ exports.default = new Yu();
         compose.waitUntil(60_000) { has("novel_all_grid") || has("novel_all_empty") || has("novel_browse_grid") || has("novel_browse_error") }
         compose.waitUntil(30_000) { hasText("River Tale 1") && hasText("Stone Tale 1") }
         SystemClock.sleep(800); compose.waitForIdle(); FirstRun.shot("gx_d_all")
-        val sourceLine = runCatching { compose.onAllNodes(hasText("Yu Stone") and hasAnyAncestor(hasTestTag("novel_all_grid")), true).fetchSemanticsNodes().size }.getOrDefault(0)
+        val sourceLine = runCatching { compose.onAllNodes(androidx.compose.ui.test.hasText("Yu Stone") and hasAnyAncestor(hasTestTag("novel_all_grid")), true).fetchSemanticsNodes().size }.getOrDefault(0)
         log("GX_D all=${has("novel_all_grid")} subtitleAll=${hasText("All sources")} river=${hasText("River Tale 1")} stone=${hasText("Stone Tale 1")} stoneLabels=$sourceLine failedNote=${has("novel_all_failed")} broken=${hasText("Yu Broken")}")
         assertTrue("B4: the page did not open on All sources", has("novel_all_grid") && hasText("All sources"))
         assertTrue("B4: All sources is missing a working source", hasText("River Tale 1") && hasText("Stone Tale 1"))

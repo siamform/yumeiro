@@ -166,7 +166,7 @@ class GroupXReadingDeviceTest {
         SystemClock.sleep(1_500); compose.waitForIdle()
         val before = scrollInto("manga_reader", ::mangaSpot) { it.label != "Page 1" && it.frac in 0.3f..0.7f }
         SystemClock.sleep(300); FirstRun.shot("gx_a_before")
-        log("GX_A before=$before saved=${MangaLibrary.get(p.id, "yuspot://m")?.let { it.lastPage to it.lastOffset }}")
+        log("GX_A before=$before saved=${MangaLibrary.get(p.id, "yuspot://m")?.lastPage}")
         reopen()
         compose.waitUntil(60_000) { pagesShown() }
         SystemClock.sleep(3_000); compose.waitForIdle()
