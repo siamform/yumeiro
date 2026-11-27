@@ -74,8 +74,8 @@ class GroupVManyExtensionsDeviceTest {
     private val worstWhere = java.util.concurrent.ConcurrentHashMap<Owner, String>()
     private fun ownerOf(samples: List<Array<StackTraceElement>>): Pair<Owner, String> {
         for (st in samples) st.firstOrNull { e -> !platform(e) }?.let { return Owner.EXTENSION to it.className + "." + it.methodName }
-        for (st in samples) st.firstOrNull { e -> e.className.startsWith("dev.asfakul.") || e.className.startsWith("androidx.compose.") }
-            ?.let { e -> return Owner.APP to (st.firstOrNull { it.className.startsWith("dev.asfakul.") } ?: e).let { it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber } }
+        for (st in samples) st.firstOrNull { e -> appWork(e) }
+            ?.let { e -> return Owner.APP to (st.firstOrNull { appWork(it) && it.className.startsWith("dev.asfakul.") } ?: e).let { it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber } }
         return Owner.SYSTEM to (samples.first().firstOrNull()?.let { it.className.substringAfterLast('.') + "." + it.methodName } ?: "?")
     }
     private fun resetOwners() { worst.clear(); worstWhere.clear() }
@@ -263,7 +263,14 @@ class GroupVManyExtensionsDeviceTest {
             "kotlinx.", "dalvik.", "libcore.", "sun.", "jdk.", "com.google.", "org.chromium.", "okhttp3.", "okio.",
             "org.json.", "org.jsoup.", "com.fasterxml.", "org.mozilla.",
         )
-        /** WebView's own classes are loaded without a package (J9, N, Zs0 …). */
-        fun platform(e: StackTraceElement) = '.' !in e.className || PLATFORM.any { e.className.startsWith(it) }
+        /** WebView's own classes have no package or a one- or two-letter one (J9, N, J.N, Zs0 …). */
+        fun platform(e: StackTraceElement) = e.className.substringBefore('.', "").length <= 2 || PLATFORM.any { e.className.startsWith(it) }
+        /**
+         * App frames that are not app work: ExtensionGuard runs the main looper inside its own handler (every main
+         * stack has it), and the test's own helpers.
+         */
+        fun appWork(e: StackTraceElement) = (e.className.startsWith("dev.asfakul.") || e.className.startsWith("androidx.compose.")) &&
+            !e.className.startsWith("dev.asfakul.yumeiro.online.ExtensionGuard") && !e.className.startsWith("androidx.compose.ui.test.") &&
+            !e.className.startsWith("dev.asfakul.yumeiro.GroupV") && !e.className.startsWith("dev.asfakul.yumeiro.MainStallWatch")
     }
 }

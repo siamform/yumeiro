@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -63,10 +64,18 @@ internal class ExtensionFeed {
         homes[name] = Rows(rows)
         if (rows.isNotEmpty() && name !in order) order += name
     }
-    /** Extension name → its rows, in the order they arrived, only those that loaded something. */
-    val ready: List<Pair<String, List<OnlineRow>>> get() {
-        val live = providers.mapTo(HashSet()) { it.name }
-        return order.filter { it in live }.mapNotNull { n -> rows(n)?.takeIf { it.isNotEmpty() }?.let { n to it } }
+    /** Names of [providers], set with them (an extension's `name` runs its own code). */
+    var liveNames by mutableStateOf<Set<String>>(emptySet())
+    /**
+     * Extension name → its rows, in the order they arrived, only those that loaded something.
+     * B20-PERF-EXT: worked out only when the rows, their order or the extensions change, and the same list is
+     * handed out until then. It was rebuilt on every read while Home composed, and Home's `remember(channels)`
+     * then compared the new list with the old one row by row (device run 45947352301, TV, 60 extensions: a
+     * 761 ms main-thread stall in this getter while a video played).
+     */
+    val ready: List<Pair<String, List<OnlineRow>>> by derivedStateOf {
+        val live = liveNames
+        order.filter { it in live }.mapNotNull { n -> rows(n)?.takeIf { it.isNotEmpty() }?.let { n to it } }
     }
 }
 
@@ -98,9 +107,10 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
     }
     val feed = HomeMemory.feed
     LaunchedEffect(providers) {
-        feed.providers = providers
         val names = providers.map { it.name }
         val live = names.toSet()
+        feed.providers = providers
+        feed.liveNames = live
         feed.homes.keys.retainAll(live)
         feed.order.retainAll(live)
         feed.requested.retainAll(live)
