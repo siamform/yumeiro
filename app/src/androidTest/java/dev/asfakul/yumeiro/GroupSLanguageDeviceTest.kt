@@ -50,10 +50,8 @@ class GroupSLanguageDeviceTest {
 
     // Android 13+ asks for the notification (and media) permission when MainActivity opens; that system dialog
     // pauses the app and the recreate below needs it resumed. Granted up front like the other MainActivity tests.
-    @Before fun grant() {
-        listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.POST_NOTIFICATIONS")
-            .forEach { runCatching { InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(ctx.packageName, it) } }
-    }
+    // (run 45940770266: READ_MEDIA_AUDIO was still asked, so the shared list FirstRun.grant() is used.)
+    @Before fun grant() = FirstRun.grant()
     private fun savedTag() = ctx.getSharedPreferences("mt_language", Context.MODE_PRIVATE).getString("tag", null)
 
     private fun pick(optionTag: String, wantSaved: String) {
