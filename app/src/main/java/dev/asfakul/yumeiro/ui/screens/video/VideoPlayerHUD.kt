@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -142,7 +144,7 @@ fun VolumeHUD(
             // F-06: the bar shows 100-200 %, in a warm warning colour, with a hearing warning beside it.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "Loud: protect your hearing", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                    stringResource(R.string.loud_protect_your_hearing), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(end = 6.dp).clip(yuRound(8)).background(Color(0xCC8A2A12)).padding(horizontal = 8.dp, vertical = 4.dp).testTag("volume_boost_warning"),
                 )
                 VerticalLevelBar(boost, icon, "Volume boost", "volume_hud", number = dev.asfakul.yumeiro.player.VolumeBoost.percent(volumeLevel, maxVolume, boost), fill = Color(0xFFFF8A3D))
@@ -308,7 +310,7 @@ fun ResumePill(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Resumed at ${formatDuration(playbackPositionMs)}",
+                text = stringResource(R.string.resumed_at, formatDuration(playbackPositionMs)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = androidx.compose.ui.graphics.Color.White,
                 fontWeight = FontWeight.Medium
@@ -326,7 +328,7 @@ fun ResumePill(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Start over",
+                    text = stringResource(R.string.start_over),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -337,7 +339,7 @@ fun ResumePill(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss resume notice",
+                    contentDescription = stringResource(R.string.dismiss_resume_notice),
                     tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.75f),
                     modifier = Modifier.size(16.dp)
                 )

@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.profiles
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -187,8 +189,8 @@ fun WhoIsWatching(activity: Activity, onManage: (() -> Unit)?) {
         verticalArrangement = Arrangement.Center,
     ) {
         Spacer(Modifier.height(48.dp))
-        Text("誰が見る？", color = SpotifyGreen, fontSize = 13.sp, letterSpacing = 2.sp)
-        Text("Who's watching?", color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.text), color = SpotifyGreen, fontSize = 13.sp, letterSpacing = 2.sp)
+        Text(stringResource(R.string.whos_watching), color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(28.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.widthIn(max = 640.dp)) {
             list.forEachIndexed { i, p ->
@@ -205,7 +207,7 @@ fun WhoIsWatching(activity: Activity, onManage: (() -> Unit)?) {
                 }
             }
         }
-        if (onManage != null) TextButton(onClick = onManage, modifier = Modifier.padding(top = 20.dp)) { Text("Manage profiles") }
+        if (onManage != null) TextButton(onClick = onManage, modifier = Modifier.padding(top = 20.dp)) { Text(stringResource(R.string.manage_profiles)) }
         Spacer(Modifier.height(48.dp))
     }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
@@ -269,7 +271,7 @@ private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, allow
     dev.asfakul.yumeiro.ui.components.TsukiDialog(
         tone = if (device) dev.asfakul.yumeiro.ui.components.DialogTone.NEUTRAL else dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = onDismiss,
-        title = { Text("Forgot the PIN?") },
+        title = { Text(stringResource(R.string.forgot_the_pin)) },
         text = {
             Text(
                 if (device) "Use this phone's screen lock to remove ${profile.name}'s PIN. Nothing else changes."
@@ -289,7 +291,7 @@ private fun ForgotPinDialog(activity: Activity, profile: Profiles.Profile, allow
                 }
             }, modifier = Modifier.testTag("pin_forgot_confirm")) { Text(if (device) "Use screen lock" else if (profile.id == Profiles.DEFAULT) "Clear and unlock" else "Delete ${profile.name}") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -353,8 +355,8 @@ fun PinPadDialog(
                             contentAlignment = Alignment.Center,
                         ) {
                             when (k) {
-                                "back" -> Icon(Icons.AutoMirrored.Filled.Backspace, "Delete", tint = if (enabled) TextPrimary else TextTertiary)
-                                "ok" -> Text("OK", color = if (enabled) dev.asfakul.yumeiro.ui.theme.OnAccent else TextTertiary, fontWeight = FontWeight.Bold)
+                                "back" -> Icon(Icons.AutoMirrored.Filled.Backspace, stringResource(R.string.delete), tint = if (enabled) TextPrimary else TextTertiary)
+                                "ok" -> Text(stringResource(R.string.ok), color = if (enabled) dev.asfakul.yumeiro.ui.theme.OnAccent else TextTertiary, fontWeight = FontWeight.Bold)
                                 else -> Text(k, color = TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Medium)
                             }
                         }
@@ -362,10 +364,10 @@ fun PinPadDialog(
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-                if (onForgot != null) TextButton(onClick = onForgot, modifier = Modifier.testTag("pin_forgot")) { Text("Forgot?") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                if (onForgot != null) TextButton(onClick = onForgot, modifier = Modifier.testTag("pin_forgot")) { Text(stringResource(R.string.forgot)) }
                 if (onBiometric != null) TextButton(onClick = onBiometric) {
-                    Icon(Icons.Default.Fingerprint, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Screen lock")
+                    Icon(Icons.Default.Fingerprint, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.screen_lock))
                 }
             }
         }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
@@ -179,9 +181,9 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         SubPageHeader(title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}")
         OutlinedTextField(
             value = text, onValueChange = { text = it.take(120); typing = true },
-            placeholder = { Text("Title, series or anime", color = TextTertiary, fontSize = 13.sp) },
+            placeholder = { Text(stringResource(R.string.title_series_or_anime), color = TextTertiary, fontSize = 13.sp) },
             leadingIcon = { Icon(Icons.Default.Search, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp)) },
-            trailingIcon = { if (text.isNotEmpty()) IconButton(onClick = { text = ""; submitted = "" }) { Icon(Icons.Default.Close, "Clear", tint = TextSecondary) } },
+            trailingIcon = { if (text.isNotEmpty()) IconButton(onClick = { text = ""; submitted = "" }) { Icon(Icons.Default.Close, stringResource(R.string.clear), tint = TextSecondary) } },
             singleLine = true, shape = yuRound(24),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { submitted = text.trim(); typing = false; keyboard?.hide() }),
@@ -291,8 +293,8 @@ private fun RecentSearches(history: List<String>, onClear: () -> Unit, onPick: (
     LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp)) {
         if (history.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Recent searches", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                TextButton(onClick = onClear) { Text("Clear", color = TextTertiary) }
+                Text(stringResource(R.string.recent_searches), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                TextButton(onClick = onClear) { Text(stringResource(R.string.clear), color = TextTertiary) }
             }
         }
         items(history, key = { it }) { h -> SearchHistoryRow(h) { onPick(h) } }
@@ -425,7 +427,7 @@ private fun GroupedResults(
         items(plan.groups, key = { "g_" + it.name }, contentType = { "group" }) { g ->
             Column(Modifier.testTag("online_search_group_${g.name}")) {
                 SectionHeader(g.name, subtitle = "${g.items.size} result${if (g.items.size == 1) "" else "s"}") {
-                    TextButton(onClick = { onFilter(g.name) }, modifier = Modifier.testTag("online_search_group_all_${g.name}")) { Text("See all", color = SpotifyGreen, fontSize = 13.sp) }
+                    TextButton(onClick = { onFilter(g.name) }, modifier = Modifier.testTag("online_search_group_all_${g.name}")) { Text(stringResource(R.string.see_all), color = SpotifyGreen, fontSize = 13.sp) }
                 }
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(g.items.take(GROUP_ROW_MAX), key = { it.key }) { item ->
@@ -443,7 +445,7 @@ private fun GroupedResults(
         if (plan.failed.isNotEmpty()) item("g_failed") {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("online_search_group_failed"), verticalAlignment = Alignment.CenterVertically) {
                 Text("Couldn't search: " + plan.failed.joinToString(", "), color = WarnColor, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                TextButton(onClick = onRetry, modifier = Modifier.testTag("online_search_group_retry")) { Text("Retry", color = SpotifyGreen) }
+                TextButton(onClick = onRetry, modifier = Modifier.testTag("online_search_group_retry")) { Text(stringResource(R.string.retry), color = SpotifyGreen) }
             }
         }
     }

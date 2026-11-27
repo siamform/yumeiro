@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -173,7 +175,7 @@ fun ErrorSuggestions(tips: List<String>, modifier: Modifier = Modifier, onDark: 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lightbulb, null, tint = accent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("TRY THIS", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            Text(stringResource(R.string.try_this), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
         }
         tips.forEach { tip ->
             Row(verticalAlignment = Alignment.Top) {

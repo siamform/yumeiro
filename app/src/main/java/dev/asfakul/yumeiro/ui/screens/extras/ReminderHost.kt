@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -241,7 +243,7 @@ internal fun ReminderCard(icon: ImageVector, tag: String, title: String, body: S
                 modifier = Modifier.fillMaxWidth().height(50.dp).testTag("${tag}_action"),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
             ) { Text(action, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
-            TextButton(onClick = onClose, modifier = Modifier.testTag("${tag}_later")) { Text("Maybe later", color = TextSecondary) }
+            TextButton(onClick = onClose, modifier = Modifier.testTag("${tag}_later")) { Text(stringResource(R.string.maybe_later), color = TextSecondary) }
         }
     }
 }
@@ -259,9 +261,9 @@ internal fun FollowCard(inline: Boolean = false, onClose: () -> Unit, onDismiss:
                 CircularProgressIndicator(progress = { left / total.toFloat() }, color = if (dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.isDark) BrandGold else dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, trackColor = androidx.compose.ui.graphics.Color.Transparent, strokeWidth = 3.dp, modifier = Modifier.size(60.dp))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Join the Yumeiro community", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+            Text(stringResource(R.string.join_the_yumeiro_community), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
             Spacer(Modifier.height(6.dp))
-            Text("Get Yumeiro news first on Telegram, ask for help and share ideas.", color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.get_yumeiro_news_first_on_telegram), color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Reminders.Social.entries.forEach { s ->
@@ -274,9 +276,9 @@ internal fun FollowCard(inline: Boolean = false, onClose: () -> Unit, onDismiss:
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Closes in ${left}s", color = TextTertiary, fontSize = 12.sp)
+                Text(stringResource(R.string.closes_in_s, left), color = TextTertiary, fontSize = 12.sp)
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onDismiss, modifier = Modifier.testTag("reminder_follow_later")) { Text("Later", color = TextSecondary) }
+                TextButton(onClick = onDismiss, modifier = Modifier.testTag("reminder_follow_later")) { Text(stringResource(R.string.later), color = TextSecondary) }
             }
         }
     }

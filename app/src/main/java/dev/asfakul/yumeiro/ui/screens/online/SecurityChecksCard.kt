@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,9 +67,9 @@ internal fun SecurityChecksCard() {
     LaunchedEffect(Unit) { while (true) { delay(60_000L); now = System.currentTimeMillis() } }
     Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(top = 14.dp).testTag("security_checks")) {
         Column(Modifier.padding(14.dp)) {
-            Text("Security checks", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.security_checks), color = TextPrimary, fontWeight = FontWeight.SemiBold)
             Text(
-                "Sites that asked to confirm you're a person. Each one asks once; Yumeiro reuses the pass, and a check you close stays closed for a while.",
+                stringResource(R.string.sites_that_asked_to_confirm_youre),
                 color = TextTertiary, fontSize = 12.sp, lineHeight = 16.sp,
             )
             sites.forEach { s ->
@@ -95,11 +97,11 @@ internal fun SecurityChecksCard() {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     if (s.state != VerificationCenter.State.CLEAR) {
                         TextButton(onClick = { VerificationCenter.checkNow(s.host) }, modifier = Modifier.testTag("security_check_now")) {
-                            Text("Check now", color = SpotifyGreen)
+                            Text(stringResource(R.string.check_now), color = SpotifyGreen)
                         }
                     }
                     TextButton(onClick = { VerificationCenter.forget(s.host) }, modifier = Modifier.testTag("security_check_forget")) {
-                        Text("Forget", color = TextSecondary)
+                        Text(stringResource(R.string.forget), color = TextSecondary)
                     }
                 }
             }

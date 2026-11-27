@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.setValue
@@ -182,7 +184,7 @@ internal fun HeroCarousel(
                             ) {
                                 Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("Play", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(stringResource(R.string.play), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                             val entry = saved.firstOrNull { it.api == item.api && it.url == item.url }
                             val isSaved = entry?.listed == true

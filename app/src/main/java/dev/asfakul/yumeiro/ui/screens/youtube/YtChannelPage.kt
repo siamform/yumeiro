@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -120,7 +122,7 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier.padding(start = 18.dp, top = 6.dp).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).testTag("youtube_channel_back"),
-                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
+                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = Color.White) }
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(64.dp).clip(CircleShape).background(pal.surfaceContainerHigh), contentAlignment = Alignment.Center) {

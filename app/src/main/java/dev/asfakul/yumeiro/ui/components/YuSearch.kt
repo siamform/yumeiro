@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -135,7 +137,7 @@ fun HeaderSearchField(
                 )
             }
             if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.Close, "Clear search", tint = p.textSecondary, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.clear_search), tint = p.textSecondary, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -168,7 +170,7 @@ fun YuSearchField(query: String, onQuery: (String) -> Unit, placeholder: String,
             )
         }
         if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Default.Close, "Clear search", tint = p.textSecondary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Close, stringResource(R.string.clear_search), tint = p.textSecondary, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -190,9 +192,9 @@ fun FilterSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(kanaOverline("絞込", "Refine"), style = OverlineStyle)
-                    Text("Filters", style = SectionTitleStyle, color = p.textPrimary)
+                    Text(stringResource(R.string.filters), style = SectionTitleStyle, color = p.textPrimary)
                 }
-                if (onReset != null) TextButton(onClick = onReset, modifier = Modifier.testTag(tag + "_reset")) { Text("Reset", color = p.accent, fontWeight = FontWeight.Bold) }
+                if (onReset != null) TextButton(onClick = onReset, modifier = Modifier.testTag(tag + "_reset")) { Text(stringResource(R.string.reset), color = p.accent, fontWeight = FontWeight.Bold) }
             }
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) { content() }
             Button(

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.content.Intent
 import android.net.Uri
@@ -200,7 +202,7 @@ fun PlaylistMarketScreen(
             val refreshing = ready?.refreshing == true || state is PlaylistMarket.State.Loading
             IconButton(onClick = { reload() }, enabled = !refreshing, modifier = Modifier.testTag("market_reload")) {
                 if (refreshing) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                else Icon(Icons.Default.Refresh, "Check for updates", tint = TextSecondary)
+                else Icon(Icons.Default.Refresh, stringResource(R.string.check_for_updates), tint = TextSecondary)
             }
         }
         if (ready != null) dev.asfakul.yumeiro.ui.components.HeaderSearchField(open = searching || query.isNotEmpty(), query = query, onQuery = { query = it }, placeholder = "Search playlists, countries, repos", tag = "market_search")
@@ -285,12 +287,12 @@ fun PlaylistMarketScreen(
                     e.repo?.let { DetailLine("Repository", it + (e.stars?.let { s -> " · ★ $s" } ?: "")) }
                     if (e.updated > 0) DetailLine("Changed", relativeTime(e.updated))
                     if (e.topGroups.isNotEmpty()) DetailLine("Groups", e.topGroups.joinToString(", "))
-                    if (!e.ok) Text("The source could not be reached on the last check; the last good copy is offered.", color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp)
+                    if (!e.ok) Text(stringResource(R.string.the_source_could_not_be_reached), color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp)
                     e.repo?.let { r ->
                         TextButton(onClick = {
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$r")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                                 .onFailure { AppMessages.error(context, "No browser available") }
-                        }) { Text("View on GitHub", color = SpotifyGreen) }
+                        }) { Text(stringResource(R.string.view_on_github), color = SpotifyGreen) }
                     }
                 }
             },
@@ -300,7 +302,7 @@ fun PlaylistMarketScreen(
                     if (installed != null) onOpenPlaylist(installed.id) else install(e)
                 }, modifier = Modifier.testTag("market_details_action")) { Text(if (installed != null) "Open" else "Install", color = SpotifyGreen, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { details = null }) { Text("Close", color = TextSecondary) } },
+            dismissButton = { TextButton(onClick = { details = null }) { Text(stringResource(R.string.close), color = TextSecondary) } },
         )
     }
 }
@@ -377,7 +379,7 @@ private fun MarketCard(
                 ) {
                     Icon(Icons.Default.Download, null, tint = OnAccent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Install", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.install), color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }

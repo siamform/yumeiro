@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -101,8 +103,8 @@ fun UserGuideEntryCard(onOpen: () -> Unit) {
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text("How Yumeiro works", color = p.textPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text("Illustrated guide to every section, gesture and fix", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.how_yumeiro_works), color = p.textPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.illustrated_guide_to_every_section_gesture), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = p.textSecondary)
     }
@@ -124,11 +126,11 @@ fun UserGuideScreen(onBack: () -> Unit) {
                     Box(
                         Modifier.minimumInteractiveComponentSize().size(44.dp).clip(CircleShape).background(p.glass).clickable(onClick = onBack).testTag("user_guide_back"),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = p.textPrimary) }
+                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = p.textPrimary) }
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("User guide", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                        Text("How Yumeiro works", color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.user_guide), color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                        Text(stringResource(R.string.how_yumeiro_works), color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
                     }
                 }
             }
@@ -234,9 +236,9 @@ private fun AppMapCard() {
     Column(
         Modifier.fillMaxWidth().clip(yuRound(24)).background(p.glass).padding(16.dp).testTag("guide_map"),
     ) {
-        Text("The app at a glance", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.the_app_at_a_glance), color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(4.dp))
-        Text("Four tabs in the floating dock at the bottom. The bar above it is the music player.", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.four_tabs_in_the_floating_dock), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(14.dp))
         // Mock dock
         Column(Modifier.fillMaxWidth().clip(yuRound(22)).background(Color.Black.copy(alpha = if (p.isDark) 0.35f else 0.06f)).padding(10.dp)) {
@@ -290,7 +292,7 @@ private fun GestureDiagram() {
             Zone("Volume\nswipe up/down", Icons.AutoMirrored.Filled.VolumeUp, p.accent.copy(alpha = 0.18f))
         }
         Text(
-            "← drag sideways to seek →   ·   double-tap a side: ±10 s",
+            stringResource(R.string.drag_sideways_to_seek_double_tap),
             color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
         )
@@ -314,12 +316,12 @@ private fun RowScope.Zone(label: String, icon: ImageVector, tint: Color) {
 private fun HomeDiagram() {
     val p = LocalMtPalette.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Continue", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.continue), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MockTile(Modifier.weight(1f), Icons.Default.MusicNote, "Last song")
             MockTile(Modifier.weight(1f), Icons.Default.SmartDisplay, "Last video")
         }
-        Text("Spaces", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.spaces), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(Icons.Default.MusicNote, Icons.Default.Equalizer, Icons.Default.Extension, Icons.Default.LiveTv).forEach {
                 Box(Modifier.weight(1f).height(30.dp).clip(yuRound(8)).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
@@ -327,7 +329,7 @@ private fun HomeDiagram() {
                 }
             }
         }
-        Text("Yumix random  ·  keeps loading as you scroll ↓", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.yumix_random_keeps_loading_as_you), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         repeat(2) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(24.dp).clip(yuRound(6)).background(p.accent.copy(alpha = 0.35f)))

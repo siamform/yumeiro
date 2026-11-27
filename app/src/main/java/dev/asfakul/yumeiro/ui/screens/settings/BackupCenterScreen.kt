@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.Manifest
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -142,7 +144,7 @@ fun BackupScreen(onBack: () -> Unit) {
         ) {
             busy?.let { Text("$it…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
             repair?.let { (done, total) ->
-                Text("Downloading your extensions again: $done of $total", color = TextSecondary, fontSize = 13.sp,
+                Text(stringResource(R.string.downloading_your_extensions_again_of, done, total), color = TextSecondary, fontSize = 13.sp,
                     modifier = Modifier.padding(top = 8.dp).testTag("backup_repair_progress"))
             }
 
@@ -157,21 +159,21 @@ fun BackupScreen(onBack: () -> Unit) {
                         enabled = busy == null, shape = yuRound(20),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.fillMaxWidth().testTag("restore_latest"),
-                    ) { Text("Restore latest backup · ${whenText(latest.modified)}", maxLines = 1) }
+                    ) { Text(stringResource(R.string.restore_latest_backup, whenText(latest.modified)), maxLines = 1) }
                     Spacer(Modifier.height(8.dp))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(
                         onClick = { file.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
                         enabled = busy == null, shape = yuRound(20), modifier = Modifier.weight(1f).testTag("restore_pick_file"),
-                    ) { Text("Choose a backup file", maxLines = 1) }
+                    ) { Text(stringResource(R.string.choose_a_backup_file), maxLines = 1) }
                     OutlinedButton(
                         onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } },
                         enabled = busy == null, shape = yuRound(20), modifier = Modifier.weight(1f).testTag("restore_find_folder"),
-                    ) { Text("Find my backups", maxLines = 1) }
+                    ) { Text(stringResource(R.string.find_my_backups), maxLines = 1) }
                 }
                 Text(
-                    "You see what's inside and pick what to bring back before anything changes. Your current data is backed up first.",
+                    stringResource(R.string.you_see_whats_inside_and_pick),
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp),
                 )
             }
@@ -196,18 +198,18 @@ fun BackupScreen(onBack: () -> Unit) {
                         shape = yuRound(20),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.testTag("backup_now"),
-                    ) { Text("Back up now") }
+                    ) { Text(stringResource(R.string.back_up_now)) }
                     OutlinedButton(onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } }, shape = yuRound(20),
-                        modifier = Modifier.testTag("backup_choose_folder")) { Text("Choose folder") }
+                        modifier = Modifier.testTag("backup_choose_folder")) { Text(stringResource(R.string.choose_folder)) }
                 }
                 if (BackupStore.folderUri(context) != null) {
                     TextButton(onClick = { BackupStore.forgetFolder(context); refresh++ }, modifier = Modifier.testTag("backup_forget_folder")) {
-                        Text("Use Download › Yumeiro › Backups again")
+                        Text(stringResource(R.string.use_download_yumeiro_backups_again))
                     }
                 }
                 if (BackupStore.legacyNeedsPermission(context)) {
                     TextButton(onClick = { storage.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE) }, modifier = Modifier.testTag("backup_allow_storage")) {
-                        Text("Allow storage access so backups survive an uninstall")
+                        Text(stringResource(R.string.allow_storage_access_so_backups_survive))
                     }
                 }
             }
@@ -215,7 +217,7 @@ fun BackupScreen(onBack: () -> Unit) {
             // Backups on this phone
             Block("Backups on this phone", if (items.isEmpty()) null else "Tap one to see what's inside and restore it") {
                 if (items.isEmpty()) {
-                    Text("No backups found yet. After reinstalling, tap Find my backups and open the Yumeiro › Backups folder.",
+                    Text(stringResource(R.string.no_backups_found_yet_after_reinstalling),
                         color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(vertical = 10.dp).testTag("backup_list_empty"))
                 }
                 items.forEachIndexed { i, item ->
@@ -223,9 +225,9 @@ fun BackupScreen(onBack: () -> Unit) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 6.dp)) {
                     OutlinedButton(onClick = { runCatching { folder.launch(BackupStore.pickerStart()) } }, shape = yuRound(20),
-                        modifier = Modifier.testTag("backup_find")) { Text("Find my backups") }
+                        modifier = Modifier.testTag("backup_find")) { Text(stringResource(R.string.find_my_backups)) }
                     OutlinedButton(onClick = { file.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }, shape = yuRound(20),
-                        modifier = Modifier.testTag("backup_pick_file")) { Text("Open a file") }
+                        modifier = Modifier.testTag("backup_pick_file")) { Text(stringResource(R.string.open_a_file)) }
                 }
             }
 
@@ -312,14 +314,14 @@ fun BackupScreen(onBack: () -> Unit) {
         TsukiDialog(
             tone = DialogTone.DANGER,
             onDismissRequest = { deleting = null },
-            title = { Text("Delete this backup?") },
-            text = { Text("${item.name} is removed from the phone. This can't be undone.") },
+            title = { Text(stringResource(R.string.delete_this_backup)) },
+            text = { Text(stringResource(R.string.is_removed_from_the_phone_this, item.name)) },
             confirmButton = { TextButton(onClick = {
                 deleting = null
                 if (BackupStore.delete(context, item)) AppMessages.success(context, "Backup deleted") else AppMessages.error(context, "Couldn't delete that file")
                 refresh++
-            }, modifier = Modifier.testTag("backup_delete_confirm")) { Text("Delete") } },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+            }, modifier = Modifier.testTag("backup_delete_confirm")) { Text(stringResource(R.string.delete)) } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     resetting?.let { s ->
@@ -327,7 +329,7 @@ fun BackupScreen(onBack: () -> Unit) {
             tone = DialogTone.WARNING,
             onDismissRequest = { resetting = null },
             title = { Text("${s.label}?") },
-            text = { Text("${s.hint}. A backup is saved first so you can undo this, then Yumeiro restarts.") },
+            text = { Text(stringResource(R.string.a_backup_is_saved_first_so, s.hint)) },
             confirmButton = { TextButton(onClick = {
                 resetting = null
                 work("Saving a backup first") {
@@ -335,24 +337,24 @@ fun BackupScreen(onBack: () -> Unit) {
                     ResetCenter.stage(context, setOf(s))
                     Restart.now(context)
                 }
-            }, modifier = Modifier.testTag("reset_confirm")) { Text("Back up and reset") } },
-            dismissButton = { TextButton(onClick = { resetting = null }) { Text("Cancel") } },
+            }, modifier = Modifier.testTag("reset_confirm")) { Text(stringResource(R.string.back_up_and_reset)) } },
+            dismissButton = { TextButton(onClick = { resetting = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (erase) {
         TsukiDialog(
             tone = DialogTone.CRITICAL,
             onDismissRequest = { erase = false },
-            title = { Text("Erase everything?") },
-            text = { Text("Every setting, list, source and extension is removed and Yumeiro closes. A backup is saved to Download › Yumeiro › Backups first, so you can restore it later.") },
+            title = { Text(stringResource(R.string.erase_everything)) },
+            text = { Text(stringResource(R.string.every_setting_list_source_and_extension)) },
             confirmButton = { TextButton(onClick = {
                 erase = false
                 work("Saving a backup first") {
                     BackupStore.save(context, "safety", Backup.Section.entries.toSet() - Backup.Section.EXTENSION_FILES)
                     ResetCenter.eraseEverything(context)
                 }
-            }, modifier = Modifier.testTag("reset_erase_confirm")) { Text("Back up and erase") } },
-            dismissButton = { TextButton(onClick = { erase = false }) { Text("Cancel") } },
+            }, modifier = Modifier.testTag("reset_erase_confirm")) { Text(stringResource(R.string.back_up_and_erase)) } },
+            dismissButton = { TextButton(onClick = { erase = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -365,7 +367,7 @@ private fun RestoreDialog(info: Backup.Info, onDismiss: () -> Unit, onRestore: (
     TsukiDialog(
         tone = DialogTone.WARNING,
         onDismissRequest = onDismiss,
-        title = { Text("Restore this backup?") },
+        title = { Text(stringResource(R.string.restore_this_backup)) },
         text = {
             Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                 Text(buildString {
@@ -386,13 +388,13 @@ private fun RestoreDialog(info: Backup.Info, onDismiss: () -> Unit, onRestore: (
                     CheckRow(s.label, s.hint, s in chosen, "restore_section_${s.name.lowercase()}") { on -> chosen = if (on) chosen + s else chosen - s }
                 }
                 if (Backup.Section.SOURCES in chosen && info.extensions > 0) {
-                    Text("Extensions", fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text(stringResource(R.string.extensions), fontWeight = FontWeight.SemiBold, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
                     RadioRow("Download them again (recommended)", "Fresh copies from their own repositories, checked like an update", !useFiles, "restore_ext_redownload") { useFiles = false }
                     if (info.hasCode) {
                         RadioRow("Use the copies in this backup", "Works offline. Only for a backup you made yourself", useFiles, "restore_ext_files") { useFiles = true }
                     }
                 }
-                Text("What's on this phone now is saved as a backup first. Yumeiro restarts to finish.", fontSize = 12.sp, color = TextTertiary, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.whats_on_this_phone_now_is), fontSize = 12.sp, color = TextTertiary, modifier = Modifier.padding(top = 8.dp))
             }
         },
         confirmButton = {
@@ -400,9 +402,9 @@ private fun RestoreDialog(info: Backup.Info, onDismiss: () -> Unit, onRestore: (
                 onClick = { onRestore(if (useFiles && info.hasCode) chosen + Backup.Section.EXTENSION_FILES else chosen) },
                 enabled = chosen.isNotEmpty(),
                 modifier = Modifier.testTag("restore_confirm"),
-            ) { Text("Restore") }
+            ) { Text(stringResource(R.string.restore)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -487,7 +489,7 @@ private fun BackupRow(item: BackupStore.Item, index: Int, onRestore: () -> Unit,
             )
         }
         IconButton(onClick = onDelete, modifier = Modifier.testTag("backup_item_${index}_delete")) {
-            Icon(Icons.Outlined.Delete, contentDescription = "Delete backup", tint = TextTertiary)
+            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.delete_backup), tint = TextTertiary)
         }
     }
 }

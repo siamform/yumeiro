@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- F2: counted text. Every language gives its own forms (Arabic has six, Bangla two). -->
+<resources>
+    <plurals name="vault_sources">
+        <item quantity="one">%d source</item>
+        <item quantity="other">%d sources</item>
+    </plurals>
+    <plurals name="vault_titles">
+        <item quantity="one">%d title</item>
+        <item quantity="other">%d titles</item>
+    </plurals>
+    <plurals name="vault_sources_found">
+        <item quantity="one">%d source found</item>
+        <item quantity="other">%d sources found</item>
+    </plurals>
+</resources>

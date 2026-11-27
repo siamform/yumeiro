@@ -1,0 +1,836 @@
+app_name	Yumeiro
+widget_name	দেখা চালিয়ে যান
+widget_description	শেষ যা দেখছিলেন সেখানে ফিরে যান
+widget_overline	দেখা চালিয়ে যান
+widget_empty_title	চালিয়ে যাওয়ার মতো এখনও কিছু নেই
+widget_empty_body	Yumeiro খুলে কিছু শুরু করুন
+widget_resume	আবার চালান
+widget_open	খুলুন
+version	সংস্করণ %1$s
+processor_installed_build	প্রসেসর %1$s · ইনস্টল করা বিল্ড: %2$s
+check_for_updates	আপডেট খুঁজুন
+check_automatically	নিজে থেকে খুঁজুন
+look_for_new_versions_each_time	অ্যাপ খোলার সময় প্রতিবার নতুন সংস্করণ খুঁজুন
+release_history	রিলিজের ইতিহাস
+view_all_versions_and_what_changed	সব সংস্করণ আর প্রতিটিতে কী বদলেছে দেখুন
+new	নতুন
+whats_new	নতুন কী আছে
+remind_me_later	পরে মনে করিয়ে দিন
+download	ডাউনলোড
+yumeiro_v	Yumeiro v%1$s
+of	%2$s-এর মধ্যে %1$s
+download_in_background	ব্যাকগ্রাউন্ডে ডাউনলোড করুন
+cancel_download	ডাউনলোড বাতিল করুন
+youll_get_a_notification_when_its	ইনস্টলের জন্য তৈরি হলে আপনি একটি নোটিফিকেশন পাবেন।
+yumeiro_v_has_been_downloaded_and	Yumeiro v%1$s ডাউনলোড ও যাচাই করা হয়েছে।
+android_will_ask_you_to_allow	Android আপনাকে Yumeiro-কে আপডেট ইনস্টল করার অনুমতি দিতে বলবে। এটা শুধু একবারই লাগে।
+later	পরে
+update_didnt_finish	আপডেট শেষ হয়নি
+close	বন্ধ করুন
+retry	আবার চেষ্টা করুন
+bug_fixes_and_improvements	বাগ ঠিক করা ও উন্নতি।
+downloaded	ডাউনলোড হয়েছে
+equalizer	ইকুয়ালাইজার
+response	音響 · রেসপন্স
+presets	প্রিসেট
+bands	ব্যান্ড
+enhancements	উন্নত শব্দ
+reset_to_flat	সমান করে দিন
+repository_page	রিপোজিটরির পাতা
+update	আপডেট
+manage	পরিচালনা
+see_all	সব দেখুন
+search_all_sources	সব সোর্সে খুঁজুন
+browse_everything_on	%1$s-এ সবকিছু দেখুন
+youre_all_caught_up_on	%1$s-এ আপনি সব দেখে ফেলেছেন
+done	হয়ে গেছে
+the_page_stopped_responding_close_this	পাতাটি সাড়া দিচ্ছে না। এটি বন্ধ করে আবার চেষ্টা করুন।
+opening	%1$s খোলা হচ্ছে…
+ads_and_pop_ups_are_blocked	আপনার জন্য বিজ্ঞাপন ও পপ-আপ আটকানো হয়েছে।
+open_anyway	তবুও খুলুন
+cancel	বাতিল
+this_calendar_has_no_genres_country	এই ক্যালেন্ডারে কোনো ধরন নেই। দেশের সূচিতে (সিরিজ › দেশ) আছে।
+the_calendar_is_worldwide_schedules_by	%1$s ক্যালেন্ডারটি বিশ্বজুড়ে। দেশভিত্তিক সূচি শুধু সিরিজ ও সিনেমার জন্য।
+nothing_loaded_yet	এখনও কিছু লোড হয়নি।
+couldnt_load_the_calendar_check_your	ক্যালেন্ডার লোড করা যায়নি। আপনার সংযোগ দেখুন।
+try_again	আবার চেষ্টা করুন
+nothing_listed_for_the_next_two	আগামী দুই সপ্তাহের জন্য কিছু নেই।
+offline_showing_the_last_saved_calendar	অফলাইন — শেষ সংরক্ষিত ক্যালেন্ডার দেখানো হচ্ছে।
+most_awaited	সবচেয়ে প্রতীক্ষিত
+play	চালান
+on	চালু
+turn_on	চালু করুন
+coming_up	আসছে
+pick_what_you_watch	কী দেখবেন বেছে নিন
+online_videos_come_from_extensions_made	অনলাইন ভিডিও আসে কমিউনিটির তৈরি এক্সটেনশন থেকে। কয়েকটি বেছে নিন — এগুলো মার্কেটের সবচেয়ে জনপ্রিয় ও সম্প্রতি আপডেট হওয়া।
+browse_market	মার্কেট দেখুন
+add_manually	নিজে যোগ করুন
+suggestions_arent_available_right_now_open	এখন কোনো পরামর্শ পাওয়া যাচ্ছে না। মার্কেট খুলুন বা একটি রিপোজিটরি লিংক যোগ করুন।
+yumeiro_doesnt_host_own_or_check	এক্সটেনশন যা দেখায় তা Yumeiro হোস্ট করে না, মালিকও নয়, যাচাইও করে না। আপনার এলাকায় যা দেখার অনুমতি আছে শুধু সেই সোর্সই ব্যবহার করুন।
+updated	%1$s আপডেট হয়েছে
+yumix_source	Yumix সোর্স
+clear	মুছুন
+clear_search	খোঁজা মুছুন
+yumix_opens_with_these_pick_at	Yumix এগুলো দিয়ে খোলে। অন্তত একটি বেছে নিন; পরে এই তালিকা থেকে যেকোনো এক্সটেনশন বেছে নিতে পারবেন।
+use_every_extension	সব এক্সটেনশন ব্যবহার করুন
+showing	দেখানো হচ্ছে: %1$s
+default_extensions	ডিফল্ট এক্সটেনশন
+selected	বাছাই করা
+show_all_extensions	সব এক্সটেনশন দেখান
+titles	%1$sটি টাইটেল
+view	দেখুন
+yumix_mix	Yumix মিক্স
+change_extension	এক্সটেনশন বদলান
+if_you_like	আপনার ভালো লাগলে 
+nothing_similar_listed_yet_pick_another	এর মতো এখনও কিছু নেই। অন্য একটি টাইটেল বেছে নিন।
+yumeiro_cloud_didnt_answer	Yumeiro Cloud সাড়া দেয়নি।
+nothing_listed_here_yet	এখানে এখনও কিছু নেই।
+data_tmdb_this_product_uses_the	তথ্য: TMDB। এই পণ্যটি TMDB API ব্যবহার করে, তবে TMDB এটি অনুমোদন বা প্রত্যয়ন করেনি।
+back	পিছনে
+security_checks	নিরাপত্তা যাচাই
+sites_that_asked_to_confirm_youre	যেসব সাইট আপনি মানুষ কিনা নিশ্চিত করতে বলেছে। প্রতিটি একবারই বলে; Yumeiro পাসটি আবার ব্যবহার করে, আর আপনি যে যাচাই বন্ধ করেন তা কিছুক্ষণ বন্ধই থাকে।
+check_now	এখনই যাচাই করুন
+forget	ভুলে যান
+found_automatically_from_cloudstreams_community	CloudStream-এর কমিউনিটি তালিকা ও GitHub থেকে নিজে থেকে পাওয়া। বাছাই করা রিপোজিটরিগুলো মার্কেট যাচাই করে ও কপি রাখে।
+update_all	সব আপডেট করুন (%1$s)
+extensions_are_third_party_code_found	এক্সটেনশন হলো নিজে থেকে খুঁজে পাওয়া অন্যদের কোড। Yumeiro এদের কনটেন্ট হোস্ট বা যাচাই করে না এবং কখনও DRM বা লগইন এড়িয়ে যায় না। শুধু যা বিশ্বাস করেন ও যা দেখার অনুমতি আছে তা-ই ইনস্টল করুন।
+in_repos	%1$sটি রিপোজিটরিতে
+installed	ইনস্টল করা
+add_repository	রিপোজিটরি যোগ করুন
+curated	বাছাই করা
+add_anything_auto_detect	যেকোনো কিছু যোগ করুন (নিজে চিনে নেবে)
+install_from_file_cs3_or_apk	ফাইল থেকে ইনস্টল করুন (.cs3 বা .apk)
+install_from_link	লিংক থেকে ইনস্টল করুন
+update_all_2	সব আপডেট করুন
+more_sources	আরও সোর্স
+aniyomi_mihon_manga_stremio_add_ons	Aniyomi, Mihon মাঙ্গা, Stremio অ্যাড-অন, JavaScript সোর্স ও হোম সার্ভার
+sources_installed	%1$sটি সোর্স: %2$sটি ইনস্টল করা
+official_built_in	অফিসিয়াল · অন্তর্ভুক্ত
+your_repositories	আপনার রিপোজিটরি
+extra_cloudstream_repositories_shown_in_the	মার্কেটে দেখানো অতিরিক্ত CloudStream রিপোজিটরি
+add	যোগ করুন
+no_repositories_added_the_market_already	কোনো রিপোজিটরি যোগ করা হয়নি। মার্কেটে আগে থেকেই যাচাই করাগুলো আছে।
+extensions_run_code_from_their_authors	এক্সটেনশন তাদের নির্মাতাদের কোড চালায়। শুধু বিশ্বাসযোগ্যগুলো ইনস্টল করুন, আর যা দেখার অনুমতি আছে তার জন্যই ব্যবহার করুন। সুরক্ষিত (DRM) ও টরেন্ট সোর্স চালানো হয় না।
+remove	%1$s সরাবেন?
+its_sources_disappear_from_online_you	এর সোর্সগুলো অনলাইন থেকে চলে যাবে। মার্কেট থেকে আবার ইনস্টল করতে পারবেন।
+remove_2	সরান
+their_sources_disappear_from_online_you	এগুলোর সোর্স অনলাইন থেকে চলে যাবে। মার্কেট থেকে আবার ইনস্টল করতে পারবেন।
+remove_repository	রিপোজিটরি সরাবেন?
+wont_appear_in_the_market_anymore	%1$s আর মার্কেটে দেখা যাবে না। এখান থেকে ইনস্টল করা এক্সটেনশনগুলো থেকে যাবে।
+safety_check	নিরাপত্তা যাচাই · %1$s
+static_check_of_the_installed_file	ইনস্টল করা ফাইলের স্থির যাচাই: %1$sটি ক্লাস, %2$sটি মেথড পড়া হয়েছে; কিছুই চালানো হয়নি।
+ok	ঠিক আছে
+settings	সেটিংস
+remove_clone	ক্লোন সরান · %1$s
+update_to_v	v%1$s-এ আপডেট করুন
+check_for_update	আপডেট খুঁজুন
+sign_out_of_site	সাইট থেকে সাইন আউট
+safety_check_2	নিরাপত্তা যাচাই
+sign_in_to_site	সাইটে সাইন ইন
+couldnt_start	শুরু করা যায়নি: %1$s
+turn_off	বন্ধ করুন
+market	মার্কেট
+remove_repository_2	রিপোজিটরি সরান
+more	আরও
+couldnt_load_more_retry	আর লোড করা যায়নি · আবার চেষ্টা
+thats_everything	এই সবকিছু
+clear_history	ইতিহাস মুছুন
+still_finding_sources	এখনও সোর্স খোঁজা হচ্ছে…
+tip	পরামর্শ: %1$s
+search_opensubtitles_subdl_and_subsource_add	OpenSubtitles, SubDL ও SubSource-এ খুঁজুন: সেটিংস → সাবটাইটেল ও ইন্ট্রো-তে এদের যেকোনো ফ্রি API কি যোগ করুন।
+searching	%1$s-এ খোঁজা হচ্ছে (%2$s)…
+nothing_found_in_this_language	এই ভাষায় কিছু পাওয়া যায়নি।
+watched	দেখা হয়েছে
+playing	চলছে
+now_playing	এখন চলছে
+audio	অডিও
+imdb	IMDb
+downloaded_2	ডাউনলোড করা
+download_for_offline	অফলাইনের জন্য ডাউনলোড
+quality_auto_delete_change_in_settings	মান: %1$s · নিজে মুছে যাবে: %2$s · সেটিংস → ডাউনলোড-এ বদলান
+version_2	সংস্করণ
+nothing_to_download_here	এখানে ডাউনলোড করার মতো কিছু নেই।
+next_youll_see_where_its_saved	এরপর দেখবেন কোথায় সংরক্ষিত হবে এবং স্থায়ী বা অফলাইন (নিজে মুছে যাবে) বেছে নেবেন। প্রতি এক্সটেনশনে একবারে একটি পর্ব ডাউনলোড হয়, যাতে সাইট আপনাকে আটকে না দেয়।
+from	থেকে
+to	পর্যন্ত
+to_2	পর্যন্ত
+nothing_in_this_format	এই ফরম্যাটে কিছু নেই।
+retry_download	আবার ডাউনলোড করুন
+download_episode	পর্ব ডাউনলোড করুন
+safety_check_3	নিরাপত্তা যাচাই: %1$s
+yumeiro_reads_the_extensions_code_without	Yumeiro এক্সটেনশনের কোড না চালিয়ে পড়ে দেখে। এতে স্পষ্ট ঝুঁকি ধরা পড়ে, সব নয় — শুধু বিশ্বাসযোগ্য মানুষের এক্সটেনশন ইনস্টল করুন।
+installing_anyway_gives_this_code_the	তবুও ইনস্টল করলে এই কোডে ওপরের ঝুঁকিগুলো থাকবে। নিশ্চিত করতে আবার ট্যাপ করুন।
+pop_ups_from_extensions	এক্সটেনশনের পপ-আপ
+show	দেখান
+dismiss	সরিয়ে দিন
+title_series_or_anime	টাইটেল, সিরিজ বা অ্যানিমে
+recent_searches	সাম্প্রতিক খোঁজ
+youve_reached_the_end_pull_down	আপনি শেষে পৌঁছেছেন। রিফ্রেশ করতে নিচে টানুন।
+set_up	সেট আপ
+search_only_source_find_titles_with	শুধু খোঁজার সোর্স — খুঁজে টাইটেল বের করুন
+search	খুঁজুন
+upcoming	আসন্ন
+movies_series_and_anime_in_the	আগামী দুই সপ্তাহের সিনেমা, সিরিজ ও অ্যানিমে
+extension_market	এক্সটেনশন মার্কেট
+extensions	এক্সটেনশন
+couldnt_load_more_try_again	আর লোড করা যায়নি। আবার চেষ্টা করুন
+no_results	কোনো ফল নেই
+no_repositories_yet_tap_to_add	এখনও কোনো রিপোজিটরি নেই। একটি LNReader প্লাগইন তালিকা যোগ করতে + ট্যাপ করুন।
+add_lnreaders_list	LNReader-এর তালিকা যোগ করুন
+v	%1$s · v%2$s
+install	ইনস্টল
+chapters	অধ্যায়
+this_source_listed_no_chapters	এই সোর্সে কোনো অধ্যায় নেই।
+a	A−
+a_2	A+
+previous	আগের
+next	পরের
+youve_reached_the_last_chapter_this	এই সোর্সের শেষ অধ্যায়ে পৌঁছেছেন।
+novel_sources	উপন্যাসের সোর্স
+text_size	লেখার আকার
+checks_run_on_your_phone_and	যাচাই চলে আপনার ফোন ও নেটওয়ার্কে। আপনার এলাকায় কোনো সাইট আটকানো থাকলে অন্য কারও জন্য চলা সোর্স এখানে ব্যর্থ হতে পারে।
+see_the_public_status_of_every	মার্কেটের প্রতিটি রিপোজিটরির সর্বজনীন অবস্থা দেখুন
+share_report	রিপোর্ট শেয়ার করুন
+paste_link	লিংক পেস্ট করুন
+trust	বিশ্বাস করুন
+trust_2	%1$s-কে বিশ্বাস করবেন?
+extensions_are_code_from_other_people	এক্সটেনশন অন্যদের লেখা কোড। শুধু পরিচিত রিপোজিটরির গুলো বিশ্বাস করুন। Yumeiro এই সাইনিং কি মনে রাখে; অন্য কি দিয়ে সাইন করা আপডেট নেওয়া হয় না।
+signing_key_sha_256	সাইনিং কি (SHA-256)
+dlna	DLNA
+dlna_servers_nearby	কাছাকাছি DLNA সার্ভার
+nothing_answered_make_sure_youre_on	কেউ সাড়া দেয়নি। একই Wi-Fi-তে আছেন আর সার্ভারে DLNA চালু আছে কিনা দেখুন।
+add_2	%1$s যোগ করুন
+name_optional	নাম (ঐচ্ছিক)
+user_name	ব্যবহারকারীর নাম
+password	পাসওয়ার্ড
+refresh	রিফ্রেশ
+uninstall	আনইনস্টল
+no_repositories_yet	এখনও কোনো রিপোজিটরি নেই।
+installed_sources_from_it_stay_until	এখান থেকে ইনস্টল করা সোর্স আপনি আনইনস্টল না করা পর্যন্ত থাকবে।
+remove_3	%1$s সরান
+uninstall_2	%1$s আনইনস্টল করুন
+listed_automatically_from_github_and_public	GitHub ও সর্বজনীন ক্যাটালগ থেকে নিজে থেকে তালিকাভুক্ত। রিপোজিটরিতে কী আছে Yumeiro তা যাচাই করে না; যেগুলো বিশ্বাস করেন সেগুলো যোগ করুন।
+loading_the_market	মার্কেট লোড হচ্ছে…
+nothing_matches	কিছু মেলেনি।
+show_more	আরও দেখান (%1$s)
+add_to_yumeiro	Yumeiro-তে যোগ করবেন?
+yumeiro_will_check_what_this_is	Yumeiro দেখে নেবে এটা কী (এক্সটেনশন, রিপোজিটরি, অ্যাড-অন না সার্ভার) এবং সঠিক ইঞ্জিন দিয়ে যোগ করবে।
+text	誰が見る？
+whos_watching	কে দেখছেন?
+manage_profiles	প্রোফাইল পরিচালনা
+forgot_the_pin	পিন ভুলে গেছেন?
+forgot	ভুলে গেছেন?
+screen_lock	স্ক্রিন লক
+delete	মুছুন
+add_profile	প্রোফাইল যোগ করুন
+each_profile_has_its_own_history	প্রতিটি প্রোফাইলের নিজস্ব ইতিহাস, দেখা চালিয়ে যান, আমার তালিকা, প্রিয়, YouTube ইতিহাস, প্রাপ্তবয়স্ক কনটেন্টের সুইচ ও ব্যক্তিগত ডাউনলোড আছে। এক্সটেনশন, সেটিংস ও ফোনের লাইব্রেরি সবার জন্য একই।
+remove_picture	ছবি সরান
+unlock_with_the_phones_lock	ফোনের লক দিয়ে খুলুন
+delete_2	%1$s মুছবেন?
+its_history_lists_favorites_private_downloads	এর ইতিহাস, তালিকা, প্রিয়, ব্যক্তিগত ডাউনলোড আর শুধু এটি যেসব এক্সটেনশন যোগ করেছে, সব এই ফোন থেকে মুছে যাবে। এটা আর ফেরানো যাবে না।
+name	নাম
+save	সংরক্ষণ
+security_questions	নিরাপত্তা প্রশ্ন
+if_s_pin_is_forgotten_these	%1$s-এর পিন ভুলে গেলে এই তিনটি উত্তর দিয়ে পিন সরানো যাবে, বাকি সব থেকে যাবে। উত্তরে বড়-ছোট হাতের অক্ষর আর বাড়তি স্পেস ধরা হয় না।
+question	প্রশ্ন %1$s
+answer	উত্তর
+answer_s_security_questions_to_remove	পিন সরাতে %1$s-এর নিরাপত্তা প্রশ্নের উত্তর দিন। আর কিছু বদলাবে না।
+i_dont_know_the_answers	আমি উত্তরগুলো জানি না
+remove_pin	পিন সরান
+picture_and_anime4k	ছবি ও Anime4K
+anime4k	Anime4K
+this_title_only	শুধু এই টাইটেল
+your_device_is_hot_so_sharpening	আপনার ডিভাইস গরম হয়ে গেছে, তাই ঠান্ডা না হওয়া পর্যন্ত শার্পনিং ও Anime4K বন্ধ থাকবে। রঙের সেটিংস চালু থাকবে।
+hdr_videos_are_always_shown_as	HDR ভিডিও সবসময় যেমন তৈরি তেমনই দেখানো হয়; এই সেটিংস সাধারণ (SDR) ভিডিওর জন্য।
+reset_all	সব রিসেট করুন
+reset_all_picture_settings	ছবির সব সেটিংস রিসেট করবেন?
+every_preset_picture_control_filter_setting	সব প্রিসেট, ছবির নিয়ন্ত্রণ, ফিল্টার ও টাইটেলভিত্তিক সেটিং ডিফল্টে ফিরে যাবে।
+reset	রিসেট
+video_filter	ভিডিও ফিল্টার
+up_next	এরপর
+play_now	এখনই চালান
+controls_locked_tap_to_unlock	নিয়ন্ত্রণ লক করা · খুলতে ট্যাপ করুন
+live	লাইভ
+close_player	প্লেয়ার বন্ধ করুন
+audio_tracks	অডিও ট্র্যাক
+subtitles	সাবটাইটেল
+speed	গতি
+aspect_ratio	অনুপাত
+picture_in_picture	ছবির ভেতরে ছবি
+video_details	ভিডিওর বিবরণ
+lock_controls	নিয়ন্ত্রণ লক করুন
+unlock_controls	নিয়ন্ত্রণ খুলুন
+playback_speed	চালানোর গতি
+adjust_video_and_audio_speed_seamlessly	সুর ঠিক রেখে ভিডিও ও অডিওর গতি নির্বিঘ্নে বদলান। দ্রুত 2x: ভিডিওতে চেপে ধরে রাখুন, বা গতির বোতামে লং-প্রেস করুন।
+this_video_has_one_audio_track	এই ভিডিওতে একটাই অডিও ট্র্যাক, তাই বদলানোর কিছু নেই। অন্য ভাষার জন্য সোর্স থেকে একটি ডাব সোর্স বেছে নিন।
+subtitles_captions	সাবটাইটেল ও ক্যাপশন
+external_subtitle_file	বাইরের সাবটাইটেল ফাইল
+load_from_file_srt_vtt_ass	ফাইল থেকে লোড করুন (.srt, .vtt, .ass)
+search_subtitles_online	অনলাইনে সাবটাইটেল খুঁজুন
+loaded	লোড হয়েছে: %1$s
+more_from_this_source	এই সোর্স থেকে আরও
+subtitle_style_size_colour_position	সাবটাইটেলের ধরন: আকার, রং, অবস্থান
+subtitle_tracks	সাবটাইটেল ট্র্যাক
+subtitles_off	সাবটাইটেল বন্ধ
+subtitle_sync_delay	সাবটাইটেল মেলানোর বিলম্ব
+t_1_0s	-1.0s
+t_250ms	-250ms
+t_250ms_2	+250ms
+t_1_0s_2	+1.0s
+skip_to_next_video	পরের ভিডিওতে যান
+stream_health	স্ট্রিমের অবস্থা
+quality	মান
+picture_size	ছবির আকার
+smaller_picture	ছোট ছবি
+bigger_picture	বড় ছবি
+subtitle_style	সাবটাইটেলের ধরন
+use_android_caption_settings	Android-এর ক্যাপশন সেটিংস ব্যবহার করুন
+follows_settings_accessibility_captions	সেটিংস → অ্যাক্সেসিবিলিটি → ক্যাপশন অনুসরণ করে
+bold_text	মোটা লেখা
+keep_the_files_own_colours	ফাইলের নিজের রং রাখুন
+colours_and_positions_written_inside_srt	SRT, VTT বা TTML ফাইলের ভেতরে লেখা রং ও অবস্থান। ASS/SSA ফাইল সবসময় নিজের চেহারা রাখে
+reset_to_default	ডিফল্টে ফেরান
+subtitles_look_like_this	সাবটাইটেল দেখতে এমন হবে
+hidden_folder_s	%1$sটি লুকানো ফোল্ডার
+back_to_folders	ফোল্ডারে ফিরে যান
+sort_videos	ভিডিও সাজান
+rescan_offline_videos	অফলাইন ভিডিও আবার খুঁজুন
+online_subtitles	অনলাইন সাবটাইটেল
+movie_or_episode_name	সিনেমা বা পর্বের নাম
+no_subtitles_found_try_a_shorter	কোনো সাবটাইটেল পাওয়া যায়নি। ছোট টাইটেল বা অন্য ভাষা দিয়ে চেষ্টা করুন।
+exact_match	হুবহু মিল · 
+dynamic_range_compressor	ডায়নামিক রেঞ্জ কম্প্রেসর
+loud_protect_your_hearing	জোরে: আপনার শ্রবণশক্তি রক্ষা করুন
+resumed_at	%1$s থেকে আবার শুরু
+start_over	শুরু থেকে
+dismiss_resume_notice	আবার শুরুর নোটিশ সরান
+play_with	যা দিয়ে চালাবেন
+watch_in_yumeiro_or_open_this	Yumeiro-তে দেখুন, বা অন্য কোনো প্লেয়ার অ্যাপে এই ভিডিও খুলুন।
+another_app	অন্য অ্যাপ
+t_2x	2x
+reset_zoom	জুম রিসেট · %1$s
+reset_rotation	ঘোরানো রিসেট · %1$s
+text_2	夢色
+music_video_streams	গান · ভিডিও · স্ট্রিম
+by_asfakul_siam	Asfakul Siam-এর তৈরি
+download_2	%1$s ডাউনলোড করুন
+not_enough_free_space_for_this	এই ডাউনলোডের জন্য যথেষ্ট খালি জায়গা নেই।
+offline_copy	অফলাইন কপি
+permanent	স্থায়ী
+where_it_goes_and_tips	কোথায় যাবে ও পরামর্শ
+dont_ask_again	আর জিজ্ঞেস করবেন না
+download_settings	ডাউনলোড সেটিংস
+nothing_here_yet_in_downloads_tap	এখানে এখনও কিছু নেই। ডাউনলোডে, শেষ হওয়া ডাউনলোডের চোখ আইকনে ট্যাপ করে এখানে আনুন। এটি ডাউনলোড তালিকা, গ্যালারি ও অন্য সব অ্যাপ থেকে সরে যাবে।
+private_downloads_are_not_in_backups	ব্যক্তিগত ডাউনলোড ব্যাকআপে থাকে না। এই প্রোফাইল মুছলে এগুলোও মুছে যায়।
+offline_settings	অফলাইন সেটিংস
+auto_delete_quality_at_once	নিজে মুছবে: %1$s · মান: %2$s · একসাথে %3$sটি
+change	বদলান
+how_downloads_work	ডাউনলোড কীভাবে কাজ করে
+no_downloads_yet	এখনও কোনো ডাউনলোড নেই
+save_episodes_movies_youtube_videos_and	ইন্টারনেট ছাড়া দেখতে বা শুনতে পর্ব, সিনেমা, YouTube ভিডিও ও গান সংরক্ষণ করুন।
+find_something_to_save	সংরক্ষণের মতো কিছু খুঁজুন
+these_files_will_be_removed_from	%1$s: এই ফাইলগুলো এই ফোন থেকে মুছে যাবে। সিরিজের অন্য কপিগুলো থাকবে।
+private_locked	ব্যক্তিগত (লক করা)
+hide_tips	পরামর্শ লুকান
+pause	থামান
+delete_folder	ফোল্ডার মুছুন
+download_3	%1$s ডাউনলোড করবেন?
+quality_for_this_download	এই ডাউনলোডের মান
+where_it_goes	কোথায় যাবে
+keep_as	যেভাবে রাখবেন
+tips	পরামর্শ
+dont_ask_again_turn_it_back	আর জিজ্ঞেস করবেন না (সেটিংস → ডাউনলোড-এ আবার চালু করুন)
+read_from	যেখান থেকে পড়বেন
+manga_sources_installed	%1$sটি মাঙ্গা সোর্স ইনস্টল করা
+no_source_matches	কোনো সোর্স মেলেনি
+continue_reading	পড়া চালিয়ে যান
+chapters_2	%1$sটি অধ্যায়
+end_of_your_saved_chapters	আপনার সংরক্ষিত অধ্যায় শেষ
+connect_to_the_internet_or_save	পড়া চালিয়ে যেতে ইন্টারনেটে যুক্ত হন বা পরের অধ্যায় সংরক্ষণ করুন।
+end_of_chapter	অধ্যায় শেষ
+next_2	এরপর: %1$s
+read_next_chapter	পরের অধ্যায় পড়ুন
+translate_pages	পাতা অনুবাদ করুন
+translate_speech_bubbles	সংলাপের বাবল অনুবাদ করুন
+read_on_this_phone_only_the	এই ফোনেই পড়া হয়। প্রতি ভাষার জন্য শুধু একবার ভাষা প্যাক ডাউনলোড হয়।
+download_language_packs_on_wi_fi	শুধু Wi-Fi-তে ভাষা প্যাক ডাউনলোড করুন
+long_press_a_translation_to_hide	লুকাতে অনুবাদে লং-প্রেস করুন।
+language_packs_on_this_phone	এই ফোনের ভাষা প্যাক
+checking	যাচাই হচ্ছে…
+none_yet_english_is_built_in	এখনও নেই। ইংরেজি অন্তর্ভুক্ত; অন্যগুলো প্রথমবার ব্যবহারে ডাউনলোড হয়।
+page_failed_tap_to_retry	পাতা %1$s লোড হয়নি · আবার চেষ্টা করতে ট্যাপ করুন
+manage_sources	সোর্স পরিচালনা
+sort	সাজান
+saved_on_this_device_tap_to	এই ডিভাইসে সংরক্ষিত, সরাতে ট্যাপ করুন
+save_for_offline_reading	অফলাইনে পড়ার জন্য সংরক্ষণ
+previous_chapter	আগের অধ্যায়
+next_chapter	পরের অধ্যায়
+full_player	  পূর্ণ প্লেয়ার
+close_shorts	Shorts বন্ধ করুন
+thats_the_whole_list_search_or	পুরো তালিকা এটুকুই। আরও দেখতে খুঁজুন বা অন্য চিপ বেছে নিন।
+streams_come_straight_from_youtube_without	স্ট্রিম কোনো অ্যাকাউন্ট ছাড়াই সরাসরি YouTube থেকে আসে। আপনার বিষয়, খোঁজ ও ইতিহাস এই ডিভাইসেই থাকে।
+for_you	おすすめ · আপনার জন্য
+topics	বিষয়
+add_a_topic	একটি বিষয় যোগ করুন
+your_topics	আপনার বিষয়
+topics_shape_your_chips_and_shelves	বিষয় অনুযায়ী আপনার চিপ ও তাক সাজানো হয়। সরাতে একটিতে ট্যাপ করুন।
+no_topics_yet_the_page_uses	এখনও কোনো বিষয় নেই — পাতাটি আপনি যা চালান আর আজকের মিক্স ব্যবহার করে।
+shuffle_todays_mix	আজকের মিক্স এলোমেলো করুন
+use_simple_discovery_instead	বরং সহজ আবিষ্কার ব্যবহার করুন
+shuffle	এলোমেলো
+save_to_vault	ভল্টে সংরক্ষণ
+title	টাইটেল
+no_video_sources_were_found_on	এই পাতায় এখনও কোনো ভিডিও সোর্স পাওয়া যায়নি। ভিডিওটি চালু করে আবার চেষ্টা করুন, বা পাতাটিই সংরক্ষণ করুন।
+rename	নাম বদলান
+delete_3	“%1$s” মুছবেন?
+the_title_and_its_saved_links	টাইটেল ও এর সংরক্ষিত লিংক ভল্ট আর Download › Yumeiro › Vault থেকে মুছে যাবে।
+share_file	ফাইল শেয়ার করুন
+import_vault_files	ভল্ট ফাইল আমদানি করুন
+share_the_vault_file	ভল্ট ফাইল শেয়ার করুন
+more_for	%1$s-এর জন্য আরও
+play_a_song_or_a_video	একটি গান বা ভিডিও চালান, আপনার কার্যকলাপ এখানে দেখা যাবে।
+with_activity	%1$s দিন কার্যকলাপসহ
+statistics_stay_on_this_device_are	পরিসংখ্যান এই ডিভাইসেই থাকে, ইনকগনিটো চালু থাকলে গোনা হয় না, আর আপনার লাইব্রেরি ব্যাকআপের সাথে যায়।
+clear_statistics	পরিসংখ্যান মুছুন
+clear_statistics_2	পরিসংখ্যান মুছবেন?
+the_activity_map_streaks_and_totals	কার্যকলাপের মানচিত্র, ধারাবাহিকতা ও মোট হিসাব শূন্য থেকে আবার শুরু হবে। আপনার ইতিহাস ও চালানোর সংখ্যা থাকবে।
+less	কম
+more_0_15_min_1_h	বেশি (0, 15 মিনিট, 1 ঘণ্টা, 3 ঘণ্টা, আরও)
+your_activity	আপনার কার্যকলাপ
+streak_this_week	ধারাবাহিকতা %1$s · এই সপ্তাহে %2$s
+room_code	রুম কোড
+address_watching	ঠিকানা %1$s · %2$s জন দেখছেন
+close_room	রুম বন্ধ করুন
+you_need_the_same_source_installed	হোস্টের মতো একই সোর্স ইনস্টল থাকতে হবে। প্রতিটি ফোন নিজে স্ট্রিম করে।
+leave	বেরিয়ে যান
+one_phone_hosts_others_join_with	একটি ফোন হোস্ট করে, অন্যরা ৪ অঙ্কের কোড দিয়ে যোগ দেয়। বাড়ির Wi-Fi বা ফোনের হটস্পটে চলে; প্রতিটি ফোনের নিজের স্ট্রিম ছাড়া কিছুই ইন্টারনেট দিয়ে যায় না।
+host_a_room	রুম হোস্ট করুন
+join_by_address	ঠিকানা দিয়ে যোগ দিন
+no_rooms_yet_when_someone_on	এখনও কোনো রুম নেই। একই Wi-Fi-র কেউ রুম হোস্ট করুন ট্যাপ করলে এখানে দেখা যাবে।
+join	যোগ দিন
+join_2	%1$s-এ যোগ দিন
+open_an_m3u_playlist_in_videos	এখান থেকে চ্যানেল বদলাতে ভিডিও → লাইভ টিভি-তে একটি M3U প্লেলিস্ট খুলুন।
+nothing_related_found_for_this_video	এই ভিডিওর সাথে সম্পর্কিত কিছু পাওয়া যায়নি।
+reading_video_details	ভিডিওর বিবরণ পড়া হচ্ছে…
+size_estimated_from_the_streams_bitrate	স্ট্রিমের বিটরেট থেকে আকার আনুমানিক।
+load_more_of	আরও লোড করুন · %2$s-এর মধ্যে %1$s
+audio_language	অডিওর ভাষা
+remembered	মনে রাখা হয়েছে
+episodes	পর্ব
+dimmed_for_focus_tap_to_brighten	মনোযোগের জন্য আবছা · উজ্জ্বল করতে ট্যাপ করুন
+maybe_later	হয়তো পরে
+join_the_yumeiro_community	Yumeiro কমিউনিটিতে যোগ দিন
+get_yumeiro_news_first_on_telegram	Telegram-এ সবার আগে Yumeiro-র খবর পান, সাহায্য চান ও আইডিয়া শেয়ার করুন।
+closes_in_s	%1$s সেকেন্ডে বন্ধ হবে
+yume_guide	Yume · গাইড
+clear_all_notifications	সব নোটিফিকেশন মুছবেন?
+they_are_removed_from_this_page	এগুলো এই পাতা থেকে সরানো হবে। আপনার সেটিংস একই থাকবে।
+until_then_news_only_shows_up	%1$s ততক্ষণ খবর শুধু এখানেই দেখা যাবে।
+mark_all_as_read	সব পড়া হয়েছে চিহ্নিত করুন
+clear_all	সব মুছুন
+keep_notifications_on_time	নোটিফিকেশন সময়মতো রাখুন
+open_settings	সেটিংস খুলুন
+fix	ঠিক করুন
+tap_a_detail_to_copy_it	কপি করতে একটি তথ্যে ট্যাপ করুন। যেকোনো পরিমাণই সাহায্য করে, একটা সুন্দর কথাও।
+other_ways_to_help	সাহায্যের অন্য উপায়
+a_star_on_github_or_a	GitHub-এ একটি স্টার বা ফলো করতে কিছু লাগে না, কিন্তু অনেক সাহায্য করে।
+star_on_github	GitHub-এ স্টার দিন
+yumeiro_click	yumeiro.click
+copy	%1$s কপি করুন
+buy_a_coffee	এক কাপ কফি কিনে দিন
+start_using_yumeiro	Yumeiro ব্যবহার শুরু করুন
+yumeiro	夢色 YUMEIRO
+new_to_yumeiro	Yumeiro-তে নতুন?
+explore_and_discover_what_you_can	ঘুরে দেখুন এখানে কী কী করা যায়।
+already_familiar_with_yumeiro	Yumeiro আগে থেকেই চেনা?
+you_can_skip_and_start_using	এড়িয়ে গিয়ে অ্যাপ ব্যবহার শুরু করতে পারেন।
+explore_yumeiro	Yumeiro ঘুরে দেখুন
+skip_for_now	এখন এড়িয়ে যান
+set_up_the_essentials_instead	বরং জরুরি জিনিস সেট আপ করুন
+set_up_the_essentials	জরুরি জিনিস সেট আপ করুন
+of_ready_tap_any_step_to	%2$s-এর মধ্যে %1$sটি তৈরি। এখনই করতে যেকোনো ধাপে ট্যাপ করুন।
+yumeiro_is_locked	Yumeiro লক করা
+unlock_with_your_fingerprint_face_or	আঙুলের ছাপ, মুখ বা স্ক্রিন লক দিয়ে খুলুন
+unlock	খুলুন
+play_album	অ্যালবাম চালান
+play_all	সব চালান
+play_folder	ফোল্ডার চালান
+sort_options	সাজানোর বিকল্প
+shuffle_all	সব এলোমেলো চালান
+your_mix	混 · আপনার মিক্স
+device_youtube_music	ডিভাইস + YouTube Music
+nothing_to_mix_yet	মিক্স করার মতো এখনও কিছু নেই
+play_your_mix	আপনার মিক্স চালান
+got_it	বুঝেছি
+rename_website	ওয়েবসাইটের নাম বদলান
+sign_in_isnt_available_here	এখানে সাইন ইন করা যায় না
+search_your_sites_or_type_an	আপনার সাইটে খুঁজুন বা ঠিকানা লিখুন
+recently_visited	সম্প্রতি দেখা
+how_it_works	কীভাবে কাজ করে
+move_up	ওপরে সরান
+move_down	নিচে সরান
+duplicate	ডুপ্লিকেট
+vault	ভল্ট
+website_settings	ওয়েবসাইট সেটিংস
+save_2	%1$s সংরক্ষণ করুন
+remove_from_recent	সাম্প্রতিক থেকে %1$s সরান
+downloading_telegram_support_once_about_mb	Telegram সাপোর্ট ডাউনলোড হচ্ছে (একবারই, প্রায় %1$s MB)
+this_sign_in_step_isnt_supported	এই সাইন-ইন ধাপ (%1$s) এখনও Yumeiro-তে চলে না। Telegram অ্যাপে একবার সাইন ইন করে আবার চেষ্টা করুন।
+signing_out	সাইন আউট হচ্ছে…
+telegram_closed	Telegram বন্ধ হয়েছে।
+open_again	আবার খুলুন
+phone_number	ফোন নম্বর
+with_the_country_code_for_example	দেশের কোডসহ, যেমন +880 1712 345678। Telegram আপনার Telegram অ্যাপে বা SMS-এ একটি কোড পাঠাবে।
+yumeiro_signs_in_with_telegrams_official	Yumeiro Telegram-এর অফিসিয়াল লাইব্রেরি দিয়ে সাইন ইন করে। আপনার মেসেজ আর কোথাও পাঠানো হয় না; লগইন শুধু এই প্রোফাইলের জন্য এনক্রিপ্ট করে রাখা হয়।
+code_sent_to	%1$s %2$s-এ কোড পাঠানো হয়েছে
+change_number	নম্বর বদলান
+send_again	আবার পাঠান
+two_step_verification_password	দুই-ধাপ যাচাইয়ের পাসওয়ার্ড
+hint	ইঙ্গিত: %1$s
+forgot_it_reset_it_in_the	ভুলে গেছেন? Telegram অ্যাপে রিসেট করুন (সেটিংস › প্রাইভেসি ও সিকিউরিটি › টু-স্টেপ ভেরিফিকেশন)।
+this_number_has_no_telegram_account	এই নম্বরে এখনও কোনো Telegram অ্যাকাউন্ট নেই। একটি তৈরি করুন:
+first_name	নামের প্রথম অংশ
+last_name_optional	পদবি (ঐচ্ছিক)
+sign_out_of_telegram	Telegram থেকে সাইন আউট করবেন?
+yumeiro_forgets_this_login_and_its	Yumeiro এই লগইন ও ডাউনলোড করা Telegram ফাইল ভুলে যাবে। আপনার অ্যাকাউন্ট নিজে বদলাবে না।
+sign_out	সাইন আউট
+older	পুরোনো
+open_my_telegram_org	my.telegram.org খুলুন
+api_id	API ID
+api_hash	API hash
+save_and_sign_in	সংরক্ষণ করে সাইন ইন করুন
+use_yumeiros_keys_again	আবার Yumeiro-র কি ব্যবহার করুন
+search_this_channel	এই চ্যানেলে খুঁজুন
+open_in_telegram	Telegram-এ খুলুন
+open_my_telegram_account	আমার Telegram অ্যাকাউন্ট খুলুন
+older_posts	পুরোনো পোস্ট
+subscribers	%1$s জন সাবস্ক্রাইবার
+new_2	নতুন
+manage_ads	বিজ্ঞাপন পরিচালনা
+ads_and_pop_ups_are_blocked_2	সেটিংসের সুইচ দিয়ে সব সাইটে বিজ্ঞাপন ও পপ-আপ আটকানো হয়। আপনি নিজে যা লুকিয়েছেন তা এখানে আছে।
+nothing_hidden_yet_in_a_page	এখনও কিছু লুকানো হয়নি। কোনো পাতায় মেনু খুলে ‘একটি অংশ লুকান’ বেছে নিন।
+show_all	সব দেখান
+duplicate_website	ওয়েবসাইট ডুপ্লিকেট করুন
+save_again_under_another_address_like	%1$s আরেকটি ঠিকানায় আবার সংরক্ষণ করুন, যেমন মিরর ডোমেইন বা সাইটের একটি অংশ।
+address	ঠিকানা
+save_copy	কপি সংরক্ষণ
+close_all	সব বন্ধ করুন
+new_tab	নতুন ট্যাব
+show_this_part_again	এই অংশ আবার দেখান
+close_2	%1$s বন্ধ করুন
+add_channels_from_a_list	তালিকা থেকে চ্যানেল যোগ করুন
+paste_names_or_t_me_links	@নাম বা t.me লিংক পেস্ট করুন, প্রতি লাইনে একটি। আগে সংরক্ষিত চ্যানেল যেমন আছে তেমন থাকবে।
+rename_channel	চ্যানেলের নাম বদলান
+share_channel_list	চ্যানেলের তালিকা শেয়ার করুন
+how_telegram_works	Telegram কীভাবে কাজ করে
+search_your_channels	আপনার চ্যানেলে খুঁজুন
+no_channels_yet	এখনও কোনো চ্যানেল নেই
+add_a_channel	একটি চ্যানেল যোগ করুন
+sign_in	সাইন ইন
+signed_in	সাইন ইন করা
+your_telegram_account	আপনার Telegram অ্যাকাউন্ট
+add_channel	চ্যানেল যোগ করুন
+your_account	আপনার অ্যাকাউন্ট
+your_login_stays_on_this_phone	আপনার লগইন এই ফোনেই থাকে।
+close_search	খোঁজা বন্ধ করুন
+the_source_could_not_be_reached	শেষ যাচাইয়ে সোর্সে পৌঁছানো যায়নি; শেষ ভালো কপিটি দেওয়া হচ্ছে।
+view_on_github	GitHub-এ দেখুন
+now_playing_2	এখন চলছে: %1$s
+rescan_streams	স্ট্রিম আবার খুঁজুন
+minimize_streams	স্ট্রিম ছোট করুন
+show_streams	স্ট্রিম দেখান
+close_streams	স্ট্রিম বন্ধ করুন
+network_stream	নেটওয়ার্ক স্ট্রিম
+hls_dash_mp4_m3u_youtube_drive	HLS · DASH · MP4 · M3U · YouTube · Drive · TeraBox · Torrent
+stream_or_playlist_url	স্ট্রিম বা প্লেলিস্টের URL
+https_example_com_live_index_m3u8	https://example.com/live/index.m3u8
+detected	শনাক্ত: %1$s
+headers_drm	হেডার ও DRM
+user_agent_referer_origin_cookie	User-Agent, Referer, Origin, Cookie
+user_agent	User-Agent
+custom_user_agent	নিজস্ব ইউজার এজেন্ট
+referer	Referer
+origin	Origin
+cookie	Cookie
+extra_headers_key_value_per_line	বাড়তি হেডার (প্রতি লাইনে Key: Value)
+drm	DRM
+license_server_url	লাইসেন্স সার্ভারের URL
+clearkey_kid_key_hex	ClearKey kid:key (hex)
+headers_are_sent_with_every_manifest	প্রতিটি ম্যানিফেস্ট, সেগমেন্ট ও কি অনুরোধের সাথে হেডার পাঠানো হয় — কোনো হোস্ট শুধু নিজের ওয়েব প্লেয়ার মানলে এগুলো ব্যবহার করুন।
+open_in	%1$s-এ খুলুন
+m3u_file	M3U ফাইল
+open_as_channel_list	চ্যানেল তালিকা হিসেবে খুলুন
+playlists	প্লেলিস্ট
+play_a_link	একটি লিংক চালান
+recent_streams	সাম্প্রতিক স্ট্রিম
+you_can_also_share_links_to	যেকোনো অ্যাপ থেকে Yumeiro-তে লিংক শেয়ারও করতে পারেন।
+edit	সম্পাদনা
+paste	পেস্ট
+back_to_live_tv	লাইভ টিভিতে ফিরে যান
+save_to_playlist	প্লেলিস্টে সংরক্ষণ
+edit_stream	স্ট্রিম সম্পাদনা
+recently_played	সম্প্রতি চালানো
+channels	%1$sটি চ্যানেল
+reload	আবার লোড করুন
+open_in_chrome	Chrome-এ খুলুন
+close_tab	ট্যাব বন্ধ করুন
+forward	সামনে
+stop_hiding_parts	অংশ লুকানো বন্ধ করুন
+page_menu	পাতার মেনু
+tools	টুল
+links_files_and_playlists	লিংক, ফাইল ও প্লেলিস্ট
+search_every_channel	সব চ্যানেলে খুঁজুন
+country	দেশ
+countries_in_your_playlists	আপনার প্লেলিস্টে %1$sটি দেশ
+your_playlists_have_channels_from_countries	আপনার প্লেলিস্টে %1$sটি দেশের চ্যানেল আছে। বানান দেখে নিন।
+save_as_playlist	প্লেলিস্ট হিসেবে সংরক্ষণ
+export_as_m3u	.m3u হিসেবে রপ্তানি করুন
+disable	নিষ্ক্রিয় করুন
+close_list	তালিকা বন্ধ করুন
+last_update_failed	শেষ আপডেট ব্যর্থ: %1$s
+this_playlist_is_disabled	এই প্লেলিস্ট নিষ্ক্রিয়।
+enable	সক্রিয় করুন
+auto_update	নিজে আপডেট
+a_newer_version_is_available	একটি নতুন সংস্করণ পাওয়া যাচ্ছে
+playlist_options	প্লেলিস্টের বিকল্প
+back_to_top	ওপরে ফিরে যান
+stop	থামান
+browser	ব্রাউজার
+finding_the_video_on	%1$s-এ ভিডিও খোঁজা হচ্ছে
+show_the_page	পাতাটি দেখান
+open_with_your_telegram_account	আপনার Telegram অ্যাকাউন্ট দিয়ে @%1$s খুলবেন?
+not_now	এখন না
+minimize	ছোট করুন
+default	ডিফল্ট
+refresh_now	এখনই রিফ্রেশ করুন
+playlist_market	প্লেলিস্ট মার্কেট
+restore_default_playlist	ডিফল্ট প্লেলিস্ট ফিরিয়ে আনুন
+playlist_url_m3u	প্লেলিস্টের URL (.m3u)
+https_raw_githubusercontent_com_playlist_m3u	https://raw.githubusercontent.com/…/playlist.m3u
+analyse_link	লিংক বিশ্লেষণ করুন
+default_playlist_changing_the_url_stops	ডিফল্ট প্লেলিস্ট: URL বদলালে এটি আর ২ ঘণ্টার সিঙ্ক অনুসরণ করবে না।
+new_playlist_name	নতুন প্লেলিস্টের নাম
+create_add	তৈরি করে যোগ করুন
+stream_url	স্ট্রিমের URL
+group	গ্রুপ
+logo_url	লোগোর URL
+headers_and_drm_are_kept_as	হেডার ও DRM যেমন আছে তেমন রাখা হয়।
+streams_opened_not_saved	%1$sটি স্ট্রিম · খোলা হয়েছে, সংরক্ষিত নয়
+more_playlist_actions	প্লেলিস্টের আরও কাজ
+follow_a_series_with_reminders_on	রিমাইন্ডার চালু রেখে একটি সিরিজ ফলো করুন, এর নতুন পর্ব এখানে আগে দেখা যাবে।
+youre_all_caught_up	夢色 · আপনি সব দেখে ফেলেছেন।
+customize_home	হোম সাজান
+turn_sections_on_or_off_continue	অংশগুলো চালু বা বন্ধ করুন। দেখা চালিয়ে যান সবসময় ওপরে থাকে।
+finish_setting_up	সেট আপ শেষ করুন
+of_ready_sources_dns_alerts	%2$s-এর মধ্যে %1$sটি তৈরি · সোর্স, DNS, অ্যালার্ট
+tour	পরিচিতি
+songs_videos_picks_from_your_extensions	গান · ভিডিও · আপনার এক্সটেনশন থেকে বাছাই
+hide	লুকান
+copy_support_id	সাপোর্ট আইডি কপি করুন · %1$s
+dns_for_streams	স্ট্রিমের জন্য DNS
+used_for_playlists_stream_links_and	অ্যাপের ভেতরে প্লেলিস্ট, স্ট্রিম লিংক ও চালানোর জন্য ব্যবহৃত। ডিফল্ট হলো সিস্টেম DNS।
+vpn_settings	VPN সেটিংস
+connection	সংযোগ
+test	পরীক্ষা
+download_with	যা দিয়ে ডাউনলোড করবেন
+auto_delete_watched_downloads	দেখা ডাউনলোড নিজে মুছে ফেলুন
+offline_copies_are_removed_this_long	অফলাইন কপি শেষ হওয়ার এতক্ষণ পরে মুছে যায়। স্থায়ী (পিন করা) গুলো সবসময় থাকে।
+episode_quality	পর্বের মান
+highest_quality_to_save_lower_saves	সংরক্ষণের সর্বোচ্চ মান। কম মানে জায়গা ও ডেটা বাঁচে।
+downloads_at_once	একসাথে কয়টি ডাউনলোড
+never_more_than_one_per_extension	প্রতি এক্সটেনশনে কখনও একটির বেশি নয়, যাতে সাইট আপনাকে আটকে না দেয়।
+where_files_go	ফাইল কোথায় যায়
+clean_up_now	এখনই পরিষ্কার করুন
+chapters_go_to_anilist_and_myanimelist	অধ্যায় AniList ও MyAnimeList-এ যায়। টাইটেল তার নাম ও বছর দিয়ে মেলানো হয়; যথেষ্ট কাছাকাছি মিল না পেলে কিছুই পাঠানো হয় না, তাই ভুল এন্ট্রি কখনও বদলায় না।
+sync_now	এখনই সিঙ্ক করুন
+decoder_renderer_and_classic_anime4k_changes	ডিকোডার, রেন্ডারার ও ক্লাসিক Anime4K-এর পরিবর্তন পরের খোলা ভিডিওতে কাজ করবে। V2 প্রিসেট প্লেয়ারেও সরাসরি বদলানো যায় (আরও → Anime4K)।
+top_bar	ওপরের বার
+reorder_the_buttons_or_hide_the	বোতামগুলোর ক্রম বদলান, বা যেগুলো কখনও ব্যবহার করেন না সেগুলো লুকান। প্রথমগুলো বারে থাকে, বাকিগুলো আরও-র মধ্যে
+buttons_on_the_bar	বারের বোতাম
+middle_and_bottom	মাঝে ও নিচে
+play_and_pause_always_stay	চালান ও থামান সবসময় থাকে
+fields_to_show	যেসব তথ্য দেখাবে
+all	সব
+fewer_buttons_on_the_bar	বারে কম বোতাম
+more_buttons_on_the_bar	বারে বেশি বোতাম
+move_up_2	%1$s ওপরে সরান
+move_down_2	%1$s নিচে সরান
+backdrop	পটভূমি
+the_picture_behind_every_page_each	夢色 — প্রতিটি পাতার পেছনের ছবি। প্রতিটি থিমের নিজস্ব দৃশ্য আছে।
+intensity	তীব্রতা
+no_settings_match_try_a_shorter	“%1$s”-এর সাথে কোনো সেটিং মেলেনি। ছোট শব্দ দিয়ে চেষ্টা করুন।
+make_yumeiro_yours	Yumeiro-কে নিজের মতো করুন
+songs_already_play_back_to_back	গান এমনিতেই বিরতি ছাড়া একটার পর একটা চলে, আর স্ক্রিন বন্ধ থাকলেও Yumeiro চলতে থাকে।
+yumeiro_reads_androids_media_index_every	Yumeiro প্রতিবার খোলার সময় Android-এর মিডিয়া সূচি পড়ে, তাই নতুন ফাইল সাধারণত নিজে থেকেই দেখা যায়।
+user_guide	ব্যবহার নির্দেশিকা
+downloading_your_extensions_again_of	আপনার এক্সটেনশন আবার ডাউনলোড হচ্ছে: %2$s-এর মধ্যে %1$s
+restore_latest_backup	সর্বশেষ ব্যাকআপ ফিরিয়ে আনুন · %1$s
+choose_a_backup_file	একটি ব্যাকআপ ফাইল বেছে নিন
+find_my_backups	আমার ব্যাকআপ খুঁজুন
+you_see_whats_inside_and_pick	কিছু বদলানোর আগে ভেতরে কী আছে দেখে কী ফিরিয়ে আনবেন বেছে নেন। আপনার বর্তমান ডেটার আগে ব্যাকআপ নেওয়া হয়।
+back_up_now	এখনই ব্যাকআপ নিন
+choose_folder	ফোল্ডার বেছে নিন
+use_download_yumeiro_backups_again	আবার Download › Yumeiro › Backups ব্যবহার করুন
+allow_storage_access_so_backups_survive	স্টোরেজের অনুমতি দিন, যাতে আনইনস্টলের পরেও ব্যাকআপ থাকে
+no_backups_found_yet_after_reinstalling	এখনও কোনো ব্যাকআপ পাওয়া যায়নি। আবার ইনস্টলের পর আমার ব্যাকআপ খুঁজুন ট্যাপ করে Yumeiro › Backups ফোল্ডার খুলুন।
+open_a_file	একটি ফাইল খুলুন
+delete_this_backup	এই ব্যাকআপ মুছবেন?
+is_removed_from_the_phone_this	%1$s ফোন থেকে মুছে যাবে। এটা আর ফেরানো যাবে না।
+a_backup_is_saved_first_so	%1$s। আগে একটি ব্যাকআপ রাখা হয় যাতে এটা ফেরাতে পারেন, তারপর Yumeiro আবার চালু হয়।
+back_up_and_reset	ব্যাকআপ নিয়ে রিসেট করুন
+erase_everything	সব মুছে ফেলবেন?
+every_setting_list_source_and_extension	সব সেটিং, তালিকা, সোর্স ও এক্সটেনশন মুছে যাবে এবং Yumeiro বন্ধ হবে। আগে Download › Yumeiro › Backups-এ একটি ব্যাকআপ রাখা হবে, যাতে পরে ফিরিয়ে আনতে পারেন।
+back_up_and_erase	ব্যাকআপ নিয়ে মুছুন
+restore_this_backup	এই ব্যাকআপ ফিরিয়ে আনবেন?
+whats_on_this_phone_now_is	এই ফোনে এখন যা আছে তা আগে ব্যাকআপ হিসেবে রাখা হবে। শেষ করতে Yumeiro আবার চালু হবে।
+restore	ফিরিয়ে আনুন
+delete_backup	ব্যাকআপ মুছুন
+lock_again	আবার লক করুন
+every_tracker_is_free_kitsu_simkl	সব ট্র্যাকার ফ্রি। Kitsu, Simkl ও Last.fm-এ শুধু সাইন ইন লাগে; AniList, MyAnimeList ও Trakt-এ একবার তৈরি করা একটি ফ্রি কি লাগে। Yumeiro-র কোনো সার্ভার নেই, তাই আপনার সাইন ইন সরাসরি ট্র্যাকারে যায়। প্রতিটি কার্ডে ধাপে ধাপে নির্দেশনা আছে।
+tokens_and_keys_are_encrypted_with	টোকেন ও কি Android Keystore দিয়ে এনক্রিপ্ট করা থাকে এবং ট্র্যাকারের সাথে কথা বলা ছাড়া কখনও ডিভাইস ছেড়ে যায় না। এগুলো ব্যাকআপে থাকে না।
+client_id	Client ID
+sign_in_to_kitsu	Kitsu-তে সাইন ইন করুন
+e_mail	ই-মেইল
+your_password_goes_to_kitsu_once	আপনার পাসওয়ার্ড একবারই Kitsu-তে যায়; শুধু টোকেন রাখা হয়।
+trakt_api_app	Trakt API অ্যাপ
+create_a_free_app_at_trakt	এই redirect URI দিয়ে trakt.tv/oauth/applications/new-এ একটি ফ্রি অ্যাপ তৈরি করুন, তারপর এর Client ID পেস্ট করুন। নতুন Trakt অ্যাপে client secret থাকে না; Trakt দেখালেই শুধু সেটা লিখুন।
+client_secret_optional	Client secret (ঐচ্ছিক)
+your_own_simkl_app	আপনার নিজের Simkl অ্যাপ
+optional_leave_empty_to_use_yumeiros	ঐচ্ছিক। Yumeiro-র অন্তর্ভুক্ত অ্যাপ ব্যবহার করতে খালি রাখুন। নিজেরটা ব্যবহার করতে simkl.com/settings/developer-এ একটি তৈরি করে এর Client ID পেস্ট করুন।
+approve_on_simkl	Simkl-এ অনুমোদন দিন
+open_on_any_device_and_enter	যেকোনো ডিভাইসে %1$s খুলে লিখুন
+open_simkl	Simkl খুলুন
+approve_on_last_fm	Last.fm-এ অনুমোদন দিন
+open_last_fm	Last.fm খুলুন
+approve_on_trakt	Trakt-এ অনুমোদন দিন
+open_trakt	Trakt খুলুন
+change_key	কি বদলান
+how_yumeiro_works	Yumeiro কীভাবে কাজ করে
+illustrated_guide_to_every_section_gesture	প্রতিটি অংশ, জেসচার ও সমাধানের ছবিসহ নির্দেশিকা
+the_app_at_a_glance	এক নজরে অ্যাপ
+four_tabs_in_the_floating_dock	নিচের ভাসমান ডকে চারটি ট্যাব। এর ওপরের বারটি মিউজিক প্লেয়ার।
+drag_sideways_to_seek_double_tap	← সামনে-পেছনে যেতে পাশে টানুন →   ·   এক পাশে দুবার ট্যাপ: ±10 সেকেন্ড
+continue	চালিয়ে যান
+spaces	স্পেস
+yumix_random_keeps_loading_as_you	Yumix এলোমেলো  ·  স্ক্রল করলে আরও লোড হয় ↓
+accent_colour	মূল রং
+size_colour_outline_or_box_and	আকার, রং, আউটলাইন বা বক্স, আর নিচ থেকে উচ্চতা। প্লেয়ারের সাবটাইটেল মেনুতেও আছে
+back_button_while_a_video_plays	ভিডিও চলার সময় পিছনের বোতাম
+you_can_also_swipe_down_on	ভিডিও ছোট করতে এর ওপর নিচের দিকে সোয়াইপও করতে পারেন
+version_build	সংস্করণ %1$s (বিল্ড %2$s)
+unofficial_build_not_signed_by_the	অনানুষ্ঠানিক বিল্ড — Yumeiro ডেভেলপারের সাইন করা নয়। আসল অ্যাপ github.com/siamform/yumeiro থেকে ডাউনলোড করুন
+developer	ডেভেলপার
+designer_full_stack_developer	ডিজাইনার ও ফুল-স্ট্যাক ডেভেলপার
+made_with_love_in_bangladesh	বাংলাদেশে ভালোবাসা দিয়ে তৈরি
+step_by_step_tap_to_open	ধাপে ধাপে · খুলতে ট্যাপ করুন
+copy_2	কপি
+replace_with_a_pasted_cookie	পেস্ট করা কুকি দিয়ে বদলান
+sign_in_with_google	Google দিয়ে সাইন ইন করুন
+paste_cookie_advanced	কুকি পেস্ট করুন (উন্নত)
+use_this_if_google_says_the	Google যদি বলে ব্রাউজার বা অ্যাপ নিরাপদ নাও হতে পারে, তখন এটি ব্যবহার করুন।
+sign_out_of_youtube	YouTube থেকে সাইন আউট করবেন?
+the_saved_sign_in_is_deleted	সংরক্ষিত সাইন ইন এই ফোন থেকে মুছে যাবে এবং YouTube আবার পরিচয়হীনভাবে চলবে।
+the_sign_in_page_stopped_responding	সাইন-ইন পাতা সাড়া দিচ্ছে না। ফিরে গিয়ে আবার চেষ্টা করুন।
+a_youtube_cookie_works_like_a	YouTube কুকি পাসওয়ার্ডের মতো কাজ করে। শুধু এখানেই পেস্ট করুন, কখনও চ্যাট বা বাগ রিপোর্টে নয়। Yumeiro এটি youtube.com দিয়ে যাচাই করে এই ফোনে এনক্রিপ্ট করে রাখে।
+cookie_header_cookies_txt_json_or	কুকি হেডার, cookies.txt, JSON বা ArchiveTune টোকেন
+check_and_save	যাচাই করে সংরক্ষণ করুন
+couldnt_check_with_youtube	YouTube দিয়ে যাচাই করা যায়নি
+the_cookie_looks_signed_in_but	কুকিটি সাইন-ইন করা মনে হচ্ছে, কিন্তু নিশ্চিত করতে youtube.com-এ পৌঁছানো যায়নি। তবুও সংরক্ষণ করবেন? মেয়াদ শেষ হলে YouTube ভিডিও আটকাতে থাকবে, তখন নতুন একটি পেস্ট করতে পারবেন।
+save_anyway	তবুও সংরক্ষণ করুন
+no_crashes_recorded_if_yumeiro_ever	কোনো ক্র্যাশ রেকর্ড হয়নি। Yumeiro কখনও নিজে থেকে বন্ধ হলে বা আটকে গেলে রিপোর্ট এখানে রাখা হবে।
+reports_stay_on_this_phone_until	আপনি শেয়ার না করা পর্যন্ত রিপোর্ট এই ফোনেই থাকে। প্রতিটির একটি কপি Download/Yumeiro/Crash reports-এ ফাইল হিসেবেও রাখা হয়, সংযুক্ত করার জন্য তৈরি। এতে অ্যাপের সংস্করণ, ফোনের মডেল, Android সংস্করণ ও ত্রুটি থাকে; কি, টোকেন ও ই-মেইল ঠিকানাসহ লিংক বাদ দেওয়া হয়।
+they_are_removed_from_yumeiro_copies	এগুলো Yumeiro থেকে মুছে যাবে। Download/Yumeiro/Crash reports-এ আগে রাখা কপি থেকে যাবে; সেগুলো আপনার ফাইল অ্যাপে মুছুন। এটা আর ফেরানো যাবে না।
+keep	রাখুন
+share	শেয়ার
+proxy	প্রক্সি
+port	পোর্ট
+username_optional	ব্যবহারকারীর নাম (ঐচ্ছিক)
+password_optional	পাসওয়ার্ড (ঐচ্ছিক)
+web_pages_cant_use_a_socks5	ওয়েব পাতা লগইনসহ SOCKS5 প্রক্সি ব্যবহার করতে পারে না (Android WebView-এর সীমা); বাকি সব পারে।
+show_18_content	18+ কনটেন্ট দেখাবেন?
+adult_extensions_and_titles_will_appear	প্রাপ্তবয়স্কদের এক্সটেনশন ও টাইটেল মার্কেট, হোম ও খোঁজে দেখা যাবে। নিশ্চিত করুন যে আপনার বয়স 18 বা তার বেশি এবং আপনার এলাকায় এই কনটেন্ট বৈধ।
+im_18_or_older	আমার বয়স 18 বা তার বেশি
+subtitle_sites_all_free_use_any	সাবটাইটেল সাইট (সব ফ্রি, যেকোনোটি বা সবগুলো ব্যবহার করুন)
+background_checks_are_off_under_background	ব্যাকগ্রাউন্ড ও ব্যাটারি-তে ব্যাকগ্রাউন্ড যাচাই বন্ধ, তাই জেগে উঠে চালানোর কিছু নেই।
+choose_a_push_app	একটি পুশ অ্যাপ বেছে নিন
+recommended_supports_scheduled_wake_ups	প্রস্তাবিত · নির্ধারিত সময়ে জাগানো সমর্থন করে
+install_ntfy_first	আগে ntfy ইনস্টল করুন
+reliable_alerts_need_a_free_unifiedpush	নির্ভরযোগ্য অ্যালার্টের জন্য একটি ফ্রি UnifiedPush অ্যাপ লাগে। ntfy ওপেন সোর্স, অ্যাকাউন্ট লাগে না, আর ব্যবহার ফ্রি। এটি ইনস্টল করে একবার খুলুন, তারপর ফিরে এসে এটি চালু করুন।
+f_droid	F-Droid
+google_play	Google Play
+preview	প্রিভিউ
+of_each_with_a_short_label	%2$s-এর মধ্যে %1$s · প্রতিটিতে ছোট লেবেল; বুড়ো আঙুলের নাগালে সাতটি পর্যন্ত আঁটে
+pin_up_to_pages_you_open	প্রতিদিন খোলেন এমন %1$sটি পর্যন্ত পাতা পিন করুন।
+built_in_torrent_engine	অন্তর্ভুক্ত টরেন্ট ইঞ্জিন
+before_you_turn_it_on	চালু করার আগে
+i_understand_turn_on	বুঝেছি, চালু করুন
+torrserver_address	TorrServer-এর ঠিকানা
+http_127_0_0_1_8090	http://127.0.0.1:8090
+no_lyrics_found	কোনো গানের কথা পাওয়া যায়নি
+embed_lyrics_in_the_files_tags	ফাইলের ট্যাগে গানের কথা যোগ করুন, গানের পাশে একই নামের একটি .lrc ফাইল রাখুন, বা একটি আমদানি করুন।
+import	আমদানি
+lossless	লসলেস
+song_info	গানের তথ্য
+dismiss_error	ত্রুটি সরান
+sleep_timer	ঘুমের টাইমার
+new_playlist	নতুন প্লেলিস্ট
+name_your_playlist	আপনার প্লেলিস্টের নাম দিন:
+e_g_focus_chill	যেমন: মনোযোগ, আরাম
+create	তৈরি করুন
+rename_playlist	প্লেলিস্টের নাম বদলান
+delete_playlist	প্লেলিস্ট মুছবেন?
+are_you_sure_you_want_to	আপনি কি নিশ্চিত যে '%1$s' মুছতে চান? আপনার ডিভাইসের স্টোরেজে থাকা অডিও ফাইলে কোনো প্রভাব পড়বে না।
+songs	%1$sটি গান
+back_to_library	লাইব্রেরিতে ফিরে যান
+delete_playlist_2	প্লেলিস্ট মুছুন
+remove_from_playlist	প্লেলিস্ট থেকে সরান
+tip_open_any_anime_or_movie	পরামর্শ: যেকোনো অ্যানিমে বা সিনেমা খুলে ডাউনলোড ট্যাপ করুন, বা YouTube ভিডিওর নিচে ডাউনলোড ট্যাপ করুন। রেখে দিতে স্থায়ী বেছে নিন, বা নিজে মুছে ফেলার টাইমারের জন্য অফলাইন।
+remove_from_my_list	আমার তালিকা থেকে সরান
+create_your_first_playlist	আপনার প্রথম প্লেলিস্ট তৈরি করুন
+add_songs_from_any_list_with	⋮ মেনু দিয়ে যেকোনো তালিকা থেকে গান যোগ করুন
+plays	%1$s বার চালানো
+nothing_on_your_shelf_yet	আপনার তাকে এখনও কিছু নেই
+install_a_manga_source_open_a	একটি মাঙ্গা সোর্স ইনস্টল করুন, একটি টাইটেল খুলে সংরক্ষণ ট্যাপ করুন। পড়ার অগ্রগতি এই ফোনে থাকে।
+add_manga_sources	মাঙ্গা সোর্স যোগ করুন
+yumeiro_2	  Yumeiro
+filters	ফিল্টার
+offline_vault	অফলাইন ভল্ট
+on_device_media	ডিভাইসের মিডিয়া
+resume_at	%1$s থেকে আবার চালান (%2$s%%)
+left_off_at	%1$s-এ থেমেছিলেন (%2$s%%)
+hide_folder	ফোল্ডার লুকান
+hidden_video_folders	লুকানো ভিডিও ফোল্ডার
+no_folders_are_currently_hidden_you	এখন কোনো ফোল্ডার লুকানো নেই। অপ্রয়োজনীয় ভিডিও ফোল্ডার তাদের তিন-বিন্দু মেনু থেকে লুকাতে পারেন।
+videos_in_these_folders_are_hidden	এই ফোল্ডারগুলোর ভিডিও আপনার লাইব্রেরি ও খোঁজ থেকে লুকানো:
+unhide	দেখান
+unhide_all	সব দেখান
+music_access_is_off	গানের অনুমতি বন্ধ
+allow_access_to_music_and_audio	গান ও অডিওর অনুমতি দিন, যাতে Yumeiro এই ফোনের গান দেখাতে ও চালাতে পারে।
+allow_access	অনুমতি দিন
+enter_a_name_for_your_new	আপনার নতুন প্লেলিস্টের একটি নাম লিখুন:
+e_g_road_trip	যেমন: ভ্রমণ
+new_playlist_2	নতুন প্লেলিস্ট…
+create_add_2	তৈরি করে যোগ করুন
+selected_2	%1$sটি বাছাই করা
+rescan_media	মিডিয়া আবার খুঁজুন
+song_options	গানের বিকল্প
+video_options	ভিডিওর বিকল্প
+options	বিকল্প
+resume_video	ভিডিও আবার চালান
+cancel_selection	বাছাই বাতিল করুন
+play_selected	বাছাইগুলো চালান
+queue_selected	বাছাইগুলো সারিতে রাখুন
+add_to_playlist	প্লেলিস্টে যোগ করুন
+favorite_selected	বাছাইগুলো প্রিয়তে রাখুন
+help	সাহায্য: %1$s
+yumeiro_3	YUMEIRO
+youre_offline_showing_saved_content	আপনি অফলাইনে · সংরক্ষিত কনটেন্ট দেখানো হচ্ছে
+fill_search_box	খোঁজার ঘরে বসান
+youre_offline	আপনি অফলাইনে
+needs_the_internet_these_still_work	%1$s-এর জন্য ইন্টারনেট লাগে। এগুলো এখনও চলবে:
+try_this	এটা চেষ্টা করুন
+search_songs_videos_artists	গান, ভিডিও, শিল্পী খুঁজুন
+offline	অফলাইন
+l10n_language	ভাষা
+l10n_device_language	ডিভাইসের ভাষা
+l10n_preview	%1$s · প্রিভিউ, কিছু লেখা এখনও ইংরেজিতে

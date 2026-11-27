@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.music
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -195,8 +197,8 @@ fun MusicMixScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("混 · YOUR MIX", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                    Text("Device + YouTube Music", style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.your_mix), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                    Text(stringResource(R.string.device_youtube_music), style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.Bold)
                     Text(
                         when {
                             !online -> "Offline: your ${tracks.size} songs on this phone"
@@ -213,12 +215,12 @@ fun MusicMixScreen(
                         .clickable(enabled = canMix, role = Role.Button, onClickLabel = "Play your mix") { playAt(0) }
                         .testTag("music_mix_play"),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Default.PlayArrow, "Play your mix", tint = if (canMix) p.onAccent else p.textTertiary, modifier = Modifier.size(28.dp)) }
+                ) { Icon(Icons.Default.PlayArrow, stringResource(R.string.play_your_mix), tint = if (canMix) p.onAccent else p.textTertiary, modifier = Modifier.size(28.dp)) }
             }
         }
         if (tracks.isEmpty() && onlinePool.isEmpty() && !loading) item("empty") {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Nothing to mix yet", style = MaterialTheme.typography.titleMedium, color = p.textPrimary)
+                Text(stringResource(R.string.nothing_to_mix_yet), style = MaterialTheme.typography.titleMedium, color = p.textPrimary)
                 Text(
                     if (online) "Add songs to this phone or play something on YouTube Music." else "Connect to the internet for online picks, or add songs to this phone.",
                     style = MaterialTheme.typography.bodySmall, color = p.textSecondary,

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.clickable
@@ -173,9 +175,9 @@ fun MTTopBar(
                         .focusRequester(inputFocus)
                         .testTag("topbar_search_input"),
                     placeholder = {
-                        Text("Search songs, videos, artists", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                        Text(stringResource(R.string.search_songs_videos_artists), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                     },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = SpotifyGreen) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search), tint = SpotifyGreen) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             Box(
@@ -184,7 +186,7 @@ fun MTTopBar(
                                     .clickable(role = Role.Button) { onSearchQueryChange("") }
                                     .testTag("search_clear_button"),
                                 contentAlignment = Alignment.Center
-                            ) { Icon(Icons.Default.Close, contentDescription = "Clear search", tint = TextSecondary) }
+                            ) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_search), tint = TextSecondary) }
                         }
                     },
                     singleLine = true,
@@ -335,7 +337,7 @@ fun OfflineTag(modifier: Modifier = Modifier) {
     ) {
         Icon(Icons.Default.CloudOff, null, tint = p.textSecondary, modifier = Modifier.size(12.dp))
         Spacer(Modifier.width(4.dp))
-        Text("Offline", style = MaterialTheme.typography.labelSmall, color = p.textSecondary, maxLines = 1)
+        Text(stringResource(R.string.offline), style = MaterialTheme.typography.labelSmall, color = p.textSecondary, maxLines = 1)
     }
 }
 

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -102,13 +104,13 @@ internal fun UpcomingBanner(onOpenUpcoming: () -> Unit, onSearch: (String) -> Un
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.DateRange, null, tint = p.accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Coming up", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.coming_up), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
             Row(
                 Modifier.clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = onOpenUpcoming)
                     .padding(horizontal = 8.dp, vertical = 12.dp).testTag("upcoming_banner_all"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("See all", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.see_all), color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = p.accent, modifier = Modifier.size(18.dp))
             }
         }

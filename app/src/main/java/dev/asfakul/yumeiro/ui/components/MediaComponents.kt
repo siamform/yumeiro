@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.ui.draw.clipToBounds
 import dev.asfakul.yumeiro.ui.theme.rememberArtBrush
@@ -159,9 +161,9 @@ fun StorageStatBanner(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(text = "OFFLINE VAULT", style = OverlineStyle, color = SpotifyGreen)
+                Text(text = stringResource(R.string.offline_vault), style = OverlineStyle, color = SpotifyGreen)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "On-device media", style = MaterialTheme.typography.titleLarge, color = TextPrimary)
+                Text(text = stringResource(R.string.on_device_media), style = MaterialTheme.typography.titleLarge, color = TextPrimary)
             }
             if (stats.isScanning) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = SpotifyGreen, strokeWidth = 2.5.dp)
@@ -174,7 +176,7 @@ fun StorageStatBanner(
                         .glass(CircleShape)
                         .testTag("banner_rescan_button")
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Rescan media", tint = TextPrimary, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.rescan_media), tint = TextPrimary, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -323,7 +325,7 @@ fun TrackItemRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Song options",
+                        contentDescription = stringResource(R.string.song_options),
                         tint = TextTertiary,
                         modifier = Modifier.size(20.dp)
                     )
@@ -485,7 +487,7 @@ fun VideoGridCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Video options",
+                            contentDescription = stringResource(R.string.video_options),
                             tint = TextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
@@ -645,7 +647,7 @@ fun VideoRowCard(
                     val pct = ((video.playbackPositionMs.toDouble() / video.durationMs.toDouble()) * 100).toInt()
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Resume at ${formatDuration(video.playbackPositionMs)} ($pct%)",
+                        text = stringResource(R.string.resume_at, formatDuration(video.playbackPositionMs), pct),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelSmall,
@@ -680,7 +682,7 @@ fun VideoRowCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Options",
+                    contentDescription = stringResource(R.string.options),
                     tint = TextSecondary,
                     modifier = Modifier.size(18.dp)
                 )
@@ -744,7 +746,7 @@ fun ContinueWatchingCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Resume video",
+                        contentDescription = stringResource(R.string.resume_video),
                         tint = OnAccent,
                         modifier = Modifier.size(24.dp)
                     )
@@ -796,7 +798,7 @@ fun ContinueWatchingCard(
                 Spacer(modifier = Modifier.height(2.dp))
                 val pct = if (video.durationMs > 0) ((video.playbackPositionMs.toDouble() / video.durationMs.toDouble()) * 100).toInt() else 0
                 Text(
-                    text = "Left off at ${formatDuration(video.playbackPositionMs)} ($pct%)",
+                    text = stringResource(R.string.left_off_at, formatDuration(video.playbackPositionMs), pct),
                     style = MaterialTheme.typography.bodySmall,
                     color = SpotifyGreen,
                     fontWeight = FontWeight.SemiBold,
@@ -884,7 +886,7 @@ fun VideoFolderCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.VisibilityOff,
-                    contentDescription = "Hide folder",
+                    contentDescription = stringResource(R.string.hide_folder),
                     tint = TextTertiary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -905,7 +907,7 @@ fun VideoDetailsDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Video details",
+                text = stringResource(R.string.video_details),
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
@@ -980,7 +982,7 @@ fun VideoDetailsDialog(
                     },
                     modifier = Modifier.testTag("dialog_hide_folder_btn")
                 ) {
-                    Text("Hide folder", color = TextSecondary)
+                    Text(stringResource(R.string.hide_folder), color = TextSecondary)
                 }
             }
         },
@@ -1001,7 +1003,7 @@ fun ManageHiddenFoldersDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Hidden video folders",
+                text = stringResource(R.string.hidden_video_folders),
                 style = MaterialTheme.typography.titleLarge,
                 color = TextPrimary,
                 fontWeight = FontWeight.Bold
@@ -1015,13 +1017,13 @@ fun ManageHiddenFoldersDialog(
             ) {
                 if (hiddenFolderPaths.isEmpty()) {
                     Text(
-                        text = "No folders are currently hidden. You can hide unwanted video folders from their 3-dot options menu.",
+                        text = stringResource(R.string.no_folders_are_currently_hidden_you),
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
                 } else {
                     Text(
-                        text = "Videos in these folders are hidden from your library and searches:",
+                        text = stringResource(R.string.videos_in_these_folders_are_hidden),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -1068,7 +1070,7 @@ fun ManageHiddenFoldersDialog(
                                         onClick = { onUnhideFolder(path) },
                                         modifier = Modifier.testTag("unhide_folder_$folderName")
                                     ) {
-                                        Text("Unhide", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+                                        Text(stringResource(R.string.unhide), color = SpotifyGreen, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -1087,18 +1089,18 @@ fun ManageHiddenFoldersDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
                     modifier = Modifier.testTag("unhide_all_folders_btn")
                 ) {
-                    Text("Unhide all", color = OnAccent, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.unhide_all), color = OnAccent, fontWeight = FontWeight.Bold)
                 }
             } else {
                 TextButton(onClick = onDismiss) {
-                    Text("Close", color = SpotifyGreen)
+                    Text(stringResource(R.string.close), color = SpotifyGreen)
                 }
             }
         },
         dismissButton = {
             if (hiddenFolderPaths.isNotEmpty()) {
                 TextButton(onClick = onDismiss) {
-                    Text("Close", color = TextSecondary)
+                    Text(stringResource(R.string.close), color = TextSecondary)
                 }
             }
         },
@@ -1174,7 +1176,7 @@ fun PermissionPromptCard(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Music access is off",
+                    text = stringResource(R.string.music_access_is_off),
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -1184,7 +1186,7 @@ fun PermissionPromptCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Allow access to music and audio so Yumeiro can show and play the songs on this phone.",
+                text = stringResource(R.string.allow_access_to_music_and_audio),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary
             )
@@ -1198,7 +1200,7 @@ fun PermissionPromptCard(
                 modifier = Modifier.testTag("grant_permission_button")
             ) {
                 Text(
-                    text = "Allow access",
+                    text = stringResource(R.string.allow_access),
                     color = OnAccent,
                     fontWeight = FontWeight.Bold
                 )
@@ -1414,7 +1416,7 @@ fun AddToPlaylistDialog(
             if (isCreatingNew) {
                 Column {
                     Text(
-                        text = "Enter a name for your new playlist:",
+                        text = stringResource(R.string.enter_a_name_for_your_new),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -1423,7 +1425,7 @@ fun AddToPlaylistDialog(
                         value = newPlaylistName,
                         onValueChange = { newPlaylistName = it },
                         singleLine = true,
-                        placeholder = { Text("e.g. Road Trip", color = TextTertiary) },
+                        placeholder = { Text(stringResource(R.string.e_g_road_trip), color = TextTertiary) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SpotifyGreen,
                             unfocusedBorderColor = DarkOutline,
@@ -1459,7 +1461,7 @@ fun AddToPlaylistDialog(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "New playlist…",
+                                    text = stringResource(R.string.new_playlist_2),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = SpotifyGreen
@@ -1495,7 +1497,7 @@ fun AddToPlaylistDialog(
                                         color = TextPrimary
                                     )
                                     Text(
-                                        text = "${playlist.trackIds.size} songs",
+                                        text = stringResource(R.string.songs, playlist.trackIds.size),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextTertiary,
                                         fontSize = 11.sp
@@ -1516,7 +1518,7 @@ fun AddToPlaylistDialog(
                         }
                     }
                 ) {
-                    Text("Create & Add", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.create_add_2), color = SpotifyGreen, fontWeight = FontWeight.Bold)
                 }
             }
         },
@@ -1526,7 +1528,7 @@ fun AddToPlaylistDialog(
                     if (isCreatingNew) isCreatingNew = false else onDismiss()
                 }
             ) {
-                Text("Cancel", color = TextSecondary)
+                Text(stringResource(R.string.cancel), color = TextSecondary)
             }
         },
         containerColor = DarkSurfaceContainerHigh
@@ -1555,7 +1557,7 @@ fun SongDetailsDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Song info",
+                text = stringResource(R.string.song_info),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
@@ -1577,7 +1579,7 @@ fun SongDetailsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.close), color = SpotifyGreen, fontWeight = FontWeight.Bold)
             }
         },
         containerColor = DarkSurfaceContainerHigh
@@ -1629,14 +1631,14 @@ fun BatchActionBar(
                 IconButton(onClick = onCancel, modifier = Modifier.size(32.dp)) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel selection",
+                        contentDescription = stringResource(R.string.cancel_selection),
                         tint = TextSecondary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "$selectedCount selected",
+                    text = stringResource(R.string.selected_2, selectedCount),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -1648,7 +1650,7 @@ fun BatchActionBar(
                 IconButton(onClick = onPlayAll, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play Selected",
+                        contentDescription = stringResource(R.string.play_selected),
                         tint = SpotifyGreen,
                         modifier = Modifier.size(22.dp)
                     )
@@ -1657,7 +1659,7 @@ fun BatchActionBar(
                 IconButton(onClick = onAddToQueue, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
-                        contentDescription = "Queue Selected",
+                        contentDescription = stringResource(R.string.queue_selected),
                         tint = TextPrimary,
                         modifier = Modifier.size(20.dp)
                     )
@@ -1666,7 +1668,7 @@ fun BatchActionBar(
                 IconButton(onClick = onAddToPlaylist, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = "Add to playlist",
+                        contentDescription = stringResource(R.string.add_to_playlist),
                         tint = TextPrimary,
                         modifier = Modifier.size(20.dp)
                     )
@@ -1675,7 +1677,7 @@ fun BatchActionBar(
                 IconButton(onClick = onAddToFavorites, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
-                        contentDescription = "Favorite Selected",
+                        contentDescription = stringResource(R.string.favorite_selected),
                         tint = SpotifyGreen,
                         modifier = Modifier.size(20.dp)
                     )

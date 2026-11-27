@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -103,7 +105,7 @@ fun ExtensionReviewHost() {
                 )
                 Surface(shape = yuRound(14), color = levelColor(r.report.level).copy(alpha = 0.14f), modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(12.dp)) {
-                        Text("Safety check: ${levelLabel(r.report.level)}", color = levelColor(r.report.level), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(stringResource(R.string.safety_check_3, levelLabel(r.report.level)), color = levelColor(r.report.level), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Text(r.report.summary, color = TextPrimary, fontSize = 13.sp)
                     }
                 }
@@ -118,11 +120,11 @@ fun ExtensionReviewHost() {
                     }
                 }
                 Text(
-                    "Yumeiro reads the extension's code without running it. It catches obvious risks, not every one — only install extensions from people you trust.",
+                    stringResource(R.string.yumeiro_reads_the_extensions_code_without),
                     color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp,
                 )
                 if (danger && confirmDanger) Text(
-                    "Installing anyway gives this code the risks listed above. Tap again to confirm.",
+                    stringResource(R.string.installing_anyway_gives_this_code_the),
                     color = ErrorColor, fontSize = 12.sp,
                 )
             }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.equalizer
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import androidx.activity.compose.BackHandler
@@ -118,7 +120,7 @@ fun EqualizerScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.RestartAlt,
-                        contentDescription = "Reset to flat",
+                        contentDescription = stringResource(R.string.reset_to_flat),
                         tint = TextSecondary
                     )
                 }
@@ -173,7 +175,7 @@ fun EqualizerScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "Equalizer",
+                                    text = stringResource(R.string.equalizer),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
@@ -211,7 +213,7 @@ fun EqualizerScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "音響 · RESPONSE",
+                                text = stringResource(R.string.response),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = SpotifyGreen,
                                 fontWeight = FontWeight.Bold,
@@ -244,7 +246,7 @@ fun EqualizerScreen(
             item {
                 Column {
                     Text(
-                        text = "Presets",
+                        text = stringResource(R.string.presets),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -285,7 +287,7 @@ fun EqualizerScreen(
             // Frequency Band Sliders
             item {
                 Text(
-                    text = "Bands",
+                    text = stringResource(R.string.bands),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -314,7 +316,7 @@ fun EqualizerScreen(
             // Sound Enhancements: Bass Boost & Virtualizer
             item {
                 Text(
-                    text = "Enhancements",
+                    text = stringResource(R.string.enhancements),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -81,8 +83,8 @@ fun OfflineNotice(what: String, modifier: Modifier = Modifier, tag: String = "of
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("You're offline", style = MaterialTheme.typography.titleSmall, color = p.textPrimary, fontWeight = FontWeight.Bold)
-                Text("$what needs the internet. These still work:", style = MaterialTheme.typography.bodySmall, color = p.textSecondary)
+                Text(stringResource(R.string.youre_offline), style = MaterialTheme.typography.titleSmall, color = p.textPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.needs_the_internet_these_still_work, what), style = MaterialTheme.typography.bodySmall, color = p.textSecondary)
             }
         }
         Spacer(Modifier.height(10.dp))

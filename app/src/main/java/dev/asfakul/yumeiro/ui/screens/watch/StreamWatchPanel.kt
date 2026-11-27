@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -407,7 +409,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
             } else if (playlistAll.isEmpty() && queue == null) {
                 item(key = "empty") {
                     Text(
-                        "Open an M3U playlist in Videos → Live TV to switch channels from here.",
+                        stringResource(R.string.open_an_m3u_playlist_in_videos),
                         color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp),
                     )
                 }
@@ -462,7 +464,7 @@ private fun ChannelRow(number: Int, ch: StreamRequest, playing: Boolean, striped
             val sub = listOfNotNull(if (playing) "Now playing" else null, ch.group).joinToString(" · ")
             if (sub.isNotBlank()) Text(sub, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (playing) Icon(Icons.Default.PlayArrow, "Now playing", tint = p.accent, modifier = Modifier.padding(end = 14.dp).size(20.dp))
+        if (playing) Icon(Icons.Default.PlayArrow, stringResource(R.string.now_playing), tint = p.accent, modifier = Modifier.padding(end = 14.dp).size(20.dp))
         else Spacer(Modifier.width(14.dp))
     }
 }

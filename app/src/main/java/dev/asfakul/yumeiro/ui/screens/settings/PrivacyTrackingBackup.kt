@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.app.Activity
 import android.content.Intent
@@ -129,7 +131,7 @@ internal fun PrivacyLockSections() {
             }, "privacy_lock")
             if (lock) {
                 val options = listOf(0 to "Every time", 60 to "After 1 minute", 300 to "After 5 minutes", 1800 to "After 30 minutes")
-                Text("Lock again", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Text(stringResource(R.string.lock_again), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
                     options.forEach { (sec, label) ->
                         dev.asfakul.yumeiro.ui.components.FilterPill(label.removePrefix("After "), after == sec, { Privacy.setLockAfter(context, sec) })
@@ -192,7 +194,7 @@ fun TrackingScreen(onBack: () -> Unit) {
         SubPageHeader(title = "Tracking", onBack = onBack, subtitle = "Watched episodes update your lists automatically")
         androidx.compose.runtime.key(refresh) {
             Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("tracking")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Every tracker is free. Kitsu, Simkl and Last.fm only need a sign-in; AniList, MyAnimeList and Trakt need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.",
+                Text(stringResource(R.string.every_tracker_is_free_kitsu_simkl),
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                 TrackingV2Card()
 
@@ -285,7 +287,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                     }
                 }
                 GuideCard(SetupGuides.lastfm)
-                Text("Tokens and keys are encrypted with the Android Keystore and never leave the device except to talk to the tracker. They're not included in backups.",
+                Text(stringResource(R.string.tokens_and_keys_are_encrypted_with),
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
@@ -303,7 +305,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                         color = TextSecondary, fontSize = 13.sp)
                     val redirect = if (isAni) AniList.REDIRECT else MyAnimeList.REDIRECT
                     TextButton(onClick = { copyToClipboard(context, "Redirect URL", redirect) }) { Text(redirect + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
-                    OutlinedTextField(text, { text = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth().testTag("tracker_client_id"))
+                    OutlinedTextField(text, { text = it }, singleLine = true, label = { Text(stringResource(R.string.client_id)) }, modifier = Modifier.fillMaxWidth().testTag("tracker_client_id"))
                 }
             },
             confirmButton = {
@@ -311,9 +313,9 @@ fun TrackingScreen(onBack: () -> Unit) {
                     OnlineSettings.setSecret(context, if (isAni) "anilist_client" else "mal_client", text.trim().ifBlank { null })
                     editId = null; refresh++
                     if (text.isNotBlank()) AppMessages.success(context, "Saved. Now tap Sign in")
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton(onClick = { editId = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { editId = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (kitsuForm) {
@@ -324,13 +326,13 @@ fun TrackingScreen(onBack: () -> Unit) {
         var error by remember { mutableStateOf<String?>(null) }
         TsukiDialog(
             onDismissRequest = { if (!busy) kitsuForm = false },
-            title = { Text("Sign in to Kitsu") },
+            title = { Text(stringResource(R.string.sign_in_to_kitsu)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(email, { email = it }, singleLine = true, label = { Text("E-mail") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth().testTag("kitsu_email"))
-                    OutlinedTextField(pass, { pass = it }, singleLine = true, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(),
+                    OutlinedTextField(email, { email = it }, singleLine = true, label = { Text(stringResource(R.string.e_mail)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth().testTag("kitsu_email"))
+                    OutlinedTextField(pass, { pass = it }, singleLine = true, label = { Text(stringResource(R.string.password)) }, visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().testTag("kitsu_pass"))
-                    Text("Your password goes to Kitsu once; only the token is kept.", color = TextTertiary, fontSize = 12.sp)
+                    Text(stringResource(R.string.your_password_goes_to_kitsu_once), color = TextTertiary, fontSize = 12.sp)
                     error?.let { e ->
                         Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 13.sp,
                             modifier = Modifier.fillMaxWidth().testTag("kitsu_error").semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
@@ -350,7 +352,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                     }
                 }) { Text(if (error != null) "Retry" else "Sign in") }
             },
-            dismissButton = { TextButton(enabled = !busy, onClick = { kitsuForm = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(enabled = !busy, onClick = { kitsuForm = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (traktKeys) {
@@ -358,79 +360,79 @@ fun TrackingScreen(onBack: () -> Unit) {
         var secret by remember { mutableStateOf(OnlineSettings.secret("trakt_secret").orEmpty()) }
         TsukiDialog(
             onDismissRequest = { traktKeys = false },
-            title = { Text("Trakt API app") },
+            title = { Text(stringResource(R.string.trakt_api_app)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Create a free app at trakt.tv/oauth/applications/new with this redirect URI, then paste its Client ID. New Trakt apps have no client secret; fill it in only if Trakt shows one.", color = TextSecondary, fontSize = 13.sp)
+                    Text(stringResource(R.string.create_a_free_app_at_trakt), color = TextSecondary, fontSize = 13.sp)
                     TextButton(onClick = { copyToClipboard(context, "Redirect URI", SetupGuides.TRAKT_REDIRECT) }) { Text(SetupGuides.TRAKT_REDIRECT + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
-                    OutlinedTextField(id, { id = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text("Client secret (optional)") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(id, { id = it }, singleLine = true, label = { Text(stringResource(R.string.client_id)) }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text(stringResource(R.string.client_secret_optional)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = { TextButton(onClick = {
                 OnlineSettings.setSecret(context, "trakt_client", id.trim().ifBlank { null })
                 OnlineSettings.setSecret(context, "trakt_secret", secret.trim().ifBlank { null })
                 traktKeys = false; refresh++
-            }) { Text("Save") } },
-            dismissButton = { TextButton(onClick = { traktKeys = false }) { Text("Cancel") } },
+            }) { Text(stringResource(R.string.save)) } },
+            dismissButton = { TextButton(onClick = { traktKeys = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (simklKeys) {
         var id by remember { mutableStateOf(OnlineSettings.secret("simkl_client").orEmpty()) }
         TsukiDialog(
             onDismissRequest = { simklKeys = false },
-            title = { Text("Your own Simkl app") },
+            title = { Text(stringResource(R.string.your_own_simkl_app)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Optional. Leave empty to use Yumeiro's built-in app. To use your own, create one at simkl.com/settings/developer and paste its Client ID.", color = TextSecondary, fontSize = 13.sp)
-                    OutlinedTextField(id, { id = it }, singleLine = true, label = { Text("Client ID") }, modifier = Modifier.fillMaxWidth())
+                    Text(stringResource(R.string.optional_leave_empty_to_use_yumeiros), color = TextSecondary, fontSize = 13.sp)
+                    OutlinedTextField(id, { id = it }, singleLine = true, label = { Text(stringResource(R.string.client_id)) }, modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = { TextButton(onClick = {
                 OnlineSettings.setSecret(context, "simkl_client", id.trim().ifBlank { null })
                 simklKeys = false; refresh++
-            }) { Text("Save") } },
-            dismissButton = { TextButton(onClick = { simklKeys = false }) { Text("Cancel") } },
+            }) { Text(stringResource(R.string.save)) } },
+            dismissButton = { TextButton(onClick = { simklKeys = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     simklCode?.let { c ->
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
-            title = { Text("Approve on Simkl") },
+            title = { Text(stringResource(R.string.approve_on_simkl)) },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text("Open ${c.verificationUrl} on any device and enter", color = TextSecondary)
+                Text(stringResource(R.string.open_on_any_device_and_enter, c.verificationUrl), color = TextSecondary)
                 Text(c.userCode, color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(12.dp))
                 LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
             } },
-            confirmButton = { TextButton(onClick = { open(c.verificationUrl) }) { Text("Open Simkl") } },
+            confirmButton = { TextButton(onClick = { open(c.verificationUrl) }) { Text(stringResource(R.string.open_simkl)) } },
         )
     }
     lastfmUrl?.let { url ->
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
-            title = { Text("Approve on Last.fm") },
+            title = { Text(stringResource(R.string.approve_on_last_fm)) },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 Text("Tap \"Yes, allow access\" on Last.fm, then come back. This finishes on its own.", color = TextSecondary)
                 Spacer(Modifier.size(12.dp))
                 LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
             } },
-            confirmButton = { TextButton(onClick = { open(url) }) { Text("Open Last.fm") } },
-            dismissButton = { TextButton(onClick = { lastfmJob?.cancel(); lastfmUrl = null }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = { open(url) }) { Text(stringResource(R.string.open_last_fm)) } },
+            dismissButton = { TextButton(onClick = { lastfmJob?.cancel(); lastfmUrl = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     traktCode?.let { c ->
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
             onDismissRequest = {},
-            title = { Text("Approve on Trakt") },
+            title = { Text(stringResource(R.string.approve_on_trakt)) },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text("Open ${c.verificationUrl} on any device and enter", color = TextSecondary)
+                Text(stringResource(R.string.open_on_any_device_and_enter, c.verificationUrl), color = TextSecondary)
                 Text(c.userCode, color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(12.dp))
                 LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
             } },
-            confirmButton = { TextButton(onClick = { open(c.verificationUrl) }) { Text("Open Trakt") } },
+            confirmButton = { TextButton(onClick = { open(c.verificationUrl) }) { Text(stringResource(R.string.open_trakt)) } },
         )
     }
 }
@@ -459,14 +461,14 @@ private fun TrackerCard(
         }
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
             if (onSetUp != null && user == null) {
-                if (configured) TextButton(onClick = onSetUp, modifier = Modifier.testTag("tracker_${tag}_change")) { Text("Change key", color = TextSecondary) }
+                if (configured) TextButton(onClick = onSetUp, modifier = Modifier.testTag("tracker_${tag}_change")) { Text(stringResource(R.string.change_key), color = TextSecondary) }
                 else Button(onClick = onSetUp, shape = yuRound(18), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                    modifier = Modifier.testTag("tracker_${tag}_setup")) { Text("Set up") }
+                    modifier = Modifier.testTag("tracker_${tag}_setup")) { Text(stringResource(R.string.set_up)) }
             }
             when {
-                user != null -> OutlinedButton(onClick = onSignOut, shape = yuRound(18), modifier = Modifier.testTag("tracker_${tag}_signout")) { Text("Sign out") }
+                user != null -> OutlinedButton(onClick = onSignOut, shape = yuRound(18), modifier = Modifier.testTag("tracker_${tag}_signout")) { Text(stringResource(R.string.sign_out)) }
                 configured -> Button(onClick = onSignIn, shape = yuRound(18), colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                    modifier = Modifier.testTag("tracker_${tag}_signin")) { Text("Sign in") }
+                    modifier = Modifier.testTag("tracker_${tag}_signin")) { Text(stringResource(R.string.sign_in)) }
             }
         }
     }

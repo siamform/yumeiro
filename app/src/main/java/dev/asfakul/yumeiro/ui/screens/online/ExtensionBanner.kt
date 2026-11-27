@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -84,7 +86,7 @@ internal fun ExtensionBanner(
                     Icon(Icons.Default.Extension, null, tint = p.onAccent, modifier = Modifier.size(13.dp))
                 }
                 Spacer(Modifier.width(8.dp))
-                Text("Yumix source", color = Color.White.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.yumix_source), color = Color.White.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {

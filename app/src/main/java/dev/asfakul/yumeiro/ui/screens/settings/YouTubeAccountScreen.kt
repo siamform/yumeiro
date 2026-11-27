@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.webkit.CookieManager
@@ -140,23 +142,23 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     if (st.signedIn) {
                         OutlinedButton(onClick = { askSignOut = true }, modifier = Modifier.fillMaxWidth().testTag("yt_sign_out")) {
-                            Icon(Icons.AutoMirrored.Filled.Logout, null); Spacer(Modifier.width(8.dp)); Text("Sign out")
+                            Icon(Icons.AutoMirrored.Filled.Logout, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.sign_out))
                         }
                         TextButton(onClick = { pasting = true }, modifier = Modifier.fillMaxWidth().testTag("yt_paste_cookie")) {
-                            Text("Replace with a pasted cookie", color = TextSecondary)
+                            Text(stringResource(R.string.replace_with_a_pasted_cookie), color = TextSecondary)
                         }
                     } else {
                         Button(
                             onClick = { signingIn = true },
                             colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                             modifier = Modifier.fillMaxWidth().testTag("yt_sign_in"),
-                        ) { Icon(Icons.AutoMirrored.Filled.Login, null); Spacer(Modifier.width(8.dp)); Text("Sign in with Google", fontWeight = FontWeight.SemiBold) }
+                        ) { Icon(Icons.AutoMirrored.Filled.Login, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.sign_in_with_google), fontWeight = FontWeight.SemiBold) }
                         Spacer(Modifier.height(8.dp))
                         OutlinedButton(onClick = { pasting = true }, modifier = Modifier.fillMaxWidth().testTag("yt_paste_cookie")) {
-                            Icon(Icons.Default.ContentPaste, null); Spacer(Modifier.width(8.dp)); Text("Paste cookie (advanced)")
+                            Icon(Icons.Default.ContentPaste, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.paste_cookie_advanced))
                         }
                         Text(
-                            "Use this if Google says the browser or app may not be secure.",
+                            stringResource(R.string.use_this_if_google_says_the),
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp),
                         )
                     }
@@ -189,14 +191,14 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { askSignOut = false },
         icon = { Icon(Icons.AutoMirrored.Filled.Logout, null) },
-        title = { Text("Sign out of YouTube?") },
-        text = { Text("The saved sign-in is deleted from this phone and YouTube goes back to anonymous playback.") },
+        title = { Text(stringResource(R.string.sign_out_of_youtube)) },
+        text = { Text(stringResource(R.string.the_saved_sign_in_is_deleted)) },
         confirmButton = {
             TextButton(onClick = { askSignOut = false; YtAccount.signOut(context); AppMessages.success(context, "Signed out of YouTube") }, modifier = Modifier.testTag("yt_sign_out_confirm")) {
-                Text("Sign out", color = dev.asfakul.yumeiro.ui.theme.DangerTone)
+                Text(stringResource(R.string.sign_out), color = dev.asfakul.yumeiro.ui.theme.DangerTone)
             }
         },
-        dismissButton = { TextButton(onClick = { askSignOut = false }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { askSignOut = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -227,7 +229,7 @@ private fun GoogleSignInPage(onDone: (Boolean) -> Unit) {
         SubPageHeader(title = "Sign in with Google", onBack = { onDone(false) }, subtitle = "Google's own page · Yumeiro never sees your password", handleBack = false)
         if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         if (gone) {
-            Text("The sign-in page stopped responding. Go back and try again.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
+            Text(stringResource(R.string.the_sign_in_page_stopped_responding), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
             return@Column
         }
         Surface(Modifier.fillMaxSize().padding(8.dp).border(1.dp, goldHairline(), yuRound(18)), shape = yuRound(18), color = Color.White) {
@@ -316,7 +318,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                     IconTile(Icons.Default.Lock, YouTubeRed, size = 38)
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        "A YouTube cookie works like a password. Paste it only here, never in chats or bug reports. Yumeiro checks it with youtube.com and stores it encrypted on this phone.",
+                        stringResource(R.string.a_youtube_cookie_works_like_a),
                         color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp,
                     )
                 }
@@ -325,7 +327,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                 value = text,
                 onValueChange = { text = it; error = null },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 140.dp, max = 260.dp).testTag("yt_cookie_input"),
-                placeholder = { Text("Cookie header, cookies.txt, JSON or ArchiveTune token", color = TextTertiary, fontSize = 13.sp) },
+                placeholder = { Text(stringResource(R.string.cookie_header_cookies_txt_json_or), color = TextTertiary, fontSize = 13.sp) },
                 textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = TextPrimary),
                 keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Ascii),
                 isError = error != null,
@@ -342,7 +344,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                     },
                     enabled = !busy,
                     modifier = Modifier.weight(1f).testTag("yt_cookie_from_clipboard"),
-                ) { Icon(Icons.Default.ContentPaste, null); Spacer(Modifier.width(6.dp)); Text("Paste") }
+                ) { Icon(Icons.Default.ContentPaste, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.paste)) }
                 Button(
                     onClick = { check() },
                     enabled = !busy && text.isNotBlank(),
@@ -350,7 +352,7 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                     modifier = Modifier.weight(1.4f).testTag("yt_cookie_save"),
                 ) {
                     if (busy) CircularProgressIndicator(Modifier.width(18.dp).height(18.dp), color = OnAccent, strokeWidth = 2.dp)
-                    else Text("Check and save", fontWeight = FontWeight.SemiBold)
+                    else Text(stringResource(R.string.check_and_save), fontWeight = FontWeight.SemiBold)
                 }
             }
             GuideCard(SetupGuides.youtubeCookie)
@@ -362,10 +364,10 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { unverified = null },
             icon = { Icon(Icons.Default.Lock, null) },
-            title = { Text("Couldn't check with YouTube") },
-            text = { Text("The cookie looks signed in, but youtube.com couldn't be reached to confirm it. Save it anyway? If it has expired, YouTube will keep blocking videos and you can paste a new one.") },
-            confirmButton = { TextButton(onClick = { unverified = null; save(cookie) }, modifier = Modifier.testTag("yt_cookie_save_anyway")) { Text("Save anyway") } },
-            dismissButton = { TextButton(onClick = { unverified = null }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.couldnt_check_with_youtube)) },
+            text = { Text(stringResource(R.string.the_cookie_looks_signed_in_but)) },
+            confirmButton = { TextButton(onClick = { unverified = null; save(cookie) }, modifier = Modifier.testTag("yt_cookie_save_anyway")) { Text(stringResource(R.string.save_anyway)) } },
+            dismissButton = { TextButton(onClick = { unverified = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

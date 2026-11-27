@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="vault_sources">
+        <item quantity="one">%dটি সোর্স</item>
+        <item quantity="other">%dটি সোর্স</item>
+    </plurals>
+    <plurals name="vault_titles">
+        <item quantity="one">%dটি টাইটেল</item>
+        <item quantity="other">%dটি টাইটেল</item>
+    </plurals>
+    <plurals name="vault_sources_found">
+        <item quantity="one">%dটি সোর্স পাওয়া গেছে</item>
+        <item quantity="other">%dটি সোর্স পাওয়া গেছে</item>
+    </plurals>
+</resources>

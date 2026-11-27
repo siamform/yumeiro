@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -73,14 +75,14 @@ private fun MarketFrame(
                 dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Name, language or source", tag + "_search", horizontalPadding = 0.dp)
                 controls()
                 content(s.catalog, query, expanded)
-                Text("Listed automatically from GitHub and public catalogs. Yumeiro doesn't check what a repository contains; add the ones you trust.",
+                Text(stringResource(R.string.listed_automatically_from_github_and_public),
                     color = TextTertiary, fontSize = 11.sp)
             }
             is SourceMarket.State.Error -> {
                 Text(s.message, color = TextTertiary, fontSize = 12.sp)
-                TextButton(onClick = { scope.launch { SourceMarket.load(context.applicationContext, force = true) } }) { Text("Retry", color = SpotifyGreen) }
+                TextButton(onClick = { scope.launch { SourceMarket.load(context.applicationContext, force = true) } }) { Text(stringResource(R.string.retry), color = SpotifyGreen) }
             }
-            else -> Text("Loading the market…", color = TextTertiary, fontSize = 12.sp)
+            else -> Text(stringResource(R.string.loading_the_market), color = TextTertiary, fontSize = 12.sp)
         }
     }
 }
@@ -112,7 +114,7 @@ internal fun RepoMarket(
         },
         content = { catalog, query, _ ->
             val list = SourceMarket.filterRepos(catalog.repos[kind].orEmpty(), query, sort, adult)
-            if (list.isEmpty()) Text("Nothing matches.", color = TextTertiary, fontSize = 12.sp)
+            if (list.isEmpty()) Text(stringResource(R.string.nothing_matches), color = TextTertiary, fontSize = 12.sp)
             list.take(limit).forEach { r ->
                 val added = isAdded(r.url)
                 val n = r.count + if (adult) r.nsfw else 0
@@ -128,7 +130,7 @@ internal fun RepoMarket(
                     TextButton(onClick = { onAdd(r.url) }, enabled = !added) { Text(if (added) "Added" else "Add", color = if (added) TextTertiary else SpotifyGreen) }
                 }
             }
-            if (list.size > limit) TextButton(onClick = { limit += PAGE * 2 }) { Text("Show more (${list.size - limit})", color = SpotifyGreen) }
+            if (list.size > limit) TextButton(onClick = { limit += PAGE * 2 }) { Text(stringResource(R.string.show_more, list.size - limit), color = SpotifyGreen) }
         },
     )
 }
@@ -159,7 +161,7 @@ internal fun AddonMarket(isAdded: (String) -> Boolean, startExpanded: Boolean, o
         content = { catalog, query, _ ->
             val list = SourceMarket.filterAddons(catalog.addons, query, sort, adult)
                 .filter { type.isEmpty() || it.types.any { t -> t.equals(type, true) } }
-            if (list.isEmpty()) Text("Nothing matches.", color = TextTertiary, fontSize = 12.sp)
+            if (list.isEmpty()) Text(stringResource(R.string.nothing_matches), color = TextTertiary, fontSize = 12.sp)
             list.take(limit).forEach { a ->
                 val added = isAdded(a.url)
                 val meta = buildString {
@@ -171,7 +173,7 @@ internal fun AddonMarket(isAdded: (String) -> Boolean, startExpanded: Boolean, o
                     TextButton(onClick = { onAdd(a.url) }, enabled = !added) { Text(if (added) "Added" else "Add", color = if (added) TextTertiary else SpotifyGreen) }
                 }
             }
-            if (list.size > limit) TextButton(onClick = { limit += PAGE * 2 }) { Text("Show more (${list.size - limit})", color = SpotifyGreen) }
+            if (list.size > limit) TextButton(onClick = { limit += PAGE * 2 }) { Text(stringResource(R.string.show_more, list.size - limit), color = SpotifyGreen) }
         },
     )
 }

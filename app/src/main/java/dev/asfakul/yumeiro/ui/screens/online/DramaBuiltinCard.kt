@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -132,12 +134,12 @@ private fun BuiltinSourceCard(
                     if (enabled) OutlinedButton(onClick = ::toggle, shape = yuRound(18), modifier = Modifier.testTag("${tag}_toggle")) {
                         Icon(Icons.Default.Check, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("On", color = TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.on), color = TextPrimary, fontWeight = FontWeight.Bold)
                     } else Button(
                         onClick = ::toggle, shape = yuRound(18),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.testTag("${tag}_toggle"),
-                    ) { Text("Turn on", fontWeight = FontWeight.Bold) }
+                    ) { Text(stringResource(R.string.turn_on), fontWeight = FontWeight.Bold) }
                 }
             }
             Spacer(Modifier.padding(top = 8.dp))

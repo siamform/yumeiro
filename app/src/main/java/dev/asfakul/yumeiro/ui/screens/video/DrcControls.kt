@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -43,7 +45,7 @@ fun DrcPresetRow(modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { DynamicRangeCompressor.load(ctx) }
     val preset by DynamicRangeCompressor.preset.collectAsState()
     Column(modifier.fillMaxWidth().testTag("drc_row")) {
-        Text("Dynamic range compressor", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(stringResource(R.string.dynamic_range_compressor), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
         Text(preset.summary, color = TextSecondary, fontSize = 11.sp, modifier = Modifier.testTag("drc_summary"))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             DynamicRangeCompressor.Preset.entries
@@ -83,7 +85,7 @@ fun DrcCustomSliders(modifier: Modifier = Modifier) {
         DrcSlider("Release", "${c.releaseMs.roundToInt()} ms", "How fast the sound comes back", c.releaseMs, 10f..2000f, 0, "drc_release", save) { edit(c.copy(releaseMs = it)) }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             androidx.compose.material3.TextButton(onClick = { DynamicRangeCompressor.reset(ctx) }, modifier = Modifier.testTag("drc_reset")) {
-                Text("Reset", color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.reset), color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
             }
         }
     }

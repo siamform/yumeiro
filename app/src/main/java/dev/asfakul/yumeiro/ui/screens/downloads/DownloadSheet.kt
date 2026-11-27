@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -192,7 +194,7 @@ internal fun DownloadSheetContent(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Download ${req.what}", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(stringResource(R.string.download_2, req.what), color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(req.title, color = p.textSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("download_sheet_title"))
             }
         }
@@ -217,7 +219,7 @@ internal fun DownloadSheetContent(
             Text(DownloadSheet.sizeLine(probed, free, req.sizeNote), color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp).testTag("download_size"))
         }
         if (sizeBytes > 0 && free in 1 until sizeBytes)
-            Text("Not enough free space for this download.", color = if (p.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp).testTag("download_space_warning"))
+            Text(stringResource(R.string.not_enough_free_space_for_this), color = if (p.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp).testTag("download_space_warning"))
 
         // Middle part scrolls on its own so the Download button never leaves the screen.
         Column(Modifier.weight(1f, fill = false).heightIn(max = 420.dp).verticalScroll(rememberScrollState()).padding(top = 14.dp)) {
@@ -227,12 +229,12 @@ internal fun DownloadSheetContent(
                     selected = !keep, onClick = { onKeep(false) }, shape = SegmentedButtonDefaults.itemShape(0, 2),
                     icon = { Icon(Icons.Default.Schedule, null, Modifier.size(18.dp)) },
                     modifier = Modifier.testTag("download_mode_offline"),
-                ) { Text("Offline copy", maxLines = 1) }
+                ) { Text(stringResource(R.string.offline_copy), maxLines = 1) }
                 SegmentedButton(
                     selected = keep, onClick = { onKeep(true) }, shape = SegmentedButtonDefaults.itemShape(1, 2),
                     icon = { Icon(Icons.Default.PushPin, null, Modifier.size(18.dp)) },
                     modifier = Modifier.testTag("download_mode_permanent"),
-                ) { Text("Permanent", maxLines = 1) }
+                ) { Text(stringResource(R.string.permanent), maxLines = 1) }
             }
             Text(DownloadSheet.keepNote(keep, days), color = p.textSecondary, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 6.dp).testTag("download_keep_note"))
             AnimatedVisibility(!keep) {
@@ -256,7 +258,7 @@ internal fun DownloadSheetContent(
                 Modifier.fillMaxWidth().clickable { details = !details }.padding(vertical = 8.dp).testTag("download_details"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Where it goes and tips", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.where_it_goes_and_tips), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 Icon(if (details) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (details) "Hide details" else "Show details", tint = p.textTertiary)
             }
             // The requester sits on the AnimatedVisibility itself: its height grows every frame while it unfolds
@@ -284,7 +286,7 @@ internal fun DownloadSheetContent(
                 }
             }
             Row(Modifier.fillMaxWidth().clickable { onDontAsk(!dontAsk) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Don't ask again", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.dont_ask_again), color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
                 Switch(dontAsk, onDontAsk, modifier = Modifier.testTag("download_dont_ask"))
             }
         }
@@ -301,8 +303,8 @@ internal fun DownloadSheetContent(
             Text(DownloadSheet.startLabel(req.count), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = { DownloadPrompt.dismiss(); DownloadsNav.open() }, modifier = Modifier.testTag("download_sheet_settings")) { Text("Download settings") }
-            TextButton(onClick = { DownloadPrompt.dismiss() }, modifier = Modifier.testTag("download_sheet_cancel")) { Text("Cancel") }
+            TextButton(onClick = { DownloadPrompt.dismiss(); DownloadsNav.open() }, modifier = Modifier.testTag("download_sheet_settings")) { Text(stringResource(R.string.download_settings)) }
+            TextButton(onClick = { DownloadPrompt.dismiss() }, modifier = Modifier.testTag("download_sheet_cancel")) { Text(stringResource(R.string.cancel)) }
         }
     }
 }

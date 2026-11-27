@@ -47,7 +47,8 @@ class MainActivity : com.lagradost.cloudstream3.MainActivity() {
 
     /** F12: compact text app-wide (every window this activity opens), see [dev.asfakul.yumeiro.ui.theme.UiScale]. */
     override fun attachBaseContext(newBase: android.content.Context) {
-        super.attachBaseContext(dev.asfakul.yumeiro.ui.theme.UiScale.wrap(newBase))
+        // F2: the picked language first, then F12's compact text scale on top of it.
+        super.attachBaseContext(dev.asfakul.yumeiro.ui.theme.UiScale.wrap(dev.asfakul.yumeiro.l10n.AppLanguage.wrap(newBase)))
     }
 
     override fun onDestroy() {

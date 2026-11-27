@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -145,7 +147,7 @@ fun TgSearchHeader(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { close() }, modifier = Modifier.testTag("tg_search_back")) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close search", tint = p.textPrimary)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.close_search), tint = p.textPrimary)
                 }
                 TextField(
                     value = query, onValueChange = onQuery, singleLine = true,
@@ -154,7 +156,7 @@ fun TgSearchHeader(
                     keyboardActions = KeyboardActions(onSearch = { onSubmit?.invoke(query) }),
                     trailingIcon = {
                         if (query.isNotEmpty()) IconButton(onClick = { onQuery(""); onSubmit?.invoke("") }, modifier = Modifier.testTag("tg_search_clear")) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_search))
                         }
                     },
                     colors = TextFieldDefaults.colors(
@@ -241,7 +243,7 @@ fun TelegramChatsPage(
                         },
                         color = p.textSecondary, modifier = Modifier.testTag("tg_chats_empty"),
                     )
-                    if (error != null) TextButton(onClick = onRetry, modifier = Modifier.testTag("tg_chats_retry")) { Text("Try again") }
+                    if (error != null) TextButton(onClick = onRetry, modifier = Modifier.testTag("tg_chats_retry")) { Text(stringResource(R.string.try_again)) }
                 }
             }
             if (loading) item("loading") {
@@ -252,7 +254,7 @@ fun TelegramChatsPage(
 
     if (showMe) dev.asfakul.yumeiro.ui.components.TsukiDialog(
         onDismissRequest = { showMe = false },
-        title = { Text("Your account") },
+        title = { Text(stringResource(R.string.your_account)) },
         text = {
             Column(Modifier.fillMaxWidth().testTag("tg_me"), horizontalAlignment = Alignment.CenterHorizontally) {
                 TelegramAvatar(me?.second, me?.first?.name.orEmpty().ifBlank { "Me" }, size = 72.dp)
@@ -260,15 +262,15 @@ fun TelegramChatsPage(
                 Text(me?.first?.name?.ifBlank { null } ?: "Signed in", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 me?.first?.username?.takeIf { it.isNotBlank() }?.let { Text("@$it", color = p.textSecondary, fontSize = 13.sp, maxLines = 1) }
                 Spacer(Modifier.size(4.dp))
-                Text("Your login stays on this phone.", color = p.textSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.your_login_stays_on_this_phone), color = p.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.size(16.dp))
                 OutlinedButton(onClick = { showMe = false; onSignOut() }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_me_signout")) {
                     Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Sign out")
+                    Text(stringResource(R.string.sign_out))
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { showMe = false }, modifier = Modifier.testTag("tg_me_close")) { Text("Close") } },
+        confirmButton = { TextButton(onClick = { showMe = false }, modifier = Modifier.testTag("tg_me_close")) { Text(stringResource(R.string.close)) } },
     )
 }

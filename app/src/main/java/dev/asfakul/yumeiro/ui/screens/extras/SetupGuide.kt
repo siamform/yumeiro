@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -245,7 +247,7 @@ fun SetupGuideOverlay(onAction: (SetupStep) -> Unit, onExplore: () -> Unit = { E
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "Back", color = p.textSecondary, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                        stringResource(R.string.back), color = p.textSecondary, fontWeight = FontWeight.Bold, fontSize = 15.sp,
                         modifier = Modifier.clip(RoundedCornerShape(50)).clickable { page = 0 }.testTag("setup_back").padding(horizontal = 18.dp, vertical = 14.dp),
                     )
                     Spacer(Modifier.weight(1f))
@@ -254,7 +256,7 @@ fun SetupGuideOverlay(onAction: (SetupStep) -> Unit, onExplore: () -> Unit = { E
                             .clickable(role = Role.Button) { skip() }
                             .testTag("setup_done").padding(horizontal = 28.dp, vertical = 15.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text("Start using Yumeiro", color = p.onAccent, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp) }
+                    ) { Text(stringResource(R.string.start_using_yumeiro), color = p.onAccent, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp) }
                 }
             }
         }
@@ -290,28 +292,28 @@ private fun WelcomePage(onExplore: () -> Unit, onSkip: () -> Unit, onChecklist: 
                 }
                 Column(Modifier.fillMaxWidth().alpha(textAlpha)) {
                     Text(
-                        "夢色 YUMEIRO", color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                        stringResource(R.string.yumeiro), color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(18.dp))
                     Text(
-                        "New to Yumeiro?", style = MaterialTheme.typography.headlineMedium, color = p.textPrimary, fontWeight = FontWeight.ExtraBold,
+                        stringResource(R.string.new_to_yumeiro), style = MaterialTheme.typography.headlineMedium, color = p.textPrimary, fontWeight = FontWeight.ExtraBold,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "Explore and discover what you can do here.",
+                        stringResource(R.string.explore_and_discover_what_you_can),
                         style = MaterialTheme.typography.bodyLarge, color = p.textSecondary,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(22.dp))
                     Text(
-                        "Already familiar with Yumeiro?", style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.Bold,
+                        stringResource(R.string.already_familiar_with_yumeiro), style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.Bold,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "You can skip and start using the app.",
+                        stringResource(R.string.you_can_skip_and_start_using),
                         style = MaterialTheme.typography.bodyMedium, color = p.textSecondary,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth(),
                     )
@@ -323,17 +325,17 @@ private fun WelcomePage(onExplore: () -> Unit, onSkip: () -> Unit, onChecklist: 
                 Modifier.fillMaxWidth().heightIn(min = 54.dp).clip(RoundedCornerShape(50)).background(p.accent)
                     .clickable(role = Role.Button, onClick = onExplore).testTag("setup_explore").padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("Explore Yumeiro", color = p.onAccent, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
+            ) { Text(stringResource(R.string.explore_yumeiro), color = p.onAccent, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
             Spacer(Modifier.height(10.dp))
             Box(
                 Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(50))
                     .border(1.dp, p.textPrimary.copy(alpha = 0.16f), RoundedCornerShape(50))
                     .clickable(role = Role.Button, onClick = onSkip).testTag("setup_skip").padding(vertical = 15.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("Skip for now", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
+            ) { Text(stringResource(R.string.skip_for_now), color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
             Spacer(Modifier.height(6.dp))
             Text(
-                "Set up the essentials instead", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                stringResource(R.string.set_up_the_essentials_instead), color = p.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 modifier = Modifier.clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = onChecklist)
                     .testTag("setup_open_checklist").padding(horizontal = 16.dp, vertical = 12.dp),
             )
@@ -346,9 +348,9 @@ private fun ChecklistPage(status: SetupStatus, onAction: (SetupStep) -> Unit) {
     val p = LocalMtPalette.current
     LazyColumn(Modifier.fillMaxSize().testTag("setup_checklist"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("setup_checklist"), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)) {
         item {
-            Text("Set up the essentials", style = MaterialTheme.typography.headlineLarge, color = p.textPrimary, modifier = Modifier.padding(horizontal = 4.dp))
+            Text(stringResource(R.string.set_up_the_essentials), style = MaterialTheme.typography.headlineLarge, color = p.textPrimary, modifier = Modifier.padding(horizontal = 4.dp))
             Spacer(Modifier.height(6.dp))
-            Text("${status.count} of ${status.total} ready. Tap any step to do it now.", style = MaterialTheme.typography.bodyMedium, color = p.textSecondary, modifier = Modifier.padding(horizontal = 4.dp))
+            Text(stringResource(R.string.of_ready_tap_any_step_to, status.count, status.total), style = MaterialTheme.typography.bodyMedium, color = p.textSecondary, modifier = Modifier.padding(horizontal = 4.dp))
             Spacer(Modifier.height(14.dp))
         }
         items(SetupStep.entries, key = { it.name }) { step -> SetupStepRow(step, step in status.done) { onAction(step) } }

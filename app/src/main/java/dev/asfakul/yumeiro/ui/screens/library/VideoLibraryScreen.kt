@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.filled.ExpandMore
 
 import androidx.compose.material.icons.filled.ExpandLess
@@ -168,7 +170,7 @@ fun VideoLibraryContent(
         }
         if (downloads.isEmpty()) item("dlempty", span = { GridItemSpan(maxLineSpan) }) {
             Text(
-                "Tip: open any anime or movie and tap Download, or tap Download under a YouTube video. Choose Permanent to keep it, or Offline to let the auto-delete timer clear it.",
+                stringResource(R.string.tip_open_any_anime_or_movie),
                 color = TextTertiary, fontSize = 12.sp, lineHeight = 16.sp,
             )
         } else {
@@ -232,7 +234,7 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
                     }
                     DropdownMenuItem(text = { Text(if (b.favorite) "♥ Remove from Favorites" else "♡ Add to Favorites") }, onClick = { OnlineBookmarks.toggleFavorite(context, b.toItem()); menu = false })
                     DropdownMenuItem(text = { Text(if (b.notify) "Turn off new-episode alerts" else "Alert me about new episodes") }, onClick = { OnlineBookmarks.setNotify(context, b.api, b.url, !b.notify); menu = false })
-                    DropdownMenuItem(text = { Text("Remove from My List") }, onClick = { OnlineBookmarks.remove(context, b.api, b.url); menu = false })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.remove_from_my_list)) }, onClick = { OnlineBookmarks.remove(context, b.api, b.url); menu = false })
                 }
             }
         }
@@ -269,7 +271,7 @@ private fun LibHeader(title: String, subtitle: String? = null) {
 @Composable
 fun LibraryTopBar(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary) }
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = TextPrimary) }
         Text(title, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
     }
 }

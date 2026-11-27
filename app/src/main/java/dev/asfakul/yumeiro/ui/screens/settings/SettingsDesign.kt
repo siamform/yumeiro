@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import android.content.ClipData
@@ -212,7 +214,7 @@ fun GuideCard(guide: SetupGuide, modifier: Modifier = Modifier, startExpanded: B
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(guide.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    if (!open) Text("Step-by-step · tap to open", color = TextTertiary, fontSize = 11.sp)
+                    if (!open) Text(stringResource(R.string.step_by_step_tap_to_open), color = TextTertiary, fontSize = 11.sp)
                 }
                 Icon(Icons.Default.ExpandMore, if (open) "Hide guide" else "Show guide", tint = TextSecondary, modifier = Modifier.rotate(turn))
             }
@@ -254,7 +256,7 @@ private fun GuideStep(n: Int, s: SetupGuide.Step, context: Context) {
                 ) {
                     Text(s.copy, color = if (dark) BrandGold else TextPrimary, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.weight(1f, fill = false))
                     Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Default.ContentCopy, "Copy", tint = TextSecondary, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.ContentCopy, stringResource(R.string.copy_2), tint = TextSecondary, modifier = Modifier.size(14.dp))
                 }
             }
             if (s.link != null) {

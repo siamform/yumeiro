@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- F2: languages shipped in the APK (Android 13+ per-app language page). Keep in sync with AppLanguage.SHIPPED. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="bn" />
+    <locale android:name="ar" />
+</locale-config>

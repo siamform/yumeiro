@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.view.KeyEvent
 import androidx.compose.foundation.background
@@ -90,7 +92,7 @@ internal fun PictureScope(d: PictureDraft, onRebuild: () -> Unit, onPreview: () 
     if (d.titleKey != null) {
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-                Text("This title only", color = p.textPrimary)
+                Text(stringResource(R.string.this_title_only), color = p.textPrimary)
                 Text(if (d.perTitle) "Saved for this show; other videos keep the main settings" else "Changes apply to all videos",
                     color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             }
@@ -103,24 +105,24 @@ internal fun PictureScope(d: PictureDraft, onRebuild: () -> Unit, onPreview: () 
         }
     }
     if (HeatGuard.level.collectAsState().value == HeatGuard.Level.HOT) {
-        Text("Your device is hot, so sharpening and Anime4K are paused until it cools down. Colour settings still apply.",
+        Text(stringResource(R.string.your_device_is_hot_so_sharpening),
             color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp).testTag("pic_hot"))
     }
-    Text("HDR videos are always shown as mastered; these settings apply to normal (SDR) videos.",
+    Text(stringResource(R.string.hdr_videos_are_always_shown_as),
         color = p.textSecondary, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
     Row(Modifier.padding(top = 6.dp)) {
-        TextButton(onClick = { confirmReset = true }, modifier = Modifier.testTag("pic_reset_all")) { Text("Reset all", color = p.accent) }
+        TextButton(onClick = { confirmReset = true }, modifier = Modifier.testTag("pic_reset_all")) { Text(stringResource(R.string.reset_all), color = p.accent) }
     }
     if (confirmReset) AlertDialog(
         onDismissRequest = { confirmReset = false },
-        title = { Text("Reset all picture settings?") },
-        text = { Text("Every preset, picture control, filter setting and per-title setting goes back to the default.") },
+        title = { Text(stringResource(R.string.reset_all_picture_settings)) },
+        text = { Text(stringResource(R.string.every_preset_picture_control_filter_setting)) },
         confirmButton = { TextButton(modifier = Modifier.testTag("pic_reset_all_ok"), onClick = {
             confirmReset = false
             PictureLook.resetAll(d.context); d.perTitle = false; d.preview(PictureLook.Profile())
             onRebuild(); onPreview()
-        }) { Text("Reset") } },
-        dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
+        }) { Text(stringResource(R.string.reset)) } },
+        dismissButton = { TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -166,7 +168,7 @@ internal fun PictureControls(d: PictureDraft, onPreview: () -> Unit) {
     ValueSlider("Sharpness", "pic_sharpness", c.sharpness, 0f..1f, 0f, Kind.PERCENT, 0.05f, help = null,
         onChange = { v, s -> set(c.copy(sharpness = v), s) })
     Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Video filter", color = p.textPrimary, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.video_filter), color = p.textPrimary, modifier = Modifier.weight(1f))
         Text(c.filter.label, color = p.textSecondary, style = MaterialTheme.typography.labelMedium)
         ResetDot(enabled = c.filter != PictureLook.VideoFilter.NONE, tag = "pic_filter_reset") { set(c.copy(filter = PictureLook.VideoFilter.NONE), true) }
     }
@@ -258,7 +260,7 @@ internal fun ValueSlider(
     if (showHelp && help != null) AlertDialog(
         onDismissRequest = { showHelp = false },
         title = { Text(label) }, text = { Text(help) },
-        confirmButton = { TextButton(onClick = { showHelp = false }, modifier = Modifier.testTag("${tag}_help_ok")) { Text("OK") } },
+        confirmButton = { TextButton(onClick = { showHelp = false }, modifier = Modifier.testTag("${tag}_help_ok")) { Text(stringResource(R.string.ok)) } },
     )
 }
 
@@ -266,6 +268,6 @@ internal fun ValueSlider(
 private fun ResetDot(enabled: Boolean, tag: String, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     TextButton(onClick = onClick, enabled = enabled, modifier = Modifier.testTag(tag)) {
-        Text("Reset", color = if (enabled) p.accent else p.textSecondary.copy(alpha = 0.4f), style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(R.string.reset), color = if (enabled) p.accent else p.textSecondary.copy(alpha = 0.4f), style = MaterialTheme.typography.labelMedium)
     }
 }

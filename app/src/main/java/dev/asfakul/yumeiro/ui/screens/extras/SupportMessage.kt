@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -106,7 +108,7 @@ fun SupportYumeiroCard(modifier: Modifier = Modifier, full: Boolean = false, sho
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 10.dp),
             ) {
                 Icon(Icons.Default.Coffee, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                Text("Buy a coffee", fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(stringResource(R.string.buy_a_coffee), fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             OutlinedButton(
                 onClick = { if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context) },
@@ -114,7 +116,7 @@ fun SupportYumeiroCard(modifier: Modifier = Modifier, full: Boolean = false, sho
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 10.dp),
             ) {
                 Icon(Icons.Default.Star, null, tint = BrandGold, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp))
-                Text("Star on GitHub", color = TextPrimary, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(stringResource(R.string.star_on_github), color = TextPrimary, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
         }
     }

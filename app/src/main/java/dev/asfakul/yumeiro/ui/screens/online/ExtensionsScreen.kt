@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -230,18 +232,18 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             if (engine.installed.isNotEmpty()) IconButton(onClick = { if (selecting) endSelection() else selecting = true }, modifier = Modifier.testTag("extensions_select")) {
                 Icon(Icons.Default.Checklist, if (selecting) "Stop selecting" else "Select extensions", tint = if (selecting) SpotifyGreen else TextPrimary)
             }
-            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, "More sources", tint = TextPrimary) }
-            IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, "Market", tint = TextPrimary) }
+            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, stringResource(R.string.more_sources), tint = TextPrimary) }
+            IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, stringResource(R.string.market), tint = TextPrimary) }
             IconButton(onClick = { showAddMenu = true }, modifier = Modifier.testTag("extensions_add")) {
-                Icon(Icons.Default.Add, "Add", tint = TextPrimary)
+                Icon(Icons.Default.Add, stringResource(R.string.add), tint = TextPrimary)
                 DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                    DropdownMenuItem(text = { Text("Add anything (auto-detect)") }, leadingIcon = { Icon(Icons.Default.Add, null) },
+                    DropdownMenuItem(text = { Text(stringResource(R.string.add_anything_auto_detect)) }, leadingIcon = { Icon(Icons.Default.Add, null) },
                         onClick = { showAddMenu = false; showAnyDialog = true }, modifier = Modifier.testTag("extensions_add_any"))
-                    DropdownMenuItem(text = { Text("Add repository") }, leadingIcon = { Icon(Icons.Default.Storefront, null) },
+                    DropdownMenuItem(text = { Text(stringResource(R.string.add_repository)) }, leadingIcon = { Icon(Icons.Default.Storefront, null) },
                         onClick = { showAddMenu = false; showRepoDialog = true }, modifier = Modifier.testTag("extensions_add_repo"))
-                    DropdownMenuItem(text = { Text("Install from file (.cs3 or .apk)") }, leadingIcon = { Icon(Icons.Default.FolderOpen, null) },
+                    DropdownMenuItem(text = { Text(stringResource(R.string.install_from_file_cs3_or_apk)) }, leadingIcon = { Icon(Icons.Default.FolderOpen, null) },
                         onClick = { showAddMenu = false; picker.launch(arrayOf("*/*")) }, modifier = Modifier.testTag("extensions_add_file"))
-                    DropdownMenuItem(text = { Text("Install from link") }, leadingIcon = { Icon(Icons.Default.Link, null) },
+                    DropdownMenuItem(text = { Text(stringResource(R.string.install_from_link)) }, leadingIcon = { Icon(Icons.Default.Link, null) },
                         onClick = { showAddMenu = false; showLinkDialog = true }, modifier = Modifier.testTag("extensions_add_link"))
                 }
             }
@@ -274,7 +276,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                             Spacer(Modifier.width(12.dp))
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                             Button(onClick = { scope.launch { bulkUpdate(updates) } }, enabled = !bulkBusy, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = yuRound(20), modifier = Modifier.testTag("extensions_update_all")) {
-                                Text("Update all")
+                                Text(stringResource(R.string.update_all_2))
                             }
                         }
                     }
@@ -286,8 +288,8 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                             Icon(Icons.Default.Language, null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text("More sources", color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                                Text("Aniyomi, Mihon manga, Stremio add-ons, JavaScript sources and home servers", color = TextTertiary, fontSize = 12.sp)
+                                Text(stringResource(R.string.more_sources), color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.aniyomi_mihon_manga_stremio_add_ons), color = TextTertiary, fontSize = 12.sp)
                             }
                         }
                     }
@@ -302,12 +304,12 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                             Icon(Icons.Default.Extension, null, tint = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text("$kinds sources: ${names.size} installed", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.sources_installed, kinds, names.size), color = TextPrimary, fontWeight = FontWeight.SemiBold)
                                 Text(if (names.isEmpty()) "${scripts.repos.size} repositor${if (scripts.repos.size == 1) "y" else "ies"} added. Tap to install providers"
                                     else names.take(4).joinToString(", ") + if (names.size > 4) " and ${names.size - 4} more" else "",
                                     color = TextTertiary, fontSize = 12.sp, maxLines = 2)
                             }
-                            Text("Manage", color = SpotifyGreen, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("extensions_script_manage"))
+                            Text(stringResource(R.string.manage), color = SpotifyGreen, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("extensions_script_manage"))
                         }
                     }
                 }
@@ -337,21 +339,21 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                 }
                 // OWN-9: the official built-in sources, right after the installed ones (before: only in the market).
                 item("official_header") {
-                    Text("Official · built in", color = TextSecondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp).testTag("extensions_official"))
+                    Text(stringResource(R.string.official_built_in), color = TextSecondary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(top = 14.dp).testTag("extensions_official"))
                 }
                 if (!officialHub() && dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.OFFICIAL_CLASSICS)) item("builtin_classics") { ClassicsBuiltinCard() }
                 item("builtin_drama_installed") { DramaBuiltinCard() }
                 item("repos_header") {
                     Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Your repositories", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("Extra CloudStream repositories shown in the market", color = TextTertiary, fontSize = 11.sp)
+                            Text(stringResource(R.string.your_repositories), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(stringResource(R.string.extra_cloudstream_repositories_shown_in_the), color = TextTertiary, fontSize = 11.sp)
                         }
-                        TextButton(onClick = { showRepoDialog = true }) { Text("Add", color = SpotifyGreen) }
+                        TextButton(onClick = { showRepoDialog = true }) { Text(stringResource(R.string.add), color = SpotifyGreen) }
                     }
                 }
                 if (engine.repos.isEmpty()) item("repos_empty") {
-                    Text("No repositories added. The market already includes verified ones.", color = TextTertiary, fontSize = 12.sp)
+                    Text(stringResource(R.string.no_repositories_added_the_market_already), color = TextTertiary, fontSize = 12.sp)
                 }
                 items(engine.repos, key = { "repo_" + it.url }) { repo ->
                     Surface(shape = yuRound(16), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("extensions_repo")) {
@@ -360,7 +362,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                                 Text(repo.name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(repo.url, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            IconButton(onClick = { confirmRepo = repo }) { Icon(Icons.Default.Delete, "Remove repository", tint = TextSecondary) }
+                            IconButton(onClick = { confirmRepo = repo }) { Icon(Icons.Default.Delete, stringResource(R.string.remove_repository_2), tint = TextSecondary) }
                         }
                     }
                 }
@@ -369,7 +371,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                 item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.cloudstream) }
                 item("note") {
                     Text(
-                        "Extensions run code from their authors. Only install ones you trust, and use them for content you're allowed to watch. Protected (DRM) and torrent sources are not played.",
+                        stringResource(R.string.extensions_run_code_from_their_authors),
                         color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 12.dp),
                     )
                 }
@@ -417,8 +419,8 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmDelete = null },
-            title = { Text("Remove ${ext.name}?") },
-            text = { Text("Its sources disappear from Online. You can install it again from the market.") },
+            title = { Text(stringResource(R.string.remove, ext.name)) },
+            text = { Text(stringResource(R.string.its_sources_disappear_from_online_you)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = null
@@ -426,30 +428,30 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                         ExtensionManager.uninstall(context, ext.key); afterChange()
                         AppMessages.show(context, "${ext.name} removed")
                     }
-                }, modifier = Modifier.testTag("extensions_confirm_delete")) { Text("Remove", color = ErrorColor) }
+                }, modifier = Modifier.testTag("extensions_confirm_delete")) { Text(stringResource(R.string.remove_2), color = ErrorColor) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     if (confirmBulkRemove) TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { confirmBulkRemove = false },
         title = { Text("Remove ${selected.size} extension${if (selected.size == 1) "" else "s"}?") },
-        text = { Text("Their sources disappear from Online. You can install them again from the market.") },
+        text = { Text(stringResource(R.string.their_sources_disappear_from_online_you)) },
         confirmButton = {
             TextButton(onClick = { confirmBulkRemove = false; val keys = selected; scope.launch { bulkRemove(keys) } },
-                modifier = Modifier.testTag("extensions_bulk_confirm_remove")) { Text("Remove", color = ErrorColor) }
+                modifier = Modifier.testTag("extensions_bulk_confirm_remove")) { Text(stringResource(R.string.remove_2), color = ErrorColor) }
         },
-        dismissButton = { TextButton(onClick = { confirmBulkRemove = false }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { confirmBulkRemove = false }) { Text(stringResource(R.string.cancel)) } },
     )
     confirmRepo?.let { repo ->
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmRepo = null },
-            title = { Text("Remove repository?") },
-            text = { Text("${repo.name} won't appear in the market anymore. Extensions you installed from it stay installed.") },
-            confirmButton = { TextButton(onClick = { confirmRepo = null; scope.launch { ExtensionManager.removeRepository(context, repo.url); check(false) } }) { Text("Remove", color = ErrorColor) } },
-            dismissButton = { TextButton(onClick = { confirmRepo = null }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.remove_repository)) },
+            text = { Text(stringResource(R.string.wont_appear_in_the_market_anymore, repo.name)) },
+            confirmButton = { TextButton(onClick = { confirmRepo = null; scope.launch { ExtensionManager.removeRepository(context, repo.url); check(false) } }) { Text(stringResource(R.string.remove_2), color = ErrorColor) } },
+            dismissButton = { TextButton(onClick = { confirmRepo = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -489,15 +491,15 @@ private fun InstalledCard(
         TsukiDialog(
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { showReport = false },
-            title = { Text("Safety check · ${ext.name}") },
+            title = { Text(stringResource(R.string.safety_check, ext.name)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(rep.summary, color = levelColor(rep.level), fontWeight = FontWeight.SemiBold)
                     rep.findings.forEach { f -> Text("• ${f.title} — ${f.detail}", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp) }
-                    Text("Static check of the installed file: ${rep.classes} classes, ${rep.methods} methods read; nothing was run.", color = TextTertiary, fontSize = 11.sp)
+                    Text(stringResource(R.string.static_check_of_the_installed_file, rep.classes, rep.methods), color = TextTertiary, fontSize = 11.sp)
                 }
             },
-            confirmButton = { TextButton(onClick = { showReport = false }) { Text("OK") } },
+            confirmButton = { TextButton(onClick = { showReport = false }) { Text(stringResource(R.string.ok)) } },
         )
     }
     fun openSettings() {
@@ -556,12 +558,12 @@ private fun InstalledCard(
                     modifier = Modifier.testTag("extension_toggle_${ext.internalName}"),
                 )
                 if (!selecting && plugin?.openSettings != null && ext.enabled) IconButton(onClick = { openSettings() }, modifier = Modifier.testTag("extension_settings_${ext.internalName}")) {
-                    Icon(Icons.Default.Settings, "Settings", tint = TextSecondary)
+                    Icon(Icons.Default.Settings, stringResource(R.string.settings), tint = TextSecondary)
                 }
                 if (!selecting) IconButton(onClick = { menu = true }) {
-                    Icon(Icons.Default.MoreVert, "More", tint = TextSecondary)
+                    Icon(Icons.Default.MoreVert, stringResource(R.string.more), tint = TextSecondary)
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        if (plugin?.openSettings != null && ext.enabled) DropdownMenuItem(text = { Text("Settings") }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { menu = false; openSettings() })
+                        if (plugin?.openSettings != null && ext.enabled) DropdownMenuItem(text = { Text(stringResource(R.string.settings)) }, leadingIcon = { Icon(Icons.Default.Settings, null) }, onClick = { menu = false; openSettings() })
                         apis.forEach { api ->
                             DropdownMenuItem(text = { Text(if (apis.size > 1) "Website address · ${api.name}" else "Website address") }, leadingIcon = { Icon(Icons.Default.Language, null) }, onClick = { menu = false; editUrl = api })
                         }
@@ -571,22 +573,22 @@ private fun InstalledCard(
                                 onClick = { menu = false; cloneOf = api }, modifier = Modifier.testTag("extension_clone_${api.name}"))
                         }
                         apis.filter { api -> dev.asfakul.yumeiro.online.SiteClones.isClone(api.name) }.forEach { api ->
-                            DropdownMenuItem(text = { Text("Remove clone · ${api.name}") }, leadingIcon = { Icon(Icons.Default.Delete, null) },
+                            DropdownMenuItem(text = { Text(stringResource(R.string.remove_clone, api.name)) }, leadingIcon = { Icon(Icons.Default.Delete, null) },
                                 onClick = { menu = false; dev.asfakul.yumeiro.online.SiteClones.remove(context, api.name); AppMessages.info(context, "Removed ${api.name}") },
                                 modifier = Modifier.testTag("extension_clone_remove_${api.name}"))
                         }
-                        if (update != null) DropdownMenuItem(text = { Text("Update to v${update.version}") }, leadingIcon = { Icon(Icons.Default.SystemUpdate, null) }, onClick = { menu = false; onUpdate() })
-                        DropdownMenuItem(text = { Text("Check for update") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onCheckUpdate() })
+                        if (update != null) DropdownMenuItem(text = { Text(stringResource(R.string.update_to_v, update.version)) }, leadingIcon = { Icon(Icons.Default.SystemUpdate, null) }, onClick = { menu = false; onUpdate() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.check_for_update)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onCheckUpdate() })
                         if (ext.enabled) apis.forEach { api ->
                             DropdownMenuItem(text = { Text(if (apis.size > 1) "Sign in to site · ${api.name}" else "Sign in to site") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Login, null) }, onClick = { menu = false; signIn(api) })
                         }
-                        if (signedIn) DropdownMenuItem(text = { Text("Sign out of site") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { menu = false; signOut() })
-                        if (report != null) DropdownMenuItem(text = { Text("Safety check") }, leadingIcon = { Icon(Icons.Default.Shield, null) }, onClick = { menu = false; showReport = true })
+                        if (signedIn) DropdownMenuItem(text = { Text(stringResource(R.string.sign_out_of_site)) }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, null) }, onClick = { menu = false; signOut() })
+                        if (report != null) DropdownMenuItem(text = { Text(stringResource(R.string.safety_check_2)) }, leadingIcon = { Icon(Icons.Default.Shield, null) }, onClick = { menu = false; showReport = true })
                         if (!ext.manual) DropdownMenuItem(
                             text = { Text(if (ext.autoUpdate) "Turn off auto-update" else "Turn on auto-update") },
                             leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onAuto(!ext.autoUpdate) },
                         )
-                        DropdownMenuItem(text = { Text("Remove", color = ErrorColor) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = ErrorColor) },
+                        DropdownMenuItem(text = { Text(stringResource(R.string.remove_2), color = ErrorColor) }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = ErrorColor) },
                             onClick = { menu = false; onDelete() }, modifier = Modifier.testTag("extension_delete_${ext.internalName}"))
                     }
                 }
@@ -608,21 +610,21 @@ private fun InstalledCard(
                     onClick = onUpdate, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                     shape = yuRound(18), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp).testTag("extension_update_${ext.internalName}"),
-                ) { Icon(Icons.Default.SystemUpdate, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Update to v${update.version}", fontSize = 12.sp) }
+                ) { Icon(Icons.Default.SystemUpdate, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.update_to_v, update.version), fontSize = 12.sp) }
                 else androidx.compose.material3.OutlinedButton(
                     onClick = onCheckUpdate, enabled = !busy && !(ext.manual && !ext.sourceUrl.startsWith("http")),
                     shape = yuRound(18), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp).testTag("extension_check_${ext.internalName}"),
-                ) { Icon(Icons.Default.Refresh, null, tint = TextSecondary, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text("Check for update", color = TextSecondary, fontSize = 12.sp) }
+                ) { Icon(Icons.Default.Refresh, null, tint = TextSecondary, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.check_for_update), color = TextSecondary, fontSize = 12.sp) }
                 if (ext.enabled && apis.isNotEmpty() && !signedIn) TextButton(onClick = { signIn(apis.first()) }, contentPadding = PaddingValues(horizontal = 8.dp), modifier = Modifier.height(32.dp)) {
-                    Text("Sign in to site", color = SpotifyGreen, fontSize = 12.sp)
+                    Text(stringResource(R.string.sign_in_to_site), color = SpotifyGreen, fontSize = 12.sp)
                 }
             }
             info.error?.takeIf { ext.enabled }?.let {
                 Row(Modifier.padding(top = 8.dp, end = 8.dp), verticalAlignment = Alignment.Top) {
                     Icon(Icons.Default.Warning, null, tint = ErrorColor, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Couldn't start: $it", color = TextSecondary, fontSize = 12.sp)
+                    Text(stringResource(R.string.couldnt_start, it), color = TextSecondary, fontSize = 12.sp)
                 }
             }
             if (info.loaded && info.providers.isNotEmpty()) Text(info.providers.joinToString(", "), color = TextTertiary, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp, end = 8.dp))
@@ -647,14 +649,14 @@ private fun SelectionBar(
                 )
                 Text(if (count == 0) "Select all" else "$count selected", color = TextPrimary, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f).testTag("extensions_selected_count"))
-                TextButton(onClick = onCancel, modifier = Modifier.testTag("extensions_bulk_cancel")) { Text("Done", color = TextSecondary) }
+                TextButton(onClick = onCancel, modifier = Modifier.testTag("extensions_bulk_cancel")) { Text(stringResource(R.string.done), color = TextSecondary) }
             }
             androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 6.dp, bottom = 2.dp)) {
                 val on = count > 0 && !busy
-                TextButton(onClick = onOn, enabled = on, modifier = Modifier.testTag("extensions_bulk_on")) { Text("Turn on", color = if (on) SpotifyGreen else TextTertiary) }
-                TextButton(onClick = onOff, enabled = on, modifier = Modifier.testTag("extensions_bulk_off")) { Text("Turn off", color = if (on) TextPrimary else TextTertiary) }
-                if (canUpdate) TextButton(onClick = onUpdate, enabled = on, modifier = Modifier.testTag("extensions_bulk_update")) { Text("Update", color = if (on) WarnColor else TextTertiary) }
-                TextButton(onClick = onRemove, enabled = on, modifier = Modifier.testTag("extensions_bulk_remove")) { Text("Remove", color = if (on) ErrorColor else TextTertiary) }
+                TextButton(onClick = onOn, enabled = on, modifier = Modifier.testTag("extensions_bulk_on")) { Text(stringResource(R.string.turn_on), color = if (on) SpotifyGreen else TextTertiary) }
+                TextButton(onClick = onOff, enabled = on, modifier = Modifier.testTag("extensions_bulk_off")) { Text(stringResource(R.string.turn_off), color = if (on) TextPrimary else TextTertiary) }
+                if (canUpdate) TextButton(onClick = onUpdate, enabled = on, modifier = Modifier.testTag("extensions_bulk_update")) { Text(stringResource(R.string.update), color = if (on) WarnColor else TextTertiary) }
+                TextButton(onClick = onRemove, enabled = on, modifier = Modifier.testTag("extensions_bulk_remove")) { Text(stringResource(R.string.remove_2), color = if (on) ErrorColor else TextTertiary) }
             }
         }
     }
@@ -689,7 +691,7 @@ internal fun InputDialog(
                 onConfirm(text.trim()) { err -> busy = false; error = err }
             }, modifier = Modifier.testTag("input_dialog_confirm")) { Text(confirm) }
         },
-        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss, modifier = Modifier.testTag("input_dialog_cancel")) { Text("Cancel") } },
+        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss, modifier = Modifier.testTag("input_dialog_cancel")) { Text(stringResource(R.string.cancel)) } },
     )
 }
 

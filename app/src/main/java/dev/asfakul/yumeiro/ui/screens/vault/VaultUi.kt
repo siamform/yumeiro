@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.vault
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -111,17 +113,17 @@ fun VaultSaveDialog(draft: VaultDraft, onDismiss: () -> Unit, onSaved: (String) 
         onDismissRequest = { if (!saving) onDismiss() },
         modifier = Modifier.testTag("vault_save_dialog"),
         icon = { Icon(Icons.Default.Inventory2, null, tint = p.accent) },
-        title = { Text("Save to Vault") },
+        title = { Text(stringResource(R.string.save_to_vault)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                OutlinedTextField(title, { title = it.take(160) }, label = { Text("Title") }, singleLine = true,
+                OutlinedTextField(title, { title = it.take(160) }, label = { Text(stringResource(R.string.title)) }, singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("vault_title_field"))
                 Spacer(Modifier.size(12.dp))
                 if (draft.sources.isEmpty()) {
-                    Text("No video sources were found on this page yet. Start the video, then try again, or save the page itself.",
+                    Text(stringResource(R.string.no_video_sources_were_found_on),
                         color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.testTag("vault_no_sources"))
                 } else {
-                    Text(if (draft.sources.size == 1) "1 source found" else "${draft.sources.size} sources found", color = p.textSecondary, fontSize = 12.sp)
+                    Text(androidx.compose.ui.res.pluralStringResource(R.plurals.vault_sources_found, draft.sources.size, draft.sources.size), color = p.textSecondary, fontSize = 12.sp)
                     draft.sources.forEachIndexed { i, s ->
                         Row(
                             Modifier.fillMaxWidth().clip(yuRound(10)).clickable(role = Role.Checkbox) { picked[i] = !picked[i] }
@@ -154,7 +156,7 @@ fun VaultSaveDialog(draft: VaultDraft, onDismiss: () -> Unit, onSaved: (String) 
                 }
             }, modifier = Modifier.testTag("vault_save_confirm")) { Text(if (saving) "Saving…" else "Save") }
         },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !saving, modifier = Modifier.testTag("vault_save_cancel")) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !saving, modifier = Modifier.testTag("vault_save_cancel")) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -206,14 +208,14 @@ fun VaultScreen(onBack: () -> Unit) {
         SubPageHeader(
             title = open?.title ?: "Vault", onBack = { if (openId != null) openId = null else onBack() }, handleBack = openId == null,
             subtitle = if (open != null) (VaultLinks.hostOf(open.pageUrl) ?: "") + " · " + sourcesLabel(open.sources.size)
-                else entries?.let { if (it.isEmpty()) "Titles you save from websites" else if (it.size == 1) "1 title" else "${it.size} titles" },
+                else entries?.let { if (it.isEmpty()) "Titles you save from websites" else androidx.compose.ui.res.pluralStringResource(R.plurals.vault_titles, it.size, it.size) },
         ) {
             if (open == null) IconButton(onClick = { importer.launch(arrayOf("text/html", "application/octet-stream")) }, modifier = Modifier.testTag("vault_import")) {
-                Icon(Icons.Default.Download, "Import Vault files", tint = p.textSecondary)
+                Icon(Icons.Default.Download, stringResource(R.string.import_vault_files), tint = p.textSecondary)
             } else {
-                IconButton(onClick = { renaming = open }, modifier = Modifier.testTag("vault_rename")) { Icon(Icons.Default.Edit, "Rename", tint = p.textSecondary) }
-                IconButton(onClick = { share(context, open) }, modifier = Modifier.testTag("vault_share")) { Icon(Icons.Default.Share, "Share the Vault file", tint = p.textSecondary) }
-                IconButton(onClick = { deleting = open }, modifier = Modifier.testTag("vault_delete")) { Icon(Icons.Default.Delete, "Delete", tint = p.textSecondary) }
+                IconButton(onClick = { renaming = open }, modifier = Modifier.testTag("vault_rename")) { Icon(Icons.Default.Edit, stringResource(R.string.rename), tint = p.textSecondary) }
+                IconButton(onClick = { share(context, open) }, modifier = Modifier.testTag("vault_share")) { Icon(Icons.Default.Share, stringResource(R.string.share_the_vault_file), tint = p.textSecondary) }
+                IconButton(onClick = { deleting = open }, modifier = Modifier.testTag("vault_delete")) { Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = p.textSecondary) }
             }
         }
         val list = entries
@@ -242,23 +244,24 @@ fun VaultScreen(onBack: () -> Unit) {
     renaming?.let { e ->
         var t by rememberSaveable(e.id) { mutableStateOf(e.title) }
         TsukiDialog(
-            onDismissRequest = { renaming = null }, title = { Text("Rename") },
+            onDismissRequest = { renaming = null }, title = { Text(stringResource(R.string.rename)) },
             text = { OutlinedTextField(t, { t = it.take(160) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("vault_rename_field")) },
-            confirmButton = { TextButton(enabled = t.isNotBlank(), onClick = { renaming = null; scope.launch { VaultStore.rename(context, e.id, t) } }, modifier = Modifier.testTag("vault_rename_confirm")) { Text("Rename") } },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+            confirmButton = { TextButton(enabled = t.isNotBlank(), onClick = { renaming = null; scope.launch { VaultStore.rename(context, e.id, t) } }, modifier = Modifier.testTag("vault_rename_confirm")) { Text(stringResource(R.string.rename)) } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     deleting?.let { e ->
         TsukiDialog(
-            onDismissRequest = { deleting = null }, title = { Text("Delete “${e.title}”?") },
-            text = { Text("The title and its saved links are removed from the Vault and from Download › Yumeiro › Vault.") },
-            confirmButton = { TextButton(onClick = { deleting = null; if (openId == e.id) openId = null; scope.launch { VaultStore.delete(context, e.id) } }, modifier = Modifier.testTag("vault_delete_confirm")) { Text("Delete") } },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+            onDismissRequest = { deleting = null }, title = { Text(stringResource(R.string.delete_3, e.title)) },
+            text = { Text(stringResource(R.string.the_title_and_its_saved_links)) },
+            confirmButton = { TextButton(onClick = { deleting = null; if (openId == e.id) openId = null; scope.launch { VaultStore.delete(context, e.id) } }, modifier = Modifier.testTag("vault_delete_confirm")) { Text(stringResource(R.string.delete)) } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
 
-private fun sourcesLabel(n: Int) = if (n == 1) "1 source" else "$n sources"
+@Composable
+private fun sourcesLabel(n: Int) = androidx.compose.ui.res.pluralStringResource(R.plurals.vault_sources, n, n)
 
 private fun share(context: android.content.Context, e: VaultEntry) {
     val f = VaultStore.appFile(context, e.id) ?: return
@@ -288,11 +291,11 @@ private fun EntryRow(e: VaultEntry, onOpen: () -> Unit, onRename: () -> Unit, on
                 color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box {
-            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("vault_entry_menu")) { Icon(Icons.Default.MoreVert, "More for ${e.title}", tint = p.textSecondary) }
+            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("vault_entry_menu")) { Icon(Icons.Default.MoreVert, stringResource(R.string.more_for, e.title), tint = p.textSecondary) }
             DropdownMenu(menu, { menu = false }) {
-                DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onRename() })
-                DropdownMenuItem(text = { Text("Share file") }, leadingIcon = { Icon(Icons.Default.Share, null) }, onClick = { menu = false; onShare() })
-                DropdownMenuItem(text = { Text("Delete") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onDelete() }, modifier = Modifier.testTag("vault_entry_delete"))
+                DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onRename() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.share_file)) }, leadingIcon = { Icon(Icons.Default.Share, null) }, onClick = { menu = false; onShare() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.delete)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onDelete() }, modifier = Modifier.testTag("vault_entry_delete"))
             }
         }
     }

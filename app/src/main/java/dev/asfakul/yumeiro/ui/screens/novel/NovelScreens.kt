@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.novel
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -148,7 +150,7 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
                 if (state.installed.size > 1 && submitted.isEmpty() && (feed == Feed.POPULAR || feed == Feed.LATEST))
                     dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { sourceSheet = true }, "novel_source_filter", "Choose source")
             }
-            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("novel_manage_sources")) { Icon(Icons.Default.Extension, "Novel sources", tint = TextPrimary) }
+            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("novel_manage_sources")) { Icon(Icons.Default.Extension, stringResource(R.string.novel_sources), tint = TextPrimary) }
         }
         if (!ready) { Column(Modifier.fillMaxSize().padding(top = 8.dp)) { repeat(3) { dev.asfakul.yumeiro.ui.components.CoverRowSkeleton() } }; return@Column } // SKELETON-2
         if (state.installed.isEmpty()) {
@@ -259,7 +261,7 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
             dev.asfakul.yumeiro.ui.components.CoverSkeleton()
         }
         if (error != null && items.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-            TextButton(onClick = { attempt++ }) { Text("Couldn't load more. Try again", color = SpotifyGreen) }
+            TextButton(onClick = { attempt++ }) { Text(stringResource(R.string.couldnt_load_more_try_again), color = SpotifyGreen) }
         }
     }
 }
@@ -281,7 +283,7 @@ private fun SearchAllResults(query: String, onOpen: (NovelItem) -> Unit) {
             Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 Text(grp.plugin.name + if (grp.items.isNotEmpty()) " · ${grp.items.size}" else "", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 16.dp))
                 if (grp.error != null) Text(grp.error, color = TextTertiary, fontSize = 12.sp, maxLines = 2, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                else if (grp.items.isEmpty()) Text("No results", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                else if (grp.items.isEmpty()) Text(stringResource(R.string.no_results), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 else LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(grp.items, key = { it.path }) { NovelCover(it, null, width = 104.dp) { n -> onOpen(n) } }
                 }
@@ -340,7 +342,7 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("repo_status") {
                 Column {
-                    if (state.repos.isEmpty()) Text("No repositories yet. Tap + to add an LNReader plugin list.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("novel_repo_empty"))
+                    if (state.repos.isEmpty()) Text(stringResource(R.string.no_repositories_yet_tap_to_add), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("novel_repo_empty"))
                     if (busy == "repo") LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 6.dp), color = SpotifyGreen)
                     message?.let { Text(it, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp).testTag("novel_sources_message")) }
                 }
@@ -348,11 +350,11 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
             items(state.repos, key = { "r_$it" }) { r ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(r, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { scope.launch(Dispatchers.IO) { NovelSources.removeRepo(context, r) } }) { Text("Remove", color = TextTertiary) }
+                    TextButton(onClick = { scope.launch(Dispatchers.IO) { NovelSources.removeRepo(context, r) } }) { Text(stringResource(R.string.remove_2), color = TextTertiary) }
                 }
             }
             if (state.installed.isNotEmpty()) {
-                item("inst_h") { Text("Installed", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp)) }
+                item("inst_h") { Text(stringResource(R.string.installed), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp)) }
                 items(state.installed, key = { "i_${it.id}" }) { p ->
                     val newer = available?.firstOrNull { it.id == p.id && it.version != p.version }
                     PluginRow(p, installed = true, busy = busy == p.id, update = newer != null, onInstall = {
@@ -388,7 +390,7 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
         onDismiss = { addOpen = false }, onAdd = { addRepoNow(it) },
     ) {
         if (NovelSources.LNREADER_INDEX !in state.repos) OutlinedButton(onClick = { addRepo(NovelSources.LNREADER_INDEX); addOpen = false }, enabled = busy == null,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("novel_repo_lnreader")) { Text("Add LNReader's list", color = TextPrimary) }
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("novel_repo_lnreader")) { Text(stringResource(R.string.add_lnreaders_list), color = TextPrimary) }
     }
     val allForLang = available.orEmpty()
     if (langSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(onDismiss = { langSheet = false }, onReset = { lang = null }, resultCount = null, tag = "novel_lang_sheet") {
@@ -407,15 +409,15 @@ private fun PluginRow(p: NovelPlugin, installed: Boolean, busy: Boolean, update:
         Box(Modifier.size(36.dp).clip(yuRound(8))) { dev.asfakul.yumeiro.ui.screens.online.PosterImage(p.iconUrl, emptyMap(), Modifier.fillMaxSize(), fallbackIcon = Icons.AutoMirrored.Filled.MenuBook) }
         Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
             Text(p.name, color = TextPrimary, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${p.language} · v${p.version}", color = TextTertiary, fontSize = 12.sp, maxLines = 1)
+            Text(stringResource(R.string.v, p.language, p.version), color = TextTertiary, fontSize = 12.sp, maxLines = 1)
         }
         when {
             busy -> CircularProgressIndicator(color = SpotifyGreen, modifier = Modifier.size(22.dp))
             installed -> Row {
-                if (update) TextButton(onClick = onInstall) { Text("Update", color = SpotifyGreen) }
-                TextButton(onClick = onRemove, modifier = Modifier.testTag("novel_plugin_remove")) { Text("Remove", color = TextTertiary) }
+                if (update) TextButton(onClick = onInstall) { Text(stringResource(R.string.update), color = SpotifyGreen) }
+                TextButton(onClick = onRemove, modifier = Modifier.testTag("novel_plugin_remove")) { Text(stringResource(R.string.remove_2), color = TextTertiary) }
             }
-            else -> TextButton(onClick = onInstall, modifier = Modifier.testTag("novel_plugin_install")) { Text("Install", color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
+            else -> TextButton(onClick = onInstall, modifier = Modifier.testTag("novel_plugin_install")) { Text(stringResource(R.string.install), color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
         }
     }
 }
@@ -481,11 +483,11 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp).heightIn(min = 48.dp).testTag("novel_read"),
                 ) { Text(if (resume != null) "Continue · ${resume.name}" else "Start reading", maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold) }
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Chapters", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.chapters), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     TextButton(onClick = { newestFirst = !newestFirst }, modifier = Modifier.testTag("novel_order")) { Text(if (newestFirst) "Newest first" else "First first", color = TextSecondary) }
                 }
             }
-            if (d.chapters.isEmpty()) item("none") { Text("This source listed no chapters.", color = TextTertiary, modifier = Modifier.padding(vertical = 12.dp)) }
+            if (d.chapters.isEmpty()) item("none") { Text(stringResource(R.string.this_source_listed_no_chapters), color = TextTertiary, modifier = Modifier.padding(vertical = 12.dp)) }
             items(chapters, key = { it.path }) { ch ->
                 val current = entry?.chapterPath == ch.path
                 Row(Modifier.fillMaxWidth().clickable { onRead(item, ch) }.padding(vertical = 12.dp).testTag("novel_chapter"), verticalAlignment = Alignment.CenterVertically) {
@@ -589,13 +591,13 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
 
     Column(Modifier.fillMaxSize().testTag("novel_reader")) {
         SubPageHeader(title = chapter.name, onBack = onBack, subtitle = (details?.name ?: name) + if (index >= 0) " · ${index + 1}/${chapters.size}" else "") {
-            IconButton(onClick = { showSize = !showSize }, modifier = Modifier.testTag("novel_text_size")) { Icon(Icons.Default.FormatSize, "Text size", tint = TextPrimary) }
+            IconButton(onClick = { showSize = !showSize }, modifier = Modifier.testTag("novel_text_size")) { Icon(Icons.Default.FormatSize, stringResource(R.string.text_size), tint = TextPrimary) }
             IconButton(onClick = { tlOn = !tlOn }, modifier = Modifier.testTag("novel_translate")) { Icon(Icons.Default.Translate, if (tlOn) "Show original" else "Translate", tint = if (tlOn) SpotifyGreen else TextPrimary) }
         }
         if (showSize) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { size = (size - 1).coerceAtLeast(14) }, modifier = Modifier.testTag("novel_size_down")) { Text("A−", color = TextPrimary, fontSize = 15.sp) }
+            TextButton(onClick = { size = (size - 1).coerceAtLeast(14) }, modifier = Modifier.testTag("novel_size_down")) { Text(stringResource(R.string.a), color = TextPrimary, fontSize = 15.sp) }
             Text("$size", color = TextSecondary, modifier = Modifier.padding(horizontal = 8.dp))
-            TextButton(onClick = { size = (size + 1).coerceAtMost(28) }, modifier = Modifier.testTag("novel_size_up")) { Text("A+", color = TextPrimary, fontSize = 19.sp) }
+            TextButton(onClick = { size = (size + 1).coerceAtMost(28) }, modifier = Modifier.testTag("novel_size_up")) { Text(stringResource(R.string.a_2), color = TextPrimary, fontSize = 19.sp) }
         }
         if (translating) LinearProgressIndicator(Modifier.fillMaxWidth(), color = SpotifyGreen)
         tlNote?.let { Text(it, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("novel_tl_note")) }
@@ -614,14 +616,14 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
                 item("nav") {
                     Row(Modifier.fillMaxWidth().padding(top = 24.dp).navigationBarsPadding(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         OutlinedButton(onClick = { go(index - 1) }, enabled = index > 0, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("novel_prev")) {
-                            Icon(Icons.Default.SkipPrevious, null, tint = TextPrimary); Spacer(Modifier.width(6.dp)); Text("Previous", color = TextPrimary)
+                            Icon(Icons.Default.SkipPrevious, null, tint = TextPrimary); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.previous), color = TextPrimary)
                         }
                         Button(onClick = { go(index + 1) }, enabled = index >= 0 && index < chapters.size - 1, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                             modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("novel_next")) {
-                            Text("Next", fontWeight = FontWeight.Bold); Spacer(Modifier.width(6.dp)); Icon(Icons.Default.SkipNext, null)
+                            Text(stringResource(R.string.next), fontWeight = FontWeight.Bold); Spacer(Modifier.width(6.dp)); Icon(Icons.Default.SkipNext, null)
                         }
                     }
-                    if (index == chapters.size - 1 && chapters.isNotEmpty()) Text("You've reached the last chapter this source lists.", color = TextTertiary, fontSize = 12.sp,
+                    if (index == chapters.size - 1 && chapters.isNotEmpty()) Text(stringResource(R.string.youve_reached_the_last_chapter_this), color = TextTertiary, fontSize = 12.sp,
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp).widthIn(max = 420.dp))
                 }
             }

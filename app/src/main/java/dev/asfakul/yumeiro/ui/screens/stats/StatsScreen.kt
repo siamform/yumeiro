@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stats
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -89,7 +91,7 @@ fun StatsScreen(onBack: () -> Unit) {
         item("header") { SubPageHeader(title = "Your activity", subtitle = "Kept only on this device", onBack = onBack) }
         if (days.isEmpty()) {
             item("empty") {
-                Text("Play a song or a video and your activity shows up here.", color = TextSecondary, fontSize = 15.sp,
+                Text(stringResource(R.string.play_a_song_or_a_video), color = TextSecondary, fontSize = 15.sp,
                     modifier = Modifier.padding(24.dp).testTag("stats_empty"))
             }
         }
@@ -122,7 +124,7 @@ fun StatsScreen(onBack: () -> Unit) {
                     val n = all.plays.getOrElse(k.ordinal) { 0 }
                     Bar(k.label, n.toLong(), all.allPlays.toLong(), plays(n), "stats_plays_${k.name.lowercase()}")
                 }
-                Text("${dayCount(all.activeDays)} with activity", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.with_activity, dayCount(all.activeDays)), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
         if (milestones.isNotEmpty()) item("milestones") {
@@ -138,20 +140,20 @@ fun StatsScreen(onBack: () -> Unit) {
         }
         item("privacy") {
             Column(Modifier.padding(16.dp).navigationBarsPadding()) {
-                Text("Statistics stay on this device, are not counted while incognito is on, and go with your Library backup.",
+                Text(stringResource(R.string.statistics_stay_on_this_device_are),
                     color = TextTertiary, fontSize = 12.sp)
                 if (days.isNotEmpty()) TextButton(onClick = { confirmClear = true }, modifier = Modifier.testTag("stats_clear")) {
-                    Text("Clear statistics", color = SpotifyGreen)
+                    Text(stringResource(R.string.clear_statistics), color = SpotifyGreen)
                 }
             }
         }
     }
     if (confirmClear) AlertDialog(
         onDismissRequest = { confirmClear = false },
-        title = { Text("Clear statistics?") },
-        text = { Text("The activity map, streaks and totals start again from zero. Your history and play counts stay.") },
-        confirmButton = { TextButton(onClick = { ActivityLog.clear(context); confirmClear = false }, modifier = Modifier.testTag("stats_clear_confirm")) { Text("Clear") } },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
+        title = { Text(stringResource(R.string.clear_statistics_2)) },
+        text = { Text(stringResource(R.string.the_activity_map_streaks_and_totals)) },
+        confirmButton = { TextButton(onClick = { ActivityLog.clear(context); confirmClear = false }, modifier = Modifier.testTag("stats_clear_confirm")) { Text(stringResource(R.string.clear)) } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -207,9 +209,9 @@ private fun ActivityMap(byDay: Map<Long, StatsMath.Day>, today: Long, selected: 
 private fun Legend() {
     val levels = levelColors()
     Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        Text("Less", color = TextTertiary, fontSize = 11.sp)
+        Text(stringResource(R.string.less), color = TextTertiary, fontSize = 11.sp)
         levels.forEach { Box(Modifier.size(10.dp).clip(yuRound(2)).background(it)) }
-        Text("More (0, 15 min, 1 h, 3 h, more)", color = TextTertiary, fontSize = 11.sp)
+        Text(stringResource(R.string.more_0_15_min_1_h), color = TextTertiary, fontSize = 11.sp)
     }
 }
 
@@ -255,10 +257,10 @@ fun StatsEntryCard(onOpen: () -> Unit, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Your activity", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text("Streak ${dayCount(streak)} · this week ${StatsMath.duration(week)}", color = TextSecondary, fontSize = 12.sp, maxLines = 1)
+            Text(stringResource(R.string.your_activity), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(stringResource(R.string.streak_this_week, dayCount(streak), StatsMath.duration(week)), color = TextSecondary, fontSize = 12.sp, maxLines = 1)
         }
-        Text("See all", color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.see_all), color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 }
 

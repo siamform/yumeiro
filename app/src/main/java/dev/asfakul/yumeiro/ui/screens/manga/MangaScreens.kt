@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.manga
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.semantics.selected
@@ -185,7 +187,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
                 }, "manga_search_open", "Search ${provider?.name.orEmpty()}")
                 if (providers.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(0, { showSources = true }, "manga_source_pick", "Change source")
             }
-            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("manga_manage_sources")) { Icon(Icons.Default.Extension, "Manage sources", tint = TextPrimary) }
+            IconButton(onClick = onOpenSources, modifier = Modifier.testTag("manga_manage_sources")) { Icon(Icons.Default.Extension, stringResource(R.string.manage_sources), tint = TextPrimary) }
         }
         if (providers.isEmpty()) {
             StateMessage(Icons.AutoMirrored.Filled.MenuBook, "No manga sources yet",
@@ -258,8 +260,8 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("manga_source_sheet")) {
             Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp)) {
-                Text("Read from", color = pal.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("${providers.size} manga sources installed", color = pal.textSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.read_from), color = pal.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.manga_sources_installed, providers.size), color = pal.textSecondary, fontSize = 12.sp)
             }
             if (providers.size >= 6) dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
                 query = q, onQuery = { q = it.take(60) }, hint = "Search ${providers.size} sources",
@@ -271,7 +273,7 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
             }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                 if (shown.isEmpty()) item("none") {
-                    Text("No source matches", color = pal.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp).testTag("manga_source_none"))
+                    Text(stringResource(R.string.no_source_matches), color = pal.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp).testTag("manga_source_none"))
                 }
                 items(shown, key = { it.id }) { p ->
                     val sel = p.id == selected
@@ -290,7 +292,7 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
                                 color = pal.textSecondary, fontSize = 12.sp, maxLines = 1,
                             )
                         }
-                        if (sel) Icon(Icons.Default.Check, "Selected", tint = pal.accent, modifier = Modifier.size(22.dp))
+                        if (sel) Icon(Icons.Default.Check, stringResource(R.string.selected), tint = pal.accent, modifier = Modifier.size(22.dp))
                     }
                 }
             }
@@ -332,7 +334,7 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, saved:
         val continueReading = saved.filter { it.lastChapterUrl != null }.take(10)
         if (continueReading.isNotEmpty() && feed != Feed.SEARCH) item(span = { GridItemSpan(maxLineSpan) }, key = "continue") {
             Column {
-                Text("Continue reading", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(stringResource(R.string.continue_reading), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Spacer(Modifier.height(8.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(continueReading, key = { it.key }) { e ->
@@ -422,7 +424,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
     Column(Modifier.fillMaxSize().testTag("manga_detail")) {
         SubPageHeader(title = item.title, onBack = onBack, subtitle = provider?.name) {
             IconButton(onClick = { MangaLibrary.toggleSaved(context, item) }, modifier = Modifier.testTag("manga_save")) {
-                Icon(if (entry?.saved == true) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, "Save", tint = if (entry?.saved == true) SpotifyGreen else TextPrimary)
+                Icon(if (entry?.saved == true) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, stringResource(R.string.save), tint = if (entry?.saved == true) SpotifyGreen else TextPrimary)
             }
         }
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -463,8 +465,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
             sorted?.let { list ->
                 item("ch_head") {
                     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${list.size} chapters", color = TextPrimary, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { newestFirst = !newestFirst }) { Icon(Icons.Default.SwapVert, "Sort", tint = TextSecondary) }
+                        Text(stringResource(R.string.chapters_2, list.size), color = TextPrimary, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { newestFirst = !newestFirst }) { Icon(Icons.Default.SwapVert, stringResource(R.string.sort), tint = TextSecondary) }
                     }
                 }
                 items(list, key = { it.url }) { ch ->
@@ -497,8 +499,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                         ) {
                             when {
                                 pct != null -> CircularProgressIndicator(progress = { pct }, color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                                isSaved -> Icon(Icons.Default.DownloadDone, "Saved on this device, tap to remove", tint = SpotifyGreen)
-                                else -> Icon(Icons.Default.Download, "Save for offline reading", tint = TextSecondary)
+                                isSaved -> Icon(Icons.Default.DownloadDone, stringResource(R.string.saved_on_this_device_tap_to), tint = SpotifyGreen)
+                                else -> Icon(Icons.Default.Download, stringResource(R.string.save_for_offline_reading), tint = TextSecondary)
                             }
                         }
                       }
@@ -669,16 +671,16 @@ private fun MangaReaderChapter(
         }
         AnimatedVisibility(chrome, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter)) {
             Row(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.7f)).statusBarsPadding().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = Color.White) }
                 Column(Modifier.weight(1f)) {
                     Text(mangaTitle, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(chapterName, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 IconButton(onClick = { prev?.let(onGo) }, enabled = prev != null, modifier = Modifier.testTag("reader_prev")) {
-                    Icon(Icons.Default.SkipPrevious, "Previous chapter", tint = if (prev != null) Color.White else Color.White.copy(alpha = 0.3f))
+                    Icon(Icons.Default.SkipPrevious, stringResource(R.string.previous_chapter), tint = if (prev != null) Color.White else Color.White.copy(alpha = 0.3f))
                 }
                 IconButton(onClick = { next?.let(onGo) }, enabled = next != null, modifier = Modifier.testTag("reader_next")) {
-                    Icon(Icons.Default.SkipNext, "Next chapter", tint = if (next != null) Color.White else Color.White.copy(alpha = 0.3f))
+                    Icon(Icons.Default.SkipNext, stringResource(R.string.next_chapter), tint = if (next != null) Color.White else Color.White.copy(alpha = 0.3f))
                 }
                 if (tlAllowed) IconButton(onClick = { tlSheet = true }, modifier = Modifier.testTag("reader_translate")) {
                     Icon(Icons.Default.Translate, if (tl.on) "Translate pages: on" else "Translate pages: off", tint = if (tl.on) SpotifyGreen else Color.White)
@@ -712,9 +714,9 @@ private fun SavedEndCard() {
             .background(Color.White.copy(alpha = 0.08f), yuRound(16)).padding(20.dp).testTag("reader_saved_end"),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("End of your saved chapters", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.end_of_your_saved_chapters), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(6.dp))
-        Text("Connect to the internet or save the next chapter to keep reading.", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+        Text(stringResource(R.string.connect_to_the_internet_or_save), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
     }
 }
 
@@ -727,13 +729,13 @@ private fun NextChapterCard(next: MangaChapter, onClick: () -> Unit) {
             .clickable(onClick = onClick).padding(20.dp).testTag("reader_next_card"),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("End of chapter", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+        Text(stringResource(R.string.end_of_chapter), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
         Spacer(Modifier.height(6.dp))
-        Text("Next: ${next.name}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(stringResource(R.string.next_2, next.name), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.SkipNext, null, tint = SpotifyGreen)
-            Text("Read next chapter", color = SpotifyGreen, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.read_next_chapter), color = SpotifyGreen, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -755,45 +757,45 @@ private fun TranslateSheet(s: MangaTranslate.Settings, sourceLang: String?, onCh
     }
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss, modifier = Modifier.testTag("tl_done")) { Text("Done") } },
-        title = { Text("Translate pages") },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss, modifier = Modifier.testTag("tl_done")) { Text(stringResource(R.string.done)) } },
+        title = { Text(stringResource(R.string.translate_pages)) },
         text = {
             Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()).testTag("tl_sheet")) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Translate speech bubbles", Modifier.weight(1f), color = TextPrimary)
+                    Text(stringResource(R.string.translate_speech_bubbles), Modifier.weight(1f), color = TextPrimary)
                     androidx.compose.material3.Switch(s.on, { onChange(s.copy(on = it)) }, modifier = Modifier.testTag("tl_switch"))
                 }
-                Text("Read on this phone. Only the language pack is downloaded, once per language.", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.read_on_this_phone_only_the), color = TextSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(10.dp))
-                Text("From", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.from), color = TextSecondary, fontSize = 12.sp)
                 androidx.compose.foundation.layout.FlowRow {
                     for ((code, label) in MangaTlPlan.FROM) {
                         val shown = if (code == MangaTlPlan.AUTO) sourceLang?.let { "Auto · ${MangaTlPlan.FROM[it]}" } ?: "Auto · from the page" else label
                         Chip(shown, s.from == code, "tl_src_$code") { onChange(s.copy(from = code)) }
                     }
                 }
-                Text("To", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.to_2), color = TextSecondary, fontSize = 12.sp)
                 androidx.compose.foundation.layout.FlowRow {
                     for ((code, label) in MangaTlPlan.TARGETS) Chip(label, s.dst == code, "tl_dst_$code") { onChange(s.copy(dst = code)) }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Download language packs on Wi-Fi only", Modifier.weight(1f), color = TextPrimary, fontSize = 13.sp)
+                    Text(stringResource(R.string.download_language_packs_on_wi_fi), Modifier.weight(1f), color = TextPrimary, fontSize = 13.sp)
                     androidx.compose.material3.Switch(s.wifiOnly, { onChange(s.copy(wifiOnly = it)) }, modifier = Modifier.testTag("tl_wifi"))
                 }
-                Text("Long-press a translation to hide it.", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.long_press_a_translation_to_hide), color = TextSecondary, fontSize = 12.sp)
                 // TL-2: packs are about 30 MB each; the reader shows which are on the phone and lets you remove them.
                 Spacer(Modifier.height(10.dp))
-                Text("Language packs on this phone", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.language_packs_on_this_phone), color = TextSecondary, fontSize = 12.sp)
                 val list = packs
                 when {
-                    list == null -> Text("Checking…", color = TextSecondary, fontSize = 12.sp)
-                    list.isEmpty() -> Text("None yet. English is built in; others download the first time you use them.", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.testTag("tl_packs_none"))
+                    list == null -> Text(stringResource(R.string.checking), color = TextSecondary, fontSize = 12.sp)
+                    list.isEmpty() -> Text(stringResource(R.string.none_yet_english_is_built_in), color = TextSecondary, fontSize = 12.sp, modifier = Modifier.testTag("tl_packs_none"))
                     else -> for (code in list) Row(Modifier.fillMaxWidth().testTag("tl_pack_$code"), verticalAlignment = Alignment.CenterVertically) {
                         Text(MangaTlPlan.TARGETS[code] ?: MangaTlPlan.FROM[code] ?: java.util.Locale.forLanguageTag(code).displayLanguage, Modifier.weight(1f), color = TextPrimary, fontSize = 13.sp)
                         androidx.compose.material3.TextButton(
                             onClick = { scope.launch { MangaTranslate.deletePack(context, code); packsTry++ } },
                             modifier = Modifier.testTag("tl_pack_delete_$code"),
-                        ) { Text("Remove") }
+                        ) { Text(stringResource(R.string.remove_2)) }
                     }
                 }
             }
@@ -905,7 +907,7 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
             Text("${page.index + 1}", color = Color.White.copy(alpha = 0.4f), fontSize = 28.sp)
         }
         r.isFailure -> Box(Modifier.fillMaxWidth().aspectRatio(0.7f).clickable { attempt++ }, contentAlignment = Alignment.Center) {
-            Text("Page ${page.index + 1} failed · tap to retry", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+            Text(stringResource(R.string.page_failed_tap_to_retry, page.index + 1), color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
         }
         else -> {
             val p = r.getOrThrow()

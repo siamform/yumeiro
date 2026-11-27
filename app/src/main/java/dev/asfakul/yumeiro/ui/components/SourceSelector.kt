@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -161,7 +163,7 @@ private fun SourceRow(o: SourceOption, selected: Boolean, index: Int, reduced: B
         }
         Spacer(Modifier.width(10.dp))
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
-            if (selected) Icon(Icons.Default.Check, "Selected", tint = p.accent, modifier = Modifier.size(20.dp))
+            if (selected) Icon(Icons.Default.Check, stringResource(R.string.selected), tint = p.accent, modifier = Modifier.size(20.dp))
             Text(
                 o.status, color = if (o.attention) p.accent else p.textSecondary, fontSize = 12.sp,
                 fontWeight = if (o.attention) FontWeight.Bold else FontWeight.Normal, maxLines = 1,

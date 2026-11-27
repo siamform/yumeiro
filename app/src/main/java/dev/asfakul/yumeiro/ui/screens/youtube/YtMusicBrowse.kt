@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.a11yLabel
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.ui.zIndex
@@ -389,7 +391,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 pageBody(home, home = true, onOpen = open, onPlay = ::play, onRetry = { loadHome(true) })
                 if (home.error != null) item("basic") {
                     TextButton(onClick = onBasic, modifier = Modifier.padding(horizontal = 12.dp).testTag("ytmusic_basic")) {
-                        Text("Use simple discovery instead", color = SpotifyGreen)
+                        Text(stringResource(R.string.use_simple_discovery_instead), color = SpotifyGreen)
                     }
                 }
             }
@@ -467,7 +469,7 @@ private fun YmShelfHeader(title: String, strapline: String?, icon: androidx.comp
         if (onMore != null) Row(
             Modifier.clip(CircleShape).background(GlassFill).clickable(onClick = onMore).padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-        ) { Text("More", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+        ) { Text(stringResource(R.string.more), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
     }
 }
 
@@ -763,7 +765,7 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
     LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_detail"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
         item("bar") {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.testTag("ytmusic_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary) }
+                IconButton(onClick = onBack, modifier = Modifier.testTag("ytmusic_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = TextPrimary) }
                 if (header == null) Text(state.page?.shelves?.firstOrNull()?.title.orEmpty(), color = TextPrimary, fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -836,11 +838,11 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
                 Row(
                     Modifier.height(44.dp).clip(CircleShape).background(brush).clickable(onClick = onPlay).padding(horizontal = 22.dp).testTag("ytmusic_play_all"),
                     verticalAlignment = Alignment.CenterVertically,
-                ) { Icon(Icons.Default.PlayArrow, null, tint = OnAccent); Spacer(Modifier.width(6.dp)); Text("Play", color = OnAccent, fontWeight = FontWeight.Bold) }
+                ) { Icon(Icons.Default.PlayArrow, null, tint = OnAccent); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.play), color = OnAccent, fontWeight = FontWeight.Bold) }
                 Row(
                     Modifier.height(44.dp).clip(CircleShape).background(GlassFill).clickable(onClick = onShuffle).padding(horizontal = 20.dp).testTag("ytmusic_shuffle_all"),
                     verticalAlignment = Alignment.CenterVertically,
-                ) { Icon(Icons.Default.Shuffle, null, tint = palette.textPrimary); Spacer(Modifier.width(6.dp)); Text("Shuffle", color = TextPrimary, fontWeight = FontWeight.SemiBold) }
+                ) { Icon(Icons.Default.Shuffle, null, tint = palette.textPrimary); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.shuffle), color = TextPrimary, fontWeight = FontWeight.SemiBold) }
                 download?.invoke()
             }
             if (downloadStatus.isNotBlank()) Text(downloadStatus, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).testTag("ytmusic_download_status"))

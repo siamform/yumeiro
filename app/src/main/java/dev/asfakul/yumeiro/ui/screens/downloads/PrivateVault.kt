@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.app.Activity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -93,12 +95,12 @@ internal fun PrivateVault(days: Int, onBack: () -> Unit, onPlayVideo: (VideoItem
         SubPageHeader("Private", onBack, subtitle = "${items.size} hidden · only on this phone, only for ${Profiles.current(context).name}")
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (items.isEmpty()) item("empty") {
-                Text("Nothing here yet. In Downloads, tap the eye on a finished download to move it here. It leaves the Downloads list, the gallery and every other app.",
+                Text(stringResource(R.string.nothing_here_yet_in_downloads_tap),
                     color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
             }
             items(items, key = { "v_" + it.id }) { d -> DownloadRow(d, days, onPlayVideo) }
             item("note") {
-                Text("Private downloads are not in backups. Deleting this profile deletes them.", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.private_downloads_are_not_in_backups), color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
             }
         }
     }

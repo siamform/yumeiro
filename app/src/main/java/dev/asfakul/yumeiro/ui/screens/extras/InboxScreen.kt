@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
@@ -98,10 +100,10 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
     if (confirmClear) TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { confirmClear = false },
-        title = { Text("Clear all notifications?") },
-        text = { Text("They are removed from this page. Your settings stay the same.") },
-        confirmButton = { TextButton(onClick = { Inbox.clear(context); confirmClear = false }, modifier = Modifier.testTag("inbox_clear_confirm")) { Text("Clear") } },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
+        title = { Text(stringResource(R.string.clear_all_notifications)) },
+        text = { Text(stringResource(R.string.they_are_removed_from_this_page)) },
+        confirmButton = { TextButton(onClick = { Inbox.clear(context); confirmClear = false }, modifier = Modifier.testTag("inbox_clear_confirm")) { Text(stringResource(R.string.clear)) } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
 
     Box(Modifier.fillMaxSize().pageBackground().testTag("inbox_screen")) {
@@ -113,10 +115,10 @@ fun InboxScreen(onBack: () -> Unit, onAction: (String) -> Unit) {
                 onBack = onBack,
             ) {
                 if (unread > 0) IconButton(onClick = { Inbox.markAllRead(context) }, modifier = Modifier.testTag("inbox_mark_read")) {
-                    Icon(Icons.Default.DoneAll, "Mark all as read", tint = TextPrimary)
+                    Icon(Icons.Default.DoneAll, stringResource(R.string.mark_all_as_read), tint = TextPrimary)
                 }
                 if (items.isNotEmpty()) IconButton(onClick = { confirmClear = true }, modifier = Modifier.testTag("inbox_clear")) {
-                    Icon(Icons.Default.DeleteSweep, "Clear all", tint = TextPrimary)
+                    Icon(Icons.Default.DeleteSweep, stringResource(R.string.clear_all), tint = TextPrimary)
                 }
             }
             PullToRefreshBox(
@@ -178,9 +180,9 @@ private fun BlockedBanner(block: AppNotifier.Block, onFix: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(block.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                Text("${block.hint} Until then, news only shows up here.", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.until_then_news_only_shows_up, block.hint), color = TextSecondary, fontSize = 12.sp)
             }
-            TextButton(onClick = onFix) { Text("Turn on", color = SpotifyGreen, fontWeight = FontWeight.Bold) }
+            TextButton(onClick = onFix) { Text(stringResource(R.string.turn_on), color = SpotifyGreen, fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -221,7 +223,7 @@ private fun InboxRow(item: Inbox.Item, onClick: () -> Unit, onRemove: () -> Unit
                 Text(item.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (item.body.isNotBlank()) Text(item.body, color = TextSecondary, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
-            IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Close, "Remove", tint = TextTertiary, modifier = Modifier.size(16.dp)) }
+            IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Close, stringResource(R.string.remove_2), tint = TextTertiary, modifier = Modifier.size(16.dp)) }
         }
     }
 }

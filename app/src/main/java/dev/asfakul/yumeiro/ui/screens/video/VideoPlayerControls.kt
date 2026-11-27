@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.Replay
@@ -153,7 +155,7 @@ fun VideoPlayerTopBar(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Close player",
+                contentDescription = stringResource(R.string.close_player),
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )
@@ -259,7 +261,7 @@ fun VideoPlayerTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Audiotrack,
-                                contentDescription = "Audio tracks",
+                                contentDescription = stringResource(R.string.audio_tracks),
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -290,7 +292,7 @@ fun VideoPlayerTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Subtitles,
-                                contentDescription = "Subtitles",
+                                contentDescription = stringResource(R.string.subtitles),
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -316,7 +318,7 @@ fun VideoPlayerTopBar(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Speed,
-                                    contentDescription = "Speed",
+                                    contentDescription = stringResource(R.string.speed),
                                     tint = Color.White,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -341,7 +343,7 @@ fun VideoPlayerTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AspectRatio,
-                                contentDescription = "Aspect ratio",
+                                contentDescription = stringResource(R.string.aspect_ratio),
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -358,7 +360,7 @@ fun VideoPlayerTopBar(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PictureInPicture,
-                                    contentDescription = "Picture in picture",
+                                    contentDescription = stringResource(R.string.picture_in_picture),
                                     tint = Color.White,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -375,7 +377,7 @@ fun VideoPlayerTopBar(
                         ) {
                             Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Outlined.Movie,
-                                contentDescription = "Video details",
+                                contentDescription = stringResource(R.string.video_details),
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -406,7 +408,7 @@ fun VideoPlayerTopBar(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.LockOpen,
-                                contentDescription = "Lock controls",
+                                contentDescription = stringResource(R.string.lock_controls),
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -654,17 +656,17 @@ fun UpNextCard(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Up next", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.up_next), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text(
                     next.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                     maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
             androidx.compose.material3.TextButton(onClick = onCancel, modifier = Modifier.testTag("video_up_next_cancel")) {
-                Text("Cancel", color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.cancel), color = Color.White.copy(alpha = 0.8f), fontWeight = FontWeight.SemiBold)
             }
             androidx.compose.material3.TextButton(onClick = onPlayNow, modifier = Modifier.testTag("video_up_next_play_now")) {
-                Text("Play now", color = Color(0xFFB9A6FF), fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.play_now), color = Color(0xFFB9A6FF), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -808,13 +810,13 @@ fun LockedFloatingUnlockButton(
             ) {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Unlock controls",
+                    contentDescription = stringResource(R.string.unlock_controls),
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Controls locked · tap to unlock",
+                    text = stringResource(R.string.controls_locked_tap_to_unlock),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold,
@@ -834,7 +836,7 @@ fun LockedFloatingUnlockButton(
 @Composable
 private fun DurationPending(isLive: Boolean, @Suppress("UNUSED_PARAMETER") isLoading: Boolean) {
     if (isLive) Text(
-        "LIVE",
+        stringResource(R.string.live),
         color = Color.White,
         fontSize = 10.sp,
         fontWeight = FontWeight.Bold,

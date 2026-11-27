@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import android.net.Uri
 import dev.asfakul.yumeiro.ui.components.AppMessages
@@ -508,21 +510,21 @@ fun StreamScreen(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Network stream", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text("HLS · DASH · MP4 · M3U · YouTube · Drive · TeraBox · Torrent", color = TextSecondary, fontSize = 12.sp)
+                            Text(stringResource(R.string.network_stream), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Text(stringResource(R.string.hls_dash_mp4_m3u_youtube_drive), color = TextSecondary, fontSize = 12.sp)
                         }
                     }
                     OutlinedTextField(
                         value = url,
                         onValueChange = { url = it; error = null },
-                        label = { Text("Stream or playlist URL") },
-                        placeholder = { Text("https://example.com/live/index.m3u8") },
+                        label = { Text(stringResource(R.string.stream_or_playlist_url)) },
+                        placeholder = { Text(stringResource(R.string.https_example_com_live_index_m3u8)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                         trailingIcon = {
                             if (url.isEmpty()) IconButton(onClick = { clipboard.getText()?.text?.let { url = it.trim() } }) {
-                                Icon(Icons.Default.ContentPaste, "Paste", tint = TextSecondary)
-                            } else IconButton(onClick = { url = "" }) { Icon(Icons.Default.Close, "Clear", tint = TextSecondary) }
+                                Icon(Icons.Default.ContentPaste, stringResource(R.string.paste), tint = TextSecondary)
+                            } else IconButton(onClick = { url = "" }) { Icon(Icons.Default.Close, stringResource(R.string.clear), tint = TextSecondary) }
                         },
                         colors = fieldColors,
                         modifier = Modifier.fillMaxWidth().testTag("stream_url"),
@@ -534,7 +536,7 @@ fun StreamScreen(
                             PlatformRules.ruleFor(url.trim()) is PlatformRules.WebSession -> "${PlatformRules.ruleFor(url.trim())?.platform} web page"
                             else -> StreamSniffer.fromUrl(url.trim())?.label ?: "checked when you press Play"
                         }
-                        Text("Detected: $detected", color = TextTertiary, fontSize = 12.sp)
+                        Text(stringResource(R.string.detected, detected), color = TextTertiary, fontSize = 12.sp)
                     }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(StreamFormat.entries, key = { it.name }) { f ->
@@ -545,31 +547,31 @@ fun StreamScreen(
                         Modifier.fillMaxWidth().clip(yuRound(20)).clickable { advanced = !advanced }.padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Headers & DRM", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                        Text("User-Agent, Referer, Origin, Cookie", color = TextTertiary, fontSize = 11.sp)
+                        Text(stringResource(R.string.headers_drm), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.user_agent_referer_origin_cookie), color = TextTertiary, fontSize = 11.sp)
                         Icon(if (advanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, tint = TextSecondary)
                     }
                     AnimatedVisibility(advanced) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("User-Agent", color = TextSecondary, fontSize = 12.sp)
+                            Text(stringResource(R.string.user_agent), color = TextSecondary, fontSize = 12.sp)
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(UserAgentPreset.entries, key = { it.name }) { p -> Chip(p.label, uaPreset == p && customUa.isBlank()) { uaPreset = p; customUa = "" } }
                             }
-                            OutlinedTextField(customUa, { customUa = it }, label = { Text("Custom user agent") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(referer, { referer = it }, label = { Text("Referer") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(origin, { origin = it }, label = { Text("Origin") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(cookie, { cookie = it }, label = { Text("Cookie") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(extraHeaders, { extraHeaders = it }, label = { Text("Extra headers (Key: Value per line)") }, minLines = 2, colors = fieldColors, modifier = Modifier.fillMaxWidth())
-                            Text("DRM", color = TextSecondary, fontSize = 12.sp)
+                            OutlinedTextField(customUa, { customUa = it }, label = { Text(stringResource(R.string.custom_user_agent)) }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(referer, { referer = it }, label = { Text(stringResource(R.string.referer)) }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(origin, { origin = it }, label = { Text(stringResource(R.string.origin)) }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(cookie, { cookie = it }, label = { Text(stringResource(R.string.cookie)) }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(extraHeaders, { extraHeaders = it }, label = { Text(stringResource(R.string.extra_headers_key_value_per_line)) }, minLines = 2, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                            Text(stringResource(R.string.drm), color = TextSecondary, fontSize = 12.sp)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { DrmScheme.entries.forEach { d -> Chip(d.label, drm == d) { drm = d } } }
                             if (drm != DrmScheme.NONE) {
-                                OutlinedTextField(license, { license = it }, label = { Text("License server URL") }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(license, { license = it }, label = { Text(stringResource(R.string.license_server_url)) }, singleLine = true, colors = fieldColors, modifier = Modifier.fillMaxWidth())
                             }
                             if (drm == DrmScheme.CLEARKEY) {
-                                OutlinedTextField(clearKeys, { clearKeys = it }, label = { Text("ClearKey kid:key (hex)") }, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                                OutlinedTextField(clearKeys, { clearKeys = it }, label = { Text(stringResource(R.string.clearkey_kid_key_hex)) }, colors = fieldColors, modifier = Modifier.fillMaxWidth())
                             }
                             Text(
-                                "Headers are sent with every manifest, segment and key request — use them when a host only accepts its own web player.",
+                                stringResource(R.string.headers_are_sent_with_every_manifest),
                                 color = TextTertiary, fontSize = 11.sp,
                             )
                         }
@@ -579,7 +581,7 @@ fun StreamScreen(
                         TextButton(onClick = {
                             runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(h.url))) }
                                 .onFailure { error = "No app on this device can open ${h.platform} links." }
-                        }) { Text("Open in ${h.platform}", color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
+                        }) { Text(stringResource(R.string.open_in, h.platform), color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
@@ -589,25 +591,25 @@ fun StreamScreen(
                             modifier = Modifier.weight(1f).height(48.dp).testTag("stream_play"),
                         ) {
                             if (loading) CircularProgressIndicator(color = OnAccent, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                            else { Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Play", fontWeight = FontWeight.Bold) }
+                            else { Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.play), fontWeight = FontWeight.Bold) }
                         }
                         OutlinedButton(
                             onClick = { filePicker.launch(arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "application/vnd.apple.mpegurl", "text/plain", "*/*")) },
                             border = null,
                             colors = ButtonDefaults.outlinedButtonColors(containerColor = GlassFill, contentColor = TextPrimary),
                             modifier = Modifier.height(48.dp),
-                        ) { Icon(Icons.Default.FolderOpen, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("M3U file") }
+                        ) { Icon(Icons.Default.FolderOpen, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.m3u_file)) }
                     }
                     if (url.isNotBlank()) OutlinedButton(
                         onClick = ::download, enabled = !loading, border = null,
                         colors = ButtonDefaults.outlinedButtonColors(containerColor = GlassFill, contentColor = TextPrimary),
                         modifier = Modifier.fillMaxWidth().height(44.dp).testTag("stream_download"),
-                    ) { Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Download") }
+                    ) { Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.download)) }
                     if (url.isNotBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = { loadPlaylist(url.trim(), Uri.parse(url.trim()).host) }, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = SpotifyGreen); Spacer(Modifier.width(6.dp))
-                                Text("Open as channel list", color = SpotifyGreen, maxLines = 1)
+                                Text(stringResource(R.string.open_as_channel_list), color = SpotifyGreen, maxLines = 1)
                             }
                             TextButton(
                                 onClick = {
@@ -618,7 +620,7 @@ fun StreamScreen(
                                 modifier = Modifier.testTag("stream_save"),
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null, tint = SpotifyGreen); Spacer(Modifier.width(6.dp))
-                                Text("Save", color = SpotifyGreen)
+                                Text(stringResource(R.string.save), color = SpotifyGreen)
                             }
                         }
                     }
@@ -647,8 +649,8 @@ fun StreamScreen(
         // NBUG-15 (c): playlist management, opened from Tools → Playlists.
         Column(Modifier.fillMaxSize().testTag("playlists_page")) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { pane = "hub" }, modifier = Modifier.testTag("playlists_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Live TV", tint = TextPrimary) }
-                Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                IconButton(onClick = { pane = "hub" }, modifier = Modifier.testTag("playlists_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_to_live_tv), tint = TextPrimary) }
+                Text(stringResource(R.string.playlists), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
             }
             val q = playlistQuery
             fun match(p: StreamPlaylist) = q.isBlank() || filterByTitle(listOf(p), q) { it.name }.isNotEmpty()
@@ -695,7 +697,7 @@ fun StreamScreen(
                 if (q.isNotBlank() && on.isEmpty() && off.isEmpty()) item(key = "playlists_none") {
                     Column(Modifier.fillMaxWidth().padding(8.dp).testTag("playlists_no_match")) {
                         Text("No playlist called \"${q.trim()}\"", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                        TextButton(onClick = { playlistQuery = "" }) { Text("Clear search", color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
+                        TextButton(onClick = { playlistQuery = "" }) { Text(stringResource(R.string.clear_search), color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
                     }
                 }
                 item(key = "bottom_space") { Spacer(Modifier.height(96.dp)) }
@@ -704,8 +706,8 @@ fun StreamScreen(
     } else if (pn == "link") {
         Column(Modifier.fillMaxSize().testTag("stream_link_page")) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { pane = "hub" }, modifier = Modifier.testTag("stream_link_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Live TV", tint = TextPrimary) }
-                Text("Play a link", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                IconButton(onClick = { pane = "hub" }, modifier = Modifier.testTag("stream_link_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back_to_live_tv), tint = TextPrimary) }
+                Text(stringResource(R.string.play_a_link), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.weight(1f))
             }
             LazyColumn(
                 Modifier.fillMaxSize(),
@@ -718,8 +720,8 @@ fun StreamScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.History, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Recent streams", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { StreamRepository.clear(context) }) { Text("Clear", color = TextSecondary) }
+                    Text(stringResource(R.string.recent_streams), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { StreamRepository.clear(context) }) { Text(stringResource(R.string.clear), color = TextSecondary) }
                 }
             }
             items(history, key = { "h_${it.url}" }) { h ->
@@ -738,7 +740,7 @@ fun StreamScreen(
         }
 
                 if (history.isEmpty()) item(key = "link_tip") {
-                    Text("You can also share links to Yumeiro from any app.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(4.dp))
+                    Text(stringResource(R.string.you_can_also_share_links_to), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(4.dp))
                 }
                 item(key = "bottom_space") { Spacer(Modifier.height(96.dp)) }
             }
@@ -972,10 +974,10 @@ internal fun StreamRow(
                 Text(item.displayTitle, color = TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(subtitle, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (onEdit != null) TextButton(onClick = onEdit) { Text("Edit", color = TextSecondary, fontSize = 12.sp) }
-            if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, "Save to playlist", tint = TextTertiary) }
-            if (onEditIcon != null) IconButton(onClick = onEditIcon) { Icon(Icons.Default.Edit, "Edit stream", tint = TextTertiary) }
-            if (onDelete != null) IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, "Remove", tint = TextTertiary) }
+            if (onEdit != null) TextButton(onClick = onEdit) { Text(stringResource(R.string.edit), color = TextSecondary, fontSize = 12.sp) }
+            if (onAdd != null) IconButton(onClick = onAdd) { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, stringResource(R.string.save_to_playlist), tint = TextTertiary) }
+            if (onEditIcon != null) IconButton(onClick = onEditIcon) { Icon(Icons.Default.Edit, stringResource(R.string.edit_stream), tint = TextTertiary) }
+            if (onDelete != null) IconButton(onClick = onDelete) { Icon(Icons.Default.DeleteOutline, stringResource(R.string.remove_2), tint = TextTertiary) }
         }
     }
 }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.online.web.SafeWebView
 import dev.asfakul.yumeiro.online.web.SafeWebViewClient
 import android.annotation.SuppressLint
@@ -86,10 +88,10 @@ private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, mod
     Box(modifier.background(DarkSurface).testTag("page_finder_auto"), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(32.dp)) {
             dev.asfakul.yumeiro.ui.components.YuLoader(size = 56.dp, label = "Looking for streams")
-            Text("Finding the video on $host", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Text(stringResource(R.string.finding_the_video_on, host), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             androidx.compose.animation.AnimatedContent(step, label = "autoStep") { Text("$it…", color = TextSecondary, fontSize = 13.sp) }
             androidx.compose.material3.TextButton(onClick = onShowPage, modifier = Modifier.testTag("page_finder_show_page")) {
-                Text("Show the page", color = SpotifyGreen)
+                Text(stringResource(R.string.show_the_page), color = SpotifyGreen)
             }
         }
     }
@@ -100,11 +102,11 @@ private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, mod
 private fun MiniAppConsentCard(bot: String, onAllow: () -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier.background(DarkSurface).testTag("page_finder_miniapp_consent"), contentAlignment = Alignment.Center) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(28.dp)) {
-            Text("Open @$bot with your Telegram account?", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Text(stringResource(R.string.open_with_your_telegram_account, bot), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             Text(dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.CONSENT_TEXT, color = TextSecondary, fontSize = 13.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.TextButton(onClick = onCancel, modifier = Modifier.testTag("page_finder_miniapp_cancel")) { Text("Not now", color = TextSecondary) }
-                androidx.compose.material3.Button(onClick = onAllow, modifier = Modifier.testTag("page_finder_miniapp_allow")) { Text("Open") }
+                androidx.compose.material3.TextButton(onClick = onCancel, modifier = Modifier.testTag("page_finder_miniapp_cancel")) { Text(stringResource(R.string.not_now), color = TextSecondary) }
+                androidx.compose.material3.Button(onClick = onAllow, modifier = Modifier.testTag("page_finder_miniapp_allow")) { Text(stringResource(R.string.widget_open)) }
             }
         }
     }
@@ -820,12 +822,12 @@ fun PageStreamFinderDialog(
         Surface(color = DarkSurface, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().systemBarsPadding()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onDismiss, modifier = Modifier.testTag("page_finder_close")) { Icon(Icons.Default.Close, "Close", tint = TextPrimary) }
+                    IconButton(onClick = onDismiss, modifier = Modifier.testTag("page_finder_close")) { Icon(Icons.Default.Close, stringResource(R.string.close), tint = TextPrimary) }
                     Column(Modifier.weight(1f)) {
                         Text(pageTitle.ifBlank { "Find stream" }, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(PlatformRules.hostOf(currentUrl) ?: currentUrl, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = TextSecondary) }
+                    if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.minimize), tint = TextSecondary) }
                     // GROUP E2: in the browser the ad filter and Reload live in the bottom bar's menu.
                     if (!browser) IconButton(
                         onClick = { togglePageFilter() },
@@ -837,7 +839,7 @@ fun PageStreamFinderDialog(
                             tint = if (filterOn) SpotifyGreen else TextSecondary,
                         )
                     }
-                    if (!browser) IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
+                    if (!browser) IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, stringResource(R.string.reload), tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
                 if (showHint && !autoActive) PageFinderHint(autoNote ?: reason, onHide = { showHint = false })

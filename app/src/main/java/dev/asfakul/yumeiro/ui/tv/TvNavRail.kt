@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.tv
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -123,7 +124,7 @@ fun TvNavRail(
                     modifier = Modifier.size(40.dp).clip(yuRound(11)),
                 )
                 AnimatedVisibility(focusedInside, enter = fadeIn(tween(160)), exit = fadeOut(tween(90))) {
-                    Text("  Yumeiro", color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(stringResource(R.string.yumeiro_2), color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
             Spacer(Modifier.height(12.dp))

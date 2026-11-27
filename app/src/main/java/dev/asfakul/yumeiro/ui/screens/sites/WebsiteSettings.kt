@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -85,7 +87,7 @@ internal fun WebsiteSettingsSheet(onDismiss: () -> Unit, onImport: () -> Unit, o
     if (manage) ManageAdsDialog(onDismiss = { manage = false })
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = p.surfaceContainerHigh, dragHandle = sheetDragHandle(), modifier = Modifier.testTag("site_settings_sheet")) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
-            Text("Website settings", style = dev.asfakul.yumeiro.ui.theme.SectionTitleStyle, color = p.textPrimary, modifier = Modifier.padding(bottom = 6.dp))
+            Text(stringResource(R.string.website_settings), style = dev.asfakul.yumeiro.ui.theme.SectionTitleStyle, color = p.textPrimary, modifier = Modifier.padding(bottom = 6.dp))
             SettingSwitch("Remember sites I visit", "Shown under Recently visited, on this phone only", remember, "recent_switch") { SiteHistory.setOn(context, it) }
             SettingSwitch("Block ads and pop-ups", "Ad sites never load, pop-ups and pop-unders stay closed. The shield in a page's menu turns it off there only", ads, "filter_ads_switch") { BrowserFilters.setFilterAds(context, it) }
             SettingSwitch("Open the real link behind short links", "Waits out the timers and taps Continue on link-shortener pages; a check that needs you is left to you", links, "resolve_links_switch") { BrowserFilters.setResolveLinks(context, it) }
@@ -143,28 +145,28 @@ internal fun ManageAdsDialog(onDismiss: () -> Unit, onChanged: () -> Unit = {}) 
     TsukiDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("manage_ads"),
-        title = { Text("Manage ads") },
+        title = { Text(stringResource(R.string.manage_ads)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Ads and pop-ups are blocked for every site by the switch in settings. Parts you hid yourself are listed here.", color = p.textSecondary, fontSize = 13.sp)
-                if (all.isEmpty()) Text("Nothing hidden yet. In a page, open the menu and pick Hide an element.", color = p.textTertiary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp).testTag("manage_ads_empty"))
+                Text(stringResource(R.string.ads_and_pop_ups_are_blocked_2), color = p.textSecondary, fontSize = 13.sp)
+                if (all.isEmpty()) Text(stringResource(R.string.nothing_hidden_yet_in_a_page), color = p.textTertiary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp).testTag("manage_ads_empty"))
                 all.forEach { (site, rules) ->
                     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(site, color = p.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        TextButton(onClick = { ElementBlocker.clearSite(context, site); version++; onChanged() }, modifier = Modifier.testTag("manage_ads_clear_$site")) { Text("Show all") }
+                        TextButton(onClick = { ElementBlocker.clearSite(context, site); version++; onChanged() }, modifier = Modifier.testTag("manage_ads_clear_$site")) { Text(stringResource(R.string.show_all)) }
                     }
                     rules.forEach { rule ->
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(rule, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 8.dp))
                             IconButton(onClick = { ElementBlocker.removeRule(context, site, rule); version++; onChanged() }, modifier = Modifier.testTag("manage_ads_rule")) {
-                                Icon(Icons.Default.Delete, "Show this part again", tint = p.textSecondary)
+                                Icon(Icons.Default.Delete, stringResource(R.string.show_this_part_again), tint = p.textSecondary)
                             }
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag("manage_ads_done")) { Text("Done") } },
+        confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag("manage_ads_done")) { Text(stringResource(R.string.done)) } },
     )
 }
 
@@ -179,12 +181,12 @@ internal fun DuplicateSiteDialog(site: SavedSites.Site, taken: Collection<String
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("site_duplicate_dialog"),
         icon = { Icon(Icons.Default.ContentCopy, null) },
-        title = { Text("Duplicate website") },
+        title = { Text(stringResource(R.string.duplicate_website)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Save ${site.name} again under another address, like a mirror domain or one section of the site.", fontSize = 13.sp)
-                OutlinedTextField(name, { name = it.take(40) }, singleLine = true, label = { Text("Name") }, modifier = Modifier.fillMaxWidth().testTag("site_duplicate_name"))
-                OutlinedTextField(address, { address = it; error = null }, singleLine = true, label = { Text("Address") }, isError = error != null,
+                Text(stringResource(R.string.save_again_under_another_address_like, site.name), fontSize = 13.sp)
+                OutlinedTextField(name, { name = it.take(40) }, singleLine = true, label = { Text(stringResource(R.string.name)) }, modifier = Modifier.fillMaxWidth().testTag("site_duplicate_name"))
+                OutlinedTextField(address, { address = it; error = null }, singleLine = true, label = { Text(stringResource(R.string.address)) }, isError = error != null,
                     supportingText = error?.let { e -> { Text(e, modifier = Modifier.testTag("site_duplicate_error")) } },
                     modifier = Modifier.fillMaxWidth().testTag("site_duplicate_address"))
             }
@@ -193,9 +195,9 @@ internal fun DuplicateSiteDialog(site: SavedSites.Site, taken: Collection<String
             TextButton(onClick = {
                 val err = SavedSites.duplicate(context, address, name)
                 if (err != null) error = err else onSaved(address)
-            }, enabled = address.isNotBlank(), modifier = Modifier.testTag("site_duplicate_save")) { Text("Save copy") }
+            }, enabled = address.isNotBlank(), modifier = Modifier.testTag("site_duplicate_save")) { Text(stringResource(R.string.save_copy)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -222,7 +224,7 @@ internal fun WebsiteTabsSheet(onDismiss: () -> Unit) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (tabs.size == 1) "1 open tab" else "${tabs.size} open tabs", style = dev.asfakul.yumeiro.ui.theme.SectionTitleStyle, color = p.textPrimary, modifier = Modifier.weight(1f))
-                if (tabs.size > 1) TextButton(onClick = { onDismiss(); WebsiteTab.closeAll() }, modifier = Modifier.testTag("browser_tabs_close_all")) { Text("Close all") }
+                if (tabs.size > 1) TextButton(onClick = { onDismiss(); WebsiteTab.closeAll() }, modifier = Modifier.testTag("browser_tabs_close_all")) { Text(stringResource(R.string.close_all)) }
             }
             tabs.forEach { t ->
                 val isFront = t.id == front?.id
@@ -238,18 +240,18 @@ internal fun WebsiteTabsSheet(onDismiss: () -> Unit) {
                         Text(SavedSites.hostOf(t.keep.address) ?: t.keep.address, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     IconButton(onClick = { WebsiteTab.closeTab(t.id); if (WebsiteTab.tabs.value.isEmpty()) onDismiss() }, modifier = Modifier.testTag("browser_tab_close")) {
-                        Icon(Icons.Default.Close, "Close ${t.name}", tint = p.textSecondary)
+                        Icon(Icons.Default.Close, stringResource(R.string.close_2, t.name), tint = p.textSecondary)
                     }
                 }
             }
-            Text("New tab", color = p.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+            Text(stringResource(R.string.new_tab), color = p.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
                     query = address, onQuery = { address = it.take(800) }, hint = "Address or search", tag = "browser_new_tab_field",
                     modifier = Modifier.weight(1f), leadingIcon = Icons.Default.Add, keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri, onDone = { go() },
                 )
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = { go() }, enabled = address.isNotBlank(), modifier = Modifier.testTag("browser_new_tab_go")) { Text("Open") }
+                TextButton(onClick = { go() }, enabled = address.isNotBlank(), modifier = Modifier.testTag("browser_new_tab_go")) { Text(stringResource(R.string.widget_open)) }
             }
         }
     }

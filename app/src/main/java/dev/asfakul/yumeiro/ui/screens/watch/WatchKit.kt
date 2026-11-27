@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -343,7 +345,7 @@ fun WatchServerBox(
             Box(Modifier.width(3.dp).height(44.dp).clip(CircleShape).background(brush))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("Now playing", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text(stringResource(R.string.now_playing), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(watching, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(3.dp))
                 Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
@@ -371,7 +373,7 @@ fun LoadMoreSources(more: Int, accent: Color, ink: Color, onClick: () -> Unit, m
     ) {
         Icon(Icons.Default.ExpandMore, null, tint = accent, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Load more · ${minOf(more, SERVER_PAGE)} of $more", color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.load_more_of, minOf(more, SERVER_PAGE), more), color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -388,9 +390,9 @@ fun AudioFilterRow(options: List<AudioFilterOption>, selected: String?, onSelect
         Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Translate, null, tint = p.accent, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Audio language", color = ink.copy(alpha = 0.72f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+            Text(stringResource(R.string.audio_language), color = ink.copy(alpha = 0.72f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
             Spacer(Modifier.weight(1f))
-            if (active != null) Text("Remembered", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            if (active != null) Text(stringResource(R.string.remembered), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
         }
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
@@ -545,7 +547,7 @@ fun WatchNumberGrid(
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).testTag("watch_number_grid")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Episodes", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text(stringResource(R.string.episodes), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(title, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
             Row(
@@ -603,7 +605,7 @@ fun WatchNumberGrid(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (isCurrent) Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.PlayArrow, "Now playing", tint = p.onAccent, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.PlayArrow, stringResource(R.string.now_playing), tint = p.onAccent, modifier = Modifier.size(14.dp))
                             Text("${numberOf(i)}", color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         } else {
                             Text(
@@ -704,7 +706,7 @@ fun BoxScope.WatchLightsOverlay() {
             ) {
                 Icon(Icons.Default.DarkMode, null, tint = LocalMtPalette.current.accent, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Dimmed for focus · tap to brighten", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                Text(stringResource(R.string.dimmed_for_focus_tap_to_brighten), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
             }
         }
     }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -114,7 +116,7 @@ internal fun LiveChannelTile(ch: StreamRequest, onClick: () -> Unit, modifier: M
             ) {
                 Box(Modifier.size(5.dp).clip(CircleShape).background(Color(0xFFFF4D5E)))
                 Spacer(Modifier.width(3.dp))
-                Text("LIVE", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, lineHeight = 10.sp)
+                Text(stringResource(R.string.live), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, lineHeight = 10.sp)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -133,11 +135,11 @@ internal fun LiveRecentRow(recent: List<StreamRequest>, onPlay: (StreamRequest) 
     Column(Modifier.fillMaxWidth().testTag("live_recent_row")) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Recently played", color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1)
-                Text("${recent.size.coerceAtMost(MAX_RECENT_ROW)} channels", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+                Text(stringResource(R.string.recently_played), color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1)
+                Text(stringResource(R.string.channels, recent.size.coerceAtMost(MAX_RECENT_ROW)), color = TextTertiary, fontSize = 11.sp, maxLines = 1)
             }
             Text(
-                "Clear", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                stringResource(R.string.clear), color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 modifier = Modifier.clip(yuRound(10)).clickable(role = Role.Button, onClickLabel = "Clear recently played", onClick = onClear)
                     .padding(horizontal = 8.dp, vertical = 6.dp).testTag("live_recent_clear"),
             )
@@ -170,7 +172,7 @@ internal fun LiveProblem(message: String, onRetry: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(message, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text("Retry", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onRetry).padding(horizontal = 12.dp, vertical = 10.dp))
+        Text(stringResource(R.string.retry), color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onRetry).padding(horizontal = 12.dp, vertical = 10.dp))
     }
 }
 

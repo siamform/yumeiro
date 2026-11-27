@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.Lightbulb
 import android.os.Handler
 import android.os.Looper
@@ -486,7 +488,7 @@ fun SubPageHeader(
                         modifier = Modifier.testTag("subpage_kana").clearAndSetSemantics { })
                     Text("  ·  ", style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, modifier = Modifier.clearAndSetSemantics { })
                 }
-                Text("YUMEIRO", style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = if (kana != null) TextTertiary else dev.asfakul.yumeiro.ui.theme.SpotifyGreen, maxLines = 1,
+                Text(stringResource(R.string.yumeiro_3), style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = if (kana != null) TextTertiary else dev.asfakul.yumeiro.ui.theme.SpotifyGreen, maxLines = 1,
                     modifier = Modifier.testTag("yumeiro_mark").clearAndSetSemantics { })
             }
             Text(title, color = TextPrimary, style = dev.asfakul.yumeiro.ui.theme.PageTitleCompactStyle, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -504,7 +506,7 @@ fun SubPageHeader(
 @Composable
 fun YumeiroMark(modifier: Modifier = Modifier, light: Boolean = false) {
     Text(
-        "Yumeiro",
+        stringResource(R.string.app_name),
         color = if (light) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.92f) else dev.asfakul.yumeiro.ui.theme.SpotifyGreen,
         fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.6.sp, maxLines = 1,
         modifier = modifier.testTag("yumeiro_mark"),
@@ -525,7 +527,7 @@ fun OfflineBanner(modifier: Modifier = Modifier) {
             Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(androidx.compose.material.icons.Icons.Default.CloudOff, null, tint = dev.asfakul.yumeiro.ui.theme.SpotifyGreen, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("You're offline · showing saved content", color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.youre_offline_showing_saved_content), color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

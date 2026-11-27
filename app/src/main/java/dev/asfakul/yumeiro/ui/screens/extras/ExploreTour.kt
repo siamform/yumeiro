@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -351,7 +353,7 @@ private fun TourCard(
                 ) { Text("夢", color = p.onAccent, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold) }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Yume · guide", color = p.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.yume_guide), color = p.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         repeat(total) { k ->

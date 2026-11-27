@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -227,7 +229,7 @@ internal fun HuePage(
                     "${feed.size} match${if (feed.size == 1) "" else "es"} in ${fullFeed.size} loaded" + if (pagingBusy) " · looking further…" else "",
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.weight(1f).testTag("hue_section_search_count"),
                 )
-                androidx.compose.material3.TextButton(onClick = { OnlineSearchPending.query = query.trim(); onSearch() }, modifier = Modifier.testTag("hue_search_everywhere")) { Text("Search all sources", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 12.sp) }
+                androidx.compose.material3.TextButton(onClick = { OnlineSearchPending.query = query.trim(); onSearch() }, modifier = Modifier.testTag("hue_search_everywhere")) { Text(stringResource(R.string.search_all_sources), color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 12.sp) }
             }
         }
         when {
@@ -284,7 +286,7 @@ internal fun HuePage(
                         androidx.compose.material3.OutlinedButton(
                             onClick = { home = false },
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp).heightIn(min = 48.dp).testTag("hue_browse_all"),
-                        ) { Text("Browse everything on $name", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent) }
+                        ) { Text(stringResource(R.string.browse_everything_on, name), color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent) }
                     }
                     return@LazyColumn
                 }
@@ -301,7 +303,7 @@ internal fun HuePage(
                 if (pagingBusy) item("more") { PosterGridSkeleton() }
                 else if (!canLoadMore) item("end") {
                     Text(
-                        "You're all caught up on $name", color = TextTertiary, fontSize = 12.sp,
+                        stringResource(R.string.youre_all_caught_up_on, name), color = TextTertiary, fontSize = 12.sp,
                         modifier = Modifier.fillMaxWidth().padding(24.dp).testTag("hue_feed_end"),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )

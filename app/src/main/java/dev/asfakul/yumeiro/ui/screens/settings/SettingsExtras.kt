@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -48,6 +49,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -169,6 +174,8 @@ fun AppearanceSettingsCard() {
             testTag = "toggle_ambient",
         )
         SettingsDivider()
+        LanguageRow()
+        SettingsDivider()
         SettingsToggleRow(
             title = "Compact text and corners",
             subtitle = "Slightly smaller text and softer, tighter corners across Yumeiro. Off: the larger standard size. If you chose large text in Android settings, your size is kept",
@@ -198,7 +205,7 @@ fun AppearanceSettingsCard() {
 private fun AccentToneSection(mode: ThemeMode) {
     val context = LocalContext.current
     val accent by ThemeSettings.accent.collectAsState()
-    Text("Accent colour", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+    Text(stringResource(R.string.accent_colour), color = TextPrimary, style = MaterialTheme.typography.titleMedium)
     Text(
         if (mode == ThemeMode.DYNAMIC) "Material You uses your wallpaper colours; the accent applies to the other themes"
         else "Buttons, highlights and the selected tab",
@@ -245,8 +252,8 @@ fun SubtitleDisplayCard() {
                 .padding(vertical = 8.dp)
                 .testTag("settings_subtitle_style"),
         ) {
-            Text("Subtitle style", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-            Text("Size, colour, outline or box, and height above the bottom. Also in the player's subtitle menu", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.subtitle_style), color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.size_colour_outline_or_box_and), color = TextSecondary, style = MaterialTheme.typography.bodySmall)
         }
         if (subStyleOpen) dev.asfakul.yumeiro.ui.screens.video.SubtitleStyleDialog(onDismiss = { subStyleOpen = false })
     }
@@ -276,8 +283,8 @@ fun VideoPlayerSettingsCard() {
         dev.asfakul.yumeiro.ui.screens.video.DrcCustomSliders()
         SettingsDivider()
         val back by PlayerSettings.backAction.collectAsState()
-        Text("Back button while a video plays", color = TextPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
-        Text("You can also swipe down on the video to shrink it", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.back_button_while_a_video_plays), color = TextPrimary, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
+        Text(stringResource(R.string.you_can_also_swipe_down_on), color = TextSecondary, style = MaterialTheme.typography.bodySmall)
         PlayerSettings.BackAction.entries.forEach { a ->
             Row(
                 Modifier.fillMaxWidth().clip(yuRound(10))
@@ -313,12 +320,12 @@ fun DeveloperCard() {
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Yumeiro", color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Text("Version ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.app_name), color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.version_build, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE), color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 val integrity = remember { dev.asfakul.yumeiro.security.IntegrityGuard.status(context) }
                 if (integrity == dev.asfakul.yumeiro.security.IntegrityGuard.Status.UNOFFICIAL) {
                     Text(
-                        "Unofficial build — not signed by the Yumeiro developer. Download the real app from github.com/siamform/yumeiro",
+                        stringResource(R.string.unofficial_build_not_signed_by_the),
                         color = dev.asfakul.yumeiro.ui.theme.DangerTone, style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.testTag("unofficial_build_notice"),
                     )
@@ -332,9 +339,9 @@ fun DeveloperCard() {
                 .padding(12.dp),
         ) {
             Column {
-                Text("Developer", color = TextTertiary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.developer), color = TextTertiary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 Text(DeveloperInfo.NAME, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text("Designer & full-stack developer", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.designer_full_stack_developer), color = TextSecondary, fontSize = 12.sp)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -371,7 +378,7 @@ fun MadeInBangladesh(modifier: Modifier = Modifier) {
             )
         }
         Spacer(Modifier.width(8.dp))
-        Text("Made with love in Bangladesh", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.made_with_love_in_bangladesh), color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -387,3 +394,50 @@ private fun DevLink(vector: androidx.compose.ui.graphics.vector.ImageVector?, dr
         else if (drawable != null) Icon(painterResource(drawable), label, tint = TextPrimary, modifier = Modifier.size(20.dp))
     }
 }
+
+/** F2: Settings › Appearance › Language: follow the device or pick a shipped language (kept; Android 13+ syncs it). */
+@Composable
+internal fun LanguageRow() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var open by remember { mutableStateOf(false) }
+    val saved = remember { dev.asfakul.yumeiro.l10n.AppLanguage.saved(context) }
+    val device = androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.l10n_device_language)
+    val now = dev.asfakul.yumeiro.l10n.AppLanguage.SHIPPED.firstOrNull { it.tag == saved }?.native ?: device
+    SettingsActionRow(
+        title = androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.l10n_language),
+        subtitle = now, testTag = "settings_language", onClick = { open = true },
+    )
+    if (open) dev.asfakul.yumeiro.ui.components.TsukiDialog(
+        onDismissRequest = { open = false },
+        modifier = Modifier.testTag("language_dialog"),
+        title = { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.l10n_language)) },
+        text = {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                LanguageOption(device, null, saved.isEmpty(), "language_device") { open = false; dev.asfakul.yumeiro.l10n.AppLanguage.set(context, "") }
+                for (l in dev.asfakul.yumeiro.l10n.AppLanguage.SHIPPED) LanguageOption(
+                    l.native, if (l.complete) null else androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.l10n_preview, l.english),
+                    saved == l.tag, "language_${l.tag}",
+                ) { open = false; dev.asfakul.yumeiro.l10n.AppLanguage.set(context, l.tag) }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { open = false }) { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.close)) } },
+    )
+}
+
+@Composable
+private fun LanguageOption(name: String, note: String?, selected: Boolean, tag: String, onPick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(yuRound(10))
+            .selectable(selected = selected, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onPick)
+            .padding(horizontal = 4.dp, vertical = 6.dp).testTag(tag),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.RadioButton(selected = selected, onClick = null)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, color = TextPrimary, fontSize = 15.sp)
+            if (note != null) Text(note, color = TextTertiary, fontSize = 12.sp)
+        }
+    }
+}
+

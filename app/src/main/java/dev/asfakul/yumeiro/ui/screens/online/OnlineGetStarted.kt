@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -134,23 +136,23 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
                     Icon(Icons.Default.Extension, null, tint = SpotifyGreen, modifier = Modifier.size(26.dp))
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Pick what you watch", color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
+                Text(stringResource(R.string.pick_what_you_watch), color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Online videos come from extensions made by the community. Choose a few — these are the most popular, recently updated ones in the market.",
+                    stringResource(R.string.online_videos_come_from_extensions_made),
                     color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp,
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_empty_primary")) { Text("Browse market", color = TextPrimary) }
-                    OutlinedButton(onClick = onAddManually, modifier = Modifier.testTag("online_empty_secondary")) { Text("Add manually", color = TextPrimary) }
+                    OutlinedButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_empty_primary")) { Text(stringResource(R.string.browse_market), color = TextPrimary) }
+                    OutlinedButton(onClick = onAddManually, modifier = Modifier.testTag("online_empty_secondary")) { Text(stringResource(R.string.add_manually), color = TextPrimary) }
                 }
             }
         }
         when {
             loading -> items(4) { SkeletonRow(trailing = true) }
             categories.isEmpty() -> item("none") {
-                Text("Suggestions aren't available right now. Open the market or add a repository link.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.testTag("online_picks_unavailable"))
+                Text(stringResource(R.string.suggestions_arent_available_right_now_open), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.testTag("online_picks_unavailable"))
             }
             else -> {
                 item("cats") {
@@ -167,7 +169,7 @@ internal fun GetStarted(onOpenMarket: () -> Unit, onAddManually: () -> Unit) {
                 }
                 item("legal") {
                     Text(
-                        "Yumeiro doesn't host, own or check what extensions show. Use only sources you're allowed to watch where you live.",
+                        stringResource(R.string.yumeiro_doesnt_host_own_or_check),
                         color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp),
                     )
                 }
@@ -207,7 +209,7 @@ private fun PickCard(ext: RemoteExtension, selected: Boolean, enabled: Boolean, 
                         Text(" $it", color = TextSecondary, fontSize = 11.sp)
                         Spacer(Modifier.width(8.dp))
                     }
-                    if (ext.updated > 0) Text("updated ${relativeAge(ext.updated)}", color = TextSecondary, fontSize = 11.sp)
+                    if (ext.updated > 0) Text(stringResource(R.string.updated, relativeAge(ext.updated)), color = TextSecondary, fontSize = 11.sp)
                 }
             }
             Box(

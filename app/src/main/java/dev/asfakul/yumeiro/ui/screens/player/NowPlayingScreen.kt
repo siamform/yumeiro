@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material.icons.outlined.Album
 import androidx.compose.foundation.basicMarquee
@@ -268,10 +270,10 @@ fun NowPlayingScreen(
                         val tip = remember(playbackState.errorMessage) {
                             dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor(playbackState.errorMessage.orEmpty()).firstOrNull()
                         }
-                        if (tip != null) Text("Tip: $tip", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB3C0), modifier = Modifier.testTag("now_playing_error_tip"))
+                        if (tip != null) Text(stringResource(R.string.tip, tip), style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB3C0), modifier = Modifier.testTag("now_playing_error_tip"))
                     }
                     Box(Modifier.minimumInteractiveComponentSize().size(32.dp).clip(CircleShape).clickable(onClick = onDismissError).testTag("now_playing_error_dismiss"), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Close, "Dismiss error", tint = Color(0xFFFFD6DD), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Close, stringResource(R.string.dismiss_error), tint = Color(0xFFFFD6DD), modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -543,10 +545,10 @@ private fun LyricsPanel(
             ) {
                 Icon(Icons.Default.Lyrics, null, tint = TextSecondary, modifier = Modifier.size(40.dp))
                 Spacer(Modifier.height(12.dp))
-                Text("No lyrics found", style = MaterialTheme.typography.titleLarge, color = TextPrimary)
+                Text(stringResource(R.string.no_lyrics_found), style = MaterialTheme.typography.titleLarge, color = TextPrimary)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Embed lyrics in the file's tags, put a .lrc file with the same name next to the song, or import one.",
+                    stringResource(R.string.embed_lyrics_in_the_files_tags),
                     style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
@@ -568,10 +570,10 @@ private fun LyricsPanel(
                         TextButton(onClick = {
                             val id = currentTrackId ?: return@TextButton
                             scope.launch { TrackDetailsRepository.removeImportedLyrics(context, id); onReload() }
-                        }) { Text("Remove", color = TextSecondary, style = MaterialTheme.typography.labelLarge) }
+                        }) { Text(stringResource(R.string.remove_2), color = TextSecondary, style = MaterialTheme.typography.labelLarge) }
                     }
                     TextButton(onClick = launchImport, modifier = Modifier.testTag("lyrics_import_button")) {
-                        Text("Import", color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.import), color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -681,7 +683,7 @@ private fun CodecLine(codec: dev.asfakul.yumeiro.player.AudioCodecInfo) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("now_playing_codec")) {
         if (codec.lossless) {
             Text(
-                "Lossless", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                stringResource(R.string.lossless), color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(accent.copy(alpha = 0.14f))
                     .padding(horizontal = 7.dp, vertical = 2.dp).testTag("now_playing_lossless"),
             )
@@ -746,7 +748,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item(key = "header") {
-            Text("Song info", style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
+            Text(stringResource(R.string.song_info), style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
         }
         items(rows, key = { it.first }) { (label, value) ->
             Row(Modifier.fillMaxWidth().testTag("song_info_${label.lowercase().replace(' ', '_')}")) {

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -130,7 +132,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         SubPageHeader(title = "Source status", onBack = onBack, subtitle = if (results.isEmpty()) (when (apis.size) { 0 -> if (engine.ready) "No sources installed yet" else "Loading sources…"; 1 -> "1 source installed"; else -> "${apis.size} sources installed" }) else "${results.count { it.value.ok }} of ${results.size} working") {
-            if (results.isNotEmpty()) IconButton(onClick = ::share) { Icon(Icons.Default.Share, "Share report", tint = TextSecondary) }
+            if (results.isNotEmpty()) IconButton(onClick = ::share) { Icon(Icons.Default.Share, stringResource(R.string.share_report), tint = TextSecondary) }
         }
         if (running) LinearProgressIndicator(progress = { if (apis.isEmpty()) 0f else done / apis.size.toFloat() }, color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("source_health"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -139,10 +141,10 @@ fun SourceHealthScreen(onBack: () -> Unit) {
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) {
                     Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text(if (results.isEmpty()) "Check all sources" else "Check again")
                 }
-                Text("Checks run on your phone and network. A source can work for someone else and fail here if a site is blocked where you are.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                Text(stringResource(R.string.checks_run_on_your_phone_and), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
                 val uri = androidx.compose.ui.platform.LocalUriHandler.current
                 androidx.compose.material3.TextButton(onClick = { runCatching { uri.openUri("https://yumeiro.click/status") } }, contentPadding = PaddingValues(0.dp)) {
-                    Text("See the public status of every market repository", color = SpotifyGreen, fontSize = 13.sp)
+                    Text(stringResource(R.string.see_the_public_status_of_every), color = SpotifyGreen, fontSize = 13.sp)
                 }
             }
             if (apis.isEmpty() && engine.ready) item("empty") {

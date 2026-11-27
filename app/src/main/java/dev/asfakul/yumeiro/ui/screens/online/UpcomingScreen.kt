@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -188,7 +190,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                 if (options.genres.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterGroup("Genre", tag = "upcoming_genres") {
                     OnlineChip("All genres", v.genre == null, { genre = null }, Modifier.testTag("upcoming_genre_all"))
                     options.genres.forEach { g -> OnlineChip(g, g.equals(genre, ignoreCase = true), { genre = g }, Modifier.testTag("upcoming_genre_${g.lowercase()}")) }
-                } else Text("This calendar has no genres. Country schedules (Series › Country) do.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_genre_none"))
+                } else Text(stringResource(R.string.this_calendar_has_no_genres_country), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_genre_none"))
             }
             "country" -> dev.asfakul.yumeiro.ui.components.FilterSheet(onDismiss = close, onReset = { channel = null; if (byCountry) country = null }, resultCount = shown.size, tag = "upcoming_country_sheet") {
                 if (scheduleOn) {
@@ -208,7 +210,7 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     options.countries.forEach { c -> OnlineChip(UpcomingCountries.label(c), c == channel, { channel = c }, Modifier.testTag("upcoming_channel_${c.lowercase()}")) }
                 }
                 if (!scheduleOn && options.countries.size <= 1) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("The ${kind.label.lowercase()} calendar is worldwide. Schedules by country are for series and movies.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_country_none"))
+                    Text(stringResource(R.string.the_calendar_is_worldwide_schedules_by, kind.label.lowercase()), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_country_none"))
                     if (byCountry) OnlineChip("Show series by country", false, { kindName = Upcoming.Kind.SERIES.name }, Modifier.testTag("upcoming_country_to_series"))
                 }
             }
@@ -217,14 +219,14 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     val perDay = list.orEmpty().groupingBy { it.day }.eachCount()
                     OnlineChip("Any day", v.day == null, { dayText = null }, Modifier.testTag("upcoming_day_all"))
                     options.days.forEach { d -> OnlineChip("${Upcoming.dayLabel(d, today)} · ${perDay[d] ?: 0}", d.toString() == dayText, { dayText = d.toString() }, Modifier.testTag("upcoming_day_$d")) }
-                } else Text("Nothing loaded yet.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_filter_none"))
+                } else Text(stringResource(R.string.nothing_loaded_yet), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("upcoming_filter_none"))
             }
         }
         when {
             list == null && loading -> dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 6, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("upcoming_loading")) // SKELETON-2
             list == null && failed -> Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Couldn't load the calendar. Check your connection.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.testTag("upcoming_error"))
-                TextButton(onClick = { retry++ }, modifier = Modifier.testTag("upcoming_retry")) { Text("Try again", color = SpotifyGreen) }
+                Text(stringResource(R.string.couldnt_load_the_calendar_check_your), color = TextSecondary, fontSize = 14.sp, modifier = Modifier.testTag("upcoming_error"))
+                TextButton(onClick = { retry++ }, modifier = Modifier.testTag("upcoming_retry")) { Text(stringResource(R.string.try_again), color = SpotifyGreen) }
             }
             days.isEmpty() && list.orEmpty().isNotEmpty() -> Text(if (query.isNotBlank()) "Nothing matches \"${query.trim()}\"." else "Nothing matches these filters.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_no_match"))
             // H-9b (owner item 9): India (and other countries) in Series came back empty with no word why: TVmaze
@@ -244,17 +246,17 @@ fun UpcomingScreen(onBack: () -> Unit, onSearch: (String) -> Unit) {
                     OnlineChip("All countries", false, { country = null }, Modifier.testTag("upcoming_empty_all"))
                 }
             }
-            days.isEmpty() -> Text("Nothing listed for the next two weeks.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_empty"))
+            days.isEmpty() -> Text(stringResource(R.string.nothing_listed_for_the_next_two), color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(24.dp).testTag("upcoming_empty"))
             // Device 45045030577 (api33-lowram): the offline note was the list's first row, so after a scroll it sat
             // off screen. It stays above the list now.
             else -> Column(Modifier.fillMaxSize()) {
-                if (failed) Text("Offline — showing the last saved calendar.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("upcoming_stale"))
+                if (failed) Text(stringResource(R.string.offline_showing_the_last_saved_calendar), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("upcoming_stale"))
                 // F10 (Group O): the most-awaited titles of what is shown, as a multi-browse carousel on top.
                 val highlights = remember(shown, kind) { dev.asfakul.yumeiro.online.upcoming.UpcomingSoon.picks(mapOf(kind to shown), today, days = 400, max = 12) }
                 LazyColumn(Modifier.fillMaxSize().testTag("upcoming_list"), contentPadding = PaddingValues(bottom = 24.dp)) {
                 if (highlights.size >= 3) item("highlights", contentType = "carousel") {
                     Column(Modifier.padding(top = 8.dp)) {
-                        Text("Most awaited", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp).semantics { heading() })
+                        Text(stringResource(R.string.most_awaited), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp).semantics { heading() })
                         UpcomingCarousel(highlights, today, tag = "upcoming_highlight") { onSearch(it.entry.title) }
                     }
                 }

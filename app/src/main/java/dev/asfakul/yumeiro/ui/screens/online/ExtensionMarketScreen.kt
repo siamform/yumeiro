@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -197,7 +199,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                 dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true }, "market_search_toggle", "Search the market")
             }
             if (tab == MarketTab.DISCOVER) dev.asfakul.yumeiro.ui.components.FilterIconButton(activeFilters, { showFilters = true }, "market_filter")
-            IconButton(onClick = { showRepoDialog = true }, modifier = Modifier.testTag("market_add_repo")) { Icon(Icons.Default.Add, "Add repository", tint = TextPrimary) }
+            IconButton(onClick = { showRepoDialog = true }, modifier = Modifier.testTag("market_add_repo")) { Icon(Icons.Default.Add, stringResource(R.string.add_repository), tint = TextPrimary) }
         }
         dev.asfakul.yumeiro.ui.components.HeaderSearchField(
             open = tab != MarketTab.REPOS && (searchOpen || query.isNotEmpty()), query = query, onQuery = { query = it },
@@ -257,7 +259,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
             tab == MarketTab.REPOS -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { load(true) } }, modifier = Modifier.fillMaxSize()) {
                 LazyColumn(Modifier.fillMaxSize().testTag("market_repos"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("market_repos"), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item("repo_note") {
-                        Text("Found automatically from CloudStream's community list and GitHub. Curated repositories are checked and mirrored by the market.", color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp)
+                        Text(stringResource(R.string.found_automatically_from_cloudstreams_community), color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp)
                     }
                     items(repos, key = { "r_" + it.url }) { r ->
                         RepoCard(r) { repoFilter = r.url; category = "All"; language = null; tab = MarketTab.DISCOVER }
@@ -273,7 +275,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                 else LazyColumn(Modifier.fillMaxSize().testTag("market_list"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("market_list"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (tab == MarketTab.INSTALLED && updates.isNotEmpty()) item("update_all") {
                         Button(onClick = { updateAll() }, colors = ButtonDefaults.buttonColors(containerColor = WarnColor, contentColor = OnAccent), shape = yuRound(20), modifier = Modifier.fillMaxWidth().testTag("market_update_all")) {
-                            Text("Update all (${updates.size})", fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.update_all, updates.size), fontWeight = FontWeight.Bold)
                         }
                     }
                     // OWN-13: with the hub on, one "Yumeiro" card (Discover: All, drama, Movies, TV; Installed) instead of two.
@@ -304,7 +306,7 @@ fun ExtensionMarketScreen(onBack: () -> Unit, onOpenExtensions: () -> Unit) {
                     }
                     if (tab == MarketTab.DISCOVER) item("legal") {
                         Text(
-                            "Extensions are third-party code found automatically. Yumeiro doesn't host or check their content and never bypasses DRM or logins. Install only what you trust and are allowed to watch.",
+                            stringResource(R.string.extensions_are_third_party_code_found),
                             color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 8.dp),
                         )
                     }
@@ -446,7 +448,7 @@ private fun MarketCard(
                         )
                     }
                     ExtensionLabelText(label, titleColor = TextPrimary, lineColor = TextTertiary) {
-                        if (ext.verified) { Spacer(Modifier.width(4.dp)); Icon(Icons.Default.Verified, "Curated", tint = SpotifyGreen, modifier = Modifier.size(14.dp)) }
+                        if (ext.verified) { Spacer(Modifier.width(4.dp)); Icon(Icons.Default.Verified, stringResource(R.string.curated), tint = SpotifyGreen, modifier = Modifier.size(14.dp)) }
                     }
                     // FlowRow + single-line chunks: when the trailing button grows (e.g. "Installed"),
                     // whole chunks wrap to the next line instead of breaking text letter by letter.
@@ -457,16 +459,16 @@ private fun MarketCard(
                                 Text(" $it", color = TextSecondary, fontSize = 11.sp, maxLines = 1, softWrap = false)
                             }
                         }
-                        if (ext.updated > 0) Text("updated ${relativeAge(ext.updated)}", color = TextSecondary, fontSize = 11.sp, maxLines = 1, softWrap = false)
-                        if (ext.copies > 1) Text("in ${ext.copies} repos", color = TextTertiary, fontSize = 11.sp, maxLines = 1, softWrap = false)
+                        if (ext.updated > 0) Text(stringResource(R.string.updated, relativeAge(ext.updated)), color = TextSecondary, fontSize = 11.sp, maxLines = 1, softWrap = false)
+                        if (ext.copies > 1) Text(stringResource(R.string.in_repos, ext.copies), color = TextTertiary, fontSize = 11.sp, maxLines = 1, softWrap = false)
                     }
                 }
                 Spacer(Modifier.width(8.dp))
                 when {
                     busy -> CircularProgressIndicator(Modifier.size(24.dp), color = SpotifyGreen, strokeWidth = 2.dp)
-                    hasUpdate -> Button(onClick = onInstall, colors = ButtonDefaults.buttonColors(containerColor = WarnColor, contentColor = OnAccent), shape = yuRound(20), modifier = Modifier.testTag("market_update_${ext.internalName}")) { Text("Update") }
+                    hasUpdate -> Button(onClick = onInstall, colors = ButtonDefaults.buttonColors(containerColor = WarnColor, contentColor = OnAccent), shape = yuRound(20), modifier = Modifier.testTag("market_update_${ext.internalName}")) { Text(stringResource(R.string.update)) }
                     installedVersion != null -> OutlinedButton(onClick = onManage, shape = yuRound(20), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
-                        Icon(Icons.Default.Check, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Installed", color = TextPrimary, maxLines = 1, softWrap = false)
+                        Icon(Icons.Default.Check, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.installed), color = TextPrimary, maxLines = 1, softWrap = false)
                     }
                     else -> Button(
                         onClick = onInstall, enabled = !ext.isDown && ext.apiVersion <= OnlineRuntime.API_VERSION,

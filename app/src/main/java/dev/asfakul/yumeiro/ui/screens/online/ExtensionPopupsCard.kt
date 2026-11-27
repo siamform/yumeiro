@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,7 +46,7 @@ internal fun ExtensionPopupsCard() {
     androidx.compose.runtime.LaunchedEffect(heldIds) { if (heldIds.isNotEmpty()) ExtensionPopups.onListShown() }
     Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(top = 14.dp).testTag("extensions_popups")) {
         Column(Modifier.padding(14.dp)) {
-            Text("Pop-ups from extensions", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.pop_ups_from_extensions), color = TextPrimary, fontWeight = FontWeight.SemiBold)
             Text(
                 when (mode) {
                     ExtensionPopups.Mode.SHOW -> "Every window an extension opens is shown."
@@ -64,8 +66,8 @@ internal fun ExtensionPopupsCard() {
                         Text(ExtensionPopups.cardText(h.extName, h.functional), color = TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (h.title.isNotBlank()) Text(h.title, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    TextButton(onClick = { ExtensionPopups.reveal(h.id) }, modifier = Modifier.testTag("extensions_popup_show")) { Text("Show", color = SpotifyGreen) }
-                    TextButton(onClick = { ExtensionPopups.discard(h.id) }, modifier = Modifier.testTag("extensions_popup_discard")) { Text("Dismiss", color = TextSecondary) }
+                    TextButton(onClick = { ExtensionPopups.reveal(h.id) }, modifier = Modifier.testTag("extensions_popup_show")) { Text(stringResource(R.string.show), color = SpotifyGreen) }
+                    TextButton(onClick = { ExtensionPopups.discard(h.id) }, modifier = Modifier.testTag("extensions_popup_discard")) { Text(stringResource(R.string.dismiss), color = TextSecondary) }
                 }
             }
         }

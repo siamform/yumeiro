@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.profiles
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -96,9 +98,9 @@ fun ProfilesSettings(activity: Activity?) {
         ) {
             Box(Modifier.size(40.dp).clip(CircleShape).border(1.dp, TextTertiary, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Add, null, tint = TextPrimary) }
             Spacer(Modifier.width(12.dp))
-            Text("Add profile", color = TextPrimary, fontSize = 15.sp)
+            Text(stringResource(R.string.add_profile), color = TextPrimary, fontSize = 15.sp)
         }
-        Text("Each profile has its own history, Continue watching, My List, favorites, YouTube history, adult-content switch and private downloads. Extensions, settings and the phone's library are shared.",
+        Text(stringResource(R.string.each_profile_has_its_own_history),
             color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp, bottom = 6.dp))
     }
     if (adding) NameAndColourDialog("New profile", "", AccentTone.entries[list.size % AccentTone.entries.size], onDismiss = { adding = false }) { name, tone ->
@@ -150,7 +152,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
                         Text(when { photoBusy -> "Saving…"; p.photo > 0L -> "Change picture"; else -> "Choose a picture" }, color = SpotifyGreen)
                     }
                     if (p.photo > 0L) TextButton(onClick = { photoScope.launch { dev.asfakul.yumeiro.profiles.ProfilePhotos.remove(context, p.id); AppMessages.success(context, "Picture removed") } },
-                        enabled = !photoBusy, modifier = Modifier.testTag("profile_photo_remove")) { Text("Remove picture", color = TextSecondary) }
+                        enabled = !photoBusy, modifier = Modifier.testTag("profile_photo_remove")) { Text(stringResource(R.string.remove_picture), color = TextSecondary) }
                 }
                 ToneRow(p.tone) { Profiles.setTone(context, p.id, it) }
                 Spacer(Modifier.height(8.dp))
@@ -161,7 +163,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
                 if (p.hasRecovery) ActionRow("Remove security questions", "profile_recovery_remove") { guarded { Profiles.setRecovery(context, p.id, emptyList(), emptyList()); AppMessages.success(context, "Security questions removed") } }
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Unlock with the phone's lock", color = TextPrimary, fontSize = 14.sp)
+                        Text(stringResource(R.string.unlock_with_the_phones_lock), color = TextPrimary, fontSize = 14.sp)
                         Text(if (Privacy.canAuthenticate(context)) "Fingerprint, face or screen lock" else "Set a screen lock in Android settings first", color = TextTertiary, fontSize = 12.sp)
                     }
                     Switch(p.biometric, onCheckedChange = { on ->
@@ -173,7 +175,7 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
                 if (p.id != Profiles.DEFAULT) ActionRow("Delete profile", "profile_delete", danger = true) { confirmDelete = true }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
     )
     if (questions) SecurityQuestionsDialog(p) { questions = false }
     if (rename) NameAndColourDialog("Rename", p.name, null, onDismiss = { rename = false }) { name, _ -> rename = false; Profiles.rename(context, p.id, name) }
@@ -209,8 +211,8 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
     if (confirmDelete) TsukiDialog(
         tone = DialogTone.DANGER,
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Delete ${p.name}?") },
-        text = { Text("Its history, lists, favorites, private downloads and the extensions only it added are removed from this phone. This can't be undone.") },
+        title = { Text(stringResource(R.string.delete_2, p.name)) },
+        text = { Text(stringResource(R.string.its_history_lists_favorites_private_downloads)) },
         confirmButton = { TextButton(onClick = {
             confirmDelete = false
             val wasCurrent = isCurrent
@@ -220,8 +222,8 @@ private fun EditProfileDialog(activity: Activity?, p: Profiles.Profile, isCurren
                 onDismiss()
                 if (wasCurrent && activity != null) dev.asfakul.yumeiro.backup.Restart.now(activity)
             }
-        }, modifier = Modifier.testTag("profile_delete_confirm")) { Text("Delete") } },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+        }, modifier = Modifier.testTag("profile_delete_confirm")) { Text(stringResource(R.string.delete)) } },
+        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -256,11 +258,11 @@ private fun NameAndColourDialog(title: String, initial: String, tone: AccentTone
         title = { Text(title) },
         text = {
             Column {
-                OutlinedTextField(name, { name = it.take(24) }, singleLine = true, label = { Text("Name") }, modifier = Modifier.fillMaxWidth().testTag("profile_name"))
+                OutlinedTextField(name, { name = it.take(24) }, singleLine = true, label = { Text(stringResource(R.string.name)) }, modifier = Modifier.fillMaxWidth().testTag("profile_name"))
                 if (tone != null) { Spacer(Modifier.height(12.dp)); ToneRow(pick) { pick = it } }
             }
         },
-        confirmButton = { TextButton(onClick = { onDone(name, pick) }, enabled = name.isNotBlank(), modifier = Modifier.testTag("profile_name_ok")) { Text("Save", color = if (name.isNotBlank()) SpotifyGreen else TextTertiary) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onDone(name, pick) }, enabled = name.isNotBlank(), modifier = Modifier.testTag("profile_name_ok")) { Text(stringResource(R.string.save), color = if (name.isNotBlank()) SpotifyGreen else TextTertiary) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

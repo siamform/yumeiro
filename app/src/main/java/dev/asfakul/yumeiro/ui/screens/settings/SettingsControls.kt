@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.Manifest
 import android.os.Build
@@ -187,7 +189,7 @@ fun NotificationSettingsCard() {
                 TextButton(
                     onClick = { copyToClipboard(context, "Yumeiro support ID", supportId) },
                     modifier = Modifier.testTag("notify_support_id"),
-                ) { Text("Copy support ID · $supportId", color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
+                ) { Text(stringResource(R.string.copy_support_id, supportId), color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
             }
         }
         SettingsDivider()
@@ -312,9 +314,9 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
                             .onSuccess { AppMessages.success(context, a.done) }
                             .onFailure { AppMessages.error(context, "Couldn't clear. Try again") }
                     }
-                }, modifier = Modifier.testTag("privacy_confirm")) { Text("Clear", color = dev.asfakul.yumeiro.ui.theme.DangerTone) }
+                }, modifier = Modifier.testTag("privacy_confirm")) { Text(stringResource(R.string.clear), color = dev.asfakul.yumeiro.ui.theme.DangerTone) }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { pending = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     val io: suspend (() -> Unit) -> Unit = { f -> withContext(Dispatchers.IO) { f() } }

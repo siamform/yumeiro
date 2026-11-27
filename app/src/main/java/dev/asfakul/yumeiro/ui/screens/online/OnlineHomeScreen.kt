@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LiveTv
@@ -417,12 +419,12 @@ fun OnlineHomeScreen(
             )
             Row(Modifier.tourTarget("yumix_sources")) {
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_market")) {
-                Icon(Icons.Default.Storefront, "Extension market", tint = TextPrimary)
+                Icon(Icons.Default.Storefront, stringResource(R.string.extension_market), tint = TextPrimary)
             }
             IconButton(onClick = onOpenExtensions, modifier = Modifier.testTag("online_extensions")) {
                 val errors = engine.installed.count { engine.info(it.key).error != null }
                 BadgedBox(badge = { if (errors > 0) Badge { Text("$errors") } }) {
-                    Icon(Icons.Default.Extension, "Extensions", tint = TextPrimary)
+                    Icon(Icons.Default.Extension, stringResource(R.string.extensions), tint = TextPrimary)
                 }
             }
             // Round 10: one filter button replaces the row of round extension shortcuts. It opens a
@@ -710,7 +712,7 @@ fun OnlineHomeScreen(
                             }
                             if (exploreBusy || exploreLimit < exploreSnap.size) st.item("explore_more") { PosterGridSkeleton(1) }
                             else if (!exploreMore) st.item("explore_end") {
-                                Text("You've reached the end. Pull down to refresh.", color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
+                                Text(stringResource(R.string.youve_reached_the_end_pull_down), color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
                             }
                         }
                         if (loadingNames.isNotEmpty()) st.item("feed_loading") {
@@ -810,7 +812,7 @@ private fun ProviderProblem(name: String, message: String, onRetry: (() -> Unit)
                 Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 Text(message, color = TextSecondary, fontSize = 12.sp)
             }
-            if (onRetry != null) TextButton(onClick = onRetry) { Text("Retry", color = SpotifyGreen) }
+            if (onRetry != null) TextButton(onClick = onRetry) { Text(stringResource(R.string.retry), color = SpotifyGreen) }
         }
     }
 }
@@ -822,7 +824,7 @@ private fun ProviderSetup(message: String, onSetUp: () -> Unit) {
             Icon(Icons.Default.Settings, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
             Text(message, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            TextButton(onClick = onSetUp) { Text("Set up", color = SpotifyGreen) }
+            TextButton(onClick = onSetUp) { Text(stringResource(R.string.set_up), color = SpotifyGreen) }
         }
     }
 }
@@ -835,9 +837,9 @@ private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text("Search-only source — find titles with search", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.search_only_source_find_titles_with), color = TextSecondary, fontSize = 12.sp)
             }
-            TextButton(onClick = onSearch) { Text("Search", color = SpotifyGreen) }
+            TextButton(onClick = onSearch) { Text(stringResource(R.string.search), color = SpotifyGreen) }
         }
     }
 }
@@ -912,8 +914,8 @@ internal fun UpcomingEntryCard(onClick: () -> Unit) {
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, null, tint = dev.asfakul.yumeiro.ui.theme.SpotifyGreen)
         androidx.compose.foundation.layout.Spacer(Modifier.width(12.dp))
         androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-            Text("Upcoming", color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 15.sp)
-            Text("Movies, series and anime in the next two weeks", color = dev.asfakul.yumeiro.ui.theme.TextSecondary, fontSize = 12.sp, maxLines = 1)
+            Text(stringResource(R.string.upcoming), color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 15.sp)
+            Text(stringResource(R.string.movies_series_and_anime_in_the), color = dev.asfakul.yumeiro.ui.theme.TextSecondary, fontSize = 12.sp, maxLines = 1)
         }
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = dev.asfakul.yumeiro.ui.theme.TextTertiary)
     }

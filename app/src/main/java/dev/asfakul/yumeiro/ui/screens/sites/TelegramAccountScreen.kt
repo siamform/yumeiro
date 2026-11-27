@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -132,11 +134,11 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
                 when {
                     startFailed != null -> {
                         Text(startFailed!!, color = p.textSecondary, fontSize = 14.sp, modifier = Modifier.testTag("tg_start_error"))
-                        TextButton(onClick = { attempt++ }, modifier = Modifier.testTag("tg_start_retry")) { Text("Try again") }
+                        TextButton(onClick = { attempt++ }, modifier = Modifier.testTag("tg_start_retry")) { Text(stringResource(R.string.try_again)) }
                     }
                     engine is TdEngine.State.Downloading -> {
                         val d = engine as TdEngine.State.Downloading
-                        Text("Downloading Telegram support (once, about ${d.total / 1_000_000} MB)", color = p.textPrimary, fontSize = 14.sp)
+                        Text(stringResource(R.string.downloading_telegram_support_once_about_mb, d.total / 1_000_000), color = p.textPrimary, fontSize = 14.sp)
                         LinearProgressIndicator(
                             progress = { if (d.total > 0) d.done.toFloat() / d.total else 0f },
                             modifier = Modifier.fillMaxWidth().padding(top = 12.dp).testTag("tg_engine_progress"),
@@ -163,13 +165,13 @@ fun TelegramAccountScreen(onBack: () -> Unit, onPlay: (StreamRequest) -> Unit) {
                         is TgAuthState.WaitPassword -> PasswordStep(s, st)
                         is TgAuthState.WaitRegistration -> RegisterStep(s, st)
                         is TgAuthState.Unsupported -> Text(
-                            "This sign-in step (${st.step}) isn't supported in Yumeiro yet. Sign in once in the Telegram app, then try again.",
+                            stringResource(R.string.this_sign_in_step_isnt_supported, st.step),
                             color = p.textSecondary, fontSize = 14.sp, modifier = Modifier.testTag("tg_unsupported"),
                         )
-                        TgAuthState.LoggingOut -> Text("Signing out…", color = p.textSecondary, modifier = Modifier.testTag("tg_logging_out"))
+                        TgAuthState.LoggingOut -> Text(stringResource(R.string.signing_out), color = p.textSecondary, modifier = Modifier.testTag("tg_logging_out"))
                         TgAuthState.Closed -> {
-                            Text("Telegram closed.", color = p.textSecondary)
-                            TextButton(onClick = { session = null; attempt++ }, modifier = Modifier.testTag("tg_reopen")) { Text("Open again") }
+                            Text(stringResource(R.string.telegram_closed), color = p.textSecondary)
+                            TextButton(onClick = { session = null; attempt++ }, modifier = Modifier.testTag("tg_reopen")) { Text(stringResource(R.string.open_again)) }
                         }
                         else -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.testTag("tg_starting"), size = 48.dp, label = "Starting Telegram")
                     }
@@ -208,11 +210,11 @@ private fun PhoneStep(s: TgSession, onBack: () -> Unit, onOwnKeys: (() -> Unit)?
     val scope = rememberCoroutineScope()
     SubPageHeader(title = "Sign in to Telegram", subtitle = "Your account stays on this phone", onBack = onBack)
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        Text("Phone number", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-        Text("With the country code, for example +880 1712 345678. Telegram sends a code to your Telegram app or by SMS.", color = p.textSecondary, fontSize = 13.sp)
+        Text(stringResource(R.string.phone_number), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Text(stringResource(R.string.with_the_country_code_for_example), color = p.textSecondary, fontSize = 13.sp)
         OutlinedTextField(
             value = phone, onValueChange = { phone = it; s.clearError() }, singleLine = true,
-            label = { Text("Phone number") },
+            label = { Text(stringResource(R.string.phone_number)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { scope.launch { s.submitPhone(phone) } }),
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.PhoneNumber }.testTag("tg_phone"),
@@ -220,7 +222,7 @@ private fun PhoneStep(s: TgSession, onBack: () -> Unit, onOwnKeys: (() -> Unit)?
         ErrorLine(s)
         SubmitButton("Send code", s, TgAuth.normalizePhone(phone) != null, "tg_phone_go") { s.submitPhone(phone) }
         Text(
-            "Yumeiro signs in with Telegram's official library. Your messages are not sent anywhere else; the login is saved encrypted for this profile only.",
+            stringResource(R.string.yumeiro_signs_in_with_telegrams_official),
             color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 16.dp),
         )
         if (onOwnKeys != null) TextButton(onClick = onOwnKeys, modifier = Modifier.padding(top = 4.dp).testTag("tg_own_keys")) {
@@ -242,7 +244,7 @@ private fun CodeStep(s: TgSession, st: TgAuthState.WaitCode) {
         "Fragment" -> "on fragment.com"
         else -> "to you"
     }
-    Text("Code sent $where to ${st.phone}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.testTag("tg_code_where"))
+    Text(stringResource(R.string.code_sent_to, where, st.phone), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.testTag("tg_code_where"))
     OutlinedTextField(
         value = code, onValueChange = { code = TgAuth.normalizeCode(it).take(12); s.clearError() }, singleLine = true,
         label = { Text(if (st.length > 0) "${st.length}-digit code" else "Code") },
@@ -253,8 +255,8 @@ private fun CodeStep(s: TgSession, st: TgAuthState.WaitCode) {
     ErrorLine(s)
     SubmitButton("Sign in", s, code.isNotEmpty(), "tg_code_go") { s.submitCode(code) }
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        TextButton(onClick = { s.backToPhone() }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_change_phone")) { Text("Change number") }
-        if (st.next != null) TextButton(onClick = { scope.launch { s.resendCode() } }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_resend")) { Text("Send again") }
+        TextButton(onClick = { s.backToPhone() }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_change_phone")) { Text(stringResource(R.string.change_number)) }
+        if (st.next != null) TextButton(onClick = { scope.launch { s.resendCode() } }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_resend")) { Text(stringResource(R.string.send_again)) }
     }
 }
 
@@ -263,18 +265,18 @@ private fun PasswordStep(s: TgSession, st: TgAuthState.WaitPassword) {
     val p = LocalMtPalette.current
     var pass by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    Text("Two-step verification password", color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-    if (st.hint.isNotBlank()) Text("Hint: ${st.hint}", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.testTag("tg_pass_hint"))
+    Text(stringResource(R.string.two_step_verification_password), color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+    if (st.hint.isNotBlank()) Text(stringResource(R.string.hint, st.hint), color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.testTag("tg_pass_hint"))
     OutlinedTextField(
         value = pass, onValueChange = { pass = it; s.clearError() }, singleLine = true,
-        label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(),
+        label = { Text(stringResource(R.string.password)) }, visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { scope.launch { s.submitPassword(pass) } }),
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.Password }.testTag("tg_password"),
     )
     ErrorLine(s)
     SubmitButton("Sign in", s, pass.isNotEmpty(), "tg_password_go") { s.submitPassword(pass) }
-    Text("Forgot it? Reset it in the Telegram app (Settings › Privacy and Security › Two-Step Verification).", color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+    Text(stringResource(R.string.forgot_it_reset_it_in_the), color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
 }
 
 @Composable
@@ -282,10 +284,10 @@ private fun RegisterStep(s: TgSession, st: TgAuthState.WaitRegistration) {
     val p = LocalMtPalette.current
     var first by rememberSaveable { mutableStateOf("") }
     var last by rememberSaveable { mutableStateOf("") }
-    Text("This number has no Telegram account yet. Create one:", color = p.textPrimary, fontSize = 14.sp)
-    OutlinedTextField(first, { first = it; s.clearError() }, singleLine = true, label = { Text("First name") },
+    Text(stringResource(R.string.this_number_has_no_telegram_account), color = p.textPrimary, fontSize = 14.sp)
+    OutlinedTextField(first, { first = it; s.clearError() }, singleLine = true, label = { Text(stringResource(R.string.first_name)) },
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.PersonFirstName }.testTag("tg_first"))
-    OutlinedTextField(last, { last = it }, singleLine = true, label = { Text("Last name (optional)") },
+    OutlinedTextField(last, { last = it }, singleLine = true, label = { Text(stringResource(R.string.last_name_optional)) },
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).semantics { contentType = ContentType.PersonLastName }.testTag("tg_last"))
     if (st.termsText.isNotBlank()) Text(st.termsText.take(600), color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
     ErrorLine(s)
@@ -330,10 +332,10 @@ private fun TelegramLibrary(s: TgSession, onBack: () -> Unit, onPlay: (StreamReq
 
     if (confirmLogout) dev.asfakul.yumeiro.ui.components.TsukiDialog(
         onDismissRequest = { confirmLogout = false },
-        title = { Text("Sign out of Telegram?") },
-        text = { Text("Yumeiro forgets this login and its downloaded Telegram files. Your account itself is not changed.") },
-        confirmButton = { TextButton(onClick = { confirmLogout = false; scope.launch { s.logOut() } }, modifier = Modifier.testTag("tg_logout_confirm")) { Text("Sign out") } },
-        dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
+        title = { Text(stringResource(R.string.sign_out_of_telegram)) },
+        text = { Text(stringResource(R.string.yumeiro_forgets_this_login_and_its)) },
+        confirmButton = { TextButton(onClick = { confirmLogout = false; scope.launch { s.logOut() } }, modifier = Modifier.testTag("tg_logout_confirm")) { Text(stringResource(R.string.sign_out)) } },
+        dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text(stringResource(R.string.cancel)) } },
     )
 
     // B8 (beta chapter): account and search moved into the header as icons (TelegramChatsPage).
@@ -427,7 +429,7 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
             if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(videos.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
                 dev.asfakul.yumeiro.ui.components.CoverSkeleton(aspect = 16f / 9f)
             } else if (next != 0L) item("more", span = { GridItemSpan(maxLineSpan) }) {
-                TextButton(onClick = { pages = 0; load(next) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("tg_videos_more")) { Text("Older") }
+                TextButton(onClick = { pages = 0; load(next) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("tg_videos_more")) { Text(stringResource(R.string.older)) }
             }
         }
     }
@@ -461,7 +463,7 @@ private fun TgVideoTile(v: TgVideo, title: String, thumb: suspend () -> String?,
                 sizeText(v.size)?.let { Text(it, color = p.textSecondary, fontSize = 11.sp) }
             }
             IconButton(onClick = onDownload, modifier = Modifier.size(40.dp).testTag("tg_download_${v.messageId}")) {
-                Icon(Icons.Default.Download, "Download $title", tint = p.textSecondary, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Download, stringResource(R.string.download_2, title), tint = p.textSecondary, modifier = Modifier.size(20.dp))
             }
         }
     }
@@ -502,16 +504,16 @@ private fun TelegramKeysStep(onBack: () -> Unit, onSaved: () -> Unit) {
                     "\"API development tools\", create an app (any name), then copy the App api_id and App api_hash here.",
                 color = p.textSecondary, fontSize = 13.sp,
             )
-            TextButton(onClick = { runCatching { uri.openUri("https://my.telegram.org/apps") } }, modifier = Modifier.testTag("tg_keys_site")) { Text("Open my.telegram.org") }
+            TextButton(onClick = { runCatching { uri.openUri("https://my.telegram.org/apps") } }, modifier = Modifier.testTag("tg_keys_site")) { Text(stringResource(R.string.open_my_telegram_org)) }
             OutlinedTextField(
                 value = id, onValueChange = { id = it.filter { c -> c.isDigit() }.take(10); error = null }, singleLine = true,
-                label = { Text("API ID") },
+                label = { Text(stringResource(R.string.api_id)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("tg_keys_id"),
             )
             OutlinedTextField(
                 value = hash, onValueChange = { hash = it.trim().take(32); error = null }, singleLine = true,
-                label = { Text("API hash") },
+                label = { Text(stringResource(R.string.api_hash)) },
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("tg_keys_hash"),
@@ -524,10 +526,10 @@ private fun TelegramKeysStep(onBack: () -> Unit, onSaved: () -> Unit) {
                 },
                 enabled = id.isNotEmpty() && hash.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 12.dp).testTag("tg_keys_save"),
-            ) { Text("Save and sign in") }
+            ) { Text(stringResource(R.string.save_and_sign_in)) }
             if (hasOwn && hasBuild) TextButton(onClick = {
                 dev.asfakul.yumeiro.online.telegram.td.TgKeys.clear(context); onSaved()
-            }, modifier = Modifier.testTag("tg_keys_reset")) { Text("Use Yumeiro's keys again") }
+            }, modifier = Modifier.testTag("tg_keys_reset")) { Text(stringResource(R.string.use_yumeiros_keys_again)) }
             Text(
                 "The hash is kept encrypted on this phone and never leaves it except to Telegram. Saving new keys signs " +
                     "every profile out of Telegram on this phone.",

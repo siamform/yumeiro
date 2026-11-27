@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.music
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.PillTabRow
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnAccent
@@ -200,7 +202,7 @@ fun MusicScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Sort options",
+                                contentDescription = stringResource(R.string.sort_options),
                                 tint = SpotifyGreen,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -270,7 +272,7 @@ fun MusicScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Shuffle,
-                            contentDescription = "Shuffle all",
+                            contentDescription = stringResource(R.string.shuffle_all),
                             tint = OnAccent,
                             modifier = Modifier.size(18.dp)
                         )
@@ -446,7 +448,7 @@ fun MusicScreen(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text("Play album", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                    Text(stringResource(R.string.play_album), color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                 }
                                             }
 
@@ -568,7 +570,7 @@ fun MusicScreen(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text("Play all", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                    Text(stringResource(R.string.play_all), color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                 }
                                             }
 
@@ -698,7 +700,7 @@ fun MusicScreen(
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text("Play folder", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                                    Text(stringResource(R.string.play_folder), color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                                 }
                                             }
 

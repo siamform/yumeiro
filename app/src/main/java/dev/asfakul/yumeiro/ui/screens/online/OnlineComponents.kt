@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.yuEntrance
 import dev.asfakul.yumeiro.ui.components.yuPressScale
 import dev.asfakul.yumeiro.ui.feed.feedCard
@@ -340,7 +342,7 @@ internal fun PosterGridSkeleton(rows: Int = 2) {
 @Composable
 internal fun SeeAllButton(onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.testTag("online_see_all")) {
-        Text("See all", color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.see_all), color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
     }
 }

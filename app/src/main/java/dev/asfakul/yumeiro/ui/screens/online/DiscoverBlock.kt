@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -233,7 +235,7 @@ private fun IfYouLikeRow(seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, 
     var menu by remember { mutableStateOf(false) }
     Column(Modifier.testTag("discover_if_you_like")) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("If you like ", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.if_you_like), color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Box {
                 Row(
                     Modifier.clip(Chip).clickable(role = Role.DropdownList, onClickLabel = "Pick another title") { menu = true }
@@ -252,7 +254,7 @@ private fun IfYouLikeRow(seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, 
         }
         when {
             page == null -> PosterGridSkeleton(1)
-            items.isEmpty() -> Text("Nothing similar listed yet. Pick another title.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp))
+            items.isEmpty() -> Text(stringResource(R.string.nothing_similar_listed_yet_pick_another), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp))
             else -> LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 itemsIndexed(items, key = { i, it -> "${i}_${it.key}" }) { _, it -> PosterCard(it, onClick = { onOpen(it) }, width = 112.dp) }
             }
@@ -334,7 +336,7 @@ internal fun DiscoverGrid(row: Discover.Row, onOpen: (OnlineItem) -> Unit, onClo
         }
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().testTag("discover_grid")) {
             Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose, modifier = Modifier.testTag("discover_grid_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary) }
+                IconButton(onClick = onClose, modifier = Modifier.testTag("discover_grid_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back), tint = TextPrimary) }
                 Text(row.title, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             LazyVerticalGrid(
@@ -346,15 +348,15 @@ internal fun DiscoverGrid(row: Discover.Row, onOpen: (OnlineItem) -> Unit, onClo
                 if (busy || (more && !failed)) item(span = { GridItemSpan(maxLineSpan) }) { PosterGridSkeleton(1) }
                 if (failed) item(span = { GridItemSpan(maxLineSpan) }) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Yumeiro Cloud didn't answer.", color = TextSecondary, fontSize = 13.sp)
+                        Text(stringResource(R.string.yumeiro_cloud_didnt_answer), color = TextSecondary, fontSize = 13.sp)
                         OnlineChip("Try again", false, { failed = false }, Modifier.padding(top = 8.dp).testTag("discover_grid_retry"))
                     }
                 }
                 if (!more && items.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text("Nothing listed here yet.", color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp).testTag("discover_grid_empty"))
+                    Text(stringResource(R.string.nothing_listed_here_yet), color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp).testTag("discover_grid_empty"))
                 }
                 if (items.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text("Data: TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp))
+                    Text(stringResource(R.string.data_tmdb_this_product_uses_the), color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp))
                 }
             }
         }

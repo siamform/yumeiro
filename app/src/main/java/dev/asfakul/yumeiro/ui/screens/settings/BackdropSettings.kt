@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -87,8 +89,8 @@ fun BackdropSettingsSection() {
     }
     val pick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
-    Text("Backdrop", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
-    Text("夢色 — the picture behind every page. Each theme has its own scene.", color = p.textTertiary, fontSize = 12.5.sp, lineHeight = 17.sp)
+    Text(stringResource(R.string.backdrop), color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+    Text(stringResource(R.string.the_picture_behind_every_page_each), color = p.textTertiary, fontSize = 12.5.sp, lineHeight = 17.sp)
     Text("Your photo: " + BackdropSettings.ACCEPTED, color = p.textTertiary, fontSize = 11.5.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 2.dp).testTag("backdrop_accepted"))
     Spacer(Modifier.height(10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -128,7 +130,7 @@ fun BackdropSettingsSection() {
     run {
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Intensity", color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.intensity), color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Text(when { live < 0.7f -> "Faint"; live < 1.2f -> "Balanced"; else -> "Vivid" }, color = p.textTertiary, fontSize = 12.sp)
         }
         Slider(

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,8 +67,8 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
 fun SubtitleStyleDialog(onDismiss: () -> Unit) {
     TsukiDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag("subtitle_style_done")) { Text("Done", color = SpotifyGreen) } },
-        title = { Text("Subtitle style", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold) },
+        confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag("subtitle_style_done")) { Text(stringResource(R.string.done), color = SpotifyGreen) } },
+        title = { Text(stringResource(R.string.subtitle_style), style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = { SubtitleStyleEditor() },
     )
 }
@@ -83,8 +85,8 @@ fun SubtitleStyleEditor(modifier: Modifier = Modifier) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Use Android caption settings", color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
-                Text("Follows Settings → Accessibility → Captions", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.use_android_caption_settings), color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.follows_settings_accessibility_captions), color = TextSecondary, style = MaterialTheme.typography.bodySmall)
             }
             Switch(
                 checked = s.followSystem,
@@ -115,7 +117,7 @@ fun SubtitleStyleEditor(modifier: Modifier = Modifier) {
         ChipRow(SubtitleStyle.Edge.entries.map { it.label to it }, current = s.edge.takeIf { !s.followSystem }, tag = "sub_edge") { v -> change { it.copy(edge = v) } }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Bold text", color = TextPrimary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.bold_text), color = TextPrimary, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Switch(checked = !s.followSystem && s.bold, onCheckedChange = { b -> change { it.copy(bold = b) } },
                 colors = SwitchDefaults.colors(checkedThumbColor = OnAccent, checkedTrackColor = SpotifyGreen), modifier = Modifier.testTag("sub_bold"))
         }
@@ -131,15 +133,15 @@ fun SubtitleStyleEditor(modifier: Modifier = Modifier) {
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Keep the file's own colours", color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
-                Text("Colours and positions written inside SRT, VTT or TTML files. ASS/SSA files always keep their look", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.keep_the_files_own_colours), color = TextPrimary, style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.colours_and_positions_written_inside_srt), color = TextSecondary, style = MaterialTheme.typography.bodySmall)
             }
             Switch(checked = s.keepFileStyling, onCheckedChange = { k -> change { it.copy(keepFileStyling = k) } },
                 colors = SwitchDefaults.colors(checkedThumbColor = OnAccent, checkedTrackColor = SpotifyGreen), modifier = Modifier.testTag("sub_keep_file"))
         }
 
         TextButton(onClick = { SubtitleStyleSettings.reset(context) }, modifier = Modifier.testTag("sub_reset")) {
-            Text("Reset to default", color = SpotifyGreen)
+            Text(stringResource(R.string.reset_to_default), color = SpotifyGreen)
         }
     }
 }
@@ -183,7 +185,7 @@ private fun SubtitlePreview(s: SubtitleStyle) {
         contentAlignment = Alignment.BottomCenter,
     ) {
         Text(
-            "Subtitles look like this",
+            stringResource(R.string.subtitles_look_like_this),
             style = TextStyle(color = color, fontSize = size, fontWeight = if (!s.followSystem && s.bold) FontWeight.Bold else FontWeight.Normal, shadow = shadow, textAlign = TextAlign.Center),
             modifier = Modifier
                 .padding(bottom = (10 + (if (s.followSystem) 0f else s.lift) * 120).dp)

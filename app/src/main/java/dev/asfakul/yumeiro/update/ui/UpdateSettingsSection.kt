@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.update.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import android.content.Intent
 import android.net.Uri
@@ -88,7 +90,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                 ) { Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = SpotifyGreen, modifier = Modifier.size(22.dp)) }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Version ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                     Text(
                         "Build ${BuildConfig.VERSION_CODE} · ${if (manager.usesAuthenticatedChannel) "Private" else "Official"} release channel",
                         style = MaterialTheme.typography.bodySmall, color = TextSecondary,
@@ -100,7 +102,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                     }
                     cpu?.let { r ->
                         Text(
-                            "Processor ${dev.asfakul.yumeiro.update.ProcessorCheck.label(r.phone)} · installed build: ${dev.asfakul.yumeiro.update.ProcessorCheck.installedText(r)}",
+                            stringResource(R.string.processor_installed_build, dev.asfakul.yumeiro.update.ProcessorCheck.label(r.phone), dev.asfakul.yumeiro.update.ProcessorCheck.installedText(r)),
                             style = MaterialTheme.typography.bodySmall, color = TextSecondary,
                             modifier = Modifier.testTag("update_processor"),
                         )
@@ -125,7 +127,7 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Check for updates", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                    Text(stringResource(R.string.check_for_updates), style = MaterialTheme.typography.titleMedium, color = TextPrimary)
                     Text(statusText(state, lastChecked), style = MaterialTheme.typography.bodySmall, color = statusColor(state))
                 }
                 Spacer(Modifier.width(12.dp))
@@ -146,8 +148,8 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
 
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Check automatically", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                    Text("Look for new versions each time the app opens", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    Text(stringResource(R.string.check_automatically), style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                    Text(stringResource(R.string.look_for_new_versions_each_time), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                 }
                 Spacer(Modifier.width(12.dp))
                 Switch(
@@ -183,8 +185,8 @@ fun UpdateSettingsCard(modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Release history", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                    Text("View all versions and what changed in each", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    Text(stringResource(R.string.release_history), style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                    Text(stringResource(R.string.view_all_versions_and_what_changed), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                 }
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(20.dp))
             }
@@ -199,7 +201,7 @@ private fun StatusIcon(state: UpdateState) {
         is UpdateState.UpToDate -> Icon(Icons.Default.CheckCircle, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
         is UpdateState.Available, is UpdateState.ReadyToInstall ->
             Box(Modifier.clip(RoundedCornerShape(50)).background(SpotifyGreen).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Text("NEW", style = MaterialTheme.typography.labelMedium, color = OnAccent, fontWeight = FontWeight.Black)
+                Text(stringResource(R.string.new), style = MaterialTheme.typography.labelMedium, color = OnAccent, fontWeight = FontWeight.Black)
             }
         is UpdateState.Downloading -> Icon(Icons.Default.CloudDownload, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
         is UpdateState.Failed -> Icon(Icons.Default.ErrorOutline, null, tint = dev.asfakul.yumeiro.ui.theme.DangerTone, modifier = Modifier.size(22.dp))

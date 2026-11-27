@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import android.content.Context
 import androidx.compose.foundation.background
@@ -215,7 +217,7 @@ fun SuggestionList(
                 Box(
                     Modifier.minimumInteractiveComponentSize().size(36.dp).clip(CircleShape).clickable { onFill(s) }.testTag(tag + "_fill"),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Default.NorthWest, "Fill search box", tint = p.textTertiary, modifier = Modifier.size(16.dp)) }
+                ) { Icon(Icons.Default.NorthWest, stringResource(R.string.fill_search_box), tint = p.textTertiary, modifier = Modifier.size(16.dp)) }
             }
         }
     }

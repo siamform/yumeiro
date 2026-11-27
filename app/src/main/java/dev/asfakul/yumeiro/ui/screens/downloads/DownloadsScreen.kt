@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -151,12 +153,12 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
             // DL-H: a lock in the header, not a row in the list, so the page looks the same for everyone
             // and nothing moves down (DownloadUiScreenshotTest, CI 44514234313). Hidden in stealth mode.
             if (vaultOn && !stealth) IconButton(onClick = { askVault = true }, modifier = Modifier.testTag("downloads_private")) {
-                Icon(Icons.Default.Lock, "Private (locked)", tint = TextPrimary)
+                Icon(Icons.Default.Lock, stringResource(R.string.private_locked), tint = TextPrimary)
             }
             // GROUP C catch-all: the All/Offline/Permanent/Active chips moved behind a filter icon.
             if (!split.isEmpty) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (filter != DownloadFilter.ALL) 1 else 0, { filterSheet = true }, "downloads_filter", "Filter downloads")
             IconButton(onClick = { settingsOpen = !settingsOpen }, modifier = Modifier.testTag("downloads_settings")) {
-                Icon(Icons.Default.Settings, "Offline settings", tint = if (settingsOpen) SpotifyGreen else TextPrimary)
+                Icon(Icons.Default.Settings, stringResource(R.string.offline_settings), tint = if (settingsOpen) SpotifyGreen else TextPrimary)
             }
         }
         LazyVerticalGrid(
@@ -169,7 +171,7 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
             }
             if (settingsOpen) item("settings") {
                 Column {
-                    Text("Offline settings", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
+                    Text(stringResource(R.string.offline_settings), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.padding(vertical = 6.dp))
                     DownloadSettingsCard()
                 }
             }
@@ -254,10 +256,10 @@ private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, paralle
                 Column(Modifier.weight(1f)) {
                     Text(listOfNotNull((DownloadPrompt.sizeText(used).takeIf { it.isNotBlank() && used > 0 }?.let { "$it used" } ?: "No space used yet"), if (free > 0) DownloadPrompt.sizeText(free) + " free" else null).joinToString(" · "),
                         color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                    Text("Auto-delete: ${DownloadSettings.autoDeleteLabel(days)} · Quality: ${DownloadSettings.qualityLabel(quality)} · $parallel at once",
+                    Text(stringResource(R.string.auto_delete_quality_at_once, DownloadSettings.autoDeleteLabel(days), DownloadSettings.qualityLabel(quality), parallel),
                         color = TextTertiary, fontSize = 12.sp)
                 }
-                TextButton(onClick = onSettings) { Text("Change") }
+                TextButton(onClick = onSettings) { Text(stringResource(R.string.change)) }
             }
             if (used > 0 && free > 0) {
                 Spacer(Modifier.height(8.dp))
@@ -274,8 +276,8 @@ private fun TipsCard(onClose: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Lightbulb, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("How downloads work", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Hide tips", tint = TextTertiary) }
+                Text(stringResource(R.string.how_downloads_work), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Default.Close, stringResource(R.string.hide_tips), tint = TextTertiary) }
             }
             listOf(
                 "Anime and movies: open a title and tap Download (this season, all, next 5), or the arrow next to one episode.",
@@ -294,11 +296,11 @@ private fun EmptyDownloads(onBrowse: () -> Unit) {
     Column(Modifier.fillMaxWidth().clip(yuRound(16)).background(DarkSurfaceContainer).padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Default.DownloadForOffline, null, tint = SpotifyGreen, modifier = Modifier.size(36.dp))
         Spacer(Modifier.height(8.dp))
-        Text("No downloads yet", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text(stringResource(R.string.no_downloads_yet), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Spacer(Modifier.height(4.dp))
-        Text("Save episodes, movies, YouTube videos and music to watch or listen without internet.", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.save_episodes_movies_youtube_videos_and), color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(12.dp))
-        Text("Find something to save", color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+        Text(stringResource(R.string.find_something_to_save), color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
             modifier = Modifier.clip(yuRound(20)).background(SpotifyGreen).clickable(onClick = onBrowse).padding(horizontal = 18.dp, vertical = 8.dp))
     }
 }
@@ -318,7 +320,7 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
         Box(Modifier.width(54.dp).aspectRatio(2f / 3f).clip(yuRound(8))) {
             PosterImage(d.posterUrl, d.posterHeaders, Modifier.fillMaxSize())
             // DL-H: the play mark sits on the poster, so a finished row has room for Hide.
-            if (done) Icon(Icons.Default.PlayArrow, "Play", tint = Color.White, modifier = Modifier.align(Alignment.Center).size(26.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0x66000000)).padding(3.dp))
+            if (done) Icon(Icons.Default.PlayArrow, stringResource(R.string.play), tint = Color.White, modifier = Modifier.align(Alignment.Center).size(26.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0x66000000)).padding(3.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -354,9 +356,9 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
             }, modifier = Modifier.testTag(if (d.hidden) "download_unhide" else "download_hide")) {
                 Icon(if (d.hidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, if (d.hidden) "Unhide (back to Downloads)" else "Hide in Private", tint = TextTertiary)
             }
-            OnlineDownloads.Status.RUNNING, OnlineDownloads.Status.QUEUED -> IconButton(onClick = { OnlineDownloads.pause(context, d.id) }) { Icon(Icons.Default.Pause, "Pause", tint = TextPrimary) }
-            OnlineDownloads.Status.PAUSED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Download, "Resume", tint = TextPrimary) }
-            OnlineDownloads.Status.FAILED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Refresh, "Retry", tint = TextPrimary) }
+            OnlineDownloads.Status.RUNNING, OnlineDownloads.Status.QUEUED -> IconButton(onClick = { OnlineDownloads.pause(context, d.id) }) { Icon(Icons.Default.Pause, stringResource(R.string.pause), tint = TextPrimary) }
+            OnlineDownloads.Status.PAUSED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Download, stringResource(R.string.widget_resume), tint = TextPrimary) }
+            OnlineDownloads.Status.FAILED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Refresh, stringResource(R.string.retry), tint = TextPrimary) }
         }
         IconButton(onClick = {
             OnlineDownloads.setKeep(context, d.id, !d.keep)
@@ -364,7 +366,7 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
         }, modifier = Modifier.testTag("library_download_keep")) {
             Icon(if (d.keep) Icons.Default.PushPin else Icons.Outlined.PushPin, if (d.keep) "Permanent (tap to make offline)" else "Offline (tap to keep forever)", tint = if (d.keep) SpotifyGreen else TextTertiary)
         }
-        IconButton(onClick = { OnlineDownloads.delete(context, d.id) }) { Icon(Icons.Default.Delete, "Delete", tint = TextTertiary) }
+        IconButton(onClick = { OnlineDownloads.delete(context, d.id) }) { Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = TextTertiary) }
     }
 }
 
@@ -434,15 +436,15 @@ internal fun DownloadFolderRow(f: DownloadGroups.Folder, days: Int, expanded: Bo
         }, modifier = Modifier.testTag("library_folder_keep")) {
             Icon(if (allKept) Icons.Default.PushPin else Icons.Outlined.PushPin, if (allKept) "Permanent (tap to make offline)" else "Keep whole folder forever", tint = if (allKept) SpotifyGreen else TextTertiary)
         }
-        IconButton(onClick = { confirm = true }) { Icon(Icons.Default.Delete, "Delete folder", tint = TextTertiary) }
+        IconButton(onClick = { confirm = true }) { Icon(Icons.Default.Delete, stringResource(R.string.delete_folder), tint = TextTertiary) }
         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", tint = TextSecondary)
     }
     if (confirm) TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = { confirm = false },
         title = { Text("Delete ${list.size} download${if (list.size == 1) "" else "s"}?") },
-        text = { Text("${f.name}: these files will be removed from this phone. Other copies of the series stay.") },
-        confirmButton = { TextButton(onClick = { confirm = false; list.forEach { OnlineDownloads.delete(context, it.id) } }) { Text("Delete") } },
-        dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } },
+        text = { Text(stringResource(R.string.these_files_will_be_removed_from, f.name)) },
+        confirmButton = { TextButton(onClick = { confirm = false; list.forEach { OnlineDownloads.delete(context, it.id) } }) { Text(stringResource(R.string.delete)) } },
+        dismissButton = { TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }

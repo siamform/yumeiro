@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -120,7 +122,7 @@ internal fun AddLinkField(title: String, placeholder: String, hint: String?, tag
             leadingIcon = { Icon(Icons.Default.Link, null) },
             trailingIcon = {
                 IconButton(onClick = { clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { text = it } }, modifier = Modifier.testTag("${tag}_paste")) {
-                    Icon(Icons.Default.ContentPaste, "Paste link")
+                    Icon(Icons.Default.ContentPaste, stringResource(R.string.paste_link))
                 }
             },
             placeholder = { Text(placeholder, maxLines = 1) },

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.splash
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -130,12 +132,12 @@ fun SplashScreen(
                 }
                 .testTag("splash_wordmark"),
         ) {
-            Text("夢色", color = p.accent, fontSize = 13.sp, letterSpacing = 4.sp, fontWeight = FontWeight.Medium)
-            Text("Yumeiro", color = p.textPrimary, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
-            Text("Music · Video · Streams", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
+            Text(stringResource(R.string.text_2), color = p.accent, fontSize = 13.sp, letterSpacing = 4.sp, fontWeight = FontWeight.Medium)
+            Text(stringResource(R.string.app_name), color = p.textPrimary, fontSize = 30.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+            Text(stringResource(R.string.music_video_streams), color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
         }
         Text(
-            text = "by Asfakul Siam",
+            text = stringResource(R.string.by_asfakul_siam),
             color = p.textTertiary,
             fontSize = 11.sp,
             modifier = Modifier

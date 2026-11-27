@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -85,13 +87,13 @@ internal fun LinkChainBanner(
             }
         }
         if (onStop != null) TextButton(onClick = onStop, modifier = Modifier.testTag("link_chain_stop")) {
-            Text("Stop", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.stop), color = SpotifyGreen, fontWeight = FontWeight.Bold)
         }
         if (onBack != null) TextButton(onClick = onBack, modifier = Modifier.testTag("link_chain_back")) {
-            Text("Back", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.back), color = SpotifyGreen, fontWeight = FontWeight.Bold)
         }
         if (onOutside != null) TextButton(onClick = onOutside, modifier = Modifier.testTag("link_chain_outside")) {
-            Text("Browser", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.browser), color = SpotifyGreen, fontWeight = FontWeight.Bold)
         }
     }
 }

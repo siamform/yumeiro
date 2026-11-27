@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.content.Intent
 import android.net.Uri
@@ -213,7 +215,7 @@ internal fun BrowseHeader(
     Column {
         dev.asfakul.yumeiro.ui.components.YuSectionHeader(title, hint) {
             dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), { onSearch(!(searchOpen || query.isNotEmpty())) }, "hub_filter_open", "Search $title".lowercase().replaceFirstChar { it.uppercase() })
-            IconButton(onClick = onRefresh, modifier = Modifier.testTag("hub_refresh")) { Icon(Icons.Default.Refresh, "Refresh", tint = TextSecondary) }
+            IconButton(onClick = onRefresh, modifier = Modifier.testTag("hub_refresh")) { Icon(Icons.Default.Refresh, stringResource(R.string.refresh), tint = TextSecondary) }
         }
         dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, onQuery, placeholder, "hub_filter", horizontalPadding = 0.dp)
     }
@@ -232,8 +234,8 @@ internal fun UrlDialog(title: String, hint: String, examples: String?, onDismiss
                 if (examples != null) Text(examples, color = TextTertiary, fontSize = 12.sp)
             }
         },
-        confirmButton = { TextButton(onClick = { if (text.isNotBlank()) onSubmit(text.trim()) }, enabled = text.isNotBlank()) { Text("Add") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { if (text.isNotBlank()) onSubmit(text.trim()) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.add)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -325,8 +327,8 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
                             badge = if (e.trusted) "Trusted" else null,
                             warning = e.error ?: if (!e.trusted) "Not trusted yet. Its code won't run until you trust it." else null,
                         ) {
-                            if (!e.trusted && e.signature != null) TextButton(onClick = { trustAsk = e }) { Text("Trust", color = SpotifyGreen) }
-                            IconButton(onClick = { scope.launch { TachiyomiExtensions.uninstall(context, e.pkg); afterChange() } }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
+                            if (!e.trusted && e.signature != null) TextButton(onClick = { trustAsk = e }) { Text(stringResource(R.string.trust), color = SpotifyGreen) }
+                            IconButton(onClick = { scope.launch { TachiyomiExtensions.uninstall(context, e.pkg); afterChange() } }) { Icon(Icons.Default.Delete, stringResource(R.string.uninstall), tint = TextSecondary) }
                         }
                     }
                 }
@@ -365,7 +367,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
                     items(repos, key = { "r" + it.url }) { r ->
                         HubCard(r.name.ifBlank { r.url }, r.url) {
                             IconButton(onClick = { scope.launch { TachiyomiExtensions.removeRepo(context, r.url); available = available.filterNot { it.repo.url == r.url } } }) {
-                                Icon(Icons.Default.Delete, "Remove", tint = TextSecondary)
+                                Icon(Icons.Default.Delete, stringResource(R.string.remove_2), tint = TextSecondary)
                             }
                         }
                     }
@@ -393,17 +395,17 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
             onDismissRequest = { trustAsk = null },
             icon = { Icon(Icons.Default.Verified, null) },
-            title = { Text("Trust ${e.name}?") },
+            title = { Text(stringResource(R.string.trust_2, e.name)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Extensions are code from other people. Only trust ones from repositories you know. Yumeiro remembers this signing key; an update signed with a different key is refused.")
-                    Text("Signing key (SHA-256)", color = TextTertiary, fontSize = 12.sp)
+                    Text(stringResource(R.string.extensions_are_code_from_other_people))
+                    Text(stringResource(R.string.signing_key_sha_256), color = TextTertiary, fontSize = 12.sp)
                     Text(e.signature.orEmpty().chunked(2).joinToString(":").uppercase(), fontSize = 11.sp, color = TextSecondary)
                 }
             },
             confirmButton = { TextButton(onClick = { val sig = e.signature ?: return@TextButton; trustAsk = null
-                scope.launch { TachiyomiExtensions.trust(context, e.pkg, sig); afterChange() } }) { Text("Trust") } },
-            dismissButton = { TextButton(onClick = { trustAsk = null }) { Text("Cancel") } },
+                scope.launch { TachiyomiExtensions.trust(context, e.pkg, sig); afterChange() } }) { Text(stringResource(R.string.trust)) } },
+            dismissButton = { TextButton(onClick = { trustAsk = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -446,13 +448,13 @@ private fun StremioTab(nav: SourcesPageNav) {
                 items(addons, key = { it.manifestUrl }) { a ->
                     val res = a.resources.joinToString(" · ") { it.name }
                     HubCard(a.name, "v${a.version} · ${a.types.joinToString()} · $res", badge = if (a.catalogs.isNotEmpty()) "${a.catalogs.size} catalogs" else null) {
-                        IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { StremioAddons.remove(context, a.manifestUrl) }; afterChange() } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                        IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { StremioAddons.remove(context, a.manifestUrl) }; afterChange() } }) { Icon(Icons.Default.Delete, stringResource(R.string.remove_2), tint = TextSecondary) }
                     }
                 }
             } else {
                 if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
                     HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
-                        TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text("Add", color = SpotifyGreen) }
+                        TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text(stringResource(R.string.add), color = SpotifyGreen) }
                     }
                 }
                 item("market") {
@@ -528,7 +530,7 @@ private fun JsTab(nav: SourcesPageNav) {
                     }
                     items(state.installed, key = { "i" + it.id }) { e ->
                         HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}") {
-                            IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { JsSources.uninstall(context, e.id) }; afterChange() } }) { Icon(Icons.Default.Delete, "Uninstall", tint = TextSecondary) }
+                            IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { JsSources.uninstall(context, e.id) }; afterChange() } }) { Icon(Icons.Default.Delete, stringResource(R.string.uninstall), tint = TextSecondary) }
                         }
                     }
                 }
@@ -560,7 +562,7 @@ private fun JsTab(nav: SourcesPageNav) {
                     if (state.repos.isEmpty()) note("norepo", "No repositories yet. Tap + to add a link, or pick one from Discover below.")
                     items(state.repos, key = { "r$it" }) { r ->
                         HubCard(r.substringAfter("://").substringBefore("/"), r) {
-                            IconButton(onClick = { scope.launch(Dispatchers.IO) { JsSources.removeRepo(context, r) } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                            IconButton(onClick = { scope.launch(Dispatchers.IO) { JsSources.removeRepo(context, r) } }) { Icon(Icons.Default.Delete, stringResource(R.string.remove_2), tint = TextSecondary) }
                         }
                     }
                     item("market") {
@@ -622,7 +624,7 @@ private fun ServersTab(nav: SourcesPageNav) {
                             scanning = false
                         }
                     }, modifier = Modifier.weight(1f), shape = yuRound(14),
-                        colors = ButtonDefaults.buttonColors(containerColor = GlassFill, contentColor = TextPrimary)) { Text("DLNA", maxLines = 1, fontSize = 13.sp) }
+                        colors = ButtonDefaults.buttonColors(containerColor = GlassFill, contentColor = TextPrimary)) { Text(stringResource(R.string.dlna), maxLines = 1, fontSize = 13.sp) }
                     listOf(HomeServers.Kind.WEBDAV, HomeServers.Kind.SMB).forEach { k ->
                         Button(onClick = { form = k }, modifier = Modifier.weight(1f), shape = yuRound(14),
                             colors = ButtonDefaults.buttonColors(containerColor = GlassFill, contentColor = TextPrimary)) { Text(k.label, maxLines = 1, fontSize = 13.sp) }
@@ -633,7 +635,7 @@ private fun ServersTab(nav: SourcesPageNav) {
             if (servers.isEmpty()) note("none", "No servers yet.")
             items(servers, key = { it.id }) { s ->
                 HubCard(s.name, s.url, badge = s.kind.label) {
-                    IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { HomeServers.remove(context, s.id) }; afterChange() } }) { Icon(Icons.Default.Delete, "Remove", tint = TextSecondary) }
+                    IconButton(onClick = { scope.launch { withContext(Dispatchers.IO) { HomeServers.remove(context, s.id) }; afterChange() } }) { Icon(Icons.Default.Delete, stringResource(R.string.remove_2), tint = TextSecondary) }
                 }
             }
         }
@@ -642,9 +644,9 @@ private fun ServersTab(nav: SourcesPageNav) {
     found?.let { list ->
         TsukiDialog(
             onDismissRequest = { found = null },
-            title = { Text("DLNA servers nearby") },
+            title = { Text(stringResource(R.string.dlna_servers_nearby)) },
             text = {
-                if (list.isEmpty()) Text("Nothing answered. Make sure you're on the same Wi-Fi and the server has DLNA turned on.")
+                if (list.isEmpty()) Text(stringResource(R.string.nothing_answered_make_sure_youre_on))
                 else Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     list.forEach { f ->
                         TextButton(onClick = {
@@ -658,7 +660,7 @@ private fun ServersTab(nav: SourcesPageNav) {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { found = null }) { Text("Close") } },
+            confirmButton = { TextButton(onClick = { found = null }) { Text(stringResource(R.string.close)) } },
         )
     }
 }
@@ -691,16 +693,16 @@ private fun ServerForm(kind: HomeServers.Kind, onDismiss: () -> Unit, onSaved: (
 
     TsukiDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text("Add ${kind.label}") },
+        title = { Text(stringResource(R.string.add_2, kind.label)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(url, { url = it }, singleLine = true, label = { Text(if (kind == HomeServers.Kind.SMB) "smb://host/share/folder" else "Server address") },
                     placeholder = { Text(when (kind) { HomeServers.Kind.PLEX -> "http://192.168.1.10:32400"; HomeServers.Kind.WEBDAV -> "https://cloud.example/remote.php/dav/files/me"; else -> "http://192.168.1.10:8096" }) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().testTag("server_url"))
-                OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Name (optional)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(name, { name = it }, singleLine = true, label = { Text(stringResource(R.string.name_optional)) }, modifier = Modifier.fillMaxWidth())
                 if (needsUser) {
-                    OutlinedTextField(user, { user = it }, singleLine = true, label = { Text("User name") }, modifier = Modifier.fillMaxWidth().testTag("server_user"))
-                    OutlinedTextField(pass, { pass = it }, singleLine = true, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(),
+                    OutlinedTextField(user, { user = it }, singleLine = true, label = { Text(stringResource(R.string.user_name)) }, modifier = Modifier.fillMaxWidth().testTag("server_user"))
+                    OutlinedTextField(pass, { pass = it }, singleLine = true, label = { Text(stringResource(R.string.password)) }, visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().testTag("server_pass"))
                 } else {
                     Text(plexCode?.let { "Waiting for you to approve code $it in the browser…" } ?: "Sign in with your Plex account in the browser. Yumeiro only stores the token Plex gives back.",
@@ -732,7 +734,7 @@ private fun ServerForm(kind: HomeServers.Kind, onDismiss: () -> Unit, onSaved: (
                 }
             }) { Text(if (error != null) "Retry" else if (kind == HomeServers.Kind.PLEX) "Sign in with Plex" else "Connect") }
         },
-        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 

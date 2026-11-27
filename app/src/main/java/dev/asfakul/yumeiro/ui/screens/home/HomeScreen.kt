@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.yuEntrance
 import dev.asfakul.yumeiro.ui.components.yuPressScale
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -626,7 +628,7 @@ fun HomeScreen(
                             }
                             HeroCarousel(slides, tag = "home_next_episodes") { i -> onOpenOnlineTitle(picks[i]) }
                             Text(
-                                "Follow a series with reminders on and its new episodes show here first.",
+                                stringResource(R.string.follow_a_series_with_reminders_on),
                                 style = MaterialTheme.typography.bodySmall, color = p.textTertiary,
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 2.dp),
                             )
@@ -811,7 +813,7 @@ fun HomeScreen(
                 Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     GlassPill("Customize home", onClick = { customizing = true }, leading = Icons.Default.Tune, tag = "home_customize")
                     Text(
-                        "夢色 · You're all caught up.", style = MaterialTheme.typography.bodySmall, color = p.textTertiary,
+                        stringResource(R.string.youre_all_caught_up), style = MaterialTheme.typography.bodySmall, color = p.textTertiary,
                         modifier = Modifier.padding(top = 12.dp).testTag("home_end"),
                     )
                 }
@@ -822,8 +824,8 @@ fun HomeScreen(
     if (customizing) {
         ModalBottomSheet(onDismissRequest = { customizing = false }, containerColor = p.surfaceContainerHigh, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 16.dp).testTag("home_customize_sheet")) {
-                Text("Customize home", style = SectionTitleStyle, color = p.textPrimary)
-                Text("Turn sections on or off. Continue always stays at the top.", style = MaterialTheme.typography.bodySmall, color = p.textSecondary, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
+                Text(stringResource(R.string.customize_home), style = SectionTitleStyle, color = p.textPrimary)
+                Text(stringResource(R.string.turn_sections_on_or_off_continue), style = MaterialTheme.typography.bodySmall, color = p.textSecondary, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
                 HomeLayout.sections.forEach { (key, label) ->
                     val on = key !in hidden
                     Row(
@@ -872,8 +874,8 @@ private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> U
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("Finish setting up", style = MaterialTheme.typography.titleSmall, color = p.textPrimary)
-            Text("$done of $total ready · sources, DNS, alerts", style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(stringResource(R.string.finish_setting_up), style = MaterialTheme.typography.titleSmall, color = p.textPrimary)
+            Text(stringResource(R.string.of_ready_sources_dns_alerts, done, total), style = MaterialTheme.typography.bodySmall, color = p.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (onExplore != null) {
             Row(
@@ -884,13 +886,13 @@ private fun SetupCard(done: Int, total: Int, onOpen: () -> Unit, onHide: () -> U
             ) {
                 Icon(Icons.Default.Explore, null, tint = p.accent, modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Tour", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(stringResource(R.string.tour), color = p.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
         Box(
             Modifier.minimumInteractiveComponentSize().size(40.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Hide setup card", onClick = onHide).testTag("home_setup_hide"),
             contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Default.Close, "Hide", tint = p.textTertiary, modifier = Modifier.size(18.dp)) }
+        ) { Icon(Icons.Default.Close, stringResource(R.string.hide), tint = p.textTertiary, modifier = Modifier.size(18.dp)) }
     }
 }
 
@@ -1154,7 +1156,7 @@ private fun MoodSection(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(mood.line, style = MaterialTheme.typography.bodyMedium, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("Songs · videos · picks from your extensions", style = MaterialTheme.typography.bodySmall, color = p.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(stringResource(R.string.songs_videos_picks_from_your_extensions), style = MaterialTheme.typography.bodySmall, color = p.textTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -1220,7 +1222,7 @@ private fun RandomGroupHeader(api: String, onSeeAll: (() -> Unit)?) {
         Spacer(Modifier.width(10.dp))
         Text(api, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         if (onSeeAll != null) Text(
-            "More", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+            stringResource(R.string.more), color = p.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp,
             modifier = Modifier.clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClickLabel = "More from $api", onClick = onSeeAll).padding(horizontal = 10.dp, vertical = 8.dp),
         )
     }

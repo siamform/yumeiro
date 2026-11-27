@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -243,7 +245,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                 }
                 Row(Modifier.statusBarsPadding().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack, modifier = Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)).testTag("subpage_back")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = Color.White)
                     }
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.clip(yuRound(14)).background(Color.Black.copy(alpha = 0.35f)).padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -332,7 +334,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
         if (versions.size > 1 || versions.firstOrNull()?.isNotEmpty() == true && versions.size == 1 && d.kind == OnlineKind.ANIME) {
             item("versions") {
                 Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Audio", color = TextSecondary, fontSize = 13.sp)
+                    Text(stringResource(R.string.audio), color = TextSecondary, fontSize = 13.sp)
                     versions.forEach { v -> OnlineChip(v.ifBlank { "Default" }, v == version, { version = v }, Modifier.testTag("online_version_$v")) }
                 }
             }
@@ -417,7 +419,7 @@ private fun DetailSkeleton(preview: OnlineItem?, onBack: () -> Unit) {
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.3f), DarkBackground))))
             } else Box(Modifier.fillMaxSize().shimmer(yuRound(0)))
             IconButton(onClick = onBack, modifier = Modifier.statusBarsPadding().padding(4.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.35f))) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = Color.White)
             }
             Text(preview?.name.orEmpty(), color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp, maxLines = 2,
                 modifier = Modifier.align(Alignment.BottomStart).padding(16.dp))
@@ -440,7 +442,7 @@ private fun EpisodeTile(e: OnlineEpisode, tag: String? = null, current: Boolean,
             modifier = Modifier.align(Alignment.TopStart).padding(start = 5.dp, top = 3.dp, end = 14.dp).testTag("online_episode_tag"))
         // NF-1: a small green dot for an episode added since the last visit (TalkBack reads "Fresh").
         if (fresh && !downloaded) Box(Modifier.align(Alignment.TopEnd).padding(5.dp).size(7.dp).clip(CircleShape).background(SpotifyGreen).semantics { contentDescription = "Fresh" }.testTag("online_episode_fresh"))
-        if (downloaded) Icon(Icons.Default.CheckCircle, "Downloaded", tint = SpotifyGreen, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(12.dp))
+        if (downloaded) Icon(Icons.Default.CheckCircle, stringResource(R.string.downloaded_2), tint = SpotifyGreen, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(12.dp))
         if (progress > 0.01f) {
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.12f))) {
                 Box(Modifier.fillMaxWidth(progress).height(3.dp).background(SpotifyGreen))
@@ -525,7 +527,7 @@ private fun RatingChips(list: List<dev.asfakul.yumeiro.online.meta.TitleFacts.Ra
                     .testTag(if (imdb) "online_detail_imdb" else "online_detail_rating"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (imdb) Text("IMDb", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
+                if (imdb) Text(stringResource(R.string.imdb), color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.clip(yuRound(4)).background(Color(0xFFF5C518)).padding(horizontal = 5.dp, vertical = 1.dp))
                 else {
                     Icon(Icons.Default.Star, null, tint = dev.asfakul.yumeiro.ui.theme.StarTone, modifier = Modifier.size(13.dp))

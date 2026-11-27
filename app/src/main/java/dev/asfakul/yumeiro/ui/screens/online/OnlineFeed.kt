@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -161,9 +163,9 @@ internal fun ChannelSectionHeader(name: String, titles: Int, onOpen: () -> Unit)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(name, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("$titles titles", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+            Text(stringResource(R.string.titles, titles), color = TextTertiary, fontSize = 11.sp, maxLines = 1)
         }
-        Text("View", color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(stringResource(R.string.view), color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
     }
 }
 
@@ -178,7 +180,7 @@ internal fun ChannelAvatar(name: String, selected: Boolean, size: androidx.compo
             Modifier.fillMaxSize().clip(CircleShape).background(if (mix) signature else Brush.linearGradient(listOf(art.start, art.end))),
             contentAlignment = Alignment.Center,
         ) {
-            if (mix) Icon(dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "Yumix mix", tint = Color.White, modifier = Modifier.size(size * 0.46f))
+            if (mix) Icon(dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, stringResource(R.string.yumix_mix), tint = Color.White, modifier = Modifier.size(size * 0.46f))
             else {
                 // Fallback (and what shows while the logo loads): the Hue's initials.
                 Text(
@@ -307,10 +309,10 @@ internal fun ChannelHeader(name: String, rows: Int, titles: Int, onChange: (() -
             Text("$rows playlist${if (rows == 1) "" else "s"} · $titles titles", maxLines = 1, color = TextTertiary, fontSize = 12.sp)
         }
         if (onChange != null) androidx.compose.material3.IconButton(onClick = onChange, modifier = Modifier.testTag("online_filter_active")) {
-            Icon(Icons.Default.FilterList, "Change extension", tint = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent)
+            Icon(Icons.Default.FilterList, stringResource(R.string.change_extension), tint = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent)
         }
         if (onClear != null) androidx.compose.material3.IconButton(onClick = onClear, modifier = Modifier.testTag("online_filter_active_clear")) {
-            Icon(Icons.Default.Close, "Show all extensions", tint = TextSecondary)
+            Icon(Icons.Default.Close, stringResource(R.string.show_all_extensions), tint = TextSecondary)
         }
     }
 }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -72,7 +74,7 @@ fun ProxySettingsCard() {
     fun draft() = AppProxy.Config(type, host.trim(), port.trim().toIntOrNull() ?: 0, if (type == AppProxy.Type.HTTP || type == AppProxy.Type.SOCKS) user.trim() else "", pass)
 
     SettingsCard {
-        Text("Proxy", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.proxy), color = TextPrimary, style = MaterialTheme.typography.titleMedium)
         Text(
             "Send Yumeiro's traffic through your own proxy: streams, extensions, images, downloads, subtitles, updates and web pages. " +
                 "Use it when your network blocks a site by its address (DNS can't fix that). Local devices (casting, home servers) stay direct.",
@@ -92,18 +94,18 @@ fun ProxySettingsCard() {
         if (type != AppProxy.Type.OFF) {
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(host, { host = it; result = null }, singleLine = true, label = { Text("Address") },
+                OutlinedTextField(host, { host = it; result = null }, singleLine = true, label = { Text(stringResource(R.string.address)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.weight(1f).testTag("proxy_host"))
-                OutlinedTextField(port, { v -> port = v.filter { it.isDigit() }.take(5); result = null }, singleLine = true, label = { Text("Port") },
+                OutlinedTextField(port, { v -> port = v.filter { it.isDigit() }.take(5); result = null }, singleLine = true, label = { Text(stringResource(R.string.port)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.width(110.dp).testTag("proxy_port"))
             }
-            OutlinedTextField(user, { user = it; result = null }, singleLine = true, label = { Text("Username (optional)") },
+            OutlinedTextField(user, { user = it; result = null }, singleLine = true, label = { Text(stringResource(R.string.username_optional)) },
                 modifier = Modifier.fillMaxWidth().testTag("proxy_user"))
-            OutlinedTextField(pass, { pass = it; result = null }, singleLine = true, label = { Text("Password (optional)") },
+            OutlinedTextField(pass, { pass = it; result = null }, singleLine = true, label = { Text(stringResource(R.string.password_optional)) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().testTag("proxy_pass"))
             if (type == AppProxy.Type.SOCKS && user.isNotBlank()) {
-                Text("Web pages can't use a SOCKS5 proxy with a login (Android WebView limit); everything else can.", color = TextTertiary, fontSize = 11.sp)
+                Text(stringResource(R.string.web_pages_cant_use_a_socks5), color = TextTertiary, fontSize = 11.sp)
             }
         }
         SettingsDivider()
@@ -133,7 +135,7 @@ fun ProxySettingsCard() {
                     scope.launch { result = withContext(Dispatchers.IO) { AppProxy.test(context, d) }; busy = false }
                 },
                 modifier = Modifier.testTag("proxy_test"),
-            ) { Text("Test", color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
+            ) { Text(stringResource(R.string.test), color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
             TextButton(
                 enabled = loaded && !busy,
                 onClick = {
@@ -144,7 +146,7 @@ fun ProxySettingsCard() {
                     }
                 },
                 modifier = Modifier.testTag("proxy_save"),
-            ) { Text("Save", color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
+            ) { Text(stringResource(R.string.save), color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
         }
         Text(
             "Not covered: torrent peers and DNS-over-TLS / plain DNS lookups (with a proxy on, sites are looked up by the proxy). " +

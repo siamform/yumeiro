@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,7 +51,7 @@ internal fun TrackingV2Card() {
             )
             if (on) {
                 Text(
-                    "Chapters go to AniList and MyAnimeList. A title is matched by its names and year; when no match is close enough nothing is sent, so the wrong entry is never changed.",
+                    stringResource(R.string.chapters_go_to_anilist_and_myanimelist),
                     color = TextTertiary, fontSize = 12.sp,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -58,7 +60,7 @@ internal fun TrackingV2Card() {
                         color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                         modifier = Modifier.weight(1f).testTag("tracking_v2_waiting"),
                     )
-                    OutlinedButton(onClick = { TrackV2.syncNow(context) }, enabled = queue.isNotEmpty(), modifier = Modifier.testTag("tracking_v2_sync")) { Text("Sync now") }
+                    OutlinedButton(onClick = { TrackV2.syncNow(context) }, enabled = queue.isNotEmpty(), modifier = Modifier.testTag("tracking_v2_sync")) { Text(stringResource(R.string.sync_now)) }
                 }
                 queue.take(3).forEach { q ->
                     Text("${q.title} · ${if (q.kind.reading) "chapter" else "episode"} ${q.unit} → ${q.pending.sorted().joinToString()}" +

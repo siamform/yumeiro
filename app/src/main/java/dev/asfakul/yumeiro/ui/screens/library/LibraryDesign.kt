@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -268,7 +270,7 @@ internal fun LazyListScope.musicOverview(
         Row(Modifier.fillMaxWidth().clip(yuRound(20)).background(GlassFill).clickable(onClick = onCreatePlaylist).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             TrackArtwork(null, "new", 56.dp, 14.dp, icon = Icons.Default.Add)
             Spacer(Modifier.width(14.dp))
-            Column { Text("Create your first playlist", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp); Text("Add songs from any list with the ⋮ menu", color = TextTertiary, fontSize = 12.sp) }
+            Column { Text(stringResource(R.string.create_your_first_playlist), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp); Text(stringResource(R.string.add_songs_from_any_list_with), color = TextTertiary, fontSize = 12.sp) }
         }
     } else items(playlists.chunked(2), key = { row -> "pl_" + row.joinToString { it.id } }) { row ->
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -297,7 +299,7 @@ internal fun LazyListScope.musicOverview(
                     Text(t.title, color = if (currentPlayingTrack?.id == t.id) SpotifyGreen else TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(t.artist, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text("${t.playCount} plays", color = TextTertiary, fontSize = 11.sp)
+                Text(stringResource(R.string.plays, t.playCount), color = TextTertiary, fontSize = 11.sp)
             }
         }
     }
@@ -351,10 +353,10 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
         item("sv_h") { LibrarySectionHeader("Saved", if (saved.isEmpty()) null else "${saved.size} titles", "Browse", onBrowse) }
         if (saved.isEmpty()) item("sv_empty") {
             Column(Modifier.fillMaxWidth().clip(yuRound(20)).background(GlassFill).padding(18.dp)) {
-                Text("Nothing on your shelf yet", color = TextPrimary, fontWeight = FontWeight.Bold)
-                Text("Install a manga source, open a title and tap Save. Reading progress is kept on this phone.", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.nothing_on_your_shelf_yet), color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.install_a_manga_source_open_a), color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 Spacer(Modifier.height(12.dp))
-                Text("Add manga sources", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                Text(stringResource(R.string.add_manga_sources), color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.clip(yuRound(20)).background(SpotifyGreen).clickable(onClick = onOpenSources).padding(horizontal = 16.dp, vertical = 8.dp))
             }
         } else items(saved.chunked(3), key = { r -> "sv_" + r.joinToString { it.key } }) { row ->

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -100,23 +102,23 @@ fun SupportScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 SupportYumeiroCard(full = true, showCoffee = false)
-                Text("Tap a detail to copy it. Any amount helps, and so does a kind word.", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.tap_a_detail_to_copy_it), color = TextSecondary, fontSize = 12.sp)
                 SupportInfo.groups.forEach { g -> GroupCard(g) { e -> copy(context, e.label, e.value) } }
                 Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Other ways to help", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(stringResource(R.string.other_ways_to_help), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text("A star on GitHub or a follow costs nothing and helps a lot.", color = TextSecondary, fontSize = 12.sp)
+                        Text(stringResource(R.string.a_star_on_github_or_a), color = TextSecondary, fontSize = 12.sp)
                         Row(Modifier.padding(top = 4.dp)) {
                             TextButton(onClick = { if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context) }, modifier = Modifier.testTag("support_star")) {
-                                Icon(Icons.Default.Star, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Star on GitHub", color = SpotifyGreen)
+                                Icon(Icons.Default.Star, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.star_on_github), color = SpotifyGreen)
                             }
                         }
                         Row {
                             Reminders.Social.entries.forEach { s ->
                                 TextButton(onClick = { if (Links.open(context, s.url)) Reminders.recordFollow(context, s) }) { Text(s.label, color = SpotifyGreen, fontSize = 13.sp) }
                             }
-                            TextButton(onClick = { Links.open(context, Reminders.WEBSITE_URL) }, modifier = Modifier.testTag("support_website")) { Text("yumeiro.click", color = SpotifyGreen, fontSize = 13.sp) }
+                            TextButton(onClick = { Links.open(context, Reminders.WEBSITE_URL) }, modifier = Modifier.testTag("support_website")) { Text(stringResource(R.string.yumeiro_click), color = SpotifyGreen, fontSize = 13.sp) }
                         }
                     }
                 }
@@ -142,7 +144,7 @@ private fun GroupCard(g: SupportInfo.Group, onCopy: (SupportInfo.Entry) -> Unit)
                         e.note?.let { Text(it, color = TextSecondary, fontSize = 11.sp) }
                     }
                     IconButton(onClick = { onCopy(e) }, modifier = Modifier.testTag("support_copy")) {
-                        Icon(Icons.Default.ContentCopy, "Copy ${e.label}", tint = TextSecondary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.ContentCopy, stringResource(R.string.copy, e.label), tint = TextSecondary, modifier = Modifier.size(18.dp))
                     }
                 }
             }
