@@ -74,14 +74,14 @@ class GroupYDrcPresetsTest {
         drc.applySaved(ctx, drc.saved.value.single())
         assertEquals(Preset.CUSTOM, drc.preset.value)
         assertEquals(-20f, drc.active!!.thresholdDb)
-        assertEquals("Late show", drc.activeSaved(drc.preset.value, drc.custom.value, drc.saved.value)?.name)
+        assertEquals("replacing keeps the name as typed the last time", "late SHOW", drc.activeSaved(drc.preset.value, drc.custom.value, drc.saved.value)?.name)
 
         (2..DynamicRangeCompressor.MAX_SAVED).forEach { assertEquals(SaveResult.Saved, drc.savePreset(ctx, "P$it")) }
         assertEquals(SaveResult.Full, drc.savePreset(ctx, "one too many"))
         drc.deletePreset(ctx, "Late show")
         assertEquals(DynamicRangeCompressor.MAX_SAVED - 1, drc.saved.value.size)
         drc.reloadForTest(ctx)
-        assertTrue(drc.saved.value.none { it.name == "Late show" })
+        assertTrue(drc.saved.value.none { it.name.equals("Late show", ignoreCase = true) })
 
         drc.setPreset(ctx, Preset.OFF)
         assertEquals(SaveResult.Off, drc.savePreset(ctx, "nothing"))

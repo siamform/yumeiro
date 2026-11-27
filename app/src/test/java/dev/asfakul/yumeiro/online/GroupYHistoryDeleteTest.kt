@@ -39,7 +39,8 @@ class GroupYHistoryDeleteTest {
         OnlineHistory.progressKey("Demo", "e-ep2") to OnlineHistory.Progress(600_000, 1_400_000, now - 90 * day),
     )
 
-    @Before fun setUp() { Privacy.setIncognito(ctx, false); OnlineHistory.seedForTests(ctx, seed, marks) }
+    // Robolectric gives every test a new files dir: forget the file of the previous test so writes land in this one.
+    @Before fun setUp() { Privacy.setIncognito(ctx, false); OnlineHistory.resetForTests(); OnlineHistory.seedForTests(ctx, seed, marks) }
     @After fun tidy() { OnlineHistory.clear(ctx) }
 
     private fun names() = OnlineHistory.entries.value.map { it.name }

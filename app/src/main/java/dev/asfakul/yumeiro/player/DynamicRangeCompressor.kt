@@ -168,7 +168,7 @@ object DynamicRangeCompressor {
 
     fun deletePreset(context: Context, name: String) {
         load(context)
-        _saved.value = _saved.value.filterNot { it.name == name }
+        _saved.value = _saved.value.filterNot { it.name.equals(name, ignoreCase = true) }
         writeSaved(context)
     }
 

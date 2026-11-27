@@ -264,9 +264,10 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
                             if (selecting) HistoryPickOverlay(on, e.name, Modifier.matchParentSize().testTag("history_pick_${e.url}")) { if (on) selected.remove(e.key) else selected.add(e.key) }
                         }
                         e.episodeLabel?.let { Text(it, color = TextTertiary, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 2.dp)) }
+                        val removeLabel = stringResource(R.string.hx_remove_title, e.name)
                         if (!selecting) TextButton(
                             onClick = { removed(OnlineHistory.removeWhere(context) { it.key == e.key }) },
-                            modifier = Modifier.height(30.dp).testTag("history_remove_${e.url}").semantics { contentDescription = context.getString(R.string.hx_remove_title, e.name) },
+                            modifier = Modifier.height(30.dp).testTag("history_remove_${e.url}").semantics { contentDescription = removeLabel },
                             contentPadding = PaddingValues(0.dp),
                         ) { Text(stringResource(R.string.remove_2), color = TextSecondary, fontSize = 11.sp) }
                     }

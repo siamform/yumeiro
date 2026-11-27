@@ -58,7 +58,12 @@ class GroupYDrcDeviceTest {
     @After fun tearDown() { drc.setPreset(ctx, Preset.OFF); prefs.edit().clear().commit(); drc.reloadForTest(ctx) }
 
     private fun has(tag: String) = runCatching { compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().isNotEmpty() }.getOrDefault(false)
-    private fun tap(tag: String) { compose.onNodeWithTag(tag, true).performScrollTo().performClick(); compose.waitForIdle() }
+    // Dialog buttons have no scrolling parent; only nodes in the page are scrolled into view first.
+    private fun tap(tag: String) {
+        val n = compose.onNodeWithTag(tag, true)
+        runCatching { n.performScrollTo() }
+        n.performClick(); compose.waitForIdle()
+    }
     private fun text(tag: String): String = runCatching {
         compose.onAllNodesWithTag(tag, true)[0].fetchSemanticsNode().config[SemanticsProperties.Text].joinToString { it.text }
     }.getOrDefault("?")

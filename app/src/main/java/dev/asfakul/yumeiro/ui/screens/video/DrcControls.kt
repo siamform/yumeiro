@@ -96,6 +96,8 @@ fun DrcCustomSliders(modifier: Modifier = Modifier) {
     val mine = DynamicRangeCompressor.activeSaved(preset, custom, saved)
     val edit = { s: DynamicRangeCompressor.Settings -> DynamicRangeCompressor.setCustom(ctx, s, persist = false) }
     val save = { DynamicRangeCompressor.current()?.let { DynamicRangeCompressor.setCustom(ctx, it) }; Unit }
+    val needName = stringResource(R.string.drc_name_needed)
+    val fullNote = stringResource(R.string.drc_full, DynamicRangeCompressor.MAX_SAVED)
     if (naming) DrcSaveDialog(saved, onDismiss = { naming = false }) { name ->
         when (DynamicRangeCompressor.savePreset(ctx, name)) {
             DynamicRangeCompressor.SaveResult.Saved, DynamicRangeCompressor.SaveResult.Replaced -> {
@@ -104,8 +106,8 @@ fun DrcCustomSliders(modifier: Modifier = Modifier) {
                 DynamicRangeCompressor.saved.value.firstOrNull { it.name.equals(DynamicRangeCompressor.cleanName(name), true) }?.let { DynamicRangeCompressor.applySaved(ctx, it) }
                 null
             }
-            DynamicRangeCompressor.SaveResult.NoName -> ctx.getString(R.string.drc_name_needed)
-            DynamicRangeCompressor.SaveResult.Full -> ctx.getString(R.string.drc_full, DynamicRangeCompressor.MAX_SAVED)
+            DynamicRangeCompressor.SaveResult.NoName -> needName
+            DynamicRangeCompressor.SaveResult.Full -> fullNote
             DynamicRangeCompressor.SaveResult.Off -> { naming = false; null }
         }
     }
