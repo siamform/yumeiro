@@ -200,6 +200,14 @@ object BrowserCheck {
         return challengedAt.entries.any { (h, at) -> at >= since && SitePass.matches(mainUrl, h) }
     }
 
+    private val blockedAt = ConcurrentHashMap<String, Long>()
+
+    /** B7: did [mainUrl]'s site refuse a request with a firewall block at or after [since]? */
+    fun blockedSince(mainUrl: String?, since: Long): Boolean {
+        if (blockedAt.isEmpty()) return false
+        return blockedAt.entries.any { (h, at) -> at >= since && SitePass.matches(mainUrl, h) }
+    }
+
     internal fun rememberForTest(host: String, c: Clearance) { cleared[host] = c }
 
     /** What a refused response is. */
@@ -477,6 +485,8 @@ object BrowserCheck {
 
     /** One calm message per host (every 5 min) instead of an endless "verify you're human" page. */
     private fun noteBlocked(host: String, url: String = "https://$host/") {
+        if (blockedAt.size > 256) blockedAt.clear()
+        blockedAt[VerificationPolicy.normalize(host)] = System.currentTimeMillis()
         if (centerOn()) {
             // ADR-059: one note per block period for the site, whichever path (ours or an extension's) met it.
             val before = VerificationCenter.site(host)

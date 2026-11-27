@@ -186,7 +186,8 @@ object NovelSources {
         e.clearAway()
         val items = load()
         if (items.isNotEmpty() || page > 1) return items
-        val why = NovelSiteCheck.emptyReason(p.name, dev.asfakul.yumeiro.online.web.BrowserCheck.challengedSince(e.site, since), e.awayHost)
+        val bc = dev.asfakul.yumeiro.online.web.BrowserCheck
+        val why = NovelSiteCheck.emptyReason(p.name, bc.challengedSince(e.site, since), e.awayHost, blocked = bc.blockedSince(e.site, since))
         return if (why != null) throw IllegalStateException(why) else items
     }
 

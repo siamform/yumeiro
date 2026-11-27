@@ -35,13 +35,26 @@ object NovelSiteCheck {
         return if (same(host(requested)) || same(host(site))) null else f
     }
 
+    private val cleartext = Regex("""CLEARTEXT communication to (\S+) not permitted""")
+
+    /**
+     * B7: the host of a plain-http hop Android refused (MTL Novel redirects its list to http://survey-twist.com, so the
+     * request failed with no response to read the host from); null for other failures. Pure.
+     */
+    fun cleartextHost(message: String?): String? = message?.let { cleartext.find(it)?.groupValues?.get(1)?.lowercase() }
+
+    /** B7: an empty list because the site's firewall refused the request (no check page to pass). */
+    fun blockedMessage(siteName: String): String =
+        "$siteName's firewall refused Yumeiro's request, so it sent no novels. Try again later or on another network, or pick another source."
+
     /** B7: an empty list because the site sent Yumeiro elsewhere. */
     fun movedMessage(siteName: String, host: String): String =
         "$siteName sent Yumeiro to another site ($host) instead of its novels. The site may have moved or closed; try again later or pick another source."
 
     /** B7: the error to raise for an empty first page, or null when empty really means empty. */
-    fun emptyReason(siteName: String, challenged: Boolean, away: String?): String? = when {
+    fun emptyReason(siteName: String, challenged: Boolean, away: String?, blocked: Boolean = false): String? = when {
         challenged -> "$siteName: Cloudflare check (just a moment)"
+        blocked -> blockedMessage(siteName)
         away != null -> movedMessage(siteName, away)
         else -> null
     }

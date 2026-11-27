@@ -48,6 +48,10 @@ class GroupPTest {
         assertTrue(s.isSiteCheck(s.emptyReason("Scribble Hub", challenged = true, away = null)))
         assertTrue(s.emptyReason("MTL Novel", false, "survey-twist.com")!!.contains("another site"))
         assertEquals(null, s.emptyReason("X", false, null))
+        assertEquals("survey-twist.com", s.cleartextHost("CLEARTEXT communication to survey-twist.com not permitted by network security policy"))
+        assertEquals(null, s.cleartextHost("timeout"))
+        val blocked = s.emptyReason("Scribble Hub", false, null, blocked = true)!!
+        assertTrue("firewall" in blocked); assertTrue(!s.isSiteCheck(blocked))
     }
 
     @Test fun b8_chatFilter() {

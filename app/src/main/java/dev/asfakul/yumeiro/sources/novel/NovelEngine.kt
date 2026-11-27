@@ -128,6 +128,7 @@ class NovelEngine(
                 out.put("body", src.buffer.readUtf8(minOf(src.buffer.size, MAX_BODY)))
             }
         } catch (e: java.io.IOException) {
+            NovelSiteCheck.cleartextHost(e.message)?.let { h -> NovelSiteCheck.awayHost(url, "http://$h/", site)?.let { awayHost = it } }
             out.put("status", 0); out.put("url", url); out.put("headers", JSONObject()); out.put("body", "")
         }
         return out.toString()

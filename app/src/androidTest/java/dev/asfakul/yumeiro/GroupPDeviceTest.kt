@@ -212,8 +212,10 @@ class GroupPDeviceTest {
         fun after(label: String) = shown.indexOf(label).takeIf { it >= 0 }?.let { shown.getOrNull(it + 1) }
         val duration = after("Duration"); val size = after("File size")
         log("GROUPP_B13 c duration=$duration size=$size")
-        log("GROUPP_B13_RESULT c ${if (duration == "3:25" && size?.contains("MB") == true) "PASS" else "FAIL"}")
-        assertEquals("B13: the length of a streamed song", "3:25", duration)
+        // The app's own length format (03:25 everywhere else in Yumeiro).
+        val want = dev.asfakul.yumeiro.ui.components.formatDuration(205_000L)
+        log("GROUPP_B13_RESULT c ${if (duration == want && size?.contains("MB") == true) "PASS" else "FAIL"}")
+        assertEquals("B13: the length of a streamed song", want, duration)
         assertTrue("B13: the size of a streamed song's audio, got $size", size?.contains("MB") == true && size.contains("streamed"))
     }
 
@@ -248,7 +250,7 @@ class GroupPDeviceTest {
                 // A site check or a site that moved is said as such (with what to do); "listed no novels" is the bug.
                 results[id] = when {
                     has("novel_browse_error_check") -> "site-check"
-                    has("novel_browse_error") -> if (allText().any { "another site" in it }) "moved" else "source-error"
+                    has("novel_browse_error") -> allText().let { t -> if (t.any { "another site" in it }) "moved" else if (t.any { "firewall refused" in it }) "blocked" else "source-error" }
                     !decided -> "timeout"
                     else -> "NO-BANNER"
                 }
