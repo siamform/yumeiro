@@ -896,7 +896,7 @@
     <string name="bs9_sources_note">المصادر الأقل تنتهي أسرع. المصادر الجديدة مفعّلة حتى توقفها.</string>
     <string name="bs9_sources_none">لا توجد مصادر مثبتة بعد.</string>
     <string name="bs9_group">%1$s · %2$d من %3$d</string>
-    <string name="bs9_cost">يستغرق وقتًا أطول: حتى %1$d عملية بحث في %2$d مصدر</string>
+    <string name="bs9_cost">يستغرق وقتًا أطول: حتى %1$d عملية بحث · المصادر المختارة: %2$d</string>
     <string name="bs9_clear">مسح المرشحات (%1$d)</string>
     <string name="bs9_score_of">التقييم %1$d</string>
     <string name="bs9_only_found">فقط العناوين الموجودة في مصادري</string>

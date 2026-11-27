@@ -69,11 +69,14 @@ class GroupB9BlackSourceDeviceTest {
     private fun seek(tag: String) = runCatching {
         compose.onNodeWithTag("blacksource_list", true).performScrollToNode(hasTestTag(tag)); compose.waitForIdle(); has(tag)
     }.getOrDefault(false)
-    private fun texts(tag: String): List<String> = runCatching {
-        compose.onAllNodesWithTag(tag, true).fetchSemanticsNodes().flatMap { n ->
-            n.config.getOrNull(SemanticsProperties.Text)?.map { it.text }.orEmpty()
-        }
-    }.getOrDefault(emptyList())
+    /** Text of a tagged node; a clickable card merges its children's text, so the merged tree is read too. */
+    private fun texts(tag: String): List<String> = listOf(true, false).flatMap { unmerged ->
+        runCatching {
+            compose.onAllNodesWithTag(tag, unmerged).fetchSemanticsNodes().flatMap { n ->
+                n.config.getOrNull(SemanticsProperties.Text)?.map { it.text }.orEmpty()
+            }
+        }.getOrDefault(emptyList())
+    }.distinct()
     private fun cardTexts(): List<String> = runCatching {
         compose.onAllNodes(hasAnyAncestor(hasTestTag("blacksource_title")), true).fetchSemanticsNodes()
             .flatMap { n -> n.config.getOrNull(SemanticsProperties.Text)?.map { it.text }.orEmpty() }
@@ -165,7 +168,7 @@ class GroupB9BlackSourceDeviceTest {
         tap("bs_genre_Fantasy")
         val note = texts("bs_cost").joinToString()
         log("GB9_B note=$note")
-        assertTrue("the extra-time note does not count one source: $note", note.contains("in 1 sources") || note.contains(" 1 "))
+        assertTrue("the extra-time note does not count one source: $note", note.trimEnd().endsWith("chosen: 1"))
         tap("blacksource_search")
         assertTrue("AniList listed nothing", waitFor(30_000) { has("blacksource_title") })
         assertTrue("source lookups did not finish", waitFor(90_000) { checkingDone() })
