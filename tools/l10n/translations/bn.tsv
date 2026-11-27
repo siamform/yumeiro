@@ -1703,13 +1703,13 @@ install_a_yumix_source_from_videos	ভিডিও থেকে একটি Yum
 not_checked	যাচাই করা হয়নি
 home_servers	হোম সার্ভার
 script_repos	স্ক্রিপ্ট রিপো
-yumeiro_plays_from_many_kinds_of	Yumeiro নানা ধরনের সোর্স থেকে চালায়। প্রতিটি সারি নিজের পেজ খোলে:\\n\\n
-cloudstream_extensions_for_movies_series_anime	• CloudStream: সিনেমা, সিরিজ, অ্যানিমে ও লাইভ টিভির এক্সটেনশন।\\n
-aniyomi_and_mihon_anime_and_manga	• Aniyomi ও Mihon: আপনার যোগ করা রিপোজিটরি থেকে অ্যানিমে ও মাঙ্গা এক্সটেনশন।\\n
-stremio_add_ons_with_catalogs_and	• Stremio: ক্যাটালগ ও স্ট্রিমসহ অ্যাড-অন।\\n
-javascript_mangayomi_format_sources_in_a	• JavaScript: স্যান্ডবক্সে Mangayomi-ফরম্যাটের সোর্স।\\n
-script_repos_vega_provider_repositories	• স্ক্রিপ্ট রিপো: Vega প্রোভাইডার রিপোজিটরি।\\n
-home_servers_jellyfin_emby_plex_dlna	• হোম সার্ভার: Jellyfin, Emby, Plex, DLNA, WebDAV ও SMB।\\n\\n
+yumeiro_plays_from_many_kinds_of	Yumeiro নানা ধরনের সোর্স থেকে চালায়। প্রতিটি সারি নিজের পেজ খোলে:\n\n
+cloudstream_extensions_for_movies_series_anime	• CloudStream: সিনেমা, সিরিজ, অ্যানিমে ও লাইভ টিভির এক্সটেনশন।\n
+aniyomi_and_mihon_anime_and_manga	• Aniyomi ও Mihon: আপনার যোগ করা রিপোজিটরি থেকে অ্যানিমে ও মাঙ্গা এক্সটেনশন।\n
+stremio_add_ons_with_catalogs_and	• Stremio: ক্যাটালগ ও স্ট্রিমসহ অ্যাড-অন।\n
+javascript_mangayomi_format_sources_in_a	• JavaScript: স্যান্ডবক্সে Mangayomi-ফরম্যাটের সোর্স।\n
+script_repos_vega_provider_repositories	• স্ক্রিপ্ট রিপো: Vega প্রোভাইডার রিপোজিটরি।\n
+home_servers_jellyfin_emby_plex_dlna	• হোম সার্ভার: Jellyfin, Emby, Plex, DLNA, WebDAV ও SMB।\n\n
 to_check	যাচাই বাকি %1$sটি
 not_set_up	সেট আপ করা হয়নি
 add_ons_and_scripts	অ্যাড-অন ও স্ক্রিপ্ট
@@ -2241,7 +2241,7 @@ nothing_in_this_section_yet	এই অংশে এখনও কিছু নে
 playlists_are_collected_from_public_github	প্লেলিস্টগুলো পাবলিক GitHub রিপোজিটরি থেকে সংগ্রহ করা হয়, প্রতি ৩ দিনে মেরামত ও যাচাই করা হয়। 
 responding_is_measured_from_githubs_servers	"সাড়া দিচ্ছে" মাপা হয় GitHub-এর সার্ভার থেকে, তাই অঞ্চল-সীমিত তালিকা (যেমন BDIX) শুধু নিজের দেশেই কাজ করতে পারে। 
 yumeiro_does_not_host_or_bypass	Yumeiro কোনো স্ট্রিম হোস্ট করে না বা কোনো স্ট্রিমের সুরক্ষা এড়ায় না।
-start_playback_on_the_page_detected	\\n\\nপেজে প্লেব্যাক শুরু করুন; শনাক্ত হওয়া স্ট্রিম নিচে দেখা যাবে। লুকাতে ট্যাপ করুন।
+start_playback_on_the_page_detected	\n\nপেজে প্লেব্যাক শুরু করুন; শনাক্ত হওয়া স্ট্রিম নিচে দেখা যাবে। লুকাতে ট্যাপ করুন।
 no_stream_detected_yet_start_the	এখনও কোনো স্ট্রিম শনাক্ত হয়নি — পেজে ভিডিওটি শুরু করুন।
 detected_streams	শনাক্ত হওয়া স্ট্রিম
 exported_streams	%1$sটি স্ট্রিম এক্সপোর্ট হয়েছে
@@ -2743,10 +2743,10 @@ tap_yes_allow_access_on_last	Last.fm-এ "Yes, allow access" ট্যাপ ক
 signed_in_as	%1$s হিসেবে সাইন ইন করা
 needs_a_free_key_see_the	একটি ফ্রি কী লাগবে। নিচের গাইড দেখুন
 ready_to_sign_in	সাইন ইনের জন্য প্রস্তুত
-swipe_down_to_shrink	ছোট করতে\\nনিচে সোয়াইপ করুন
+swipe_down_to_shrink	ছোট করতে\nনিচে সোয়াইপ করুন
 last_song	সর্বশেষ গান
 last_video	সর্বশেষ ভিডিও
-back_or_swipe_down	পেছনে যান বা\\nনিচে সোয়াইপ করুন
+back_or_swipe_down	পেছনে যান বা\nনিচে সোয়াইপ করুন
 your_starting_point_it_remembers_what	আপনার শুরুর জায়গা। আপনি সর্বশেষ কী চালিয়েছেন মনে রাখে এবং আরও প্রস্তাব দিতে থাকে।
 tap_the_song_or_video_card	যেখানে থেমেছিলেন সেখান থেকে শুরু করতে "চালিয়ে যান"-এর নিচের গান বা ভিডিও কার্ডে ট্যাপ করুন।
 spaces_jump_to_every_part_of	স্পেসগুলো দিয়ে Yumeiro-র প্রতিটি অংশে যাওয়া যায়। প্রথমে আটটি দেখা যায়; বাকিগুলোর জন্য "সব দেখান" ট্যাপ করুন।
@@ -3142,7 +3142,7 @@ empty_playlist	খালি প্লেলিস্ট
 the_playlist_was_downloaded_but_contains	প্লেলিস্ট ডাউনলোড হয়েছে, কিন্তু এতে চালানোর মতো কোনো চ্যানেল নেই।
 this_page_asks_you_to_sign	এই পেজ প্লেয়ার দেখানোর আগে সাইন ইন করতে বলে। পেজ ব্রাউজারে খুলুন, সাইন ইন করুন এবং সেখানে প্লেব্যাক শুরু করুন; অনুমোদিত স্ট্রিমটি ধরে নেওয়া হবে।
 this_link_is_a_web_page	এই লিংকটি একটি ওয়েব পেজ, মিডিয়া ফাইল নয়, এবং এর HTML-এ স্ট্রিমের ঠিকানা নেই — সাইটের প্লেয়ার চলার সময় তা লোড করে। পেজ ব্রাউজারে খুলে প্লেব্যাক শুরু করুন; পেজ যে স্ট্রিম চালায় তা প্রয়োজনীয় হেডারসহ ধরে নেওয়া হবে।
-the_page_uses_drm_encrypted_media	\\n\\nপেজটি DRM (এনক্রিপ্টেড মিডিয়া) ব্যবহার করে। সাইটের লাইসেন্স সার্ভার এই ডিভাইস গ্রহণ করলেই শুধু DRM স্ট্রিম চলে।
+the_page_uses_drm_encrypted_media	\n\nপেজটি DRM (এনক্রিপ্টেড মিডিয়া) ব্যবহার করে। সাইটের লাইসেন্স সার্ভার এই ডিভাইস গ্রহণ করলেই শুধু DRM স্ট্রিম চলে।
 this_device_is_offline_turn_on	এই ডিভাইস অফলাইনে। Wi-Fi বা মোবাইল ডেটা চালু করে আবার চেষ্টা করুন।
 cant_find_the_server	সার্ভার খুঁজে পাওয়া যাচ্ছে না
 couldnt_be_resolved_by_the_system	সিস্টেম DNS %1$s খুঁজে পায়নি। ঠিকানাটি দেখুন, বা সেটিংস → নেটওয়ার্কে একটি বিকল্প DNS (Cloudflare 1.1.1.1, Quad9 বা Google) চালু করুন, যা শুধু সিস্টেম DNS ব্যর্থ হলে ব্যবহার হয়।
@@ -3159,11 +3159,11 @@ too_many_requests_http_429	অনেক বেশি অনুরোধ (HTTP 42
 unavailable_here_http_451	এখানে পাওয়া যায় না (HTTP 451)
 the_provider_blocks_this_content_in	আইনি বা লাইসেন্সের কারণে প্রোভাইডার আপনার অঞ্চলে এই কনটেন্ট ব্লক করে। Yumeiro আঞ্চলিক সীমাবদ্ধতা এড়ায় না।
 had_an_internal_problem_try_again	%1$s-এ একটি অভ্যন্তরীণ সমস্যা হয়েছে। একটু পরে আবার চেষ্টা করুন।
-the_server_refused_this_link_even	Yumeiro নিজে থেকে ব্রাউজারের মতো, হোস্টের নিজস্ব ওয়েব প্লেয়ারের মতো, VLC হিসেবে ও মিডিয়া প্লেয়ার হিসেবে আবার চেষ্টা করার পরেও সার্ভার এই লিংক প্রত্যাখ্যান করেছে। সাধারণত যা কাজে দেয়:\\n
-the_link_contains_a_token_that	• লিংকে থাকা টোকেনের মেয়াদ শেষ — নতুন লিংক নিন বা প্লেলিস্ট রিফ্রেশ করুন।\\n
-the_host_only_accepts_its_own	• হোস্ট শুধু নিজের ওয়েব প্লেয়ার গ্রহণ করে — হেডার ও DRM-এ এর Referer / Origin যোগ করুন।\\n
-the_host_blocks_unknown_players_pick	• হোস্ট অচেনা প্লেয়ার ব্লক করে — একটি ব্রাউজার User-Agent বেছে নিন।\\n
-a_session_cookie_is_required_add	• একটি সেশন কুকি প্রয়োজন — Cookie হেডার যোগ করুন।\\n
+the_server_refused_this_link_even	Yumeiro নিজে থেকে ব্রাউজারের মতো, হোস্টের নিজস্ব ওয়েব প্লেয়ারের মতো, VLC হিসেবে ও মিডিয়া প্লেয়ার হিসেবে আবার চেষ্টা করার পরেও সার্ভার এই লিংক প্রত্যাখ্যান করেছে। সাধারণত যা কাজে দেয়:\n
+the_link_contains_a_token_that	• লিংকে থাকা টোকেনের মেয়াদ শেষ — নতুন লিংক নিন বা প্লেলিস্ট রিফ্রেশ করুন।\n
+the_host_only_accepts_its_own	• হোস্ট শুধু নিজের ওয়েব প্লেয়ার গ্রহণ করে — হেডার ও DRM-এ এর Referer / Origin যোগ করুন।\n
+the_host_blocks_unknown_players_pick	• হোস্ট অচেনা প্লেয়ার ব্লক করে — একটি ব্রাউজার User-Agent বেছে নিন।\n
+a_session_cookie_is_required_add	• একটি সেশন কুকি প্রয়োজন — Cookie হেডার যোগ করুন।\n
 the_stream_is_limited_to_some	• স্ট্রিমটি কিছু দেশে সীমিত। Yumeiro ভৌগোলিক ব্লক বা প্রবেশ নিয়ন্ত্রণ এড়ায় না।
 google_drive	Google Drive
 terabox_only_gives_the_video_to	TeraBox শুধু নিজের ওয়েব প্লেয়ারকে ভিডিও দেয়। Yumeiro শেয়ারটি খোলে, সেই প্লেয়ার চালু করে এবং এর স্ট্রিম এখানে চালায়। 
@@ -3209,12 +3209,12 @@ website_sign_ins_and_cloudflare_checks	ওয়েবসাইটের সা�
 clear_watch_and_search_history	দেখা ও সার্চের ইতিহাস মুছুন
 reset_settings	সেটিংস রিসেট করুন
 remove_all_extensions_and_sources	সব এক্সটেনশন ও সোর্স সরান
-last_memory_thread_samples	\\n\\n--- Last memory / thread samples ---\\n
-yumeiro_crash_report	Yumeiro crash report\\n
+last_memory_thread_samples	\n\n--- Last memory / thread samples ---\n
+yumeiro_crash_report	Yumeiro crash report\n
 native_crash	নেটিভ ক্র্যাশ
 out_of_memory	মেমরি শেষ
 android_kept_no_trace_for_this	এর জন্য Android কোনো চিহ্ন রাখেনি।
-last_memory_thread_samples_before_the	\\n\\n--- Last memory / thread samples before the kill ---\\n%1$s
+last_memory_thread_samples_before_the	\n\n--- Last memory / thread samples before the kill ---\n%1$s
 embedded_in_file	ফাইলের ভেতরে যুক্ত
 imported_lrc	আনা .lrc
 ogg_vorbis	OGG Vorbis
