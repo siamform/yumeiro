@@ -343,12 +343,19 @@ object ExtensionCheckWindows {
      * left alone (no reload, no script change).
      */
     private fun harden(w: WebView) {
-        runCatching {
-            val s = w.settings
-            if (s.allowContentAccess) s.allowContentAccess = false
-            if (s.allowFileAccess) s.allowFileAccess = false
+        // Once per WebView, and after the current frame: the check window is polled every tick, and touching a
+        // WebView's settings while its renderer is still starting waits on Chromium (B20 low-RAM, run 45957252810).
+        if (w.getTag(HARDENED_TAG) != null) return
+        w.setTag(HARDENED_TAG, true)
+        main.post {
+            runCatching {
+                val s = w.settings
+                if (s.allowContentAccess) s.allowContentAccess = false
+                if (s.allowFileAccess) s.allowFileAccess = false
+            }
         }
     }
+    private val HARDENED_TAG = dev.asfakul.yumeiro.R.id.yu_webview_hardened
 
     private fun webHost(root: View): String? = firstWeb(root)?.let { w -> runCatching { w.url }.getOrNull() }?.let(VerificationPolicy::hostOf)
 }
