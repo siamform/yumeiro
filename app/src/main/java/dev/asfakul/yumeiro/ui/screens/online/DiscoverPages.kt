@@ -216,7 +216,7 @@ private fun ActiveFilters(f: DiscoverFilter, onChange: (DiscoverFilter) -> Unit)
         f.genres.forEach { g -> RemovableChip(GenreCatalog.byKey(g)?.name ?: g) { onChange(f.copy(genres = f.genres - g)) } }
         f.services.forEach { s -> RemovableChip(services[s]?.name ?: stringResource(R.string.dw_service)) { onChange(f.copy(services = f.services - s)) } }
         f.origin?.let { RemovableChip(stringResource(R.string.dw_from_country, countryName(it))) { onChange(f.copy(origin = null)) } }
-        f.lang?.let { RemovableChip(Locale(it).getDisplayLanguage(Locale.getDefault()).ifBlank { it }) { onChange(f.copy(lang = null)) } }
+        f.lang?.let { RemovableChip(Locale(it).getDisplayLanguage(LocalConfiguration.current.locales[0]).ifBlank { it }) { onChange(f.copy(lang = null)) } }
         if (f.yearFrom != null || f.yearTo != null) RemovableChip(yearsLabel(f.yearFrom, f.yearTo)) { onChange(f.copy(yearFrom = null, yearTo = null)) }
         f.minRating?.let { RemovableChip(stringResource(R.string.dw_score_at_least, it)) { onChange(f.copy(minRating = null)) } }
         TextButton(onClick = { onChange(f.cleared()) }, modifier = Modifier.heightIn(min = 32.dp).testTag("discover_clear")) { Text(stringResource(R.string.dw_clear_all), color = SpotifyGreen, fontSize = 12.sp) }
