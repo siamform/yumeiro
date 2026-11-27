@@ -38,8 +38,10 @@ else
     bump="$BUMP_OVERRIDE"
     if [ "$bump" = "auto" ]; then
       log="$(git log "$prev_tag"..HEAD --no-merges --format='%s%n%b' || true)"
-      if echo "$log" | grep -qE '^[a-z]+(\([^)]*\))?!:|BREAKING[ -]CHANGE'; then bump=major
-      elif echo "$log" | grep -qE '^feat(\([^)]*\))?:'; then bump=minor
+      # Here-strings, not `echo | grep -q`: with pipefail, grep -q exits at the first match and a long log makes
+      # echo die of SIGPIPE, so the test came out false (beta-v2.3.1-beta.3 should have been 2.4.0).
+      if grep -qE '^[a-z]+(\([^)]*\))?!:|BREAKING[ -]CHANGE' <<<"$log"; then bump=major
+      elif grep -qE '^feat(\([^)]*\))?:' <<<"$log"; then bump=minor
       else bump=patch; fi
     fi
     IFS=. read -r ma mi pa <<<"$tag_name"
