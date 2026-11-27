@@ -72,11 +72,26 @@ class GroupVManyExtensionsDeviceTest {
     private enum class Owner { EXTENSION, APP, SYSTEM }
     private val worst = java.util.concurrent.ConcurrentHashMap<Owner, Long>()
     private val worstWhere = java.util.concurrent.ConcurrentHashMap<Owner, String>()
+    /**
+     * The owner of a stall is the owner of most of its samples (one every 100 ms while it lasts): code that holds the
+     * thread shows up in sample after sample, while a thread that is only starved for CPU (the emulator busy with
+     * downloads, dex and drawing) shows a different frame each time. Ties go to the extension, then the app.
+     */
     private fun ownerOf(samples: List<Array<StackTraceElement>>): Pair<Owner, String> {
-        for (st in samples) st.firstOrNull { e -> !platform(e) }?.let { return Owner.EXTENSION to it.className + "." + it.methodName }
-        for (st in samples) st.firstOrNull { e -> appWork(e) }
-            ?.let { e -> return Owner.APP to (st.firstOrNull { appWork(it) && it.className.startsWith("dev.asfakul.") } ?: e).let { it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber } }
-        return Owner.SYSTEM to (samples.first().firstOrNull()?.let { it.className.substringAfterLast('.') + "." + it.methodName } ?: "?")
+        if (samples.isEmpty()) return Owner.SYSTEM to "?"
+        val each = samples.map { st -> sampleOwner(st) }
+        val top = each.groupingBy { it.first }.eachCount()
+        val owner = Owner.values().maxByOrNull { o -> (top[o] ?: 0) * 4 + (Owner.values().size - o.ordinal) }!!
+        val where = each.filter { it.first == owner }.groupingBy { it.second }.eachCount().maxByOrNull { it.value }!!.key
+        return owner to where
+    }
+    private fun sampleOwner(st: Array<StackTraceElement>): Pair<Owner, String> {
+        st.firstOrNull { e -> !platform(e) }?.let { return Owner.EXTENSION to it.className + "." + it.methodName }
+        st.firstOrNull { e -> appWork(e) }?.let { e ->
+            return Owner.APP to (st.firstOrNull { appWork(it) && it.className.startsWith("dev.asfakul.") } ?: e)
+                .let { it.className.substringAfterLast('.') + "." + it.methodName + ":" + it.lineNumber }
+        }
+        return Owner.SYSTEM to (st.firstOrNull()?.let { it.className.substringAfterLast('.') + "." + it.methodName } ?: "?")
     }
     private fun resetOwners() { worst.clear(); worstWhere.clear() }
     private fun owners(): String = Owner.values().joinToString(" ") { o -> "${o.name.lowercase()}LagMs=${worst[o] ?: 0}" + (worstWhere[o]?.let { "($it)" } ?: "") }
@@ -88,6 +103,7 @@ class GroupVManyExtensionsDeviceTest {
         runCatching { rule.waitUntil(20_000) { has("home_screen_root") } }
         watch.onStall = { lag, samples ->
             val (o, where) = ownerOf(samples)
+            if (lag > FREEZE_MS) log("GV stall ${lag}ms owner=$o at=$where samples=" + samples.joinToString(" | ") { st -> sampleOwner(st).let { "${it.first}:${it.second}" } })
             if (lag > (worst[o] ?: 0L)) { worst[o] = lag; worstWhere[o] = where }
         }
         watch.start()
