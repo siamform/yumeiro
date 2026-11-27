@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -257,7 +259,11 @@ private fun DiscoverRow(row: Discover.Row, onOpen: (OnlineItem) -> Unit, onGrid:
     val items = remember(page) { page?.items.orEmpty().map { it.toOnlineItem() } }
     if (page != null && page !== Failed && items.isEmpty()) return
     Column(Modifier.testTag("discover_row_${row.key}")) {
-        SectionHeader(row.title, subtitle = "Yumeiro Cloud · TMDB") { if (items.isNotEmpty()) SeeAllButton { onGrid(row) } }
+        // Group W (B12): See all is laid out while loading too (invisible, not focusable), so the header keeps its height.
+        SectionHeader(row.title, subtitle = "Yumeiro Cloud · TMDB") {
+            val ready = items.isNotEmpty()
+            Box(if (ready) Modifier else Modifier.alpha(0f).clearAndSetSemantics {}.focusProperties { canFocus = false }) { SeeAllButton { if (ready) onGrid(row) } }
+        }
         when {
             page == null -> ShelfPostersSkeleton(112.dp)
             page === Failed -> ShelfError { attempt++ }

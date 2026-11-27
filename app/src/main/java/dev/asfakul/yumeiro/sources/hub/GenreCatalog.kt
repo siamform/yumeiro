@@ -215,7 +215,7 @@ object GenreCatalog {
         for (name in clean(raw, max = 24)) {
             if (match(name) != null) continue
             val k = normalize(name)
-            if (seenCounts.size >= LEARN_MAX && k !in seenCounts) continue
+            if (seenCounts.size >= LEARN_MAX && !seenCounts.containsKey(k)) continue
             seenNames.putIfAbsent(k, name)
             seenCounts.merge(k, 1, Int::plus)
         }

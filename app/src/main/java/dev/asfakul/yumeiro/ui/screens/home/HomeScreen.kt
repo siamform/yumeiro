@@ -1237,7 +1237,7 @@ internal object MoodMemory {
 
 /** Group W (B12): a row of [YtCard] placeholders with the cards' exact size. */
 @Composable
-private fun YtRowSkeleton(square: Boolean) {
+internal fun YtRowSkeleton(square: Boolean) {
     val width = if (square) 120.dp else 200.dp
     LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), userScrollEnabled = false, modifier = Modifier.fillMaxWidth().testTag(if (square) "home_mood_songs_skeleton" else "home_mood_videos_skeleton")) {
         items(4) {
@@ -1343,7 +1343,7 @@ private fun SquareCard(
 }
 
 @Composable
-private fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
+internal fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
     val p = LocalMtPalette.current
     val width = if (square) 120.dp else 200.dp
     val pressSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
