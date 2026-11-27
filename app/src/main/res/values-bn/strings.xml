@@ -316,6 +316,7 @@
     <string name="text_2">夢色</string>
     <string name="music_video_streams">গান · ভিডিও · স্ট্রিম</string>
     <string name="by_asfakul_siam">Asfakul Siam-এর তৈরি</string>
+    <string name="splash_opening">Yumeiro খুলছে</string>
     <string name="download_2">%1$s ডাউনলোড করুন</string>
     <string name="not_enough_free_space_for_this">এই ডাউনলোডের জন্য যথেষ্ট খালি জায়গা নেই।</string>
     <string name="offline_copy">অফলাইন কপি</string>

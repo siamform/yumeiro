@@ -87,13 +87,17 @@ fun YuMark(modifier: Modifier = Modifier, glowColor: Color = YuMarkGeometry.moon
     val moon = remember { PathParser().parsePathString(YuMarkGeometry.MOON).toPath() }
     val play = remember { PathParser().parsePathString(YuMarkGeometry.PLAY).toPath() }
     val wedge = remember { Path() }
+    // B17: built once per colour, not every frame (the splash and the loader animate at 60 fps).
+    val glow = remember(glowColor) {
+        Brush.radialGradient(listOf(glowColor.copy(alpha = 0.34f), Color.Transparent), center = YuMarkGeometry.moonCentre, radius = YuMarkGeometry.MOON_R * 1.9f)
+    }
     Canvas(modifier) {
         val f = frame()
-        drawMark(f, moon, play, wedge, glowColor)
+        drawMark(f, moon, play, wedge, glow)
     }
 }
 
-private fun DrawScope.drawMark(f: YuMarkFrame, moon: Path, play: Path, wedge: Path, glowColor: Color) = with(YuMarkGeometry) {
+private fun DrawScope.drawMark(f: YuMarkFrame, moon: Path, play: Path, wedge: Path, glow: Brush) = with(YuMarkGeometry) {
     val k = size.minDimension / CANVAS
     val left = (size.width - CANVAS * k) / 2f
     val top = (size.height - CANVAS * k) / 2f
@@ -102,10 +106,7 @@ private fun DrawScope.drawMark(f: YuMarkFrame, moon: Path, play: Path, wedge: Pa
         scale(SCALE * k, SCALE * k, pivot = Offset.Zero)
     }) {
         if (f.glow > 0f) {
-            drawCircle(
-                Brush.radialGradient(listOf(glowColor.copy(alpha = 0.34f * f.glow), Color.Transparent), center = moonCentre, radius = MOON_R * 1.9f),
-                radius = MOON_R * 1.9f, center = moonCentre,
-            )
+            drawCircle(glow, radius = MOON_R * 1.9f, center = moonCentre, alpha = f.glow.coerceIn(0f, 1f))
         }
         if (f.moon > 0f) {
             val brush = moonBrush

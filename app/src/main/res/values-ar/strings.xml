@@ -316,6 +316,7 @@
     <string name="text_2">夢色</string>
     <string name="music_video_streams">موسيقى · فيديو · بث</string>
     <string name="by_asfakul_siam">من Asfakul Siam</string>
+    <string name="splash_opening">جارٍ فتح Yumeiro</string>
     <string name="download_2">تنزيل %1$s</string>
     <string name="not_enough_free_space_for_this">لا توجد مساحة كافية لهذا التنزيل.</string>
     <string name="offline_copy">نسخة دون اتصال</string>

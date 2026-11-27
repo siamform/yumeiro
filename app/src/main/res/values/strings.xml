@@ -315,6 +315,7 @@
     <string name="text_2">夢色</string>
     <string name="music_video_streams">Music · Video · Streams</string>
     <string name="by_asfakul_siam">by Asfakul Siam</string>
+    <string name="splash_opening">Yumeiro is opening</string>
     <string name="download_2">Download %1$s</string>
     <string name="not_enough_free_space_for_this">Not enough free space for this download.</string>
     <string name="offline_copy">Offline copy</string>

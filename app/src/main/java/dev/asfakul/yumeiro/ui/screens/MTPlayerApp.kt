@@ -1906,11 +1906,16 @@ fun MTPlayerApp(
             )
         }
 
-        // Splash overlay (fades out once, then never shown again for this task).
+        // Splash overlay (fades out once, then never shown again for this task). B17: it drifts gently toward
+        // the viewer as it dissolves into Home (a plain short fade with reduced motion), then leaves the tree.
+        val splashStill = dev.asfakul.yumeiro.ui.components.reducedMotion()
         AnimatedVisibility(
             visible = showSplash,
             enter = fadeIn(tween(0)),
-            exit = fadeOut(tween(250))
+            exit = if (splashStill) fadeOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_REDUCED_MS))
+            else fadeOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing)) +
+                androidx.compose.animation.scaleOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_MS), targetScale = 1.04f),
+            label = "splash",
         ) {
             SplashScreen(onSplashFinished = { dev.asfakul.yumeiro.ui.screens.splash.SplashGate.markPlayed(); showSplash = false })
         }
