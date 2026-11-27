@@ -96,7 +96,7 @@ class GroupXReadingDeviceTest {
         repeat(80) {
             val s = read()
             if (s != null && good(s)) return s
-            slowSwipe(tag, up = s == null || s.frac < 0.25f || s.label.isEmpty()); compose.waitForIdle(); SystemClock.sleep(150)
+            slowSwipe(tag, up = true); compose.waitForIdle(); SystemClock.sleep(150)
         }
         error("never reached the middle of an item: ${read()}")
     }
