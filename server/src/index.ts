@@ -122,7 +122,14 @@ async function hub(req: Request, env: Env, url: URL, ctx?: ExecutionContext): Pr
   if (r.status === 404) return fail(404, "not_found");
   if (!r.ok) return fail(502, "upstream");
   const region = /^[A-Z]{2}$/.test(url.searchParams.get("region") ?? "") ? url.searchParams.get("region")! : "US";
-  const body = hubShape(url.pathname, await r.json<Record<string, unknown>>(), p.kind, region);
+  // Group W (B3): a second list merged in (series providers next to film providers); a failed second call only
+  // drops its part.
+  let also: Record<string, unknown> | undefined;
+  if (p.also) {
+    const r2 = await fetch(`https://api.themoviedb.org/3${p.also}`, { headers: { authorization: `Bearer ${env.TMDB_TOKEN}`, accept: "application/json" } }).catch(() => null);
+    if (r2?.ok) also = await r2.json<Record<string, unknown>>();
+  }
+  const body = hubShape(url.pathname, await r.json<Record<string, unknown>>(), p.kind, region, also);
   if (body && typeof body === "object" && "error" in body) return fail(404, "not_found");
   const res = cached(json(body), p.ttl);
   if (cache) { const put = cache.put(key, res.clone()); if (ctx) ctx.waitUntil(put); else await put; }

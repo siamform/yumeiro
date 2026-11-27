@@ -149,3 +149,48 @@ test("Group O: title lists where it streams in the asked region", () => {
   assert.deepEqual((shape("/v1/hub/title", body, "movie") as { streaming?: string[] }).streaming, ["Max"]);
   assert.ok(SHELVES.hot_today && SHELVES.top_movies);
 });
+
+test("Group W: discover takes themes, a year range and a lowest score; junk is dropped", () => {
+  const today = "2026-11-27";
+  const p = plan("/v1/hub/discover", new URLSearchParams("type=tv&anime=1&keyword=237451,207826&year_from=2015&year_to=2024&min_rating=7"), today);
+  assert.ok(!("error" in p));
+  if (!("error" in p)) {
+    const q = new URLSearchParams(p.tmdb.split("?")[1]);
+    assert.equal(q.get("with_keywords"), "237451|207826");
+    assert.equal(q.get("first_air_date.gte"), "2015-01-01");
+    assert.equal(q.get("first_air_date.lte"), "2024-12-31");
+    assert.equal(q.get("vote_average.gte"), "7");
+    assert.equal(q.get("with_genres"), "16");
+  }
+  const junk = plan("/v1/hub/discover", new URLSearchParams("type=movie&keyword=abc&year_from=1700&year_to=x&min_rating=42"), today);
+  if (!("error" in junk)) {
+    const q = new URLSearchParams(junk.tmdb.split("?")[1]);
+    assert.equal(q.get("with_keywords"), null); assert.equal(q.get("primary_release_date.gte"), null); assert.equal(q.get("vote_average.gte"), null);
+  }
+  const fresh = plan("/v1/hub/discover", new URLSearchParams("type=movie&sort=new&year_to=2030"), today);
+  if (!("error" in fresh)) assert.equal(new URLSearchParams(fresh.tmdb.split("?")[1]).get("primary_release_date.lte"), today);
+  const r = plan("/v1/hub/discover", new URLSearchParams("type=movie&sort=rating"), today);
+  assert.ok(!("error" in r));
+});
+
+test("Group W: providers merge films and series, drop stores and channels, majors first", () => {
+  const movie = { results: [
+    { provider_id: 2, provider_name: "Apple TV Store", display_priorities: { US: 1 } },
+    { provider_id: 1825, provider_name: "HBO Max Amazon Channel", display_priorities: { US: 2 } },
+    { provider_id: 99, provider_name: "Tiny Docs", display_priorities: { US: 3 } },
+    { provider_id: 8, provider_name: "Netflix", logo_path: "/n.jpg", display_priorities: { US: 9 } },
+  ] };
+  const tv = { results: [
+    { provider_id: 8, provider_name: "Netflix", display_priorities: { US: 9 } },
+    { provider_id: 283, provider_name: "Crunchyroll", display_priorities: { US: 4 } },
+    { provider_id: 1796, provider_name: "Netflix Standard with Ads", display_priorities: { US: 5 } },
+  ] };
+  const out = providers(movie, "US", tv);
+  assert.deepEqual(out.map((p) => p.id), [283, 8, 99]);
+  assert.equal(out[1].logo, "https://image.tmdb.org/t/p/w154/n.jpg");
+});
+
+test("Group W: list rows carry a backdrop for genre art", () => {
+  const it = item({ id: 5, media_type: "tv", name: "Show", backdrop_path: "/b.jpg" });
+  assert.equal(it?.backdrop, "https://image.tmdb.org/t/p/w780/b.jpg");
+});

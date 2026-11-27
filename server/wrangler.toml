@@ -57,3 +57,22 @@ crons = ["*/10 * * * *"]
 
 [observability]
 enabled = false
+
+# Group W: a separate test Worker on workers.dev (yumeiro-cloud-beta.yumeiro.workers.dev) for device tests with real
+# data before production is deployed. Catalog and BlackSource only: no domain, no database, no queues, no crons.
+# Deploy: `npx wrangler deploy --env beta` and `npx wrangler secret put TMDB_TOKEN --env beta`.
+[env.beta]
+name = "yumeiro-cloud-beta"
+workers_dev = true
+routes = []
+triggers = { crons = [] }
+
+[[env.beta.ratelimits]]
+name = "HUB"
+namespace_id = "7104"
+simple = { limit = 120, period = 60 }
+
+[[env.beta.ratelimits]]
+name = "BLACKSOURCE"
+namespace_id = "7105"
+simple = { limit = 30, period = 60 }
