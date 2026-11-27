@@ -20,7 +20,7 @@ object SocialLinks {
 
     /** Yumeiro's own accounts besides Telegram and the website (those are rows of their own). */
     val yumeiro: List<Link> = listOf(
-        Link("discord", "Discord", tr(R.string.yumeiro_server, "Yumeiro server"), "https://discord.gg/eqkNymUAMJ", R.drawable.ic_brand_discord),
+        Link("discord", "Discord", "Yumeiro server", "https://discord.gg/eqkNymUAMJ", R.drawable.ic_brand_discord),
         Link("facebook", "Facebook", HANDLE, "https://www.facebook.com/$HANDLE", R.drawable.ic_brand_facebook),
         Link("instagram", "Instagram", "@$HANDLE", "https://www.instagram.com/$HANDLE", R.drawable.ic_brand_instagram),
         Link("x", tr(R.string.x_twitter, "X (Twitter)"), "@$HANDLE", "https://x.com/$HANDLE", R.drawable.ic_brand_x),

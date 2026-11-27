@@ -206,7 +206,7 @@ fun PlayerControlsCard() {
                 Column(Modifier.weight(1f)) {
                     Text(c.label, color = if (isOff) TextTertiary else TextPrimary, fontSize = 14.sp)
                     Text(
-                        when (where) { VideoPrefs.Place.BAR -> tr(R.string.nav_edit_on_bar, "On the bar"); VideoPrefs.Place.MORE -> tr(R.string.under_more, "Under More"); VideoPrefs.Place.HIDDEN -> "Hidden" },
+                        when (where) { VideoPrefs.Place.BAR -> "On the bar"; VideoPrefs.Place.MORE -> "Under More"; VideoPrefs.Place.HIDDEN -> "Hidden" },
                         color = if (where == VideoPrefs.Place.BAR) SpotifyGreen else TextTertiary, fontSize = 11.5.sp,
                         modifier = Modifier.testTag("qa_control_place_${c.name.lowercase()}"),
                     )

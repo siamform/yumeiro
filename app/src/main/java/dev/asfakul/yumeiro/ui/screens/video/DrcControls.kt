@@ -113,12 +113,12 @@ fun DrcCustomSliders(modifier: Modifier = Modifier) {
         }
     }
     Column(modifier.fillMaxWidth().testTag("drc_custom")) {
-        DrcSlider("Threshold", "${c.thresholdDb.roundToInt()} dB", tr(R.string.sounds_louder_than_this_are_turned, "Sounds louder than this are turned down"), c.thresholdDb, -60f..0f, 59, "drc_threshold", save) { edit(c.copy(thresholdDb = it)) }
-        DrcSlider("Ratio", "${"%.1f".format(c.ratio)}:1", tr(R.string.how_strongly_they_are_turned_down, "How strongly they are turned down"), c.ratio, 1f..20f, 37, "drc_ratio", save) { edit(c.copy(ratio = it)) }
+        DrcSlider("Threshold", "${c.thresholdDb.roundToInt()} dB", "Sounds louder than this are turned down", c.thresholdDb, -60f..0f, 59, "drc_threshold", save) { edit(c.copy(thresholdDb = it)) }
+        DrcSlider("Ratio", "${"%.1f".format(c.ratio)}:1", "How strongly they are turned down", c.ratio, 1f..20f, 37, "drc_ratio", save) { edit(c.copy(ratio = it)) }
         DrcSlider(stringResource(R.string.drc_knee), "${c.kneeDb.roundToInt()} dB", stringResource(R.string.drc_knee_hint), c.kneeDb, 0f..24f, 23, "drc_knee", save) { edit(c.copy(kneeDb = it)) }
         DrcSlider(tr(R.string.make_up_gain, "Make-up gain"), "+${c.makeupDb.roundToInt()} dB", tr(R.string.turns_the_whole_sound_back_up, "Turns the whole sound back up"), c.makeupDb, 0f..24f, 23, "drc_makeup", save) { edit(c.copy(makeupDb = it)) }
-        DrcSlider("Attack", "${"%.1f".format(c.attackMs)} ms", tr(R.string.how_fast_a_loud_sound_is, "How fast a loud sound is caught"), c.attackMs, 0.5f..200f, 0, "drc_attack", save) { edit(c.copy(attackMs = it)) }
-        DrcSlider("Release", "${c.releaseMs.roundToInt()} ms", tr(R.string.how_fast_the_sound_comes_back, "How fast the sound comes back"), c.releaseMs, 10f..2000f, 0, "drc_release", save) { edit(c.copy(releaseMs = it)) }
+        DrcSlider("Attack", "${"%.1f".format(c.attackMs)} ms", "How fast a loud sound is caught", c.attackMs, 0.5f..200f, 0, "drc_attack", save) { edit(c.copy(attackMs = it)) }
+        DrcSlider("Release", "${c.releaseMs.roundToInt()} ms", "How fast the sound comes back", c.releaseMs, 10f..2000f, 0, "drc_release", save) { edit(c.copy(releaseMs = it)) }
         androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             if (mine != null) androidx.compose.material3.TextButton(onClick = { DynamicRangeCompressor.deletePreset(ctx, mine.name) }, modifier = Modifier.testTag("drc_delete_saved")) {
                 Text(stringResource(R.string.drc_delete_saved, mine.name), color = TextSecondary)

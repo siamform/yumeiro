@@ -152,7 +152,7 @@ fun BackupScreen(onBack: () -> Unit) {
             // Round 13: Restore gets its own block at the top, so it's never hidden behind the list.
             // After a reinstall Android may hide the old backups from the app; "Choose a backup file"
             // always works because the user picks the file in the system file picker.
-            Block("Restore", tr(R.string.bring_back_your_settings_lists_sources, "Bring back your settings, lists, sources and extensions from a backup")) {
+            Block("Restore", "Bring back your settings, lists, sources and extensions from a backup") {
                 val latest = items.firstOrNull()
                 if (latest != null) {
                     Button(
@@ -240,7 +240,7 @@ fun BackupScreen(onBack: () -> Unit) {
                 SettingsToggleRow(tr(R.string.back_up_automatically, "Back up automatically"), tr(R.string.only_when_something_changed_while_the, "Only when something changed, while the phone is idle"), autoOn, {
                     autoOn = it; BackupMeta.setAutoEnabled(context, it); AutoBackupWorker.schedule(context, replace = true)
                 }, "backup_auto")
-                ChoiceRow(tr(R.string.how_often, "How often"), listOf(1 to "Daily", 3 to tr(R.string.every_3_days, "Every 3 days"), 7 to "Weekly"), autoDays, "backup_auto_days", autoOn) {
+                ChoiceRow("How often", listOf(1 to "Daily", 3 to "Every 3 days", 7 to "Weekly"), autoDays, "backup_auto_days", autoOn) {
                     autoDays = it; BackupMeta.setAutoEveryDays(context, it); AutoBackupWorker.schedule(context, replace = true)
                 }
                 ChoiceRow(tr(R.string.keep, "Keep"), listOf(3 to "3", 5 to "5", 10 to "10"), autoKeep, "backup_auto_keep", autoOn) {
@@ -267,7 +267,7 @@ fun BackupScreen(onBack: () -> Unit) {
                 ChoiceRow(tr(R.string.up_to, "Up to"), listOf(64 to "64 MB", 128 to "128 MB", 256 to "256 MB", 512 to "512 MB"), maxMb, "cache_max", cacheOn) {
                     maxMb = it; DataCache.Settings.set(maxMb = it)
                 }
-                ChoiceRow(tr(R.string.clear_website_cookies_every, "Clear website cookies every"), listOf(7 to "7 days", 30 to "30 days", 90 to "90 days", 0 to "Never"), cookieDays, "cookie_days", true) {
+                ChoiceRow("Clear website cookies every", listOf(7 to "7 days", 30 to "30 days", 90 to "90 days", 0 to "Never"), cookieDays, "cookie_days", true) {
                     cookieDays = it; DataCache.Settings.set(cookieDays = it)
                 }
                 SettingsDivider()
@@ -284,7 +284,7 @@ fun BackupScreen(onBack: () -> Unit) {
             }
 
             // Reset
-            Block("Reset", tr(R.string.a_backup_is_saved_first_then, "A backup is saved first, then Yumeiro restarts")) {
+            Block("Reset", "A backup is saved first, then Yumeiro restarts") {
                 ResetCenter.Scope.entries.filter { it.needsRestart }.forEach { s ->
                     SettingsActionRow(s.label, s.hint, "reset_${s.id}", danger = true) { resetting = s }
                 }
@@ -481,7 +481,7 @@ private fun BackupRow(item: BackupStore.Item, index: Int, onRestore: () -> Unit,
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                when (item.kind) { "auto" -> tr(R.string.automatic_backup, "Automatic backup"); "safety" -> tr(R.string.saved_before_a_restore_or_reset, "Saved before a restore or reset"); else -> "Backup" },
+                when (item.kind) { "auto" -> "Automatic backup"; "safety" -> "Saved before a restore or reset"; else -> "Backup" },
                 color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
             )
             Text(

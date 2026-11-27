@@ -104,7 +104,7 @@ fun PushAlertsCard() {
                     append(if (st.lastWakeAt > 0) DateUtils.getRelativeTimeSpanString(st.lastWakeAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS) else "not yet")
                 } to true
             }
-            SettingsActionRow("Status", status, "push_status", status = if (ok == true) "On" else if (ok == false) "Check" else tr(R.string.setting_up, "Setting up"), ok = ok) {
+            SettingsActionRow("Status", status, "push_status", status = if (ok == true) "On" else if (ok == false) "Check" else "Setting up", ok = ok) {
                 distributors = PushWake.distributors(context)
                 if (distributors.size > 1) pick = true else PushWake.refillIfDue(context)
             }

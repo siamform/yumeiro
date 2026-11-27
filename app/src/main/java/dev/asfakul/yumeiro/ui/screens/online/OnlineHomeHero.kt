@@ -168,7 +168,7 @@ internal fun HeroCarousel(
                     Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
                         Column {
                             Text(
-                                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) (if (isNew) "新着 · " else "注目 · ") else "") + (if (isNew) tr(R.string.new_episode, "NEW EPISODE  ") else "SPOTLIGHT  ") + "%02d".format(java.util.Locale.US, real + 1) + " / " + "%02d".format(java.util.Locale.US, n),
+                                (if (dev.asfakul.yumeiro.ui.components.kanaEnabled()) (if (isNew) "新着 · " else "注目 · ") else "") + (if (isNew) "NEW EPISODE  " else "SPOTLIGHT  ") + "%02d".format(java.util.Locale.US, real + 1) + " / " + "%02d".format(java.util.Locale.US, n),
                                 color = p.accentBright, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp, maxLines = 1,
                             )
                             Spacer(Modifier.height(6.dp))

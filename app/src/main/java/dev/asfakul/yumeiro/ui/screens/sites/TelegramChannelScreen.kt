@@ -310,7 +310,7 @@ private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, sign
     val label = post.text.lineSequence().firstOrNull()?.ifBlank { null } ?: "Video ${post.id}"
     Row(
         Modifier.fillMaxWidth().clip(yuRound(16)).background(p.surfaceContainerHigh)
-            .clickable(onClickLabel = if (post.playable || signedIn) "Play" else tr(R.string.sign_in_to_play, "Sign in to play"), role = Role.Button, onClick = onClick)
+            .clickable(onClickLabel = if (post.playable || signedIn) "Play" else "Sign in to play", role = Role.Button, onClick = onClick)
             .padding(10.dp).testTag("tg_post_${post.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {

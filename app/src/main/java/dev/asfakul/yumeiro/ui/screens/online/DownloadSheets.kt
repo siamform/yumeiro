@@ -323,7 +323,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
                                     type = if (c.audioOnly) DownloadPrompt.Type.YT_AUDIO else DownloadPrompt.Type.YT_VIDEO,
                                     title = item.title, what = if (c.audioOnly) "audio (${c.label.removePrefix("Audio ")})" else "${c.label} video", count = 1,
                                     folder = OnlineDownloads.youTubeFolder(c.audioOnly, item.music), quality = c.label + (c.detail.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
-                                    sizeBytes = c.sizeBytes, defaultKeep = true, facts = listOf("YouTube", if (c.audioOnly) tr(R.string.audio_only, "Audio only") else tr(R.string.video_audio, "Video + audio")),
+                                    sizeBytes = c.sizeBytes, defaultKeep = true, facts = listOf("YouTube", if (c.audioOnly) "Audio only" else "Video + audio"),
                                 ) { keep -> OnlineDownloads.enqueueYouTube(context, item.id, item.title, item.channel, item.thumbnail, item.music, c, keep) })
                             }
                         }
@@ -359,7 +359,7 @@ internal fun askYouTubeInSharedPopup(context: android.content.Context, item: YtI
         // OWN-18: the size follows the picked quality.
         sizeFor = { h -> one.choose(choices, item.music, dev.asfakul.yumeiro.online.download.DownloadTracks.Pick(maxHeight = h))?.sizeBytes?.takeIf { it > 0 }
             ?.let { dev.asfakul.yumeiro.online.download.DownloadSize.Size(it, exact = true) } },
-        facts = listOf("YouTube", if (best.audioOnly) tr(R.string.audio_only, "Audio only") else tr(R.string.video_audio, "Video + audio")),
+        facts = listOf("YouTube", if (best.audioOnly) "Audio only" else "Video + audio"),
         startWith = { keep, pick ->
             val c = one.choose(choices, item.music, pick)
             if (c == null) tr(R.string.no_downloadable_formats_for_this_video, "No downloadable formats for this video")

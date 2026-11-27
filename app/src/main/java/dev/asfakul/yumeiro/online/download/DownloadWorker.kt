@@ -136,7 +136,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     if (item.kind == OnlineDownloads.Kind.LINK) " — the link may have expired; play the episode again and retry" else " — tap retry for a fresh link"
                 } else ""
                 is NoLink -> e.message ?: tr(R.string.no_downloadable_source, "No downloadable source")
-                is IOException -> e.message?.takeIf { it.isNotBlank() && !it.startsWith("HTTP") }?.let { tr(R.string.network_error, "Network error — %1\$s", it) } ?: tr(R.string.network_error_will_retry, "Network error — will retry")
+                is IOException -> e.message?.takeIf { it.isNotBlank() && !it.startsWith("HTTP") }?.let { "Network error — $it" } ?: "Network error — will retry"
                 else -> e.message ?: tr(R.string.download_failed, "Download failed")
             } }
             // A full disk doesn't get better by retrying; the partial file stays for a later resume.

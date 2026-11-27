@@ -218,7 +218,7 @@ fun AspectRatioDialog(
     val modes = listOf(
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, tr(R.string.fit_letterbox, "Fit (Letterbox)"), tr(R.string.maintains_original_aspect_ratio_with_black, "Maintains original aspect ratio with black bars if necessary")),
         Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, tr(R.string.crop_fill, "Crop / Fill"), tr(R.string.zooms_video_to_fill_the_entire, "Zooms video to fill the entire screen (eliminates black bars)")),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Stretch", tr(R.string.stretches_the_video_picture_to_touch, "Stretches the video picture to touch all display borders")),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Stretch", "Stretches the video picture to touch all display borders"),
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "100% Original", tr(R.string.renders_without_scaling_at_native_pixel, "Renders without scaling at native pixel size"))
     )
 

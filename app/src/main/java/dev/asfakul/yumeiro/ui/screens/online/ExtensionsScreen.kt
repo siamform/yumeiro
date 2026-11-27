@@ -384,7 +384,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
         onDismiss = { showFilters = false }, onReset = if (status != "all") ({ status = "all" }) else null, resultCount = null, tag = "extensions_filter_sheet",
     ) {
         dev.asfakul.yumeiro.ui.components.FilterGroup("Show") {
-            listOf("all" to "All", "on" to "On", "off" to "Off", "problems" to tr(R.string.needs_attention, "Needs attention"), "updates" to tr(R.string.has_update, "Has update")).forEach { (k, l) ->
+            listOf("all" to "All", "on" to "On", "off" to "Off", "problems" to "Needs attention", "updates" to "Has update").forEach { (k, l) ->
                 OnlineChip(l, status == k, { status = k }, Modifier.testTag("extensions_status_$k"))
             }
         }
@@ -510,7 +510,7 @@ private fun InstalledCard(
     }
     editUrl?.let { api ->
         InputDialog(
-            title = tr(R.string.website_address, "Website address"), label = api.name, hint = ProviderOverrides.mainUrl(api.name) ?: api.mainUrl, confirm = "Save",
+            title = "Website address", label = api.name, hint = ProviderOverrides.mainUrl(api.name) ?: api.mainUrl, confirm = "Save",
             onDismiss = { editUrl = null },
         ) { text, done ->
             if (text.isNotBlank() && ProviderOverrides.normalize(text) == null) done(tr(R.string.that_isnt_a_web_address, "That isn't a web address"))
@@ -601,7 +601,7 @@ private fun InstalledCard(
                     info.error != null -> Pill(tr(R.string.error, "Error"), ErrorColor)
                     info.loaded -> Pill(if (dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.EXTENSION_LABELS)) "On" else "${info.providers.size} source${if (info.providers.size == 1) "" else "s"}")
                 }
-                if (!ext.manual) Pill(if (ext.autoUpdate) "Auto-update" else tr(R.string.manual_updates, "Manual updates"), TextSecondary)
+                if (!ext.manual) Pill(if (ext.autoUpdate) "Auto-update" else "Manual updates", TextSecondary)
                 if (update != null) Pill("Update v${update.version}", WarnColor)
                 report?.let { r -> androidx.compose.foundation.layout.Box(Modifier.clickable { showReport = true }) { Pill(levelLabel(r.level), levelColor(r.level)) } }
                 if (signedIn) Pill("Signed in", SpotifyGreen)

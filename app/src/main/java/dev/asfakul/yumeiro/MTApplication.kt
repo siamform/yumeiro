@@ -29,7 +29,7 @@ class MTApplication : Application(), ImageLoaderFactory {
         // Round 12: a staged restore / reset is applied before anything reads a setting or file.
         dev.asfakul.yumeiro.backup.PendingRestore.applyIfAny(this)
         // F19: text made outside screens (messages, labels, notifications) in the picked language from the start.
-        dev.asfakul.yumeiro.l10n.Tr.use(dev.asfakul.yumeiro.l10n.AppLanguage.wrap(this), dev.asfakul.yumeiro.l10n.AppLanguage.saved(this))
+        dev.asfakul.yumeiro.l10n.Tr.startProcess(dev.asfakul.yumeiro.l10n.AppLanguage.wrap(this), dev.asfakul.yumeiro.l10n.AppLanguage.saved(this))
         // FF-LOAD: flags read without a context load the saved file (not the defaults); no disk read here.
         FeatureFlags.attach(this)
         // G12 X11-2: the first network request loads the user's DNS settings (not the defaults).

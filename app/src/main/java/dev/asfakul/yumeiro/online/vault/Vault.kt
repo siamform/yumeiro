@@ -33,7 +33,7 @@ data class VaultSource(
     val referer: String? = null,
     val userAgent: String? = null,
 ) {
-    enum class Kind(val label: String) { STREAM("Stream"), FILE(tr(R.string.video_file, "Video file")), EMBED(tr(R.string.player_page, "Player page")), LINK("Link") }
+    enum class Kind(val label: String) { STREAM("Stream"), FILE("Video file"), EMBED("Player page"), LINK("Link") }
 }
 
 data class VaultEntry(

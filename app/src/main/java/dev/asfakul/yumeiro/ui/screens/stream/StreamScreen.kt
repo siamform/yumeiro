@@ -640,8 +640,8 @@ fun StreamScreen(
                 .onFailure { toast(tr(R.string.no_app_available_to_pick_files, "No app available to pick files")) }
         },
         LiveTool("market_entry", "Market", "${playlists.count { it.isMarket }} installed", Icons.Default.Storefront, liveHue("market"), onOpenMarket),
-        LiveTool("stream_websites", "Websites", tr(R.string.saved_sites, "Saved sites"), Icons.Default.Language, liveHue("websites"), onOpenWebsites),
-        LiveTool("stream_telegram", "Telegram", tr(R.string.public_channels, "Public channels"), Icons.AutoMirrored.Filled.Send, liveHue("telegram"), onOpenTelegram),
+        LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
+        LiveTool("stream_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, liveHue("telegram"), onOpenTelegram),
         LiveTool("live_tool_sports", stringResource(R.string.sports_title), stringResource(R.string.sports_tool_status), Icons.Default.SportsSoccer, liveHue("sports"), onOpenSports),
         LiveTool("live_tool_add_url", tr(R.string.add_url, "Add URL"), tr(R.string.remote_list, "Remote list"), Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
         LiveTool("live_tool_new", tr(R.string.new_list, "New list"), tr(R.string.your_own, "Your own"), Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },

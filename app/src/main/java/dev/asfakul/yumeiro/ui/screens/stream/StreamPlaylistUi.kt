@@ -153,7 +153,7 @@ internal fun PlaylistCard(
                         )
                     }
                 }
-                val count = if (playlist.channelCount > 0) "${playlist.channelCount} streams" else if (playlist.isLocal) "Empty" else tr(R.string.tap_to_load, "Tap to load")
+                val count = if (playlist.channelCount > 0) "${playlist.channelCount} streams" else if (playlist.isLocal) "Empty" else "Tap to load"
                 val parts = listOfNotNull(
                     playlist.category, count,
                     when {
@@ -322,7 +322,7 @@ private fun AnalysisSummary(a: PlaylistAnalysis) {
     Surface(shape = yuRound(14), color = GlassFill) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             fun kb(b: Int) = if (b > 1_048_576) "%.1f MB".format(b / 1_048_576f) else "${b / 1024} KB"
-            Line("Result", if (a.isHls) tr(R.string.single_hls_stream_not_a_channel, "Single HLS stream (not a channel list)") else "${a.channels} streams in ${a.groups.size}${if (a.groups.size >= 12) "+" else ""} groups")
+            Line("Result", if (a.isHls) "Single HLS stream (not a channel list)" else "${a.channels} streams in ${a.groups.size}${if (a.groups.size >= 12) "+" else ""} groups")
             Line("HTTP", "${a.status} · ${a.contentType ?: "unknown type"} · ${kb(a.bytes)}")
             Line("Redirects", if (a.redirects.isEmpty()) "none (direct)" else "${a.redirects.size} → ${a.finalUrl}")
             if (a.drmChannels > 0 || a.headerChannels > 0) Line("Extras", "${a.drmChannels} DRM · ${a.headerChannels} with custom headers")

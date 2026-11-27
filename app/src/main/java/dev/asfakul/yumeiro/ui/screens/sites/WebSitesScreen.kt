@@ -382,7 +382,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         onClick = { account = true },
                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
                         modifier = Modifier.heightIn(min = 48.dp).testTag("tg_account_button"),
-                    ) { Text(if (signedIn) "Open" else tr(R.string.sign_in, "Sign in"), fontWeight = FontWeight.SemiBold) }
+                    ) { Text(if (signedIn) "Open" else "Sign in", fontWeight = FontWeight.SemiBold) }
                 }
             } else if (telegramPage && accountUnavailable != null) item("tg_account_unavailable") {
                 Column(
@@ -412,7 +412,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         val web = SiteGo.isSearch(url)
                         Row(
                             Modifier.fillMaxWidth().clip(yuRound(16)).background(p.surfaceContainerHigh)
-                                .combinedClickable(onClickLabel = if (web) tr(R.string.search_the_web, "Search the web") else "Open", onClick = { openUnsaved(url, name) })
+                                .combinedClickable(onClickLabel = if (web) "Search the web" else "Open", onClick = { openUnsaved(url, name) })
                                 .padding(horizontal = 14.dp, vertical = 12.dp).testTag(if (web) "site_web_search" else "site_go"),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {

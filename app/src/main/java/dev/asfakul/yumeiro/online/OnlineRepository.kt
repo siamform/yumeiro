@@ -160,7 +160,7 @@ data class OnlineLink(
     val qualityLabel: String get() = when (quality) {
         0 -> "Auto"; 400, -1 -> ""; 2160 -> "4K"; in 1..4320 -> "${quality}p"; else -> ""
     }
-    val formatLabel: String get() = when { isHls -> "HLS"; isDash -> "DASH"; audioOnly -> tr(R.string.audio_only, "Audio only"); else -> container?.uppercase() ?: "Direct" }
+    val formatLabel: String get() = when { isHls -> "HLS"; isDash -> "DASH"; audioOnly -> "Audio only"; else -> container?.uppercase() ?: "Direct" }
     /** File extension of the link's path, lowercase ("mp4", "mp3", "m3u8"…). */
     val container: String? get() = url.substringBefore('?').substringBefore('#').substringAfterLast('/').substringAfterLast('.', "").lowercase().takeIf { it.length in 2..5 }
     /** Plain audio files (no picture). Never preferred over a video. */
@@ -731,7 +731,7 @@ object OnlineRepository {
     )
 
     fun typeLabel(t: TvType?): String = when (t) {
-        TvType.Movie -> "Movie"; TvType.AnimeMovie -> tr(R.string.anime_movie, "Anime movie"); TvType.TvSeries -> tr(R.string.tv_series, "TV series"); TvType.Cartoon -> "Cartoon"
+        TvType.Movie -> "Movie"; TvType.AnimeMovie -> "Anime movie"; TvType.TvSeries -> "TV series"; TvType.Cartoon -> "Cartoon"
         TvType.Anime -> "Anime"; TvType.OVA -> "OVA"; TvType.Documentary -> "Documentary"; TvType.AsianDrama -> "Asian drama"
         TvType.Live -> "Live"; TvType.Music -> "Music"; TvType.AudioBook -> "Audiobook"; TvType.Audio -> "Audio"
         TvType.Podcast -> "Podcast"; TvType.Torrent -> "Torrent"; null -> "Video"; else -> t.name

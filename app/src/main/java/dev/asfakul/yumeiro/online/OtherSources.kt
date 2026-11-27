@@ -51,7 +51,7 @@ object OtherSources {
     enum class Mode(val label: String, val detail: String) {
         PARALLEL(tr(R.string.at_the_same_time, "At the same time"), tr(R.string.other_extensions_are_searched_while_the, "Other extensions are searched while the title's own one loads. The first working source plays")),
         WHEN_NEEDED(tr(R.string.when_needed, "When needed"), tr(R.string.other_extensions_are_searched_only_when, "Other extensions are searched only when the title's own one is slow, empty or fails")),
-        OFF("Off", tr(R.string.only_the_titles_own_extension_is, "Only the title's own extension is used")),
+        OFF("Off", "Only the title's own extension is used"),
     }
 
     private val _mode = MutableStateFlow(Mode.PARALLEL)

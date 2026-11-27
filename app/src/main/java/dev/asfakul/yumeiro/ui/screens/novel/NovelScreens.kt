@@ -586,7 +586,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
         SubPageHeader(title = d?.name ?: name, onBack = onBack, subtitle = NovelSources.plugin(pluginId)?.name) {
             val saved = entry?.saved == true
             IconButton(onClick = { scope.launch(Dispatchers.IO) { NovelLibrary.setSaved(context, item, !saved) } }, modifier = Modifier.testTag("novel_save")) {
-                Icon(if (saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, if (saved) tr(R.string.remove_from_saved, "Remove from saved") else "Save", tint = if (saved) SpotifyGreen else TextPrimary)
+                Icon(if (saved) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, if (saved) "Remove from saved" else "Save", tint = if (saved) SpotifyGreen else TextPrimary)
             }
         }
         if (d == null) {

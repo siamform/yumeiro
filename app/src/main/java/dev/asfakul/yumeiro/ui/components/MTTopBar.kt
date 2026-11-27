@@ -302,7 +302,7 @@ fun MTTopBar(
                     )
                     TopAction(
                         icon = if (unreadCount > 0) Icons.Default.NotificationsActive else Icons.Outlined.Notifications,
-                        contentDescription = if (unreadCount > 0) tr(R.string.notifications_new, "Notifications, %1\$s new", unreadCount) else "Notifications",
+                        contentDescription = if (unreadCount > 0) "Notifications, $unreadCount new" else "Notifications",
                         onClick = onInboxClick,
                         badge = unreadCount,
                         badgeTag = "topbar_inbox_badge",

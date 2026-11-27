@@ -83,7 +83,7 @@ internal fun posterMarkKey(item: OnlineItem) = "${item.api}|${item.url}"
 @Composable
 internal fun PosterMark(mark: OnlineBookmarks.Mark?, modifier: Modifier = Modifier) {
     if (mark == null || (!mark.favorite && !mark.watchLater)) return
-    val label = listOfNotNull(if (mark.favorite) "Favorite" else null, if (mark.watchLater) tr(R.string.watch_later, "Watch later") else null).joinToString(", ")
+    val label = listOfNotNull(if (mark.favorite) "Favorite" else null, if (mark.watchLater) "Watch later" else null).joinToString(", ")
     Row(
         modifier.padding(6.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.65f)).padding(3.dp)
             .testTag("poster_mark").semantics { contentDescription = label },
@@ -107,7 +107,7 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
     val mark = marks[posterMarkKey(item)]
     val act: (Boolean) -> Unit = { favorite ->
         val c = if (favorite) OnlineBookmarks.toggleFavorite(context, item) else OnlineBookmarks.toggleWatchLater(context, item)
-        val what = if (favorite) "Favorites" else tr(R.string.watch_later, "Watch later")
+        val what = if (favorite) "Favorites" else "Watch later"
         AppMessages.show(context, if (c == OnlineBookmarks.Change.ADDED) tr(R.string.added_to, "Added to %1\$s", what) else tr(R.string.removed_from, "Removed from %1\$s", what))
         onDismiss()
     }
@@ -123,7 +123,7 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
             ) { act(false) }
             ActionRow(
                 if (mark?.favorite == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                if (mark?.favorite == true) tr(R.string.remove_from_favorites, "Remove from Favorites") else "Favorite",
+                if (mark?.favorite == true) "Remove from Favorites" else "Favorite",
                 FavoritePink, "poster_actions_favorite", null,
             ) { act(true) }
         }

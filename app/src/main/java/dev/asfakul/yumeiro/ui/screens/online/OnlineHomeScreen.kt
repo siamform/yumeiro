@@ -846,7 +846,7 @@ private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
 
 /** Where the Videos tab gets its videos from. */
 enum class VideoSource(val label: String, val tag: String) {
-    ONLINE("Yumix", "online"), YOUTUBE("YouTube", "youtube"), DEVICE("Device", "device"), LIVE(tr(R.string.live_tv, "Live TV"), "live");
+    ONLINE("Yumix", "online"), YOUTUBE("YouTube", "youtube"), DEVICE("Device", "device"), LIVE("Live TV", "live");
 
     companion object {
         /** Yumix when a network is up, device videos when offline. */
@@ -859,16 +859,16 @@ fun videoSourceOptions(extensionCount: Int, deviceCount: Int, online: Boolean): 
     VideoSource.entries.map { v ->
         when (v) {
             VideoSource.ONLINE -> dev.asfakul.yumeiro.ui.components.SourceOption(
-                v.tag, "Yumix", tr(R.string.anime_movies_and_shows_from_your, "Anime, movies and shows from your extensions"),
+                v.tag, "Yumix", "Anime, movies and shows from your extensions",
                 when { extensionCount == 0 -> tr(R.string.add_sources, "Add sources"); !online -> tr(R.string.needs_internet, "Needs internet"); else -> "$extensionCount sources" },
                 dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "video_source_" + v.tag, attention = extensionCount == 0 || !online,
             )
             VideoSource.YOUTUBE -> dev.asfakul.yumeiro.ui.components.SourceOption(
-                v.tag, "YouTube", tr(R.string.watch_youtube_without_signing_in, "Watch YouTube without signing in"),
+                v.tag, "YouTube", "Watch YouTube without signing in",
                 if (online) tr(R.string.no_login, "No login") else tr(R.string.needs_internet, "Needs internet"), Icons.Default.SmartDisplay, "video_source_" + v.tag, attention = !online,
             )
             VideoSource.DEVICE -> dev.asfakul.yumeiro.ui.components.SourceOption(
-                v.tag, "Device", tr(R.string.videos_and_folders_on_this_phone, "Videos and folders on this phone"),
+                v.tag, "Device", "Videos and folders on this phone",
                 if (deviceCount == 1) "1 file" else "$deviceCount files", Icons.Default.VideoLibrary, "video_source_" + v.tag,
             )
             VideoSource.LIVE -> dev.asfakul.yumeiro.ui.components.SourceOption(
@@ -890,8 +890,8 @@ fun VideoSourceSwitch(
     ModeSwitcher(
         options = VideoSource.entries.map { v ->
             when (v) {
-                VideoSource.ONLINE -> ModeOption(v.tag, "Yumix", if (extensionCount == 0) tr(R.string.add_sources, "Add sources") else "$extensionCount sources", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "video_source_" + v.tag)
-                VideoSource.YOUTUBE -> ModeOption(v.tag, "YouTube", tr(R.string.no_login, "No login"), Icons.Default.SmartDisplay, "video_source_" + v.tag)
+                VideoSource.ONLINE -> ModeOption(v.tag, "Yumix", if (extensionCount == 0) "Add sources" else "$extensionCount sources", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "video_source_" + v.tag)
+                VideoSource.YOUTUBE -> ModeOption(v.tag, "YouTube", "No login", Icons.Default.SmartDisplay, "video_source_" + v.tag)
                 VideoSource.DEVICE -> ModeOption(v.tag, "Device", "$deviceCount files", Icons.Default.VideoLibrary, "video_source_" + v.tag)
                 VideoSource.LIVE -> ModeOption(v.tag, tr(R.string.live_tv, "Live TV"), tr(R.string.iptv_m3u, "IPTV · M3U"), Icons.Default.LiveTv, "video_source_" + v.tag)
             }

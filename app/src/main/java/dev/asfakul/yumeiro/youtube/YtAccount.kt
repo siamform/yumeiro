@@ -32,7 +32,7 @@ object YtAccount {
 
     enum class Mode(val label: String, val detail: String) {
         WHEN_BLOCKED(tr(R.string.only_when_youtube_blocks_a_video, "Only when YouTube blocks a video"), tr(R.string.recommended_everything_stays_anonymous_until_you, "Recommended. Everything stays anonymous until YouTube refuses to play something")),
-        ALWAYS("Always", tr(R.string.every_youtube_request_uses_your_account, "Every YouTube request uses your account. Fewer blocks, but YouTube sees all your viewing")),
+        ALWAYS("Always", "Every YouTube request uses your account. Fewer blocks, but YouTube sees all your viewing"),
     }
 
     data class State(val signedIn: Boolean = false, val since: Long = 0L, val mode: Mode = Mode.WHEN_BLOCKED)
@@ -234,7 +234,7 @@ object YtAccount {
             val host = u.substringAfter("://")
             val domain = "." + host.removePrefix("www.").removePrefix("m.").removePrefix("music.").removePrefix("accounts.")
             for (n in names) {
-                cm.setCookie(u, tr(R.string.max_age_0_path, "%1\$s=; Max-Age=0; Path=/", n))
+                cm.setCookie(u, "$n=; Max-Age=0; Path=/")
                 cm.setCookie(u, "$n=; Max-Age=0; Path=/; Domain=$domain")
             }
         }

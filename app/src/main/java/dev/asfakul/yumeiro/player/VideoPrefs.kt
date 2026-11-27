@@ -27,41 +27,41 @@ object VideoPrefs {
     }
 
     enum class AudioDefault(val label: String, val detail: String) {
-        SUB("Sub", tr(R.string.original_audio_with_subtitles, "Original audio with subtitles")),
-        DUB("Dub", tr(R.string.dubbed_audio_when_a_source_has, "Dubbed audio when a source has it")),
+        SUB("Sub", "Original audio with subtitles"),
+        DUB("Dub", "Dubbed audio when a source has it"),
     }
 
     enum class Decoder(val label: String, val detail: String) {
         // H-3 (owner item 3): Auto is the default. It is Hardware+ that also switches to the software decoder on its
         // own when a video fails to decode (DecoderAuto), so a video Hardware+ can't play still plays.
-        AUTO("Auto", tr(R.string.recommended_phone_decoders_first_ffmpeg_for, "Recommended. Phone decoders first, FFmpeg for audio the phone can't play, and the software decoder on its own when a video won't decode")),
+        AUTO("Auto", "Recommended. Phone decoders first, FFmpeg for audio the phone can't play, and the software decoder on its own when a video won't decode"),
         HARDWARE_PLUS("Hardware+", tr(R.string.phone_decoders_first_ffmpeg_for_audio, "Phone decoders first, FFmpeg for audio the phone can't play (AC-3, E-AC-3, DTS, TrueHD)")),
-        HARDWARE("Hardware", tr(R.string.only_the_phones_own_decoders, "Only the phone's own decoders")),
-        SOFTWARE("Software", tr(R.string.ffmpeg_and_software_decoders_first_slower, "FFmpeg and software decoders first. Slower, but plays files the phone's decoders get wrong")),
+        HARDWARE("Hardware", "Only the phone's own decoders"),
+        SOFTWARE("Software", "FFmpeg and software decoders first. Slower, but plays files the phone's decoders get wrong"),
     }
 
     enum class Renderer(val label: String, val detail: String) {
-        AUTO("Auto", tr(R.string.recommended_picks_the_best_surface_for, "Recommended. Picks the best surface for this device and video")),
-        SURFACE("SurfaceView", tr(R.string.lowest_battery_use_best_for_hdr, "Lowest battery use, best for HDR")),
-        TEXTURE("TextureView", tr(R.string.works_with_every_animation_and_effect, "Works with every animation and effect, uses a little more power")),
+        AUTO("Auto", "Recommended. Picks the best surface for this device and video"),
+        SURFACE("SurfaceView", "Lowest battery use, best for HDR"),
+        TEXTURE("TextureView", "Works with every animation and effect, uses a little more power"),
     }
 
     enum class GpuTier(val label: String, val detail: String) {
-        LOW("Low-end", tr(R.string.lightest_pass_for_older_phones, "Lightest pass, for older phones")),
-        MID("Mid-range", tr(R.string.light_and_smooth_recommended, "Light and smooth. Recommended")),
-        HIGH("High-end", tr(R.string.strongest_line_and_detail_restore, "Strongest line and detail restore")),
+        LOW("Low-end", "Lightest pass, for older phones"),
+        MID("Mid-range", "Light and smooth. Recommended"),
+        HIGH("High-end", "Strongest line and detail restore"),
     }
 
     enum class DefaultPlayer(val label: String, val detail: String) {
-        YUMEIRO("Yumeiro", tr(R.string.play_inside_yumeiro, "Play inside Yumeiro")),
+        YUMEIRO("Yumeiro", "Play inside Yumeiro"),
         ASK(tr(R.string.ask_every_time, "Ask every time"), tr(R.string.choose_yumeiro_or_another_app_for, "Choose Yumeiro or another app for each video")),
         EXTERNAL(tr(R.string.another_app, "Another app"), tr(R.string.hand_videos_to_an_installed_player, "Hand videos to an installed player such as VLC or MX Player")),
     }
 
     /** Buttons in the player's top bar, in the user's order. */
     enum class Control(val label: String) {
-        QUALITY("Quality"), AUDIO(tr(R.string.audio_track, "Audio track")), SUBTITLES("Subtitles"), SPEED("Speed"),
-        ASPECT(tr(R.string.aspect_ratio, "Aspect ratio")), PIP("Picture-in-picture"), LOCK("Lock"), INFO(tr(R.string.video_info, "Video info")),
+        QUALITY("Quality"), AUDIO("Audio track"), SUBTITLES("Subtitles"), SPEED("Speed"),
+        ASPECT("Aspect ratio"), PIP("Picture-in-picture"), LOCK("Lock"), INFO("Video info"),
         // ROT-1: new entries go last, so a saved order keeps its bar and this one starts in More.
         ROTATE(tr(R.string.rotate_video, "Rotate video")),
     }
@@ -85,8 +85,8 @@ object VideoPrefs {
     enum class InfoField(val label: String) {
         RESOLUTION("Resolution"), SOURCE("Source"), PROVIDER("Provider"), QUALITY("Quality"),
         VIDEO_CODEC(tr(R.string.video_codec, "Video codec")), AUDIO_CODEC(tr(R.string.audio_codec, "Audio codec")), FRAME_RATE(tr(R.string.frame_rate, "Frame rate")),
-        VIDEO_BITRATE(tr(R.string.video_bitrate, "Video bitrate")), BUFFER("Buffer"), DROPPED_FRAMES(tr(R.string.dropped_frames, "Dropped frames")),
-        DECODER("Decoder"), SPEED("Speed"), AUDIO_TRACK(tr(R.string.audio_track, "Audio track")), SUBTITLE_TRACK(tr(R.string.subtitle_track, "Subtitle track")),
+        VIDEO_BITRATE("Video bitrate"), BUFFER("Buffer"), DROPPED_FRAMES("Dropped frames"),
+        DECODER("Decoder"), SPEED("Speed"), AUDIO_TRACK("Audio track"), SUBTITLE_TRACK("Subtitle track"),
         AUDIO_BOOST(tr(R.string.audio_boost, "Audio boost")),
     }
 

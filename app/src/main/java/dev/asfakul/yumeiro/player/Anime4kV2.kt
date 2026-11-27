@@ -34,22 +34,22 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 object Anime4kV2 {
     enum class Engine(val label: String, val detail: String) {
-        CLASSIC("Classic", tr(R.string.the_original_yumeiro_pass_with_its, "The original Yumeiro pass with its GPU tier")),
+        CLASSIC("Classic", "The original Yumeiro pass with its GPU tier"),
         V2(tr(R.string.v2_presets, "V2 presets"), tr(R.string.presets_styles_and_a_custom_profile, "Presets, styles and a custom profile; switch them in the player")),
     }
 
     enum class Preset(val label: String, val detail: String) {
         PERFORMANCE("Performance", "Lightest: 5 samples per pixel, for older phones and TV boxes"),
-        BALANCED("Balanced", tr(R.string.clear_lines_at_low_cost_good, "Clear lines at low cost; good on most phones")),
-        QUALITY("Quality", tr(R.string.stronger_restore_with_diagonal_samples, "Stronger restore with diagonal samples")),
+        BALANCED("Balanced", "Clear lines at low cost; good on most phones"),
+        QUALITY("Quality", "Stronger restore with diagonal samples"),
         HIGH_QUALITY(tr(R.string.high_quality, "High quality"), tr(R.string.strongest_restore_and_line_darkening_needs, "Strongest restore and line darkening; needs a recent GPU")),
-        CUSTOM("Custom", tr(R.string.your_own_strength_lines_denoise_and, "Your own strength, lines, denoise and reach")),
+        CUSTOM("Custom", "Your own strength, lines, denoise and reach"),
     }
 
     enum class Style(val label: String, val detail: String) {
-        SHARPEN("Sharpen", tr(R.string.restore_detail_best_for_clean_sources, "Restore detail. Best for clean sources")),
-        DEBLUR("De-blur", tr(R.string.softer_wider_restore_for_blurry_or, "Softer, wider restore for blurry or upscaled sources")),
-        DENOISE("Denoise", tr(R.string.smooth_grain_and_blocks_while_keeping, "Smooth grain and blocks while keeping lines. For compressed sources")),
+        SHARPEN("Sharpen", "Restore detail. Best for clean sources"),
+        DEBLUR("De-blur", "Softer, wider restore for blurry or upscaled sources"),
+        DENOISE("Denoise", "Smooth grain and blocks while keeping lines. For compressed sources"),
     }
 
     /** Every value here reaches the shader as a uniform. */

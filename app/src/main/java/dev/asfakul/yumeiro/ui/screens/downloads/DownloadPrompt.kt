@@ -196,7 +196,7 @@ fun DownloadPromptHost() {
         title = { Text(stringResource(R.string.download_3, req.what), fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                if (offer != null && offer.heights.size > 1) TrackChips(tr(R.string.quality_for_this_download, "Quality for this download"), "download_track_quality", listOf(0 to "Best") + offer.heights.map { it to "${it}p" }, height) { height = it }
+                if (offer != null && offer.heights.size > 1) TrackChips("Quality for this download", "download_track_quality", listOf(0 to "Best") + offer.heights.map { it to "${it}p" }, height) { height = it }
                 else if (req.startAt != null || req.startWith != null) QualityPicker(height) { height = it }
                 // OL-5: many tracks scroll in their own box so the Offline / Permanent choice stays in view.
                 if (offer != null) Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) { TrackPicker(offer, audio, { audio = it }, subs, { subs = it }) }
@@ -244,7 +244,7 @@ internal fun TrackPicker(
     if (offer.subtitles.isNotEmpty()) TrackChips("Subtitles", "download_track_subs",
         listOf(T.SUBS_NONE to "None") + offer.subtitles.map { it to it } + if (offer.subtitles.size > 1) listOf(T.SUBS_ALL to "All") else emptyList(), subs, onSubs)
     else if (offer.subtitlesLater) TrackChips("Subtitles", "download_track_subs",
-        listOf(T.SUBS_NONE to "None") + offer.subtitleLanguages.map { it to it } + listOf(T.SUBS_ALL to tr(R.string.save_all_the_source_has, "Save all the source has")), subs, onSubs)
+        listOf(T.SUBS_NONE to "None") + offer.subtitleLanguages.map { it to it } + listOf(T.SUBS_ALL to "Save all the source has"), subs, onSubs)
 }
 
 /** NF-2b: quality for this download only (Settings → Downloads → Quality stays the default). */

@@ -146,7 +146,7 @@ object OnlineDownloads {
     }
 
     /** Folder a YouTube download goes into ([enqueueYouTube]). */
-    fun youTubeFolder(audioOnly: Boolean, music: Boolean) = if (audioOnly || music) tr(R.string.youtube_music, "YouTube Music") else "YouTube"
+    fun youTubeFolder(audioOnly: Boolean, music: Boolean) = if (audioOnly || music) "YouTube Music" else "YouTube"
 
     fun fileOf(context: Context, item: Item): File =
         if (item.hidden) File(PrivateDownloads.vaultDir(context, item.profile).apply { mkdirs() }, item.fileName)

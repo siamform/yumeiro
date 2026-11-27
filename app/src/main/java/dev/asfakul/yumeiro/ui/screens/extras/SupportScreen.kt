@@ -78,7 +78,7 @@ object SupportInfo {
             Entry(tr(R.string.routing_number, "Routing number"), "090270608"),
         )),
         Group("PayPal", Icons.Default.Payments, listOf(
-            Entry("PayPal", "asfakulsiam0@gmail.com", tr(R.string.send_as_friends_family_if_you, "Send as Friends & Family if you can")),
+            Entry("PayPal", "asfakulsiam0@gmail.com", "Send as Friends & Family if you can"),
         )),
         Group("Crypto", Icons.Default.CurrencyBitcoin, listOf(
             Entry(tr(R.string.btc_bnb_usdt, "BTC · BNB · USDT"), "0x17a2dd19ce38b5bbb22e25c526a1c89522fdda88", tr(R.string.bnb_smart_chain_bep_20_only, "BNB Smart Chain (BEP-20) only")),

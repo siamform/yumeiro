@@ -22,8 +22,8 @@ object PlayerSettings {
     /** What Back does while a video plays: shrink to the floating player, system PiP, or close. */
     enum class BackAction(val label: String, val detail: String) {
         MINIMIZE(tr(R.string.floating_player, "Floating player"), tr(R.string.shrink_into_a_small_player_over, "Shrink into a small player over the app so you can keep browsing (like YouTube). Leaving the app turns it into picture-in-picture")),
-        PIP("Picture-in-picture", tr(R.string.send_the_whole_app_into_androids, "Send the whole app into Android's picture-in-picture window right away")),
-        CLOSE("Close", tr(R.string.stop_the_video_and_close_the, "Stop the video and close the player")),
+        PIP("Picture-in-picture", "Send the whole app into Android's picture-in-picture window right away"),
+        CLOSE("Close", "Stop the video and close the player"),
     }
     private val _backAction = MutableStateFlow(BackAction.MINIMIZE)
     val backAction: StateFlow<BackAction> = _backAction.asStateFlow()

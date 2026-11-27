@@ -312,7 +312,7 @@ fun NowPlayingScreen(
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        track?.title?.takeIf { it.isNotBlank() } ?: if (track != null) "Untitled" else tr(R.string.select_a_song, "Select a song"), style = MaterialTheme.typography.headlineLarge,
+                        track?.title?.takeIf { it.isNotBlank() } ?: if (track != null) "Untitled" else "Select a song", style = MaterialTheme.typography.headlineLarge,
                         color = TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         // Long titles drift slowly instead of being cut off (still when reduced motion is on).
                         modifier = Modifier.testTag("now_playing_title")

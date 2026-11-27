@@ -177,10 +177,10 @@ internal data class HeroSlide(
 
 internal fun EpisodeCard.toSlide() = HeroSlide(
     key = bookmark.key, name = bookmark.name, poster = bookmark.posterUrl, headers = bookmark.posterHeaders,
-    badge = if (fresh) (if (bookmark.newEpisodes == 1) tr(R.string.new_episode_2, "New episode") else "${bookmark.newEpisodes} new") else bookmark.status.label,
+    badge = if (fresh) (if (bookmark.newEpisodes == 1) tr(R.string.new_episode, "New episode") else "${bookmark.newEpisodes} new") else bookmark.status.label,
     fresh = fresh, line = episodeLine,
     meta = listOfNotNull(foundAt?.let { "Found ${shortDate(it)}" }, bookmark.api).joinToString(" · "),
-    cta = if (fresh) tr(R.string.watch_now, "Watch now") else "Episodes",
+    cta = if (fresh) "Watch now" else "Episodes",
 )
 
 /** Series with new or next episodes, as an auto-advancing hero carousel. */

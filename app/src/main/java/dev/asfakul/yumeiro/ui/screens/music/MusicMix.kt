@@ -234,20 +234,20 @@ fun MusicMixScreen(
             }
         }
         if (woven.isNotEmpty()) {
-            item("up_next_head") { MixHeader("Up next in your mix", tr(R.string.yours_and_online_woven_together, "Yours and online, woven together")) }
+            item("up_next_head") { MixHeader("Up next in your mix", "Yours and online, woven together") }
             itemsIndexed(woven.take(12), key = { i, e -> "w$i" + e.key }) { i, e -> MixRow(e, e.key == currentTrackId) { playAt(i) } }
         }
-        if (quick.isNotEmpty()) item("quick") { OnlineShelf("Quick picks", tr(R.string.from_youtube_music, "From YouTube Music"), quick.take(16), onOpenOnline, onPlayOnline) }
+        if (quick.isNotEmpty()) item("quick") { OnlineShelf("Quick picks", "From YouTube Music", quick.take(16), onOpenOnline, onPlayOnline) }
         because.forEach { (artist, songs) -> item("because_$artist") { OnlineShelf(tr(R.string.because_you_play, "Because you play %1\$s", artist), tr(R.string.on_youtube_music, "On YouTube Music"), songs, null, onPlayOnline) } }
         if (loading && online && quick.isEmpty()) item("loading") {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 repeat(3) { dev.asfakul.yumeiro.ui.components.SkeletonBlock(128.dp, 128.dp, shape = yuRound(14)) }
             }
         }
-        if (mostPlayed.isNotEmpty()) item("most") { TrackShelf("Most played", tr(R.string.on_this_phone, "On this phone"), mostPlayed.take(12), currentTrackId, onPlayTrack) }
-        if (onlineSongs.isNotEmpty()) item("online") { OnlineShelf("Played online", tr(R.string.your_youtube_music_history, "Your YouTube Music history"), onlineSongs.take(16), onOpenOnline, onPlayOnline) }
-        if (recentlyPlayed.isNotEmpty()) item("recent") { TrackShelf("Played recently", tr(R.string.device_and_online, "Device and online"), recentlyPlayed.take(12), currentTrackId, onPlayTrack) }
-        if (fresh.isNotEmpty()) item("fresh") { TrackShelf("New on this phone", tr(R.string.newest_files_first, "Newest files first"), fresh, currentTrackId, onPlayTrack) }
+        if (mostPlayed.isNotEmpty()) item("most") { TrackShelf("Most played", "On this phone", mostPlayed.take(12), currentTrackId, onPlayTrack) }
+        if (onlineSongs.isNotEmpty()) item("online") { OnlineShelf("Played online", "Your YouTube Music history", onlineSongs.take(16), onOpenOnline, onPlayOnline) }
+        if (recentlyPlayed.isNotEmpty()) item("recent") { TrackShelf("Played recently", "Device and online", recentlyPlayed.take(12), currentTrackId, onPlayTrack) }
+        if (fresh.isNotEmpty()) item("fresh") { TrackShelf("New on this phone", "Newest files first", fresh, currentTrackId, onPlayTrack) }
     }
     androidx.compose.animation.AnimatedVisibility(
         visible = searching,

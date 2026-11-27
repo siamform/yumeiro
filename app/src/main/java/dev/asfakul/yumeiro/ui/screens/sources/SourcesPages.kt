@@ -216,24 +216,24 @@ internal fun SourcesHome(lastOpened: SourcePage?, onOpenCloudStream: (() -> Unit
         contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item("h_ext") { SectionTitle("Extensions") }
         if (onOpenCloudStream != null) item("cloudstream") {
-            SourcePageRow("src_page_cloudstream", Icons.Filled.Movie, "CloudStream", tr(R.string.movies_series_anime_and_live_tv, "Movies, series, anime and live TV"), tr(R.string.extensions_and_repositories, "Extensions and repositories"), onOpen = onOpenCloudStream)
+            SourcePageRow("src_page_cloudstream", Icons.Filled.Movie, "CloudStream", "Movies, series, anime and live TV", "Extensions and repositories", onOpen = onOpenCloudStream)
         }
         item("aniyomi") {
             val (s, a) = tachiStatus(TachiyomiExtensions.Kind.ANIME)
-            SourcePageRow("src_page_aniyomi", Icons.Filled.Extension, "Aniyomi", tr(R.string.anime_extensions, "Anime extensions"), s, a, focus.getValue(SourcePage.ANIYOMI)) { onOpen(SourcePage.ANIYOMI) }
+            SourcePageRow("src_page_aniyomi", Icons.Filled.Extension, "Aniyomi", "Anime extensions", s, a, focus.getValue(SourcePage.ANIYOMI)) { onOpen(SourcePage.ANIYOMI) }
         }
         item("mihon") {
             val (s, a) = tachiStatus(TachiyomiExtensions.Kind.MANGA)
-            SourcePageRow("src_page_mihon", Icons.Filled.MenuBook, "Mihon", tr(R.string.manga_extensions, "Manga extensions"), s, a, focus.getValue(SourcePage.MIHON)) { onOpen(SourcePage.MIHON) }
+            SourcePageRow("src_page_mihon", Icons.Filled.MenuBook, "Mihon", "Manga extensions", s, a, focus.getValue(SourcePage.MIHON)) { onOpen(SourcePage.MIHON) }
         }
         item("js") {
             val s = if (js.installed.isEmpty() && js.repos.isEmpty()) tr(R.string.not_set_up, "Not set up") else "${count(js.installed.size, "source")} · ${count(js.repos.size, "repository", "repositories")}"
-            SourcePageRow("src_page_js", Icons.Filled.Code, "JavaScript", tr(R.string.mangayomi_format_sources, "Mangayomi-format sources"), s, null, focus.getValue(SourcePage.JS)) { onOpen(SourcePage.JS) }
+            SourcePageRow("src_page_js", Icons.Filled.Code, "JavaScript", "Mangayomi-format sources", s, null, focus.getValue(SourcePage.JS)) { onOpen(SourcePage.JS) }
         }
         item("h_add") { SectionTitle(tr(R.string.add_ons_and_scripts, "Add-ons and scripts")) }
         item("stremio") {
             val s = if (addons.isEmpty()) tr(R.string.not_set_up, "Not set up") else count(addons.size, "add-on")
-            SourcePageRow("src_page_stremio", Icons.Filled.Hub, "Stremio", tr(R.string.catalogs_and_streams, "Catalogs and streams"), s, null, focus.getValue(SourcePage.STREMIO)) { onOpen(SourcePage.STREMIO) }
+            SourcePageRow("src_page_stremio", Icons.Filled.Hub, "Stremio", "Catalogs and streams", s, null, focus.getValue(SourcePage.STREMIO)) { onOpen(SourcePage.STREMIO) }
         }
         item("scripts") {
             val s = if (scripts.repos.isEmpty()) tr(R.string.not_set_up, "Not set up") else "${count(scripts.installed.size, "source")} · ${count(scripts.repos.size, "repository", "repositories")}"

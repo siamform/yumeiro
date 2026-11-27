@@ -42,7 +42,7 @@ object SourceMarket {
     private const val FRESH_MS = 6 * 60 * 60 * 1000L
 
     enum class Kind(val key: String) { ANIYOMI("aniyomi"), MIHON("mihon"), MANGAYOMI("mangayomi") }
-    enum class Sort(val label: String) { TOP("Top"), RECENT(tr(R.string.recently_updated, "Recently updated")), MOST(tr(R.string.most_extensions, "Most extensions")) }
+    enum class Sort(val label: String) { TOP("Top"), RECENT("Recently updated"), MOST("Most extensions") }
     enum class AddonSort(val label: String) { FEATURED("Featured"), NAME("A–Z") }
 
     data class Repo(

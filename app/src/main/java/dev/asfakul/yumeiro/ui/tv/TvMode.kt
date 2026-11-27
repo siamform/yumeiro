@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.tv
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.app.UiModeManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -28,7 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * that report themselves wrongly (common on cheap Android TV boxes running a phone image).
  */
 object TvMode {
-    enum class Pref(val label: String) { AUTO("Automatic"), TV("TV"), PHONE(tr(R.string.phone_tablet, "Phone & tablet")) }
+    enum class Pref(val label: String) { AUTO("Automatic"), TV("TV"), PHONE("Phone & tablet") }
 
     private const val PREFS = "yumeiro_tv_mode"
     private const val KEY = "layout"

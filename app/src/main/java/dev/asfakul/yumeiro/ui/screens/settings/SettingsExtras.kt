@@ -270,7 +270,7 @@ fun VideoPlayerSettingsCard() {
         SettingsToggleRow(tr(R.string.background_play, "Background play"), tr(R.string.keep_videos_playing_with_the_screen, "Keep videos playing with the screen off or in other apps, with controls in the notification. Off: the video pauses when you leave the app"), bg,
             { PlayerSettings.setBackgroundPlay(context, it) }, "toggle_bg_play")
         SettingsDivider()
-        SettingsToggleRow("Picture-in-picture", tr(R.string.show_the_pip_button_and_shrink, "Show the PiP button and shrink the video into a floating window when you leave the app. Off: PiP is disabled"), pip,
+        SettingsToggleRow("Picture-in-picture", "Show the PiP button and shrink the video into a floating window when you leave the app. Off: PiP is disabled", pip,
             { PlayerSettings.setAutoPip(context, it) }, "toggle_auto_pip")
         SettingsDivider()
         if (!dev.asfakul.yumeiro.Edition.isTv) {

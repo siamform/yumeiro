@@ -94,10 +94,10 @@ object YtDiscovery {
         // 4. Your newest searches (skipping ones that are already a topic).
         input.searches.take(4).forEach { if (out.size < input.maxFeeds) add(YtFeed(YtFeed.Kind.QUERY, it, it, tr(R.string.from_your_searches, "From your searches"), m)) }
         // 5. Live chart.
-        if (m) add(YtFeed(YtFeed.Kind.KIOSK, "trending_music", tr(R.string.trending_music, "Trending music"), "Trending", true))
+        if (m) add(YtFeed(YtFeed.Kind.KIOSK, "trending_music", "Trending music", "Trending", true))
         else {
-            add(YtFeed(YtFeed.Kind.KIOSK, "trending_gaming", tr(R.string.trending_in_gaming, "Trending in gaming"), "Trending", false))
-            add(YtFeed(YtFeed.Kind.KIOSK, "live", tr(R.string.live_now, "Live now"), "Trending", false))
+            add(YtFeed(YtFeed.Kind.KIOSK, "trending_gaming", "Trending in gaming", "Trending", false))
+            add(YtFeed(YtFeed.Kind.KIOSK, "live", "Live now", "Trending", false))
         }
         // 6. Explore mix: 3 picks from the pool, rotated daily / on shuffle.
         rotate(if (m) MUSIC_POOL else VIDEO_POOL, input.rotation).take(3).forEach {

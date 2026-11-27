@@ -546,7 +546,7 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
         is YmItem.Song -> if (compact) QuickPickRow(item, art, pad, onSong) else Row(
             // No download icon on song rows (it cluttered search results): long-press downloads.
             Modifier.fillMaxWidth().combinedClickable(
-                onClickLabel = "Play", onLongClickLabel = tr(R.string.download_song, "Download song"),
+                onClickLabel = "Play", onLongClickLabel = "Download song",
                 onLongClick = { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) },
                 onClick = { onSong(item) },
             ).padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
@@ -609,7 +609,7 @@ internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmI
         Modifier.fillMaxWidth().feedCard("ytmusic", item.videoId).clip(yuRound(12))
             .background(if (isCurrent) accent.copy(alpha = 0.10f) else Color.Transparent)
             .combinedClickable(
-                onClickLabel = "Play", onLongClickLabel = tr(R.string.download_song, "Download song"),
+                onClickLabel = "Play", onLongClickLabel = "Download song",
                 onLongClick = { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); download() },
                 onClick = { onSong(item) },
             )
@@ -759,7 +759,7 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
                 quality = tr(R.string.best_audio_m4a_when_offered, "Best audio (M4A when offered)"), defaultKeep = true,
                 // OWN-18: songs x their length at 128 kbps (YouTube Music's usual best audio).
                 sizeFor = { _ -> dev.asfakul.yumeiro.online.download.DownloadSize.songsEstimate(all.filter { s -> left.any { it.id == s.videoId } }.map { it.durationSec }) },
-                facts = listOf("YouTube Music", tr(R.string.audio_only, "Audio only")),
+                facts = listOf("YouTube Music", "Audio only"),
             ) { keep -> if (dev.asfakul.yumeiro.online.download.OnlineDownloads.enqueueYouTubeBatch(context, left, keep) == 0) tr(R.string.already_downloaded_or_queued, "Already downloaded or queued") else null })
         }
     }

@@ -89,7 +89,7 @@ import kotlinx.coroutines.launch
 import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private enum class MarketTab(val label: String) { DISCOVER("Discover"), REPOS("Repositories"), INSTALLED("Installed") }
-private enum class MarketSort(val label: String) { TOP("Top"), UPDATED(tr(R.string.recently_updated, "Recently updated")), NAME("A–Z") }
+private enum class MarketSort(val label: String) { TOP("Top"), UPDATED("Recently updated"), NAME("A–Z") }
 
 /**
  * Videos → Online → Market. Every extension the market workflow found (curated, CloudStream's

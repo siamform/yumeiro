@@ -170,7 +170,7 @@ fun NotificationSettingsCard() {
             SettingsToggleRow(tr(R.string.service_alerts, "Service alerts"), tr(R.string.planned_maintenance_outages_and_messages_for, "Planned maintenance, outages and messages for this device. Rare, but worth knowing"), service,
                 { ns.set(context, Key.SERVICE, it) }, "toggle_notify_service")
             SettingsDivider()
-            SettingsToggleRow("Suggestions", tr(R.string.an_occasional_evening_idea_like_a, "An occasional evening idea, like a movie or some music (at most every 3 days)"), nudge,
+            SettingsToggleRow("Suggestions", "An occasional evening idea, like a movie or some music (at most every 3 days)", nudge,
                 { ns.setNudges(context, it) }, "toggle_notify_nudges")
             SettingsDivider()
             SettingsToggleRow(tr(R.string.yumeiro_chime, "Yumeiro chime"), tr(R.string.play_yumeiros_own_sound_off_makes, "Play Yumeiro's own sound. Off makes notifications silent"), sound,
@@ -261,20 +261,20 @@ fun PermissionsCard(onMediaGranted: () -> Unit) {
         else PermissionCenter.explainDenied(context, PermissionCenter.mediaPermissions().first(), tr(R.string.music_videos_access, "Music & videos access"))
     }
     SettingsCard {
-        SettingsActionRow("Notifications", tr(R.string.new_episodes_extensions_and_app_updates, "New episodes, extensions and app updates"), "perm_notifications",
-            status = if (notif) "Allowed" else tr(R.string.not_allowed, "Not allowed"), ok = notif) {
+        SettingsActionRow("Notifications", "New episodes, extensions and app updates", "perm_notifications",
+            status = if (notif) "Allowed" else "Not allowed", ok = notif) {
             if (notif) PermissionCenter.openNotificationSettings(context)
             else if (Build.VERSION.SDK_INT >= 33) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             else PermissionCenter.openNotificationSettings(context)
         }
         SettingsDivider()
         SettingsActionRow(tr(R.string.music_videos, "Music & videos"), tr(R.string.find_the_songs_and_videos_on, "Find the songs and videos on this device"), "perm_media",
-            status = if (media) "Allowed" else tr(R.string.not_allowed, "Not allowed"), ok = media) {
+            status = if (media) "Allowed" else "Not allowed", ok = media) {
             if (media) PermissionCenter.openAppSettings(context) else mediaLauncher.launch(PermissionCenter.mediaPermissions())
         }
         SettingsDivider()
         SettingsActionRow(tr(R.string.install_app_updates, "Install app updates"), tr(R.string.lets_yumeiro_install_its_own_updates, "Lets Yumeiro install its own updates after you tap Update"), "perm_install",
-            status = if (install) "Allowed" else tr(R.string.ask_when_needed, "Ask when needed"), ok = if (install) true else null) {
+            status = if (install) "Allowed" else "Ask when needed", ok = if (install) true else null) {
             PermissionCenter.openInstallSettings(context)
         }
         SettingsDivider()
@@ -387,7 +387,7 @@ fun SocialMediaCard() {
             SocialLinkRow(dev.asfakul.yumeiro.notify.SocialLinks.yumeiro, "social_")
         }
         SettingsDivider()
-        SettingsActionRow("Website", tr(R.string.downloads_news_and_guides_yumeiro_click, "Downloads, news and guides · yumeiro.click"), "social_website") {
+        SettingsActionRow("Website", "Downloads, news and guides · yumeiro.click", "social_website") {
             Links.open(context, Reminders.WEBSITE_URL)
         }
         SettingsDivider()

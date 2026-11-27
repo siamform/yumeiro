@@ -120,7 +120,7 @@ private sealed interface Load<out T> {
 
 internal fun friendly(t: Throwable): String = when {
     YtAccount.accountCanHelp(t) -> YtAccount.blockedHint()
-    t.javaClass.simpleName.contains("ReCaptcha") -> tr(R.string.youtube_is_rate_limiting_this_network, "YouTube is rate-limiting this network. Try again in a few minutes or switch networks.")
+    t.javaClass.simpleName.contains("ReCaptcha") -> "YouTube is rate-limiting this network. Try again in a few minutes or switch networks."
     !dev.asfakul.yumeiro.network.Connectivity.online.value -> tr(R.string.youre_offline_your_downloads_and_songs, "You're offline. Your downloads and songs on this phone still play.")
     t is java.io.IOException -> tr(R.string.couldnt_reach_youtube_check_your_connection, "Couldn't reach YouTube. Check your connection and try again.")
     else -> readable(dev.asfakul.yumeiro.online.OnlineErrors.friendly(t, tr(R.string.youtube_didnt_answer_try_again_in, "YouTube didn't answer. Try again in a moment.")))
@@ -128,7 +128,7 @@ internal fun friendly(t: Throwable): String = when {
 
 /** Internal library or resource messages are never shown to people as-is. */
 internal fun readable(m: String): String {
-    val internal = listOf("resource", "Exception", "null", "PublicSuffix", "java.", "kotlin.", tr(R.string.unable_to_load, "Unable to load"))
+    val internal = listOf("resource", "Exception", "null", "PublicSuffix", "java.", "kotlin.", "Unable to load")
     return if (m.isBlank() || internal.any { m.contains(it, ignoreCase = false) }) tr(R.string.youtube_didnt_answer_try_again_in, "YouTube didn't answer. Try again in a moment.") else m
 }
 

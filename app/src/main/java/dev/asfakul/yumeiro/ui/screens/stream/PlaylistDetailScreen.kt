@@ -152,7 +152,7 @@ fun PlaylistDetailScreen(
     val playlist: StreamPlaylist? = if (isOpened) null else playlists.firstOrNull { it.id == slug }
     val showing = if (isOpened) repoId == null else repoId == slug
     val channels = if (showing) repoChannels else emptyList()
-    val title = if (isOpened) repoName ?: tr(R.string.opened_list, "Opened list") else playlist?.name ?: "Playlist"
+    val title = if (isOpened) repoName ?: "Opened list" else playlist?.name ?: "Playlist"
     val editable = playlist?.isLocal == true
     val marketEntry = (market as? PlaylistMarket.State.Ready)?.catalog?.entries?.firstOrNull { it.id == playlist?.marketId }
     val updateAvailable = playlist != null && marketEntry?.sha256 != null && marketEntry.sha256 != playlist.marketSha

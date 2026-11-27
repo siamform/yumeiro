@@ -647,12 +647,12 @@ fun PageStreamFinderDialog(
 
     /** ADCHAIN-2: a pop-up the filter held back; the person can still open it. */
     fun popupHeld(target: String?) = main.post {
-        barNote = BarNote(tr(R.string.pop_up_blocked, "Pop-up blocked"), if (target != null) "Open" else null, target?.let { t -> { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, t, emptyMap()) }; Unit } })
+        barNote = BarNote("Pop-up blocked", if (target != null) "Open" else null, target?.let { t -> { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, t, emptyMap()) }; Unit } })
     }
 
     /** B12: Stop redirects held the page's own jump to another site; the person can still go there. */
     fun redirectHeld(target: String) = main.post {
-        barNote = BarNote(tr(R.string.redirect_stopped, "Redirect stopped"), "Open", { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, target, emptyMap()) }; Unit })
+        barNote = BarNote("Redirect stopped", "Open", { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, target, emptyMap()) }; Unit })
     }
 
     fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
@@ -898,7 +898,7 @@ fun PageStreamFinderDialog(
                                     @JavascriptInterface fun onPicked(selector: String) = main.post {
                                         val url = currentUrl
                                         picking = false
-                                        barNote = if (dev.asfakul.yumeiro.online.web.ElementBlocker.add(appContext, url, selector)) BarNote(tr(R.string.hidden_on_this_site_from_now, "Hidden on this site from now on"), "Undo") {
+                                        barNote = if (dev.asfakul.yumeiro.online.web.ElementBlocker.add(appContext, url, selector)) BarNote("Hidden on this site from now on", "Undo") {
                                             dev.asfakul.yumeiro.online.web.ElementBlocker.undoLast(appContext, url)
                                             webViewRef?.reload()
                                         } else BarNote(tr(R.string.that_part_cant_be_blocked, "That part can't be blocked"), null, null)

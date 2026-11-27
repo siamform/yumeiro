@@ -468,7 +468,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                 Text(d, color = TextSecondary, fontSize = 13.sp, maxLines = if (open) Int.MAX_VALUE else 4, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 8.dp).clickable { open = !open })
             } }
-            error?.let { e -> item("err") { StateMessage(Icons.Default.ErrorOutline, tr(R.string.couldnt_load, "Couldn't load"), e, primary = "Retry" to { attempt++ }) } }
+            error?.let { e -> item("err") { StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { attempt++ }) } }
             if (chapters == null && error == null) item("loading") {
                 dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 6, modifier = Modifier.padding(top = 12.dp))
             }
@@ -677,7 +677,7 @@ private fun MangaReaderChapter(
         val list = pages
         when {
             error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                StateMessage(Icons.Default.ErrorOutline, tr(R.string.couldnt_open_chapter, "Couldn't open chapter"), error, primary = "Retry" to { attempt++ })
+                StateMessage(Icons.Default.ErrorOutline, "Couldn't open chapter", error, primary = "Retry" to { attempt++ })
             }
             list == null -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center))
             vertical -> {

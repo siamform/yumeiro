@@ -181,8 +181,8 @@ object SportsScores {
         return Board(sport, day, sortLeagues(leagues), Source.ESPN, now)
     }
 
-    private val SDB_LIVE = setOf("1H", "2H", "HT", "ET", "BT", "P", "LIVE", tr(R.string.in_play, "IN PLAY"), "Q1", "Q2", "Q3", "Q4", "OT", "INT")
-    private val SDB_DONE = setOf("FT", "AET", "PEN", "AP", tr(R.string.match_finished, "MATCH FINISHED"), "FINISHED", "AOT", "FT_PEN")
+    private val SDB_LIVE = setOf("1H", "2H", "HT", "ET", "BT", "P", "LIVE", "IN PLAY", "Q1", "Q2", "Q3", "Q4", "OT", "INT")
+    private val SDB_DONE = setOf("FT", "AET", "PEN", "AP", "MATCH FINISHED", "FINISHED", "AOT", "FT_PEN")
     private val SDB_OFF = setOf("PST", "POSTPONED", "CANC", "CANCELLED", "ABD", "ABANDONED", "SUSP", "AWD", "WO")
 
     fun parseSportsDb(json: String, sport: Sport, day: LocalDate, now: Long): Board {

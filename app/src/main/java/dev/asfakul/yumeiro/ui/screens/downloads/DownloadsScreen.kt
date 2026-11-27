@@ -100,7 +100,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import dev.asfakul.yumeiro.ui.theme.yuRound
 
-enum class DownloadFilter(val label: String) { ALL("All"), OFFLINE("Offline"), PERMANENT("Permanent"), ACTIVE(tr(R.string.in_progress, "In progress")) }
+enum class DownloadFilter(val label: String) { ALL("All"), OFFLINE("Offline"), PERMANENT("Permanent"), ACTIVE("In progress") }
 
 /**
  * Downloads page: in-progress queue, then Permanent and Offline copies grouped by series folder,

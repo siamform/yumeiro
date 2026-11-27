@@ -84,7 +84,7 @@ object YumeiroCatalog {
         Shelf("kdrama", tr(R.string.korean_drama, "Korean drama")), Shelf("cdrama", tr(R.string.chinese_drama, "Chinese drama")), Shelf("jdrama", tr(R.string.japanese_drama, "Japanese drama")),
         Shelf("thai", tr(R.string.thai_series, "Thai series")), Shelf("turkish", tr(R.string.turkish_series, "Turkish series")),
         Shelf("hindi", tr(R.string.hindi_movies, "Hindi movies")), Shelf("telugu", tr(R.string.telugu_movies, "Telugu movies")), Shelf("tamil", tr(R.string.tamil_movies, "Tamil movies")), Shelf("bangla", tr(R.string.bangla_movies, "Bangla movies")),
-        Shelf("spanish", tr(R.string.spanish_language_series, "Spanish-language series")), Shelf("documentaries", "Documentaries"), Shelf("kids", tr(R.string.kids_and_family, "Kids and family")),
+        Shelf("spanish", "Spanish-language series"), Shelf("documentaries", "Documentaries"), Shelf("kids", "Kids and family"),
     )
 
     data class Ref(val kind: String, val id: Long, val season: Int? = null, val episode: Int? = null)

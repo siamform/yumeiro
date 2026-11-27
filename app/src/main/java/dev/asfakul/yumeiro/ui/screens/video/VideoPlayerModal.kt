@@ -797,7 +797,7 @@ private fun VideoPlayerModalContent(
                 playerError = when {
                     error.errorCodeName.contains("FILE_NOT_FOUND") -> tr(R.string.this_file_was_moved_or_deleted, "This file was moved or deleted.")
                     error.errorCodeName.contains("NO_PERMISSION") -> tr(R.string.yumeiro_cant_read_this_file_allow, "Yumeiro can't read this file. Allow media access in Settings.")
-                    error.errorCodeName.contains("DECOD") || error.errorCodeName.contains("FORMAT") -> tr(R.string.this_phone_cant_decode_this_videos, "This phone can't decode this video's format. It may play in another app or after converting to MP4.")
+                    error.errorCodeName.contains("DECOD") || error.errorCodeName.contains("FORMAT") -> "This phone can't decode this video's format. It may play in another app or after converting to MP4."
                     else -> "This video couldn't play (${error.errorCodeName.removePrefix("ERROR_CODE_").lowercase().replace('_', ' ')})."
                 }
                 isBuffering = false

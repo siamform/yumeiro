@@ -261,7 +261,7 @@ internal fun HuePage(
                         otherCopy?.let { c -> dev.asfakul.yumeiro.online.OtherCopy.label(c) to { onTryCopy(c) } } ?: ("Search" to onSearch)
                     else -> null
                 }
-                HueNotice(tr(R.string.didnt_load, "%1\$s didn't load: %2\$s", name, error), "Retry", onRetry, second?.first, second?.second)
+                HueNotice("$name didn't load: $error", "Retry", onRetry, second?.first, second?.second)
             }
             feeds.isEmpty() -> item("empty") { HueNotice(tr(R.string.nothing_to_show_on_right_now, "Nothing to show on %1\$s right now", name)) }
             else -> {

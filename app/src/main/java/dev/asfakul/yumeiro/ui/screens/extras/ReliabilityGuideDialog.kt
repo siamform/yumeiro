@@ -116,7 +116,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
                 onClick = onClose, shape = yuRound(16),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                 modifier = Modifier.fillMaxWidth().height(48.dp).testTag("guide_close"),
-            ) { Text(if (status.allGood) tr(R.string.all_set, "All set") else "Close", fontWeight = FontWeight.Bold) }
+            ) { Text(if (status.allGood) "All set" else "Close", fontWeight = FontWeight.Bold) }
         }
     }
     if (inline || dev.asfakul.yumeiro.ui.components.LocalPopupPreview.current) { ReminderSurface("reliability_guide", Modifier.padding(horizontal = 20.dp), body); return }

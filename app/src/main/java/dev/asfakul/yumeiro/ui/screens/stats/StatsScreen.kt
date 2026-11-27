@@ -108,7 +108,7 @@ fun StatsScreen(onBack: () -> Unit) {
                 SectionTitle("Activity")
                 ActivityMap(byDay, today, selected, onSelect = { selected = it })
                 val d = byDay[selected]
-                val label = LocalDate.ofEpochDay(selected).format(DateTimeFormatter.ofPattern(tr(R.string.eee_d_mmm, "EEE d MMM"), locale))
+                val label = LocalDate.ofEpochDay(selected).format(DateTimeFormatter.ofPattern("EEE d MMM", locale))
                 Text(
                     if (d == null || !d.active) tr(R.string.nothing_played, "%1\$s: nothing played", label) else "$label: ${StatsMath.duration(d.totalMs)} · ${plays(d.plays.sum())}",
                     color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp).testTag("stats_selected_day"),

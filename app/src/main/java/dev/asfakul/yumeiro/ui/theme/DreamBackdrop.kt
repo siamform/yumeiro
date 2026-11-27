@@ -45,10 +45,10 @@ import java.io.File
 enum class DreamScene { TSUKI, WASHI, AFTERGLOW, MORNING, NOON, AFTERNOON, EVENING, MIDNIGHT, YOU }
 
 enum class BackdropStyle(val label: String, val detail: String) {
-    SCENE("Yumeiro", tr(R.string.the_original_gradient_and_glow, "The original gradient and glow")),
+    SCENE("Yumeiro", "The original gradient and glow"),
     PHOTO(tr(R.string.your_photo, "Your photo"), tr(R.string.a_picture_of_yours_softly_blurred, "A picture of yours, softly blurred")),
     /** Older saved value; treated as [SCENE]. Not shown in settings. */
-    CALM("Yumeiro", tr(R.string.the_original_gradient_and_glow, "The original gradient and glow")),
+    CALM("Yumeiro", "The original gradient and glow"),
 }
 
 /** Persisted backdrop choice (shares the appearance preferences file). */

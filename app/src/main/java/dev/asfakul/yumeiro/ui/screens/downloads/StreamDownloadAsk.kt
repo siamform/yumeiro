@@ -116,7 +116,7 @@ object StreamDownloadAsk {
             offer = offer,
             // OWN-18: size for the picked quality, subtitles and format.
             facts = listOfNotNull(
-                when (req.resolvedFormat()) { StreamFormat.HLS -> tr(R.string.hls_stream, "HLS stream"); StreamFormat.DASH -> tr(R.string.dash_stream, "DASH stream"); else -> if (other) "File" else tr(R.string.video_file, "Video file") },
+                when (req.resolvedFormat()) { StreamFormat.HLS -> "HLS stream"; StreamFormat.DASH -> "DASH stream"; else -> if (other) "File" else "Video file" },
                 named.size.takeIf { it > 0 }?.let { "$it subtitle ${if (it == 1) "file" else "files"}" },
             ),
             sizeFor = { h ->

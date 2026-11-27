@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.manga
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.res.Configuration
@@ -325,7 +323,7 @@ object MangaTlPlan {
     const val OCR_MAX_EDGE = 2048
 
     enum class Src(val code: String, val label: String) {
-        JA("ja", "Japanese"), ZH("zh", "Chinese"), KO("ko", "Korean"), LATIN("en", tr(R.string.latin_script, "Latin script"));
+        JA("ja", "Japanese"), ZH("zh", "Chinese"), KO("ko", "Korean"), LATIN("en", "Latin script");
         val cjk get() = this != LATIN
         companion object { fun of(code: String?) = entries.firstOrNull { it.code == code } ?: JA }
     }

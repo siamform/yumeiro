@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
-import dev.asfakul.yumeiro.l10n.tr
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.RepeatMode
@@ -163,7 +162,7 @@ fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
 
     val timeFmt = remember { android.text.format.DateFormat.getTimeFormat(context) }
     fun clock(i: Instant) = timeFmt.format(java.util.Date.from(i))
-    val dayFmt = remember { DateTimeFormatter.ofPattern(tr(R.string.eee_d_mmm, "EEE d MMM"), Locale.getDefault()) }
+    val dayFmt = remember { DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()) }
 
     Column(modifier.fillMaxSize().testTag("sports_page")) {
         SubPageHeader(

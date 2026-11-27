@@ -752,7 +752,7 @@ enum class MusicMode(val key: String) { DEVICE("device"), ONLINE("online"), MIX(
 }
 
 /** Header title of the Music tab for a mode ("On device", "Online", "Mix"). */
-fun musicSourceTitle(mode: MusicMode): String = when (mode) { MusicMode.DEVICE -> tr(R.string.on_device, "On device"); MusicMode.ONLINE -> "Online"; MusicMode.MIX -> "Mix" }
+fun musicSourceTitle(mode: MusicMode): String = when (mode) { MusicMode.DEVICE -> "On device"; MusicMode.ONLINE -> "Online"; MusicMode.MIX -> "Mix" }
 
 /** The Music source menu: where songs come from, each with its live status. */
 fun musicSourceOptions(songCount: Int, online: Boolean): List<dev.asfakul.yumeiro.ui.components.SourceOption> = listOf(
@@ -763,7 +763,7 @@ fun musicSourceOptions(songCount: Int, online: Boolean): List<dev.asfakul.yumeir
     ),
     dev.asfakul.yumeiro.ui.components.SourceOption(
         "online", "Online", "Search and stream from YouTube Music",
-        if (online) "Streaming" else tr(R.string.needs_internet, "Needs internet"),
+        if (online) "Streaming" else "Needs internet",
         androidx.compose.material.icons.Icons.Default.Album, "music_source_online", attention = !online,
     ),
     dev.asfakul.yumeiro.ui.components.SourceOption(

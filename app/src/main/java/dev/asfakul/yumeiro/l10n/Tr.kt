@@ -31,14 +31,14 @@ object Tr {
     @Volatile var processTag: String? = null
         private set
 
-    /** Called at start-up with the application in the picked language ([tag]), and with each activity. */
-    fun use(context: Context, tag: String? = null) {
-        res = context.resources
-        if (tag != null) markProcess(tag)
-    }
+    /** Called with each activity (already in the picked language). */
+    fun use(context: Context) { res = context.resources }
 
-    /** The first language text is made in stays this process's language. */
-    internal fun markProcess(tag: String) { if (processTag == null) processTag = tag }
+    /** Called once per process, from Application.onCreate, with the application in the picked language [tag]. */
+    fun startProcess(context: Context, tag: String) { res = context.resources; markProcess(tag) }
+
+    /** The language this process starts making text in (a new process is a new start). */
+    internal fun markProcess(tag: String) { processTag = tag }
 
     /** True when the language is now [tag] but this process already made text in another one. Pure. */
     fun staleFor(tag: String): Boolean = processTag != null && processTag != tag

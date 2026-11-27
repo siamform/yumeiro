@@ -42,7 +42,7 @@ object AppNotifier {
         EPISODES("yumeiro_episodes_v3", tr(R.string.new_episodes, "New episodes"), tr(R.string.saved_series_with_new_episodes, "Saved series with new episodes"), NotificationManager.IMPORTANCE_DEFAULT),
         DISCOVER("yumeiro_discover_v3", tr(R.string.new_extensions_streams, "New extensions & streams"), tr(R.string.new_extensions_in_the_market_and, "New extensions in the market and new stream playlists"), NotificationManager.IMPORTANCE_DEFAULT),
         NEWS("yumeiro_news_v3", tr(R.string.whats_new, "What's new"), tr(R.string.new_features_releases_and_announcements, "New features, releases and announcements"), NotificationManager.IMPORTANCE_DEFAULT),
-        NUDGE("yumeiro_suggestions_v3", "Suggestions", tr(R.string.an_occasional_idea_for_something_to, "An occasional idea for something to watch or listen to"), NotificationManager.IMPORTANCE_LOW),
+        NUDGE("yumeiro_suggestions_v3", "Suggestions", "An occasional idea for something to watch or listen to", NotificationManager.IMPORTANCE_LOW),
         ALERTS("yumeiro_alerts_v3", tr(R.string.service_alerts, "Service alerts"), tr(R.string.maintenance_outages_and_messages_for_this, "Maintenance, outages and messages for this device"), NotificationManager.IMPORTANCE_HIGH),
     }
     private val OLD_CHANNELS = listOf(

@@ -478,7 +478,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, o
             val views = (info?.views ?: item.views).takeIf { it >= 0 }?.let { formatYtViews(it) }
             WatchTitle(
                 title = info?.title ?: item.title,
-                overline = if (item.music) tr(R.string.youtube_music, "YouTube Music") else if (item.live) "Live" else "YouTube",
+                overline = if (item.music) "YouTube Music" else if (item.live) "Live" else "YouTube",
                 meta = listOfNotNull(views, info?.uploaded ?: item.uploaded, item.durationSec.takeIf { it > 0 }?.let { formatYtDuration(it) }, info?.category).joinToString(" · "),
             )
             PlaybackFactsRow()

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.subtitles
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.net.Uri
 import androidx.media3.common.MimeTypes
@@ -34,7 +32,7 @@ val SUBTITLE_LANGUAGES = listOf(
     SubtitleLanguage("eng", "English"), SubtitleLanguage("ben", "Bengali"), SubtitleLanguage("hin", "Hindi"),
     SubtitleLanguage("ara", "Arabic"), SubtitleLanguage("urd", "Urdu"), SubtitleLanguage("spa", "Spanish"),
     SubtitleLanguage("fre", "French"), SubtitleLanguage("ger", "German"), SubtitleLanguage("ita", "Italian"),
-    SubtitleLanguage("por", "Portuguese"), SubtitleLanguage("pob", tr(R.string.portuguese_br, "Portuguese (BR)")), SubtitleLanguage("rus", "Russian"),
+    SubtitleLanguage("por", "Portuguese"), SubtitleLanguage("pob", "Portuguese (BR)"), SubtitleLanguage("rus", "Russian"),
     SubtitleLanguage("tur", "Turkish"), SubtitleLanguage("ind", "Indonesian"), SubtitleLanguage("may", "Malay"),
     SubtitleLanguage("jpn", "Japanese"), SubtitleLanguage("kor", "Korean"), SubtitleLanguage("chi", "Chinese"),
     SubtitleLanguage("per", "Persian"), SubtitleLanguage("tha", "Thai"), SubtitleLanguage("vie", "Vietnamese"),

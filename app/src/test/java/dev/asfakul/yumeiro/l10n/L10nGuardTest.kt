@@ -125,6 +125,6 @@ class L10nGuardTest {
         assertFalse(Tr.staleFor(""))
         assertTrue("a new language after text was made: restart", Tr.staleFor("bn"))
         Tr.markProcess("bn")
-        assertTrue("the first language stays the process's language", Tr.staleFor("bn"))
+        assertFalse("a new process starts in the new language", Tr.staleFor("bn"))
     }
 }

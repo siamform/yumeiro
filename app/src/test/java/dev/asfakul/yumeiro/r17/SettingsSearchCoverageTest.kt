@@ -80,6 +80,6 @@ class SettingsSearchCoverageTest {
     }
 
     private companion object {
-        val TOGGLE = Regex("""SettingsToggleRow\(\s*(?:title\s*=\s*)?"([^"$]+)"""")
+        val TOGGLE = Regex("""SettingsToggleRow\(\s*(?:title\s*=\s*)?(?:tr\(R\.string\.\w+,\s*)?"([^"$]+)"""")
     }
 }

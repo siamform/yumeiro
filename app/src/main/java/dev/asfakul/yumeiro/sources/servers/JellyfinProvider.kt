@@ -84,7 +84,7 @@ class JellyfinProvider(val server: HomeServers.Server, displayName: String) : Ma
     private val token by lazy { server.secretPlain() }
     private val ctx get() = HomeServers.appContext
 
-    override val mainPage = listOf(MainPageData(tr(R.string.widget_name, "Continue watching"), "resume"), MainPageData(tr(R.string.recently_added, "Recently added"), "latest"), MainPageData("Libraries", "views"))
+    override val mainPage = listOf(MainPageData("Continue watching", "resume"), MainPageData("Recently added", "latest"), MainPageData("Libraries", "views"))
 
     private suspend fun get(path: String): JsonElement = withContext(Dispatchers.IO) {
         val req = Request.Builder().url(server.url + path).header("X-Emby-Token", token)

@@ -31,7 +31,9 @@ DRY = "--dry-run" in sys.argv
 REPORT = sys.argv[sys.argv.index("--report") + 1] if "--report" in sys.argv else None
 
 SKIP_DIRS = ("/widget",)
-SKIP_FILES = {"l10n/AppLanguage.kt", "l10n/Tr.kt"}
+SKIP_FILES = {"l10n/AppLanguage.kt", "l10n/Tr.kt",
+              # Genre names are also the match keys for providers' genre text; display labels are translated in GenreLabels.
+              "sources/hub/GenreCatalog.kt"}
 
 EXISTING = re.compile(r'<string name="([a-z0-9_]+)"(?: formatted="false")?>(.*?)</string>', re.S)
 JAVA_KEYWORDS = set("abstract assert boolean break byte case catch char class const continue default do double else enum "
@@ -64,8 +66,8 @@ UI_CALL = re.compile(r'\b(Text|SectionHeader|Chip|SettingsRow|ToggleRow|ActionRo
                      r'Pill|Badge|Hint|Tip|Row|Item|Card|Tile|Option|Entry|Choice)\w*\(\s*([^()"]*,\s*)?$')
 
 TEMPLATE = re.compile(r'(?<!\\)\$(?:\{([^{}"]*)\}|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*))')
-CODEY = re.compile(r'(://|\\r|\r|[A-Za-z]/[A-Za-z]|^[A-Z][\w-]+: |\w/\d|\(\w+;|\bHTTP/|\\u|<[a-zA-Z/!]|[{}]|=\s|^\s*[a-z0-9_.\-]+\s*$|\.kt\b|\.json\b|\.m3u8?\b|\.mp4\b|%[0-9.]*[dfx]|'
-                   r'^[A-Z0-9_]+$|[a-z][A-Z][a-z]+[A-Z]|\b(val|fun|return|null|true|false)\b\s|\(\)|&&|\|\||\\\\)')
+CODEY = re.compile(r'(://|\b(?:AND|OR|NOT) \w+:|\w:\(|=;|;\s*[A-Z][\w-]*=|\\r|\r|[A-Za-z]/[A-Za-z]|^[A-Z][\w-]+: |\w/\d|\(\w+;|\bHTTP/|\\u|<[a-zA-Z/!]|[{}]|=\s|^\s*[a-z0-9_.\-]+\s*$|\.kt\b|\.json\b|\.m3u8?\b|\.mp4\b|%[0-9.]*[dfx]|'
+                   r'^[A-Z0-9_]+$|[a-z][A-Z][a-z]+[A-Z]|\b(val|fun|return|null|true|false)\b\s|\(\)|&&|\|\||\\\\|^(?=.*(?:MMM|yyyy|dd|HH|EEE))[EMdyHhmsa ,.:/\x27-]+$)')
 
 
 def slug(text):
@@ -82,11 +84,15 @@ def xml_escape(s):
     s = s.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
     if s[:1] in ("@", "?"):
         s = "\\" + s
+    if s != s.strip() or "  " in s:
+        s = '"' + s + '"'
     return s
 
 
 def xml_unescape(s):
     import xml.sax.saxutils as su
+    if len(s) >= 2 and s[0] == '"' and s[-1] == '"' and s[-2] != "\\":
+        s = s[1:-1]
     out, i = [], 0
     while i < len(s):
         c = s[i]
@@ -262,22 +268,36 @@ def main():
                 new, last = [], 0
                 const = re.match(r'^(\s*)((?:private |internal |public )?)const val (\w+)\s*=\s*"', line)
                 prev_const = li > 0 and re.match(r'^(\s*)((?:private |internal |public )?)const val (\w+)\s*=\s*$', lines[li - 1])
+                picks, blocked = [], False
                 for (a, b, body, simple) in lits:
+                    # Only a word that looks like a name or label ("Action", "Drama") marks a data row; keys and tags don't.
+                    letters = re.fullmatch(r"[A-Z][A-Za-z'&\- ]*", body) is not None
                     before = line[:a]
                     after = line[b:]
                     if not simple or BEFORE_SKIP.search(before) or AFTER_SKIP.search(after):
+                        blocked = blocked or (letters and not re.search(r'\btr\(R\.string\.\w+,\s*$', line[:a]))
                         continue
                     if re.search(r'\btr\(R\.string\.\w+,\s*$', before) or re.search(r'stringResource\(\s*$', before):
+                        blocked = blocked or (letters and not re.search(r'\btr\(R\.string\.\w+,\s*$', line[:a]))
                         continue
                     t = as_text(body)
                     if t is None:
+                        blocked = blocked or (letters and not re.search(r'\btr\(R\.string\.\w+,\s*$', line[:a]))
                         continue
                     fmt, args = t
                     if fmt in compared:
+                        blocked = blocked or (letters and not re.search(r'\btr\(R\.string\.\w+,\s*$', line[:a]))
                         continue
                     ui = bool(UI_ARG.search(before) or UI_CALL.search(before))
                     if not human(fmt, ui):
+                        blocked = blocked or (letters and not re.search(r'\btr\(R\.string\.\w+,\s*$', line[:a]))
                         continue
+                    picks.append((a, b, fmt, args))
+                # A row of data (28 to "Action", 878 to "Science Fiction"; g("scifi", "Science Fiction")): a value
+                # stays code, so its neighbours do too, or the row is half translated and stops matching.
+                if blocked and len(lits) >= 2:
+                    picks = []
+                for (a, b, fmt, args) in picks:
                     k = key_for(fmt)
                     fallback = kotlin_escape(fmt)
                     call = f'tr(R.string.{k}, "{fallback}"' + "".join(", " + x for x in args) + ")"

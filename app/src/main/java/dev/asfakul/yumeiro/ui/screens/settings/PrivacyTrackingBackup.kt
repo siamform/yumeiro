@@ -124,7 +124,7 @@ internal fun PrivacyLockSections() {
     val hide by Privacy.hideInRecents.collectAsState()
     Column(Modifier.testTag("privacy_lock_sections")) {
         Section(tr(R.string.incognito_mode, "Incognito mode"), tr(R.string.while_on_nothing_you_watch_read, "While on, nothing you watch, read or listen to is saved: no history, no Continue watching, no tracker updates.")) {
-            SettingsToggleRow("Incognito", if (incognito) tr(R.string.on_history_is_paused, "On — history is paused") else "Off", incognito, { Privacy.setIncognito(context, it) }, "privacy_incognito")
+            SettingsToggleRow("Incognito", if (incognito) "On — history is paused" else "Off", incognito, { Privacy.setIncognito(context, it) }, "privacy_incognito")
         }
         Section(tr(R.string.app_lock, "App lock"), tr(R.string.ask_for_your_fingerprint_face_or, "Ask for your fingerprint, face or screen lock when Yumeiro opens.")) {
             SettingsToggleRow(tr(R.string.lock_yumeiro, "Lock Yumeiro"), if (Privacy.canAuthenticate(context)) tr(R.string.uses_the_devices_own_lock, "Uses the device's own lock") else tr(R.string.set_a_screen_lock_in_android, "Set a screen lock in Android settings first"), lock, { on ->
@@ -299,7 +299,7 @@ fun TrackingScreen(onBack: () -> Unit) {
         var text by remember(which) { mutableStateOf(OnlineSettings.secret(if (isAni) "anilist_client" else "mal_client").orEmpty()) }
         TsukiDialog(
             onDismissRequest = { editId = null },
-            title = { Text(if (isAni) tr(R.string.anilist_client_id, "AniList client ID") else "MyAnimeList client ID") },
+            title = { Text(if (isAni) "AniList client ID" else "MyAnimeList client ID") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(if (isAni) "Paste the Client ID from anilist.co/settings/developer. Its redirect URL must be:" else "Paste the Client ID from myanimelist.net/apiconfig (App Type: Android). Its redirect URL must be:",
@@ -351,7 +351,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                             .onFailure { error = OnlineErrors.friendly(it) }
                         busy = false
                     }
-                }) { Text(if (error != null) "Retry" else tr(R.string.sign_in, "Sign in")) }
+                }) { Text(if (error != null) "Retry" else "Sign in") }
             },
             dismissButton = { TextButton(enabled = !busy, onClick = { kitsuForm = false }) { Text(stringResource(R.string.cancel)) } },
         )
@@ -458,7 +458,7 @@ private fun TrackerCard(
                     color = TextTertiary, fontSize = 12.sp,
                 )
             }
-            StatusChip(when { user != null -> "Linked"; !configured -> tr(R.string.set_up, "Set up"); else -> "Ready" }, when { user != null -> true; !configured -> false; else -> null })
+            StatusChip(when { user != null -> "Linked"; !configured -> "Set up"; else -> "Ready" }, when { user != null -> true; !configured -> false; else -> null })
         }
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
             if (onSetUp != null && user == null) {

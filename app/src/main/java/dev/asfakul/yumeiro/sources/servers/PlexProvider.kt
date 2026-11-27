@@ -97,7 +97,7 @@ class PlexProvider(val server: HomeServers.Server, displayName: String) : MainAP
     private val token by lazy { server.secretPlain() }
     private val ctx get() = HomeServers.appContext
 
-    override val mainPage = listOf(MainPageData(tr(R.string.on_deck, "On deck"), "deck"), MainPageData(tr(R.string.recently_added, "Recently added"), "recent"), MainPageData("Libraries", "sections"))
+    override val mainPage = listOf(MainPageData("On deck", "deck"), MainPageData("Recently added", "recent"), MainPageData("Libraries", "sections"))
 
     private suspend fun get(path: String): JsonObject = withContext(Dispatchers.IO) {
         val req = with(PlexClient) { Request.Builder().url(server.url + path).plex(ctx, token) }.build()

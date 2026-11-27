@@ -131,7 +131,7 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
                         IconTile(Icons.Default.AccountCircle, YouTubeRed, size = 46)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(if (st.signedIn) "Signed in" else tr(R.string.not_signed_in, "Not signed in"), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            Text(if (st.signedIn) "Signed in" else "Not signed in", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                             Text(
                                 if (st.signedIn) "Since " + DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(st.since.takeIf { it > 0 } ?: System.currentTimeMillis()))
                                 else tr(R.string.youtube_plays_anonymously_like_newpipe, "YouTube plays anonymously, like NewPipe"),

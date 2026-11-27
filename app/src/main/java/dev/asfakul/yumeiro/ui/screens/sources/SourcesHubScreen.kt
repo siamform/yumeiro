@@ -138,7 +138,7 @@ internal fun SourcesPageNav.Header(title: String, subtitle: String? = null, acti
 private fun HomePage(nav: SourcesPageNav, lastOpened: SourcePage?, onOpenCloudStream: (() -> Unit)?) {
     val context = LocalContext.current
     var any by rememberSaveable { mutableStateOf(false) }
-    nav.Header("Sources", tr(R.string.extensions_add_ons_and_home_servers, "Extensions, add-ons and home servers")) {
+    nav.Header("Sources", "Extensions, add-ons and home servers") {
         dev.asfakul.yumeiro.ui.components.AddIconButton(tr(R.string.add_anything, "Add anything"), "sources_add_any", { any = true })
         dev.asfakul.yumeiro.ui.components.HelpIconButton(tr(R.string.about_sources, "About sources"), SourcesNav.HOME_HELP, "sources_help")
     }
@@ -319,7 +319,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
                     }
                     item("installed") { SectionTitle("Installed", "${installed.size} extension${if (installed.size == 1) "" else "s"}") }
                     if (installed.isEmpty()) item("noinst") {
-                        HubEmpty(tr(R.string.nothing_installed_yet, "Nothing installed yet."), if (repos.isEmpty()) "Add a repository" to { nav.open(HubPart.REPOS) } else "Browse extensions" to { nav.open(HubPart.BROWSE) })
+                        HubEmpty("Nothing installed yet.", if (repos.isEmpty()) "Add a repository" to { nav.open(HubPart.REPOS) } else "Browse extensions" to { nav.open(HubPart.BROWSE) })
                     }
                     items(installed, key = { "i" + it.pkg }) { e ->
                         HubCard(
@@ -334,7 +334,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
                     }
                 }
                 HubPart.BROWSE -> {
-                    if (repos.isEmpty()) item("nobrowse") { HubEmpty(tr(R.string.add_a_repository_first_its_extensions, "Add a repository first; its extensions are listed here."), "Add a repository" to { nav.open(HubPart.REPOS) }) }
+                    if (repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its extensions are listed here.", "Add a repository" to { nav.open(HubPart.REPOS) }) }
                     else {
                         item("available") {
                             BrowseHeader("Available", "${shown.size} in your ${repos.size} repositor${if (repos.size == 1) "y" else "ies"}", searchOpen, query,
@@ -434,7 +434,7 @@ private fun StremioTab(nav: SourcesPageNav) {
     var addOpen by rememberSaveable { mutableStateOf(false) }
     val part = nav.route.part ?: HubPart.INSTALLED
     Column(Modifier.fillMaxSize()) {
-        nav.Header(if (part == HubPart.BROWSE) tr(R.string.get_add_ons, "Get add-ons") else "Stremio", if (part == HubPart.BROWSE) "Stremio" else tr(R.string.catalogs_and_streams, "Catalogs and streams")) {
+        nav.Header(if (part == HubPart.BROWSE) "Get add-ons" else "Stremio", if (part == HubPart.BROWSE) "Stremio" else "Catalogs and streams") {
             dev.asfakul.yumeiro.ui.components.AddIconButton(tr(R.string.add_a_stremio_add_on, "Add a Stremio add-on"), "hub_stremio_add_plus", { addOpen = true })
             dev.asfakul.yumeiro.ui.components.HelpIconButton(tr(R.string.about_stremio_add_ons, "About Stremio add-ons"),
                 tr(R.string.stremio_add_ons_give_catalogs_movies, "Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Get add-ons or add any add-on's manifest link with +. HTTP streams and subtitles are supported; torrent-only streams are skipped."),
@@ -445,7 +445,7 @@ private fun StremioTab(nav: SourcesPageNav) {
             if (part == HubPart.INSTALLED) {
                 item("go") { SubPageLink("src_go_browse", tr(R.string.get_add_ons, "Get add-ons"), tr(R.string.suggested_add_ons_and_discover, "Suggested add-ons and Discover")) { nav.open(HubPart.BROWSE) } }
                 item("head") { SectionTitle(tr(R.string.your_add_ons, "Your add-ons"), "${addons.size} added") }
-                if (addons.isEmpty()) item("none") { HubEmpty(tr(R.string.no_add_ons_yet, "No add-ons yet."), "Get add-ons" to { nav.open(HubPart.BROWSE) }) }
+                if (addons.isEmpty()) item("none") { HubEmpty("No add-ons yet.", "Get add-ons" to { nav.open(HubPart.BROWSE) }) }
                 items(addons, key = { it.manifestUrl }) { a ->
                     val res = a.resources.joinToString(" · ") { it.name }
                     HubCard(a.name, "v${a.version} · ${a.types.joinToString()} · $res", badge = if (a.catalogs.isNotEmpty()) "${a.catalogs.size} catalogs" else null) {
@@ -454,7 +454,7 @@ private fun StremioTab(nav: SourcesPageNav) {
                 }
             } else {
                 if (addons.none { it.manifestUrl == StremioAddons.CINEMETA }) item("cinemeta") {
-                    HubCard("Cinemeta", tr(R.string.official_stremio_catalog_of_movies_and, "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons."), badge = tr(R.string.suggested, "Suggested")) {
+                    HubCard("Cinemeta", "Official Stremio catalog of movies and series (metadata only). Good base for other stream add-ons.", badge = "Suggested") {
                         TextButton(onClick = { addUrl(StremioAddons.CINEMETA) }) { Text(stringResource(R.string.add), color = SpotifyGreen) }
                     }
                 }
@@ -509,7 +509,7 @@ private fun JsTab(nav: SourcesPageNav) {
     val part = nav.route.part ?: HubPart.INSTALLED
     Column(Modifier.fillMaxSize()) {
         nav.Header(when (part) { HubPart.BROWSE -> "Browse"; HubPart.REPOS -> "Repositories"; else -> "JavaScript" },
-            if (part == HubPart.INSTALLED) tr(R.string.mangayomi_format_sources, "Mangayomi-format sources") else "JavaScript") {
+            if (part == HubPart.INSTALLED) "Mangayomi-format sources" else "JavaScript") {
             dev.asfakul.yumeiro.ui.components.AddIconButton(tr(R.string.add_a_javascript_repository, "Add a JavaScript repository"), "hub_js_add_plus", { addOpen = true })
             dev.asfakul.yumeiro.ui.components.HelpIconButton(tr(R.string.about_javascript_sources, "About JavaScript sources"),
                 tr(R.string.javascript_sources_in_the_mangayomi_format, "JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online.") +
@@ -527,7 +527,7 @@ private fun JsTab(nav: SourcesPageNav) {
                     }
                     item("inst") { SectionTitle("Installed", "${state.installed.size} sources") }
                     if (state.installed.isEmpty()) item("noinst") {
-                        HubEmpty(tr(R.string.nothing_installed_yet, "Nothing installed yet."), if (state.repos.isEmpty()) "Add a repository" to { nav.open(HubPart.REPOS) } else "Browse sources" to { nav.open(HubPart.BROWSE) })
+                        HubEmpty("Nothing installed yet.", if (state.repos.isEmpty()) "Add a repository" to { nav.open(HubPart.REPOS) } else "Browse sources" to { nav.open(HubPart.BROWSE) })
                     }
                     items(state.installed, key = { "i" + it.id }) { e ->
                         HubCard(e.name, "${e.kindLabel} · ${e.lang.uppercase()} · v${e.version}") {
@@ -536,7 +536,7 @@ private fun JsTab(nav: SourcesPageNav) {
                     }
                 }
                 HubPart.BROWSE -> {
-                    if (state.repos.isEmpty()) item("nobrowse") { HubEmpty(tr(R.string.add_a_repository_first_its_sources, "Add a repository first; its sources are listed here."), "Add a repository" to { nav.open(HubPart.REPOS) }) }
+                    if (state.repos.isEmpty()) item("nobrowse") { HubEmpty("Add a repository first; its sources are listed here.", "Add a repository" to { nav.open(HubPart.REPOS) }) }
                     else {
                         item("avail") {
                             BrowseHeader("Available", "${shown.size} JavaScript sources", searchOpen, query,
@@ -733,7 +733,7 @@ private fun ServerForm(kind: HomeServers.Kind, onDismiss: () -> Unit, onSaved: (
                     }.onSuccess { token -> busy = false; save(token) }
                         .onFailure { busy = false; plexCode = null; error = OnlineErrors.friendly(it) }
                 }
-            }) { Text(if (error != null) "Retry" else if (kind == HomeServers.Kind.PLEX) tr(R.string.sign_in_with_plex, "Sign in with Plex") else "Connect") }
+            }) { Text(if (error != null) "Retry" else if (kind == HomeServers.Kind.PLEX) "Sign in with Plex" else "Connect") }
         },
         dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )

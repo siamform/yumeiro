@@ -99,7 +99,7 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
  */
 object Discover {
     enum class Section(val label: String) {
-        DISCOVER("Discover"), MOVIES("Movies"), TV(tr(R.string.tv_shows, "TV Shows")), ANIME("Anime"), TOP(tr(R.string.top_rated, "Top Rated")), HOT(tr(R.string.hot_right_now, "Hot Right Now")),
+        DISCOVER("Discover"), MOVIES("Movies"), TV("TV Shows"), ANIME("Anime"), TOP("Top Rated"), HOT("Hot Right Now"),
     }
 
     sealed interface Shelf { val key: String }
@@ -135,7 +135,7 @@ object Discover {
     /** Pure: the shelves of a section, in order (unit-tested). */
     fun shelves(section: Section): List<Shelf> = when (section) {
         Section.DISCOVER -> listOf(
-            Row("hot", tr(R.string.hot_right_now_2, "Hot right now"), null, "hot_today"), IfYouLike(), Services("all"), Genres("all"),
+            Row("hot", tr(R.string.hot_right_now, "Hot right now"), null, "hot_today"), IfYouLike(), Services("all"), Genres("all"),
             Row("top_all", tr(R.string.all_time_greats, "All-time greats"), null, "top_movies"),
         )
         Section.MOVIES -> listOf(
@@ -157,7 +157,7 @@ object Discover {
             Row("top_a", tr(R.string.top_rated_anime, "Top rated anime"), q("tv", HubDiscover.Sort.TOP, anime = true), null),
         )
         Section.HOT -> listOf(
-            Row("hot", tr(R.string.hot_right_now_2, "Hot right now"), null, "hot_today"), IfYouLike(),
+            Row("hot", tr(R.string.hot_right_now, "Hot right now"), null, "hot_today"), IfYouLike(),
             Row("hot_m", tr(R.string.trending_movies, "Trending movies"), null, "trending_movies"), Row("hot_t", tr(R.string.trending_series, "Trending series"), null, "trending_tv"),
         )
     }
@@ -205,7 +205,7 @@ private val Tile = yuRound(16)
 @Composable
 internal fun DiscoverBar(section: Discover.Section, onPick: (Discover.Section) -> Unit, modifier: Modifier = Modifier, onFind: () -> Unit = { Discover.openFilter(dev.asfakul.yumeiro.sources.hub.DiscoverFilter()) }) {
     Column(modifier.fillMaxWidth().testTag("discover_bar")) {
-        dev.asfakul.yumeiro.ui.components.YuSection("発見", "Discover", tr(R.string.find_something_new, "Find something new"), modifier = Modifier.padding(horizontal = 16.dp))
+        dev.asfakul.yumeiro.ui.components.YuSection("発見", "Discover", "Find something new", modifier = Modifier.padding(horizontal = 16.dp))
         Row(
             Modifier.padding(horizontal = 16.dp).padding(bottom = 10.dp).fillMaxWidth().height(48.dp).clip(Chip)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))

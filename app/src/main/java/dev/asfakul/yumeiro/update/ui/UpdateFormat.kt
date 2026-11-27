@@ -64,7 +64,7 @@ internal fun eta(s: UpdateState.Downloading): String {
 
 internal fun formatDate(iso: String): String = runCatching {
     val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-    SimpleDateFormat(tr(R.string.mmm_d_yyyy, "MMM d, yyyy"), Locale.getDefault()).format(parser.parse(iso)!!)
+    SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(parser.parse(iso)!!)
 }.getOrDefault("Latest")
 
 internal fun formatRelative(epochMillis: Long, now: Long = System.currentTimeMillis()): String {

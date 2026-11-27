@@ -161,11 +161,11 @@ fun VideoLibraryContent(
             val split = remember(downloads) { dev.asfakul.yumeiro.online.download.DownloadGroups.split(downloads) }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) {
-                    LibHeader("Downloads", subtitle = if (downloads.isEmpty()) tr(R.string.watch_and_listen_without_internet, "Watch and listen without internet")
+                    LibHeader("Downloads", subtitle = if (downloads.isEmpty()) "Watch and listen without internet"
                         else listOfNotNull("${split.permanentCount} permanent", "${split.offlineCount} offline", if (split.active.isNotEmpty()) "${split.active.size} in progress" else null).joinToString(" · "))
                 }
                 if (onOpenDownloads != null) androidx.compose.material3.TextButton(onClick = onOpenDownloads, modifier = Modifier.testTag("library_downloads_manage")) {
-                    Text(if (downloads.isEmpty()) tr(R.string.how_it_works, "How it works") else "Manage", color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
+                    Text(if (downloads.isEmpty()) "How it works" else "Manage", color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

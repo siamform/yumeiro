@@ -936,7 +936,7 @@ fun VideoDetailsDialog(
                         value = "${formatDuration(video.playbackPositionMs)} / ${formatDuration(video.durationMs)} ($pct%)"
                     )
                 }
-                DetailItem(label = tr(R.string.favorite, "Favorite"), value = if (video.isFavorite) "Yes ★" else "No")
+                DetailItem(label = "Favorite", value = if (video.isFavorite) "Yes ★" else "No")
             }
         },
         confirmButton = {
@@ -1569,7 +1569,7 @@ fun SongDetailsDialog(
                 DetailItem(label = tr(R.string.title, "Title"), value = track.title)
                 DetailItem(label = tr(R.string.artist, "Artist"), value = track.artist)
                 DetailItem(label = tr(R.string.album, "Album"), value = track.album)
-                DetailItem(label = tr(R.string.duration, "Duration"), value = durationMs?.let(::formatDuration) ?: if (reading && durationMs == null) "Reading…" else "Unknown")
+                DetailItem(label = "Duration", value = durationMs?.let(::formatDuration) ?: if (reading && durationMs == null) "Reading…" else "Unknown")
                 DetailItem(label = tr(R.string.file_size, "File size"), value = if (reading && sizeBytes == null) "Reading…" else dev.asfakul.yumeiro.player.SongFacts.sizeLabel(sizeBytes, track.uri, ::formatFileSize))
                 DetailItem(label = "Folder", value = track.folderName)
                 if (track.folderPath.isNotBlank()) {

@@ -392,7 +392,7 @@ object StreamResolver {
         for (c in page.candidates) {
             if (tried >= MAX_PAGE_CANDIDATES) break
             if (PlatformRules.isYouTube(c.url)) {
-                return Resolution.Handoff(c.url, "YouTube", tr(R.string.this_page_plays_a_youtube_video, "This page plays a YouTube video that couldn't be loaded here. Try again, or open it in the YouTube app."))
+                return Resolution.Handoff(c.url, "YouTube", "This page plays a YouTube video that couldn't be loaded here. Try again, or open it in the YouTube app.")
             }
             if (c.origin == "iframe") {
                 if (depth >= MAX_IFRAME_DEPTH) continue
@@ -463,7 +463,7 @@ object StreamResolver {
                 NetworkFailure.TIMEOUT -> Resolution.Failed(tr(R.string.connection_timed_out, "Connection timed out"), tr(R.string.didnt_answer_in_time_the_server, "%1\$s didn't answer in time. The server may be overloaded or blocked on this network; try again later or on another network.", host))
                 NetworkFailure.CONNECTION -> Resolution.Failed(tr(R.string.cant_connect, "Can't connect"), tr(R.string.the_connection_to_was_refused_or, "The connection to %1\$s was refused or unreachable. The stream may be offline, or the port may be blocked on this network.", host))
                 NetworkFailure.TLS -> Resolution.Failed(tr(R.string.secure_connection_failed, "Secure connection failed"), "The HTTPS certificate of $host couldn't be verified (${p.failureMessage}). Yumeiro only trusts valid system certificates.")
-                NetworkFailure.OTHER -> Resolution.Failed(tr(R.string.network_error_2, "Network error"), p.failureMessage ?: tr(R.string.the_link_couldnt_be_opened, "The link couldn't be opened."))
+                NetworkFailure.OTHER -> Resolution.Failed(tr(R.string.network_error, "Network error"), p.failureMessage ?: tr(R.string.the_link_couldnt_be_opened, "The link couldn't be opened."))
             }
         }
         return when (p.status) {

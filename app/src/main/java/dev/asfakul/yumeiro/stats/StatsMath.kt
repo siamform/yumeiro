@@ -13,7 +13,7 @@ import dev.asfakul.yumeiro.R
  * listening time, watching time and plays per [Kind]. At most [MAX_DAYS] days are kept (about a year).
  */
 object StatsMath {
-    enum class Kind(val label: String) { MUSIC("Songs"), DEVICE(tr(R.string.videos_on_this_phone, "Videos on this phone")), ONLINE("Yumix"), YOUTUBE("YouTube") }
+    enum class Kind(val label: String) { MUSIC("Songs"), DEVICE("Videos on this phone"), ONLINE("Yumix"), YOUTUBE("YouTube") }
 
     class Day(val epochDay: Long, val musicMs: Long, val videoMs: Long, val plays: IntArray) {
         val totalMs: Long get() = musicMs + videoMs

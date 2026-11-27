@@ -40,7 +40,7 @@ object ExtensionPopups {
     private const val PREFS = "extension_popups"
     const val PERIOD_MS = 7L * 24 * 60 * 60 * 1000
 
-    enum class Mode(val label: String) { SHOW("Show"), QUIET("Quiet"), BLOCK_PROMOTIONAL(tr(R.string.block_promotional, "Block promotional")) }
+    enum class Mode(val label: String) { SHOW("Show"), QUIET("Quiet"), BLOCK_PROMOTIONAL("Block promotional") }
     enum class Kind { FUNCTIONAL, PROMOTIONAL }
     enum class Action { SHOW_FRAMED, HOLD_AND_CARD, HOLD_DEFERRED, DROP }
 

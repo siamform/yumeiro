@@ -127,9 +127,9 @@ fun OnlineSettingsCard(part: OnlinePart) {
             OnlinePart.SUBTITLES -> {
                 ValueRow(tr(R.string.subtitle_search_language, "Subtitle search language"), lang.uppercase()) { edit = "lang" }
                 Text(stringResource(R.string.subtitle_sites_all_free_use_any), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                ValueRow(tr(R.string.opensubtitles_api_key, "OpenSubtitles API key"), when { osKey.isNotBlank() -> tr(R.string.your_key, "Your key"); dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> tr(R.string.not_set, "Not set") }) { edit = "os" }
-                ValueRow(tr(R.string.subdl_api_key, "SubDL API key"), if (subdlKey.isBlank()) tr(R.string.not_set, "Not set") else "Set") { edit = "subdl" }
-                ValueRow(tr(R.string.subsource_api_key, "SubSource API key"), if (subsourceKey.isBlank()) tr(R.string.not_set, "Not set") else "Set") { edit = "subsource" }
+                ValueRow("OpenSubtitles API key", when { osKey.isNotBlank() -> "Your key"; dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> "Not set" }) { edit = "os" }
+                ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
+                ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
             }
         }
     }

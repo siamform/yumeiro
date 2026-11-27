@@ -52,6 +52,17 @@ class GroupSLanguageDeviceTest {
     // pauses the app and the recreate below needs it resumed. Granted up front like the other MainActivity tests.
     // (run 45940770266: READ_MEDIA_AUDIO was still asked, so the shared list FirstRun.grant() is used.)
     @Before fun grant() = FirstRun.grant()
+
+    // F19: a language change restarts the app. Here the restart is stood in for (it would end the test process): the
+    // hook does what the new process does first, start making text in the saved language.
+    private val restarts = java.util.concurrent.atomic.AtomicInteger()
+    @Before fun standInForRestart() {
+        dev.asfakul.yumeiro.backup.Restart.testHook = { c ->
+            restarts.incrementAndGet()
+            dev.asfakul.yumeiro.l10n.Tr.markProcess(dev.asfakul.yumeiro.l10n.AppLanguage.saved(c))
+        }
+    }
+    @org.junit.After fun clearRestartHook() { dev.asfakul.yumeiro.backup.Restart.testHook = null }
     private fun savedTag() = ctx.getSharedPreferences("mt_language", Context.MODE_PRIVATE).getString("tag", null)
 
     private fun pick(optionTag: String, wantSaved: String) {
@@ -74,6 +85,7 @@ class GroupSLanguageDeviceTest {
         while (savedTag() != wantSaved && System.currentTimeMillis() - t0 < 5_000) Thread.sleep(50)
         log("GROUPS pick $optionTag saved=${savedTag()}")
         assertEquals("F2: the pick is kept", wantSaved, savedTag())
+        log("GROUPS pick $optionTag restarts=${restarts.get()}")
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
     }
 

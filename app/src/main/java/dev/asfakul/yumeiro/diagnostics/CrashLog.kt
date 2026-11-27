@@ -52,7 +52,7 @@ object CrashLog {
             reserve = null
             val oom = generateSequence(error) { it.cause }.any { it is OutOfMemoryError }
             runCatching {
-                val f = write(d, if (oom) tr(R.string.out_of_memory, "Out of memory") else "Crash", "Thread: ${thread.name}", error,
+                val f = write(d, if (oom) "Out of memory" else "Crash", "Thread: ${thread.name}", error,
                     body = tr(R.string.last_memory_thread_samples, "\n\n--- Last memory / thread samples ---\n") + runCatching { MemoryWatch.currentTrail() }.getOrDefault(""))
                 // R15 (Phase 5): the report is copied to Downloads right away; the user doesn't have to open Settings.
                 appContext?.let { CrashExport.export(it, f) }

@@ -705,7 +705,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(e.label, color = if (current) SpotifyGreen else dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        val sub = listOfNotNull(if (current) tr(R.string.now_playing, "Now playing") else null, e.runtimeMin?.let { "${it}m" }, if (p?.finished == true) "Watched" else null).joinToString(" · ")
+                        val sub = listOfNotNull(if (current) "Now playing" else null, e.runtimeMin?.let { "${it}m" }, if (p?.finished == true) "Watched" else null).joinToString(" · ")
                         if (sub.isNotBlank()) Text(sub, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.55f), fontSize = 11.sp, maxLines = 1)
                         e.description?.takeIf { it.isNotBlank() && hasThumbs }?.let { Text(it, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.45f), fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
                         if (!hasThumbs && p != null && p.fraction > 0.01f) {

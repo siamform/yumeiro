@@ -86,7 +86,7 @@ fun ProfilesSettings(activity: Activity?) {
                 Column(Modifier.weight(1f)) {
                     Text(p.name, color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(
-                        listOfNotNull(if (p.id == current) tr(R.string.watching_now, "Watching now") else null, if (p.hasPin) "PIN" else null, if (p.biometric) tr(R.string.screen_lock, "Screen lock") else null, if (!p.locked) tr(R.string.no_lock, "No lock") else null).joinToString(" · "),
+                        listOfNotNull(if (p.id == current) "Watching now" else null, if (p.hasPin) "PIN" else null, if (p.biometric) "Screen lock" else null, if (!p.locked) "No lock" else null).joinToString(" · "),
                         color = TextTertiary, fontSize = 12.sp,
                     )
                 }

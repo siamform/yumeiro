@@ -221,7 +221,7 @@ fun VaultScreen(onBack: () -> Unit) {
         }
         val list = entries
         when {
-            error != null -> StateMessage(Icons.Default.Inventory2, tr(R.string.couldnt_open_the_vault, "Couldn't open the Vault"), error, primary = "Try again" to {
+            error != null -> StateMessage(Icons.Default.Inventory2, "Couldn't open the Vault", error, primary = "Try again" to {
                 error = null; scope.launch { runCatching { VaultStore.refresh(context) }.onFailure { error = it.message } }
             }, testTag = "vault_error")
             list == null -> dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 4, modifier = Modifier.testTag("vault_loading"))

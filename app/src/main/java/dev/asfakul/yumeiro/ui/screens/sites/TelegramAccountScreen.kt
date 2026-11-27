@@ -398,7 +398,7 @@ private fun TelegramChatVideos(s: TgSession, library: TgLibrary, chat: TgChat, o
     Column(Modifier.fillMaxSize().testTag("tg_chat_videos")) {
         // B8: the chat's search sits behind the header's search icon too.
         TgSearchHeader(
-            title = chat.title.ifBlank { "Chat" }, subtitle = counts?.label()?.ifBlank { null } ?: tr(R.string.videos_and_audio, "Videos and audio"),
+            title = chat.title.ifBlank { "Chat" }, subtitle = counts?.label()?.ifBlank { null } ?: "Videos and audio",
             searching = searchOpen, onSearching = { searchOpen = it },
             query = input, onQuery = { input = it }, placeholder = tr(R.string.search_this_chat, "Search this chat"),
             onBack = onBack, onSubmit = { search(it) },
