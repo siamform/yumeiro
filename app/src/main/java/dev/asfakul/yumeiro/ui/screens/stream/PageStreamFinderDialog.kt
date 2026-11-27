@@ -465,6 +465,7 @@ fun PageStreamFinderDialog(
 ) {
     val newTabNow = androidx.compose.runtime.rememberUpdatedState(onNewTab)
     var manageAds by remember { mutableStateOf(false) }
+    var vaultDraft by remember { mutableStateOf<dev.asfakul.yumeiro.ui.screens.vault.VaultDraft?>(null) }
     val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
     var autoActive by remember(pageUrl) { mutableStateOf(auto) }
@@ -1097,8 +1098,26 @@ fun PageStreamFinderDialog(
                     accent = SpotifyGreen,
                     filterOn = filterOn, onFilter = { togglePageFilter() }, onManageAds = { manageAds = true },
                     tabCount = tabCount, onTabs = onTabs, onCloseTab = onCloseTab,
+                    onSaveVault = {
+                        // F1: what the page's player loaded plus what the page links to (players, files, server buttons).
+                        val wv = webViewRef
+                        val streams = found.map { it.url to it.label }
+                        val page = currentUrl
+                        val title = found.firstOrNull { it.title.isNotBlank() }?.title ?: pageTitle
+                        val draft = { raw: String? ->
+                            vaultDraft = dev.asfakul.yumeiro.ui.screens.vault.VaultDraft(title, page, dev.asfakul.yumeiro.online.vault.VaultLinks.classify(
+                                page, streams, dev.asfakul.yumeiro.online.vault.VaultLinks.parseFound(raw),
+                                isAd = dev.asfakul.yumeiro.online.web.AdFilter::isAd,
+                                isMedia = { dev.asfakul.yumeiro.stream.StreamSniffer.fromUrl(it) != null },
+                            ))
+                        }
+                        if (wv == null) draft(null) else wv.evaluateJavascript(dev.asfakul.yumeiro.ui.screens.vault.VaultCollect.JS) { r -> draft(r) }
+                    },
                 )
             }
+        }
+        vaultDraft?.let { d ->
+            dev.asfakul.yumeiro.ui.screens.vault.VaultSaveDialog(d, onDismiss = { vaultDraft = null }, onSaved = { msg -> vaultDraft = null; barNote = BarNote(msg, null, null) })
         }
         if (manageAds) {
             var changed by remember { mutableStateOf(false) }

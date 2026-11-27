@@ -35,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.ui.focus.focusRequester
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -148,6 +149,12 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
 
     // F-02 (ADR-052): the signed-in account opens in place, like a channel.
     var account by rememberSaveable { mutableStateOf(false) }
+    // F1: the Vault opens in place from the Websites header.
+    var vault by rememberSaveable { mutableStateOf(false) }
+    if (vault && !telegramPage) {
+        dev.asfakul.yumeiro.ui.screens.vault.VaultScreen(onBack = { vault = false })
+        return
+    }
     val accountEnabled = remember(telegramPage) { telegramPage && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.enabled(context) }
     val accountUnavailable = remember(telegramPage) { if (telegramPage) dev.asfakul.yumeiro.online.telegram.td.TgAccounts.unavailableReason(context) else null }
     // Read off the main thread (SharedPreferences + profile id); refreshed each time the page comes back from the account.
@@ -287,6 +294,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 IconButton(onClick = { adding = !adding }, modifier = Modifier.testTag("site_add_open")) { Icon(Icons.Default.Add, if (adding) "Close add website" else "Add website", tint = if (adding) p.accent else p.textPrimary) }
             }
             if (!telegramPage) {
+                IconButton(onClick = { vault = true }, modifier = Modifier.testTag("site_vault")) { Icon(Icons.Default.Inventory2, "Vault", tint = p.textSecondary) }
                 IconButton(onClick = { settings = true }, modifier = Modifier.testTag("site_settings")) { Icon(Icons.Default.Settings, "Website settings", tint = p.textSecondary) }
             }
             // GROUP E1: no Share button on the website page (the Telegram page is TelegramHome; it returns above).

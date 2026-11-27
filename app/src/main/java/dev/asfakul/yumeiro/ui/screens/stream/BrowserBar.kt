@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tab
 import androidx.compose.material.icons.filled.Close
@@ -70,6 +71,8 @@ internal fun BrowserBar(
     accent: Color,
     filterOn: Boolean = true, onFilter: (() -> Unit)? = null, onManageAds: (() -> Unit)? = null,
     tabCount: Int = 0, onTabs: (() -> Unit)? = null, onCloseTab: (() -> Unit)? = null,
+    /** F1: keep this title and its sources in the Vault. */
+    onSaveVault: (() -> Unit)? = null,
 ) {
     var menu by remember { mutableStateOf(false) }
     Row(
@@ -102,6 +105,7 @@ internal fun BrowserBar(
                     }
                     IconButton(onClick = { menu = false; onReload() }, modifier = Modifier.testTag("browser_menu_reload")) { Icon(Icons.Default.Refresh, "Reload", tint = TextPrimary) }
                 }
+                if (onSaveVault != null) DropdownMenuItem(text = { Text("Save to Vault") }, leadingIcon = { Icon(Icons.Default.Inventory2, null, tint = accent) }, onClick = { menu = false; onSaveVault() }, modifier = Modifier.testTag("browser_save_vault"))
                 DropdownMenuItem(text = { Text("Reload") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onReload() }, modifier = Modifier.testTag("browser_reload"))
                 if (onTabs != null) DropdownMenuItem(
                     text = { Text(if (tabCount == 1) "Tabs (1 open)" else "Tabs ($tabCount open)") },
