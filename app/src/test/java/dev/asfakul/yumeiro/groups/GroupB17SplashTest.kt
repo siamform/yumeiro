@@ -59,7 +59,9 @@ class GroupB17SplashTest {
             val s = SplashMotion.at(0.45f, fromSystem)
             assertTrue("$s", s.title >= s.tagline && s.tagline >= s.byline)
             assertEquals(SplashMotion.RISE_DP, z.markRiseDp, 0.001f)
-            assertTrue("glow breathes in the middle", m.mark.glow > 0.2f)
+            // After the first bloom the glow breathes once (peak in the second half), then fades with the exit.
+            val peak = (50..95).maxOf { SplashMotion.at(it / 100f, fromSystem).mark.glow }
+            assertTrue("glow breathes after the bloom ($peak)", peak > 0.35f)
             assertEquals(1f, z.mark.moon, 0f); assertEquals(1f, z.mark.play, 0f)
         }
         val starsMid = SplashMotion.stars.count { SplashMotion.starAlpha(it, 0.4f) > 0.3f }

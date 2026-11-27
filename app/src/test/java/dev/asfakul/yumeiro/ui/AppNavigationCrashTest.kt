@@ -273,7 +273,8 @@ class AppNavigationCrashTest {
         tap("playlist_${p.id}")
         settle { exists("playlist_detail_screen") && exists("playlist_channels") }
         org.junit.Assert.assertFalse("channels are not shown on the Stream tab", exists("stream_screen") || exists("playlists_page"))
-        org.junit.Assert.assertFalse("bottom bar hidden on the sub page", exists("nav_tab_videos"))
+        // B13 (f2ae86f6): the bar stays on sub-pages, so the person can jump to another tab from here.
+        org.junit.Assert.assertTrue("bottom bar stays on the sub page (B13)", exists("nav_tab_videos"))
         snap("playlist_detail")
         back()
         settle { exists("playlists_page") && !exists("playlist_detail_screen") }
