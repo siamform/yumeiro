@@ -79,9 +79,10 @@ class GroupXReadingDeviceTest {
 
     private fun spot(rootTag: String, items: () -> List<androidx.compose.ui.semantics.SemanticsNode>, label: (androidx.compose.ui.semantics.SemanticsNode) -> String?): Spot? {
         val top = runCatching { compose.onNodeWithTag(rootTag, true).fetchSemanticsNode().boundsInRoot.top }.getOrNull() ?: return null
-        return items().mapNotNull { n -> label(n)?.let { it to n.boundsInRoot } }
-            .firstOrNull { (_, b) -> b.top <= top + 1f && b.bottom > top + 1f }
-            ?.let { (l, b) -> Spot(l, (top - b.top) / b.height, b.height) }
+        // Unclipped position and size: boundsInRoot is cut to the screen, so a tall item never shows its share.
+        return items().mapNotNull { n -> label(n)?.let { Triple(it, n.positionInRoot.y, n.size.height.toFloat()) } }
+            .firstOrNull { (_, y, h) -> h > 0f && y <= top + 1f && y + h > top + 1f }
+            ?.let { (l, y, h) -> Spot(l, (top - y) / h, h) }
     }
 
     private fun slowSwipe(tag: String, up: Boolean) = compose.onNodeWithTag(tag, true).performTouchInput {

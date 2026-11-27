@@ -81,7 +81,7 @@ exports.default = new Yu();
     private fun list(id: String, page: Int): String =
         if (page > 1) "[]" else (1..30).joinToString(",", "[", "]") { """{"name":"${id.removePrefix("yu").replaceFirstChar { c -> c.uppercase() }} Tale $it","path":"novel/$id-$it"}""" }
 
-    @Before fun setUp() = runBlocking {
+    @Before fun setUp(): Unit = runBlocking {
         server = MockWebServer()
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
