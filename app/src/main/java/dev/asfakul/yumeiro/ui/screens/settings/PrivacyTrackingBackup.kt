@@ -302,7 +302,7 @@ fun TrackingScreen(onBack: () -> Unit) {
             title = { Text(if (isAni) tr(R.string.anilist_client_id, "AniList client ID") else "MyAnimeList client ID") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (isAni) tr(R.string.paste_the_client_id_from_anilist, "Paste the Client ID from anilist.co/settings/developer. Its redirect URL must be:") else tr(R.string.paste_the_client_id_from_myanimelist, "Paste the Client ID from myanimelist.net/apiconfig (App Type: Android). Its redirect URL must be:"),
+                    Text(if (isAni) "Paste the Client ID from anilist.co/settings/developer. Its redirect URL must be:" else "Paste the Client ID from myanimelist.net/apiconfig (App Type: Android). Its redirect URL must be:",
                         color = TextSecondary, fontSize = 13.sp)
                     val redirect = if (isAni) AniList.REDIRECT else MyAnimeList.REDIRECT
                     TextButton(onClick = { copyToClipboard(context, tr(R.string.redirect_url, "Redirect URL"), redirect) }) { Text(redirect + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }

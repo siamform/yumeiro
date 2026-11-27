@@ -163,7 +163,7 @@ fun TelegramHome(onBack: () -> Unit) {
 
     if (adding) AddLinkSheet(
         title = tr(R.string.add_a_public_telegram_channel, "Add a public Telegram channel"),
-        placeholder = tr(R.string.channel_or_t_me_channel, "@channel or t.me/channel"),
+        placeholder = "@channel or t.me/channel",
         hint = tr(R.string.its_video_posts_play_in_yumeiro, "Its video posts play in Yumeiro, no login needed."),
         tag = "tg_add",
         onDismiss = { adding = false },

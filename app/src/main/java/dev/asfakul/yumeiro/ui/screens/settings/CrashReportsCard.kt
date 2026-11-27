@@ -56,7 +56,7 @@ internal fun crashPreview(file: java.io.File, max: Int = CRASH_PREVIEW_CHARS): S
         val more = r.read() >= 0
         String(buf, 0, n) + if (more) "\n\n… (the report is longer; Share sends the whole file)" else ""
     }
-}.getOrDefault(tr(R.string.this_report_cant_be_read, "This report can't be read."))
+}.getOrDefault("This report can't be read.")
 
 /** Round 2, order 7: the crash reports saved on this phone; read, copy, share or delete. */
 @Composable

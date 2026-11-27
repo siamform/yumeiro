@@ -94,7 +94,7 @@ object BackdropSettings {
     internal fun photoFile(context: Context) = File(context.filesDir, FILE)
 
     /** Shown under the picker: what the import accepts. */
-    val ACCEPTED: String get() = tr(R.string.jpeg_png_webp_gif_first_frame, "JPEG, PNG, WebP, GIF (first frame), BMP, HEIC/HEIF (Android 9+) and AVIF (Android 12+). Up to 60 MB and at least 200 × 200 px; larger pictures are scaled down.")
+    const val ACCEPTED = "JPEG, PNG, WebP, GIF (first frame), BMP, HEIC/HEIF (Android 9+) and AVIF (Android 12+). Up to 60 MB and at least 200 × 200 px; larger pictures are scaled down."
 
     /**
      * Round 2, order 8: copies the picked image into app storage, downscaled (the backdrop is

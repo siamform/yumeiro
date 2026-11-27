@@ -106,7 +106,7 @@ object PushWake {
     private const val PREFS = "push_wake"
     private const val SECRET = "push_endpoint"
     const val NTFY_PACKAGE = "io.heckel.ntfy"
-    private val MESSAGE_FOR_DISTRIBUTOR: String get() = tr(R.string.yumeiro_wakes_the_new_episode_and, "Yumeiro: wakes the new-episode and news checks")
+    private const val MESSAGE_FOR_DISTRIBUTOR = "Yumeiro: wakes the new-episode and news checks"
 
     enum class Schedule { UNKNOWN, YES, NO }
 

@@ -24,7 +24,7 @@ import java.io.File
  * app's own external folder (`Android/data/<package>/files/Crash reports`).
  */
 object CrashExport {
-    val FOLDER: String get() = tr(R.string.yumeiro_crash_reports, "Yumeiro/Crash reports")
+    const val FOLDER = "Yumeiro/Crash reports"
     private const val PREFS = "yumeiro_crash_export"
 
     /** Exports [report] once. Safe to call from the crash handler (no coroutines, no locks held). */

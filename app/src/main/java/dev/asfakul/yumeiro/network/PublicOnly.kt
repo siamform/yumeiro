@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.network
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.io.IOException
@@ -20,7 +18,7 @@ import java.net.InetAddress
  * bytes are written. User-added home servers (Jellyfin, SMB, repo indexes) do not pass through here.
  */
 object PublicOnly : Interceptor {
-    val MESSAGE: String get() = tr(R.string.blocked_private_address, "Blocked: private address")
+    const val MESSAGE = "Blocked: private address"
 
     fun isPrivate(a: InetAddress): Boolean = a.isMulticastAddress || SmartDns.isBogon(a)
 

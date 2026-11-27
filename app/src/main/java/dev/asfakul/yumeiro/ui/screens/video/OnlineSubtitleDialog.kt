@@ -193,7 +193,7 @@ fun OnlineSubtitleDialog(
                         }
                     }
                 }
-                Text(tr(R.string.sources, "Sources: ") + (listOf("OpenSubtitles.org") + sites.map { it.name }).joinToString(", ") +
+                Text("Sources: " + (listOf("OpenSubtitles.org") + sites.map { it.name }).joinToString(", ") +
                     if (sites.isEmpty()) " (add free SubDL / SubSource keys in Settings for more)" else "", color = TextSecondary, fontSize = 11.sp)
             }
         },

@@ -1144,8 +1144,6 @@
     <string name="deletes_files_in_shared_storage_not">Deletes files in shared storage (not just its own cache).</string>
     <string name="reads_device_identifiers">Reads device identifiers</string>
     <string name="reads_the_android_id_or_phone">Reads the Android ID or phone details, which can identify your device.</string>
-    <string name="landroid_provider_settings">Landroid/provider/Settings%1$s;</string>
-    <string name="android_id">Android ID</string>
     <string name="lists_your_installed_apps">Lists your installed apps</string>
     <string name="reads_which_apps_are_installed">Reads which apps are installed.</string>
     <string name="reads_the_clipboard">Reads the clipboard</string>
@@ -1299,8 +1297,6 @@
     <string name="first_aired">First aired</string>
     <string name="production_company">Production company</string>
     <string name="production_companies">Production companies</string>
-    <string name="this_stream_is_drm_protected_and">This stream is DRM-protected and can\'t be saved</string>
-    <string name="no_video_or_audio_track_in">No video or audio track in the DASH manifest</string>
     <string name="saved_permanent_tap_to_open_downloads">Saved · Permanent · tap to open Downloads</string>
     <string name="saved_offline_tap_to_open_downloads">Saved · Offline · tap to open Downloads</string>
     <string name="storage_full_free_up_space_then">Storage full — free up space, then tap retry</string>
@@ -1770,7 +1766,6 @@
     <string name="tap_the_bookmark_on_a_novel">Tap the bookmark on a novel to keep it here.</string>
     <string name="nothing_read_yet">Nothing read yet</string>
     <string name="novels_you_open_are_listed_here">Novels you open are listed here with the chapter you reached.</string>
-    <string name="added_sources">Added: %1$s sources</string>
     <string name="couldnt_add_that_link">Couldn\'t add that link</string>
     <string name="add_a_novel_repository">Add a novel repository</string>
     <string name="about_novel_sources">About novel sources</string>
@@ -1855,7 +1850,6 @@
     <string name="mangayomi">Mangayomi</string>
     <string name="play_your_own_media">Play your own media</string>
     <string name="about_home_servers">About home servers</string>
-    <string name="play_your_own_media_from_jellyfin">Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore.</string>
     <string name="add_a_server">Add a server</string>
     <string name="your_servers">Your servers</string>
     <string name="no_servers_yet">No servers yet.</string>
@@ -1973,7 +1967,6 @@
     <string name="duration_longest">Duration (Longest)</string>
     <string name="duration_shortest">Duration (Shortest)</string>
     <string name="file_size_largest">File Size (Largest)</string>
-    <string name="toggle_grid_list">Toggle Grid/List</string>
     <string name="nothing_in_this_folder_matches_try">Nothing in this folder matches. Try another folder.</string>
     <string name="no_offline_videos_found">No offline videos found</string>
     <string name="copy_mp4_mkv_or_webm_files">Copy MP4, MKV or WebM files to this phone, then scan again.</string>
@@ -1990,7 +1983,6 @@
     <string name="subtitle_search_failed_try_again">Subtitle search failed. Try again.</string>
     <string name="looking_for_subtitles">Looking for subtitles</string>
     <string name="couldnt_download_that_subtitle">Couldn\'t download that subtitle.</string>
-    <string name="sources">Sources: </string>
     <string name="sounds_louder_than_this_are_turned">Sounds louder than this are turned down</string>
     <string name="how_strongly_they_are_turned_down">How strongly they are turned down</string>
     <string name="make_up_gain">Make-up gain</string>
@@ -2046,7 +2038,6 @@
     <string name="every_source_for_this_video_refused">Every source for this video refused playback (%1$s). Yumeiro already retried each link with browser, site and player </string>
     <string name="kept_until_you_delete_it_the">Kept until you delete it. The timer never touches it.</string>
     <string name="stays_until_you_delete_it_pick">Stays until you delete it. Pick a timer to clean it up by itself.</string>
-    <string name="size_checking">Size: checking…%1$s</string>
     <string name="hide_details">Hide details</string>
     <string name="show_details">Show details</string>
     <string name="open_private">Open Private</string>
@@ -2066,8 +2057,6 @@
     <string name="moved_to_private">Moved to Private</string>
     <string name="unhide_back_to_downloads">Unhide (back to Downloads)</string>
     <string name="hide_in_private">Hide in Private</string>
-    <string name="permanent_kept_forever">Permanent: kept forever</string>
-    <string name="offline_the_auto_delete_timer_applies">Offline: the auto-delete timer applies</string>
     <string name="permanent_tap_to_make_offline">Permanent (tap to make offline)</string>
     <string name="offline_tap_to_keep_forever">Offline (tap to keep forever)</string>
     <string name="keep_whole_folder_forever">Keep whole folder forever</string>
@@ -2188,7 +2177,6 @@
     <string name="hear_about_new_episodes_extensions_and">Hear about new episodes, extensions and app updates. You choose exactly which ones in Settings.</string>
     <string name="hi_im_yume_your_guide">Hi, I\'m Yume — your guide</string>
     <string name="this_is_home_the_greeting_follows">This is Home. The greeting follows the time of day, and everything waiting for you — new episodes, where you left off — gathers below it. Two minutes, and you\'ll know your way around.</string>
-    <string name="spaces_every_feature_one_tap_away">Spaces: every feature, one tap away</string>
     <string name="each_tile_opens_a_part_of">Each tile opens a part of Yumeiro — Yumix, YouTube, Manga, Live TV and more. The small line under a tile tells you its state, like \"Add sources\".</string>
     <string name="more_shortcuts_live_here">More shortcuts live here</string>
     <string name="see_more_unfolds_the_rest_in">See more unfolds the rest in place — theme, DNS, tracking, network… — and See less folds them away again.</string>
@@ -2291,7 +2279,6 @@
     <string name="sd_card">SD card/</string>
     <string name="on_this_phone">On this phone</string>
     <string name="no_matching_songs">No matching songs</string>
-    <string name="offline_connect_to_search_online">Offline: connect to search online</string>
     <string name="type_a_little_more">Type a little more</string>
     <string name="no_songs_found">No songs found</string>
     <string name="finding_online_picks">Finding online picks…</string>
@@ -2362,7 +2349,6 @@
     <string name="send_your_website_list">Send your website list</string>
     <string name="as_text_to_keep_or_to">As text, to keep or to move to another phone</string>
     <string name="address_or_search">Address or search</string>
-    <string name="channel_or_t_me_channel">\@channel or t.me/channel</string>
     <string name="its_video_posts_play_in_yumeiro">Its video posts play in Yumeiro, no login needed.</string>
     <string name="telegram">Telegram</string>
     <string name="telegram_account">Telegram account</string>
@@ -2678,13 +2664,11 @@
     <string name="permanent_by_default">Permanent by default</string>
     <string name="new_episode_downloads_start_as_permanent">New episode downloads start as Permanent, so the timer skips them</string>
     <string name="save_youtube_and_link_downloads_to">Save YouTube and link downloads to phone</string>
-    <string name="videos_go_to_movies_yumeiro_and">Videos go to Movies/Yumeiro and music to Music/Yumeiro, visible in the gallery and other apps</string>
     <string name="show_tips_on_the_downloads_page">Show tips on the Downloads page</string>
     <string name="the_short_how_downloads_work_guide">The short \"How downloads work\" guide</string>
     <string name="nothing_to_clean_up">Nothing to clean up</string>
     <string name="tracking_v2">Tracking V2</string>
     <string name="episodes_and_manga_novel_chapters_are">Episodes and manga / novel chapters are queued and sent until every tracker has them, even after being offline</string>
-    <string name="off_episodes_are_sent_once_while">Off: episodes are sent once while you watch (classic tracking)</string>
     <string name="nothing_waiting">Nothing waiting</string>
     <string name="watch_any_website_in_yumeiros_player">Watch any website in Yumeiro\'s player</string>
     <string name="save_a_video_site_once_it">Save a video site once. It opens in Yumeiro\'s page browser with pop-ups and ad overlays blocked; when its player starts a video, Yumeiro picks up the stream and plays it in its own player (speed, subtitles, background play, downloads).</string>
@@ -2748,7 +2732,6 @@
     <string name="sign_up">Sign up</string>
     <string name="open_anilists_developer_settings_and_tap">Open AniList\'s developer settings and tap Create New Client.</string>
     <string name="developer_settings">Developer settings</string>
-    <string name="name_yumeiro_or_anything_redirect_url">Name: Yumeiro (or anything). Redirect URL: paste this exact value.</string>
     <string name="save_then_copy_the_client_id">Save, then copy the Client ID (a number).</string>
     <string name="back_here_tap_set_up_on">Back here, tap Set up on AniList and paste the ID.</string>
     <string name="tap_sign_in_then_approve_youll">Tap Sign in, then Approve. You\'ll come back to Yumeiro signed in.</string>
@@ -2768,15 +2751,10 @@
     <string name="create_a_free_trakt_account_or">Create a free Trakt account, or skip this if you already have one.</string>
     <string name="open_trakts_api_apps_and_tap">Open Trakt\'s API apps and tap New Application.</string>
     <string name="new_application">New application</string>
-    <string name="name_yumeiro_redirect_uri_paste_this">Name: Yumeiro. Redirect URI: paste this exact value (Trakt may warn about it; save anyway). Leave allowed origins and the other fields empty.</string>
     <string name="copy_the_client_id_then_tap">Copy the Client ID, then tap Add Trakt API app here and paste it. New Trakt apps have no client secret; paste one only if your (older) app shows it.</string>
-    <string name="tap_sign_in_yumeiro_shows_a">Tap Sign in. Yumeiro shows a short code and opens trakt.tv/activate. Type the code there and approve.</string>
     <string name="yumeiro_refreshes_the_sign_in_before">Yumeiro refreshes the sign-in before it expires (Trakt sign-ins last 7 days), so tracking keeps working.</string>
-    <string name="simkl_anime_shows_and_movies_in">Simkl: anime, shows and movies in one list</string>
     <string name="simkl_tracks_anime_tv_and_movies">Simkl tracks anime, TV and movies together and syncs with many other apps. Yumeiro has a built-in Simkl app, so you only sign in.</string>
     <string name="create_a_free_simkl_account_or">Create a free Simkl account, or skip this if you already have one.</string>
-    <string name="tap_sign_in_yumeiro_shows_a_2">Tap Sign in. Yumeiro shows a short code and opens simkl.com/pin. Type the code there and approve.</string>
-    <string name="using_your_own_simkl_app_is">Using your own Simkl app is optional: create one at simkl.com/settings/developer (redirect URI urn:ietf:wg:oauth:2.0:oob), then tap Change key and paste its Client ID.</string>
     <string name="simkl_sign_ins_last_7_days">Simkl sign-ins last 7 days and Yumeiro renews them on its own.</string>
     <string name="last_fm_scrobbling">Last.fm scrobbling</string>
     <string name="scrobbling_sends_the_songs_you_play">Scrobbling sends the songs you play to your Last.fm profile, for stats, charts and recommendations. Local files and streamed songs both count.</string>
@@ -2799,7 +2777,6 @@
     <string name="how_to_get_your_youtube_cookie">How to get your YouTube cookie</string>
     <string name="use_this_when_google_wont_let">Use this when Google won\'t let you sign in inside Yumeiro. You sign in on a normal browser and copy the cookie it got. It takes about two minutes on a computer.</string>
     <string name="on_a_computer_open_a_private">On a computer, open a private window (Chrome: Ctrl+Shift+N, Firefox: Ctrl+Shift+P). A private window matters: YouTube changes the cookie of open tabs, and a private session is never reopened.</string>
-    <string name="in_the_same_tab_open_youtube">In the same tab, open youtube.com/robots.txt. This page is quiet, so the cookie won\'t change while you copy it.</string>
     <string name="press_f12_to_open_developer_tools">Press F12 to open Developer tools, choose the Network tab and reload the page (F5).</string>
     <string name="easier_option_install_the_open_source">Easier option: install the open-source extension Get cookies.txt LOCALLY (Chrome or Firefox), allow it in private windows, and export youtube.com as cookies.txt. Yumeiro reads that file\'s text too.</string>
     <string name="get_cookies_txt_locally">Get cookies.txt LOCALLY</string>
@@ -2933,8 +2910,6 @@
     <string name="waiting_to_be_sent">%1$s waiting to be sent</string>
     <string name="paused_while_incognito">Paused while incognito</string>
     <string name="anilist_client_id">AniList client ID</string>
-    <string name="paste_the_client_id_from_anilist">Paste the Client ID from anilist.co/settings/developer. Its redirect URL must be:</string>
-    <string name="paste_the_client_id_from_myanimelist">Paste the Client ID from myanimelist.net/apiconfig (App Type: Android). Its redirect URL must be:</string>
     <string name="redirect_url">Redirect URL</string>
     <string name="saved_now_tap_sign_in">Saved. Now tap Sign in</string>
     <string name="signed_in_to_kitsu_as">Signed in to Kitsu as %1$s</string>
@@ -2943,9 +2918,7 @@
     <string name="signed_in_as">Signed in as %1$s</string>
     <string name="needs_a_free_key_see_the">Needs a free key. See the guide below</string>
     <string name="ready_to_sign_in">Ready to sign in</string>
-    <string name="brightness_swipe_up_down">Brightness\nswipe up/down</string>
     <string name="swipe_down_to_shrink">Swipe down\nto shrink</string>
-    <string name="volume_swipe_up_down">Volume\nswipe up/down</string>
     <string name="last_song">Last song</string>
     <string name="last_video">Last video</string>
     <string name="back_or_swipe_down">Back or\nswipe down</string>
@@ -3012,7 +2985,6 @@
     <string name="show_the_pip_button_and_shrink">Show the PiP button and shrink the video into a floating window when you leave the app. Off: PiP is disabled</string>
     <string name="volume_boost_up_to_200" formatted="false">Volume boost up to 200 %</string>
     <string name="swipe_up_past_full_volume_to">Swipe up past full volume to make quiet videos louder. It resets for every video. Loud sound can damage your hearing and small speakers</string>
-    <string name="engine_androidx_media3_exoplayer_jetpack_compose">Engine: AndroidX Media3 (ExoPlayer) · Jetpack Compose\nPrivacy: no ads, no tracking, no analytics</string>
     <string name="hide_guide">Hide guide</string>
     <string name="show_guide">Show guide</string>
     <string name="yumeiro_setup">Yumeiro setup</string>
@@ -3029,7 +3001,6 @@
     <string name="paste_cookie">Paste cookie</string>
     <string name="advanced_for_when_google_blocks_the">Advanced · for when Google blocks the sign-in page</string>
     <string name="the_clipboard_is_empty">The clipboard is empty</string>
-    <string name="this_report_cant_be_read">This report can\'t be read.</string>
     <string name="share_crash_report">Share crash report</string>
     <string name="share_all">Share all</string>
     <string name="every_report_attached_as_files">Every report, attached as files</string>
@@ -3177,7 +3148,6 @@
     <string name="phone_tablet">Phone &amp; tablet</string>
     <string name="the_original_gradient_and_glow">The original gradient and glow</string>
     <string name="a_picture_of_yours_softly_blurred">A picture of yours, softly blurred</string>
-    <string name="jpeg_png_webp_gif_first_frame">JPEG, PNG, WebP, GIF (first frame), BMP, HEIC/HEIF (Android 9+) and AVIF (Android 12+). Up to 60 MB and at least 200 × 200 px; larger pictures are scaled down.</string>
     <string name="this_pictures_format_isnt_supported_here_2">This picture\'s format isn\'t supported here</string>
     <string name="try_a_jpeg_or_png">. Try a JPEG or PNG.</string>
     <string name="backdrop_photo_import_bytes">Backdrop photo import (%1$s, %2$s bytes)</string>
@@ -3295,7 +3265,6 @@
     <string name="json_export">JSON export</string>
     <string name="archivetune_token">ArchiveTune token</string>
     <string name="top_result">Top result</string>
-    <string name="blocked_private_address">Blocked: private address</string>
     <string name="couldnt_store_the_password_safely_on">Couldn\'t store the password safely on this device.</string>
     <string name="enter_the_proxys_address">Enter the proxy\'s address.</string>
     <string name="port_must_be_a_number_from">Port must be a number from 1 to 65535.</string>
@@ -3308,7 +3277,6 @@
     <string name="unencrypted_udp_port_53_fastest_visible">Unencrypted UDP port 53 — fastest, visible to the network</string>
     <string name="always_use_it">Always use it</string>
     <string name="system_dns_auto_bypass_for_blocked">System DNS · auto bypass for blocked sites</string>
-    <string name="access_control_allow_origin_access_control">Access-Control-Allow-Origin: *\nAccess-Control-Allow-Methods: GET, HEAD, OPTIONS\nAccess-Control-Allow-Headers: *\n</string>
     <string name="videos_on_this_phone">Videos on this phone</string>
     <string name="first_day_with_yumeiro">First day with Yumeiro</string>
     <string name="yumeiro_room">Yumeiro room</string>
@@ -3429,13 +3397,6 @@
     <string name="this_torrent_has_no_playable_file">This torrent has no playable file.</string>
     <string name="no_peers_found_for_this_torrent">No peers found for this torrent. It may have no seeders right now.</string>
     <string name="peers_were_found_but_didnt_send">Peers were found but didn\'t send the torrent\'s file list in time.</string>
-    <string name="bad_request">Bad Request</string>
-    <string name="method_not_allowed">Method Not Allowed</string>
-    <string name="not_found">Not Found</string>
-    <string name="t_206_partial_content">206 Partial Content</string>
-    <string name="accept_ranges_bytes">Accept-Ranges: bytes\n</string>
-    <string name="content_range_bytes">Content-Range: bytes </string>
-    <string name="connection_close">Connection: close\n\n</string>
     <string name="simkl_answered_http">Simkl answered HTTP %1$s</string>
     <string name="your_chosen_folder">Your chosen folder: </string>
     <string name="phone_storage_download_yumeiro_backups">Phone storage › Download › Yumeiro › Backups</string>
@@ -3460,7 +3421,6 @@
     <string name="native_crash">Native crash</string>
     <string name="android_kept_no_trace_for_this">Android kept no trace for this one.</string>
     <string name="last_memory_thread_samples_before_the">\n\n--- Last memory / thread samples before the kill ---\n%1$s</string>
-    <string name="yumeiro_crash_reports">Yumeiro/Crash reports</string>
     <string name="embedded_in_file">Embedded in file</string>
     <string name="imported_lrc">Imported .lrc</string>
     <string name="ogg_vorbis">OGG Vorbis</string>
@@ -3471,7 +3431,6 @@
     <string name="everything_at_about_the_same_loudness">Everything at about the same loudness</string>
     <string name="lifts_speech_over_music_and_effects">Lifts speech over music and effects</string>
     <string name="keeps_the_punch_tames_sudden_peaks">Keeps the punch, tames sudden peaks</string>
-    <string name="gentle_songs_keep_their_dynamics">Gentle: songs keep their dynamics</string>
     <string name="noisy_place">Noisy place</string>
     <string name="commute_or_kitchen_quiet_parts_come">Commute or kitchen: quiet parts come right up</string>
     <string name="every_setting_yours_threshold_ratio_knee">Every setting yours: threshold, ratio, knee, attack, release and gain</string>
@@ -3563,7 +3522,6 @@
     <string name="the_original_yumeiro_pass_with_its">The original Yumeiro pass with its GPU tier</string>
     <string name="v2_presets">V2 presets</string>
     <string name="presets_styles_and_a_custom_profile">Presets, styles and a custom profile; switch them in the player</string>
-    <string name="lightest_5_samples_per_pixel_for">Lightest: 5 samples per pixel, for older phones and TV boxes</string>
     <string name="clear_lines_at_low_cost_good">Clear lines at low cost; good on most phones</string>
     <string name="stronger_restore_with_diagonal_samples">Stronger restore with diagonal samples</string>
     <string name="high_quality">High quality</string>
@@ -3606,9 +3564,7 @@
     <string name="needs_google_play_services">Needs Google Play services</string>
     <string name="couldnt_connect_will_retry">Couldn\'t connect — will retry</string>
     <string name="settings_is_now_grouped_by_subject">Settings is now grouped by subject: You, Video, Music, Downloads &amp; library, Sources &amp; accounts, System. </string>
-    <string name="profiles_settings_profiles_each_person_gets">Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint and their own 18+ switch. </string>
     <string name="private_downloads_the_lock_at_the">Private downloads: the lock at the top of Downloads, or Settings → Downloads. </string>
-    <string name="statistics_settings_your_statistics_or_the">Statistics: Settings → Your statistics, or the Statistics card in Library music. </string>
     <string name="telegram_channels_no_login_settings_telegram">Telegram channels (no login): Settings → Telegram, then type @channel or a t.me link. TeraBox and DiskWala links work there too. </string>
     <string name="script_repos_vega_nuvio_skystream_the">Script repos (Vega, Nuvio, SkyStream): the Script repos tab in Sources. </string>
     <string name="video_quality_anime4k_and_torrents_settings">Video quality, Anime4K and torrents: Settings → Video quality &amp; playback. Subtitles and skip intro: Settings → Subtitles &amp; intros. </string>
@@ -3644,9 +3600,7 @@
     <string name="xiaomi_redmi_and_poco_miui_hyperos">Xiaomi, Redmi and POCO (MIUI / HyperOS)</string>
     <string name="turn_on_autostart_for_yumeiro">Turn on Autostart for Yumeiro</string>
     <string name="app_battery_saver_choose_no_restrictions">App battery saver: choose No restrictions</string>
-    <string name="battery_choose_unrestricted_for_yumeiro">Battery: choose Unrestricted for Yumeiro</string>
     <string name="battery_background_usage_limits_remove_yumeiro">Battery → Background usage limits: remove Yumeiro from Sleeping apps and Deep sleeping apps</string>
-    <string name="optional_add_yumeiro_to_never_sleeping">Optional: add Yumeiro to Never sleeping apps</string>
     <string name="app_launch_turn_off_manage_automatically">App launch: turn off Manage automatically for Yumeiro</string>
     <string name="in_the_box_that_opens_allow">In the box that opens, allow Auto-launch, Secondary launch and Run in background</string>
     <string name="oppo_realme_and_oneplus_coloros_realme">OPPO, realme and OnePlus (ColorOS / realme UI / OxygenOS)</string>
@@ -3667,7 +3621,6 @@
     <string name="remove_the_restricted_battery_setting">Remove the Restricted battery setting</string>
     <string name="not_put_to_sleep_by_android">Not put to sleep by Android</string>
     <string name="open_yumeiro_once_a_day_or">Open Yumeiro once a day or remove the restriction</string>
-    <string name="yumeiro_wakes_the_new_episode_and">Yumeiro: wakes the new-episode and news checks</string>
     <string name="the_push_app_couldnt_reach_its">The push app couldn\'t reach its server. It will retry when you\'re online</string>
     <string name="the_push_app_refused_the_registration">The push app refused the registration (%1$s)</string>
     <string name="no_push_address_yet_open_the">No push address yet. Open the push app and wait a moment</string>

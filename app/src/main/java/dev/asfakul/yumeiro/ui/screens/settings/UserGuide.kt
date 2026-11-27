@@ -288,9 +288,9 @@ private fun GestureDiagram() {
     val p = LocalMtPalette.current
     Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(12)).background(Color.Black)) {
         Row(Modifier.fillMaxSize()) {
-            Zone(tr(R.string.brightness_swipe_up_down, "Brightness\nswipe up/down"), Icons.Default.BrightnessMedium, p.accent.copy(alpha = 0.18f))
+            Zone("Brightness\nswipe up/down", Icons.Default.BrightnessMedium, p.accent.copy(alpha = 0.18f))
             Zone(tr(R.string.swipe_down_to_shrink, "Swipe down\nto shrink"), Icons.Default.KeyboardArrowDown, Color.White.copy(alpha = 0.06f))
-            Zone(tr(R.string.volume_swipe_up_down, "Volume\nswipe up/down"), Icons.AutoMirrored.Filled.VolumeUp, p.accent.copy(alpha = 0.18f))
+            Zone("Volume\nswipe up/down", Icons.AutoMirrored.Filled.VolumeUp, p.accent.copy(alpha = 0.18f))
         }
         Text(
             stringResource(R.string.drag_sideways_to_seek_double_tap),

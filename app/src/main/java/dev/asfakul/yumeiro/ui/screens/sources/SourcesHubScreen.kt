@@ -602,7 +602,7 @@ private fun ServersTab(nav: SourcesPageNav) {
     Column(Modifier.fillMaxSize()) {
         nav.Header(tr(R.string.home_servers, "Home servers"), tr(R.string.play_your_own_media, "Play your own media")) {
             dev.asfakul.yumeiro.ui.components.HelpIconButton(tr(R.string.about_home_servers, "About home servers"),
-                tr(R.string.play_your_own_media_from_jellyfin, "Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore.") +
+                "Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore." +
                     "\n\nServers with self-signed HTTPS certificates aren't supported yet; use plain HTTP on your home network or a real certificate.", "hub_servers_help")
         }
         if (scanning) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())

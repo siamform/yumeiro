@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.download
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.net.Uri
 import androidx.media3.common.C
 import androidx.media3.exoplayer.dash.DashSegmentIndex
@@ -585,7 +583,7 @@ class DashGrab(private val client: OkHttpClient, private val headers: Map<String
             val audios = clear.filter { it.type == C.TRACK_TYPE_AUDIO }.flatMap { it.representations }
             val (v, a) = pickPair(videos, audios, maxHeight, java.util.Locale.getDefault().language)
             if (v == null && a == null) throw IOException(
-                if (clear.size < sets.size) tr(R.string.this_stream_is_drm_protected_and, "This stream is DRM-protected and can't be saved") else tr(R.string.no_video_or_audio_track_in, "No video or audio track in the DASH manifest"))
+                if (clear.size < sets.size) "This stream is DRM-protected and can't be saved" else "No video or audio track in the DASH manifest")
             val webm = listOfNotNull(v, a).all { isWebm(it) }
             return Plan(v?.let { track(it, C.TRACK_TYPE_VIDEO, durationUs) }, a?.let { track(it, C.TRACK_TYPE_AUDIO, durationUs) }, webm)
         }

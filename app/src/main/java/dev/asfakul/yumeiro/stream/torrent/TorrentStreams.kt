@@ -60,7 +60,7 @@ object TorrentStreams {
     fun allowed(offered: Boolean, accepted: Boolean): Boolean = offered && accepted
 
     /** The notice shown before the engine turns on (peers see the IP; pieces are shared while playing). */
-    const val PRIVACY_NOTICE =
+    val PRIVACY_NOTICE: String get() =
         tr(R.string.torrents_are_shared_between_the_people, "Torrents are shared between the people who have them. While a torrent plays, other people sharing it can see ") +
             "your IP address, and Yumeiro sends them the parts you already have. Downloading or sharing some files is " +
             "illegal in some countries. Use a VPN if your network or country restricts torrents. Pieces are kept in the " +

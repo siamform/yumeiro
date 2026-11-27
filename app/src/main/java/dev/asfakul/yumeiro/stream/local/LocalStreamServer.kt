@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.stream.local
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.IOException
@@ -97,11 +95,11 @@ class LocalStreamServer(private val maxConnections: Int = 6) {
         val input = BufferedInputStream(c.getInputStream())
         val out = BufferedOutputStream(c.getOutputStream(), 64 * 1024)
         val head = readHead(input) ?: return
-        val req = parseRequest(head) ?: return respond(out, 400, tr(R.string.bad_request, "Bad Request"))
-        if (req.method != "GET" && req.method != "HEAD") return respond(out, 405, tr(R.string.method_not_allowed, "Method Not Allowed"))
+        val req = parseRequest(head) ?: return respond(out, 400, "Bad Request")
+        if (req.method != "GET" && req.method != "HEAD") return respond(out, 405, "Method Not Allowed")
         // `/s/<token>` or `/s/<token>/<file name>` (the name only tells downloaders the file type).
         val token = req.path.substringAfter("/s/", "").substringBefore('?').substringBefore('/')
-        val src = sources[token] ?: return respond(out, 404, tr(R.string.not_found, "Not Found"))
+        val src = sources[token] ?: return respond(out, 404, "Not Found")
         val total = src.length
         val range = parseRange(req.range, total)
         if (range == INVALID) {
@@ -110,13 +108,13 @@ class LocalStreamServer(private val maxConnections: Int = 6) {
         }
         val (start, end) = range ?: (0L to total - 1)
         val len = end - start + 1
-        val status = if (range != null) tr(R.string.t_206_partial_content, "206 Partial Content") else "200 OK"
+        val status = if (range != null) "206 Partial Content" else "200 OK"
         val sb = StringBuilder("HTTP/1.1 ").append(status).append("\r\n")
             .append("Content-Type: ").append(src.mimeType).append("\r\n")
-            .append(tr(R.string.accept_ranges_bytes, "Accept-Ranges: bytes\n"))
+            .append("Accept-Ranges: bytes\r\n")
             .append("Content-Length: ").append(len).append("\r\n")
-        if (range != null) sb.append(tr(R.string.content_range_bytes, "Content-Range: bytes ")).append(start).append('-').append(end).append('/').append(total).append("\r\n")
-        sb.append(tr(R.string.connection_close, "Connection: close\n\n"))
+        if (range != null) sb.append("Content-Range: bytes ").append(start).append('-').append(end).append('/').append(total).append("\r\n")
+        sb.append("Connection: close\r\n\r\n")
         out.write(sb.toString().toByteArray())
         if (req.method == "HEAD") { out.flush(); return }
         val buf = ByteArray(64 * 1024)

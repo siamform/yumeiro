@@ -170,7 +170,7 @@ fun MusicMixScreen(
         itemsIndexed(deviceHits.take(50), key = { _, t -> "sd" + t.id }) { _, t -> MixRow(MixEntry.Device(t), t.id == currentTrackId) { onPlayTrack(t, deviceHits) } }
         item("net_head") {
             MixHeader(tr(R.string.youtube_music, "YouTube Music"), when {
-                !online -> tr(R.string.offline_connect_to_search_online, "Offline: connect to search online")
+                !online -> "Offline: connect to search online"
                 query.trim().length < 2 -> tr(R.string.type_a_little_more, "Type a little more")
                 onlineBusy -> "Searching…"
                 onlineHits.isEmpty() -> tr(R.string.no_songs_found, "No songs found")

@@ -464,7 +464,7 @@ fun NovelSourcesScreen(onBack: () -> Unit) {
     suspend fun addRepoNow(url: String): Boolean {
         busy = "repo"; message = null
         val r = NovelSources.addRepo(context, url)
-        r.onSuccess { message = tr(R.string.added_sources, "Added: %1\$s sources", it); repoField = "" }.onFailure { message = it.message ?: tr(R.string.couldnt_add_that_link, "Couldn't add that link") }
+        r.onSuccess { message = "Added: $it sources"; repoField = "" }.onFailure { message = it.message ?: tr(R.string.couldnt_add_that_link, "Couldn't add that link") }
         busy = null
         return r.isSuccess
     }

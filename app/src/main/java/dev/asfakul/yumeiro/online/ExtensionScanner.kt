@@ -157,7 +157,7 @@ object ExtensionScanner {
                 (it.method("Landroid/os/Environment;", "getExternalStorageDirectory", "getExternalStoragePublicDirectory") || it.str("/sdcard/", "/storage/emulated/"))
         },
         rule(Level.CAUTION, tr(R.string.reads_device_identifiers, "Reads device identifiers"), tr(R.string.reads_the_android_id_or_phone, "Reads the Android ID or phone details, which can identify your device.")) {
-            it.method(tr(R.string.landroid_provider_settings, "Landroid/provider/Settings%1\$s;", Secure), "getString") && it.has(PRINTS.getValue(tr(R.string.android_id, "Android ID")))
+            it.method("Landroid/provider/Settings\$Secure;", "getString") && it.has(PRINTS.getValue("Android ID"))
         },
         rule(Level.CAUTION, tr(R.string.lists_your_installed_apps, "Lists your installed apps"), tr(R.string.reads_which_apps_are_installed, "Reads which apps are installed.")),
         rule(Level.CAUTION, tr(R.string.reads_the_clipboard, "Reads the clipboard"), tr(R.string.can_read_what_you_copied, "Can read what you copied.")),

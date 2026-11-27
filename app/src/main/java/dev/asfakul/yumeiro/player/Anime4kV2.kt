@@ -39,7 +39,7 @@ object Anime4kV2 {
     }
 
     enum class Preset(val label: String, val detail: String) {
-        PERFORMANCE("Performance", tr(R.string.lightest_5_samples_per_pixel_for, "Lightest: 5 samples per pixel, for older phones and TV boxes")),
+        PERFORMANCE("Performance", "Lightest: 5 samples per pixel, for older phones and TV boxes"),
         BALANCED("Balanced", tr(R.string.clear_lines_at_low_cost_good, "Clear lines at low cost; good on most phones")),
         QUALITY("Quality", tr(R.string.stronger_restore_with_diagonal_samples, "Stronger restore with diagonal samples")),
         HIGH_QUALITY(tr(R.string.high_quality, "High quality"), tr(R.string.strongest_restore_and_line_darkening_needs, "Strongest restore and line darkening; needs a recent GPU")),

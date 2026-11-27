@@ -117,7 +117,7 @@ object DownloadSheet {
         val free = if (freeBytes > 0) " · ${DownloadPrompt.sizeText(freeBytes)} free" else ""
         return when (state) {
             is SizeState.Known -> "Size: ${dev.asfakul.yumeiro.online.download.DownloadSize.label(state.size)}$free"
-            SizeState.Checking -> tr(R.string.size_checking, "Size: checking…%1\$s", free)
+            SizeState.Checking -> "Size: checking…$free"
             SizeState.Unknown -> "Size: ${note ?: "the server doesn't say; shown in Downloads once it starts"}$free"
         }
     }

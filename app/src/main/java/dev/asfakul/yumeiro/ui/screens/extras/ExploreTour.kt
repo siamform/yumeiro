@@ -122,7 +122,7 @@ object ExploreTour {
     val stops: List<TourStop> = listOf(
         TourStop("home", "topbar_title", tr(R.string.hi_im_yume_your_guide, "Hi, I'm Yume — your guide"),
             tr(R.string.this_is_home_the_greeting_follows, "This is Home. The greeting follows the time of day, and everything waiting for you — new episodes, where you left off — gathers below it. Two minutes, and you'll know your way around."), TourPlace.HOME),
-        TourStop("spaces", "home_spaces_grid", tr(R.string.spaces_every_feature_one_tap_away, "Spaces: every feature, one tap away"),
+        TourStop("spaces", "home_spaces_grid", "Spaces: every feature, one tap away",
             tr(R.string.each_tile_opens_a_part_of, "Each tile opens a part of Yumeiro — Yumix, YouTube, Manga, Live TV and more. The small line under a tile tells you its state, like \"Add sources\"."), TourPlace.HOME),
         TourStop("spaces_more", "home_spaces_more", tr(R.string.more_shortcuts_live_here, "More shortcuts live here"),
             tr(R.string.see_more_unfolds_the_rest_in, "See more unfolds the rest in place — theme, DNS, tracking, network… — and See less folds them away again."), TourPlace.HOME,

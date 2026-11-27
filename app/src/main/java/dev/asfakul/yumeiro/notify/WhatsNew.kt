@@ -20,9 +20,9 @@ object WhatsNew {
     const val ID = "whatsnew_1.9"
 
     val BODY: String get() = tr(R.string.settings_is_now_grouped_by_subject, "Settings is now grouped by subject: You, Video, Music, Downloads & library, Sources & accounts, System. ") +
-        tr(R.string.profiles_settings_profiles_each_person_gets, "Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint and their own 18+ switch. ") +
+        "Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint and their own 18+ switch. " +
         tr(R.string.private_downloads_the_lock_at_the, "Private downloads: the lock at the top of Downloads, or Settings → Downloads. ") +
-        tr(R.string.statistics_settings_your_statistics_or_the, "Statistics: Settings → Your statistics, or the Statistics card in Library music. ") +
+        "Statistics: Settings → Your statistics, or the Statistics card in Library music. " +
         tr(R.string.telegram_channels_no_login_settings_telegram, "Telegram channels (no login): Settings → Telegram, then type @channel or a t.me link. TeraBox and DiskWala links work there too. ") +
         tr(R.string.script_repos_vega_nuvio_skystream_the, "Script repos (Vega, Nuvio, SkyStream): the Script repos tab in Sources. ") +
         tr(R.string.video_quality_anime4k_and_torrents_settings, "Video quality, Anime4K and torrents: Settings → Video quality & playback. Subtitles and skip intro: Settings → Subtitles & intros. ") +

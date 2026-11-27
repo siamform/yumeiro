@@ -47,7 +47,7 @@ internal fun TrackingV2Card() {
             SettingsToggleRow(
                 tr(R.string.tracking_v2, "Tracking V2"),
                 if (on) tr(R.string.episodes_and_manga_novel_chapters_are, "Episodes and manga / novel chapters are queued and sent until every tracker has them, even after being offline")
-                else tr(R.string.off_episodes_are_sent_once_while, "Off: episodes are sent once while you watch (classic tracking)"),
+                else "Off: episodes are sent once while you watch (classic tracking)",
                 on, { TrackV2.setEnabled(context, it) }, "tracking_v2_toggle",
             )
             if (on) {

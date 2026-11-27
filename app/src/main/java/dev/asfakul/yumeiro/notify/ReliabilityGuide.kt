@@ -46,9 +46,9 @@ object ReliabilityGuide {
                 cn("com.miui.securitycenter", "com.miui.powercenter.PowerSettings"),
             ))
             "samsung" in m -> Vendor("samsung", "Samsung (One UI)", listOf(
-                tr(R.string.battery_choose_unrestricted_for_yumeiro, "Battery: choose Unrestricted for Yumeiro"),
+                "Battery: choose Unrestricted for Yumeiro",
                 tr(R.string.battery_background_usage_limits_remove_yumeiro, "Battery → Background usage limits: remove Yumeiro from Sleeping apps and Deep sleeping apps"),
-                tr(R.string.optional_add_yumeiro_to_never_sleeping, "Optional: add Yumeiro to Never sleeping apps"),
+                "Optional: add Yumeiro to Never sleeping apps",
             ), listOf(
                 cn("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity"),
                 cn("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity"),

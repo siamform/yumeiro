@@ -363,7 +363,7 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
         }
         IconButton(onClick = {
             OnlineDownloads.setKeep(context, d.id, !d.keep)
-            AppMessages.success(context, if (!d.keep) tr(R.string.permanent_kept_forever, "Permanent: kept forever") else tr(R.string.offline_the_auto_delete_timer_applies, "Offline: the auto-delete timer applies"))
+            AppMessages.success(context, if (!d.keep) "Permanent: kept forever" else "Offline: the auto-delete timer applies")
         }, modifier = Modifier.testTag("library_download_keep")) {
             Icon(if (d.keep) Icons.Default.PushPin else Icons.Outlined.PushPin, if (d.keep) tr(R.string.permanent_tap_to_make_offline, "Permanent (tap to make offline)") else tr(R.string.offline_tap_to_keep_forever, "Offline (tap to keep forever)"), tint = if (d.keep) SpotifyGreen else TextTertiary)
         }

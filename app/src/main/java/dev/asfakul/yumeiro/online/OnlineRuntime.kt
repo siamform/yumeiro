@@ -66,7 +66,7 @@ object OnlineRuntime {
 /** Human-readable messages for network / extension failures. */
 object OnlineErrors {
     /** G10 ER-21: text for a socket or DNS call that Android or a firewall app blocked. */
-    const val NETWORK_BLOCKED =
+    val NETWORK_BLOCKED: String get() =
         tr(R.string.android_or_a_firewall_app_is, "Android or a firewall app is blocking Yumeiro's internet. Allow Wi-Fi and mobile data for Yumeiro in Settings › Apps")
 
     /** OkHttp's message for a link without http(s) — a site/extension data problem, not an outdated extension. */

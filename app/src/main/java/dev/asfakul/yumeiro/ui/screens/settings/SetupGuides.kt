@@ -169,7 +169,7 @@ object SetupGuides {
         steps = listOf(
             SetupGuide.Step(tr(R.string.create_a_free_anilist_account_or, "Create a free AniList account, or skip this if you already have one."), link = "https://anilist.co/signup", linkLabel = tr(R.string.sign_up, "Sign up")),
             SetupGuide.Step(tr(R.string.open_anilists_developer_settings_and_tap, "Open AniList's developer settings and tap Create New Client."), link = "https://anilist.co/settings/developer", linkLabel = tr(R.string.developer_settings, "Developer settings")),
-            SetupGuide.Step(tr(R.string.name_yumeiro_or_anything_redirect_url, "Name: Yumeiro (or anything). Redirect URL: paste this exact value."), copy = AniList.REDIRECT),
+            SetupGuide.Step("Name: Yumeiro (or anything). Redirect URL: paste this exact value.", copy = AniList.REDIRECT),
             SetupGuide.Step(tr(R.string.save_then_copy_the_client_id, "Save, then copy the Client ID (a number).")),
             SetupGuide.Step(tr(R.string.back_here_tap_set_up_on, "Back here, tap Set up on AniList and paste the ID.")),
             SetupGuide.Step(tr(R.string.tap_sign_in_then_approve_youll, "Tap Sign in, then Approve. You'll come back to Yumeiro signed in.")),
@@ -212,24 +212,24 @@ object SetupGuides {
         steps = listOf(
             SetupGuide.Step(tr(R.string.create_a_free_trakt_account_or, "Create a free Trakt account, or skip this if you already have one."), link = "https://trakt.tv/auth/join", linkLabel = tr(R.string.sign_up, "Sign up")),
             SetupGuide.Step(tr(R.string.open_trakts_api_apps_and_tap, "Open Trakt's API apps and tap New Application."), link = "https://trakt.tv/oauth/applications/new", linkLabel = tr(R.string.new_application, "New application")),
-            SetupGuide.Step(tr(R.string.name_yumeiro_redirect_uri_paste_this, "Name: Yumeiro. Redirect URI: paste this exact value (Trakt may warn about it; save anyway). Leave allowed origins and the other fields empty."), copy = TRAKT_REDIRECT),
+            SetupGuide.Step("Name: Yumeiro. Redirect URI: paste this exact value (Trakt may warn about it; save anyway). Leave allowed origins and the other fields empty.", copy = TRAKT_REDIRECT),
             SetupGuide.Step(tr(R.string.copy_the_client_id_then_tap, "Copy the Client ID, then tap Add Trakt API app here and paste it. New Trakt apps have no client secret; paste one only if your (older) app shows it.")),
-            SetupGuide.Step(tr(R.string.tap_sign_in_yumeiro_shows_a, "Tap Sign in. Yumeiro shows a short code and opens trakt.tv/activate. Type the code there and approve.")),
+            SetupGuide.Step("Tap Sign in. Yumeiro shows a short code and opens trakt.tv/activate. Type the code there and approve."),
         ),
         tips = listOf("Signing in shows a short code; nothing secret is needed. If your app has a client secret it's stored encrypted on the device and only sent to Trakt.", tr(R.string.yumeiro_refreshes_the_sign_in_before, "Yumeiro refreshes the sign-in before it expires (Trakt sign-ins last 7 days), so tracking keeps working.")),
     )
 
     val simkl = SetupGuide(
         id = "simkl",
-        title = tr(R.string.simkl_anime_shows_and_movies_in, "Simkl: anime, shows and movies in one list"),
+        title = "Simkl: anime, shows and movies in one list",
         intro = tr(R.string.simkl_tracks_anime_tv_and_movies, "Simkl tracks anime, TV and movies together and syncs with many other apps. Yumeiro has a built-in Simkl app, so you only sign in."),
         steps = listOf(
             SetupGuide.Step(tr(R.string.create_a_free_simkl_account_or, "Create a free Simkl account, or skip this if you already have one."), link = "https://simkl.com/", linkLabel = tr(R.string.open_simkl, "Open Simkl")),
-            SetupGuide.Step(tr(R.string.tap_sign_in_yumeiro_shows_a_2, "Tap Sign in. Yumeiro shows a short code and opens simkl.com/pin. Type the code there and approve.")),
+            SetupGuide.Step("Tap Sign in. Yumeiro shows a short code and opens simkl.com/pin. Type the code there and approve."),
             SetupGuide.Step("Done. Finished episodes and movies are marked watched on Simkl, matched by MyAnimeList, AniList, IMDb or TMDB id."),
         ),
         tips = listOf(
-            tr(R.string.using_your_own_simkl_app_is, "Using your own Simkl app is optional: create one at simkl.com/settings/developer (redirect URI urn:ietf:wg:oauth:2.0:oob), then tap Change key and paste its Client ID."),
+            "Using your own Simkl app is optional: create one at simkl.com/settings/developer (redirect URI urn:ietf:wg:oauth:2.0:oob), then tap Change key and paste its Client ID.",
             tr(R.string.simkl_sign_ins_last_7_days, "Simkl sign-ins last 7 days and Yumeiro renews them on its own."),
         ),
     )
@@ -278,7 +278,7 @@ object SetupGuides {
         steps = listOf(
             SetupGuide.Step(tr(R.string.on_a_computer_open_a_private, "On a computer, open a private window (Chrome: Ctrl+Shift+N, Firefox: Ctrl+Shift+P). A private window matters: YouTube changes the cookie of open tabs, and a private session is never reopened.")),
             SetupGuide.Step("Sign in to YouTube in that window. A spare Google account is safest.", link = "https://www.youtube.com/", linkLabel = "youtube.com"),
-            SetupGuide.Step(tr(R.string.in_the_same_tab_open_youtube, "In the same tab, open youtube.com/robots.txt. This page is quiet, so the cookie won't change while you copy it."), link = "https://www.youtube.com/robots.txt", linkLabel = "robots.txt", copy = "https://www.youtube.com/robots.txt"),
+            SetupGuide.Step("In the same tab, open youtube.com/robots.txt. This page is quiet, so the cookie won't change while you copy it.", link = "https://www.youtube.com/robots.txt", linkLabel = "robots.txt", copy = "https://www.youtube.com/robots.txt"),
             SetupGuide.Step(tr(R.string.press_f12_to_open_developer_tools, "Press F12 to open Developer tools, choose the Network tab and reload the page (F5).")),
             SetupGuide.Step("Click the robots.txt request. Under Request Headers find \"cookie\", right-click its value and copy it. It is long and starts with something like VISITOR_INFO1_LIVE= or SID=."),
             SetupGuide.Step(tr(R.string.easier_option_install_the_open_source, "Easier option: install the open-source extension Get cookies.txt LOCALLY (Chrome or Firefox), allow it in private windows, and export youtube.com as cookies.txt. Yumeiro reads that file's text too."), link = "https://github.com/kairi003/Get-cookies.txt-LOCALLY", linkLabel = tr(R.string.get_cookies_txt_locally, "Get cookies.txt LOCALLY")),

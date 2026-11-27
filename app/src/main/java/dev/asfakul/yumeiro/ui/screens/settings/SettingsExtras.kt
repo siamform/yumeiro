@@ -358,7 +358,7 @@ fun DeveloperCard() {
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            tr(R.string.engine_androidx_media3_exoplayer_jetpack_compose, "Engine: AndroidX Media3 (ExoPlayer) · Jetpack Compose\nPrivacy: no ads, no tracking, no analytics"),
+            "Engine: AndroidX Media3 (ExoPlayer) · Jetpack Compose\nPrivacy: no ads, no tracking, no analytics",
             color = TextTertiary, fontSize = 11.sp, lineHeight = 16.sp,
         )
         Spacer(Modifier.height(10.dp))

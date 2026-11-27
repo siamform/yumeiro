@@ -51,7 +51,7 @@ BEFORE_SKIP = re.compile(
     r'\bremovePrefix\(|\bremoveSuffix\(|\bsubstringBefore\(|\bsubstringAfter\(|\bsubstringBeforeLast\(|'
     r'\bsubstringAfterLast\(|getString\(|putString\(|getBoolean\(|getInt\(|getLong\(|\bget\(|\[|\bkey\s*=|\bid\s*=|'
     r'\btag\s*=|\broute\s*=|\bname\s*=\s*$|\bprefix\s*=|\bpackageName\s*=|\bmime\w*\s*=|\btype\s*=|setOf\(|'
-    r'mapOf\(|listOf\(\s*$|(?:Exception|Error|Throwable)\(|\bin\s+$|\bis\s+$)\s*$')
+    r'mapOf\(|\b(?:getValue|getOrDefault|getOrElse|containsKey|remove|method|has|field|find\w*|any|all|none|count|first\w*|matches|filter\w*)\(\s*$|listOf\(\s*$|(?:Exception|Error|Throwable)\(|\bin\s+$|\bis\s+$)\s*$')
 AFTER_SKIP = re.compile(r'^\s*(->|to\b|in\b|==|!=|\.equals|\.toRegex|\.split|\.toUri|\.toPath|\]|\.lowercase|\.uppercase|\.trim)')
 
 UI_ARG = re.compile(
@@ -63,8 +63,8 @@ UI_CALL = re.compile(r'\b(Text|SectionHeader|Chip|SettingsRow|ToggleRow|ActionRo
                      r'setContentTitle|setContentText|setTicker|setSubText|bigText|addAction|LiveTool|Button|Header|'
                      r'Pill|Badge|Hint|Tip|Row|Item|Card|Tile|Option|Entry|Choice)\w*\(\s*([^()"]*,\s*)?$')
 
-TEMPLATE = re.compile(r'\$(?:\{([^{}"]*)\}|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*))')
-CODEY = re.compile(r'(://|\w/\d|\(\w+;|\bHTTP/|\\u|<[a-zA-Z/!]|[{}]|=\s|^\s*[a-z0-9_.\-]+\s*$|\.kt\b|\.json\b|\.m3u8?\b|\.mp4\b|%[0-9.]*[dfx]|'
+TEMPLATE = re.compile(r'(?<!\\)\$(?:\{([^{}"]*)\}|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*))')
+CODEY = re.compile(r'(://|\\r|\r|[A-Za-z]/[A-Za-z]|^[A-Z][\w-]+: |\w/\d|\(\w+;|\bHTTP/|\\u|<[a-zA-Z/!]|[{}]|=\s|^\s*[a-z0-9_.\-]+\s*$|\.kt\b|\.json\b|\.m3u8?\b|\.mp4\b|%[0-9.]*[dfx]|'
                    r'^[A-Z0-9_]+$|[a-z][A-Z][a-z]+[A-Z]|\b(val|fun|return|null|true|false)\b\s|\(\)|&&|\|\||\\\\)')
 
 
@@ -79,7 +79,7 @@ def slug(text):
 def xml_escape(s):
     import xml.sax.saxutils as su
     s = su.escape(s)
-    s = s.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n").replace("\t", "\\t")
+    s = s.replace("\\", "\\\\").replace("'", "\\'").replace('"', '\\"').replace("\n", "\\n").replace("\t", "\\t").replace("\r", "\\r")
     if s[:1] in ("@", "?"):
         s = "\\" + s
     return s
@@ -243,6 +243,9 @@ def main():
             if rel in SKIP_FILES:
                 continue
             src = open(path, encoding="utf-8").read()
+            # Glance widgets have their own resources; small HTTP servers speak protocol text, not UI text.
+            if "ServerSocket" in src or "HTTP/1." in src:
+                continue
             if "androidx.glance" in src:
                 continue
             lines = src.split("\n")
@@ -258,6 +261,7 @@ def main():
                     continue
                 new, last = [], 0
                 const = re.match(r'^(\s*)((?:private |internal |public )?)const val (\w+)\s*=\s*"', line)
+                prev_const = li > 0 and re.match(r'^(\s*)((?:private |internal |public )?)const val (\w+)\s*=\s*$', lines[li - 1])
                 for (a, b, body, simple) in lits:
                     before = line[:a]
                     after = line[b:]
@@ -287,6 +291,10 @@ def main():
                         out = re.sub(r'^(\s*)((?:private |internal |public )?)const val (\w+)\s*=\s*', r'\1\2val \3: String get() = ', out)
                     elif const:
                         continue
+                    if prev_const:
+                        if len(lits) != 1:
+                            continue
+                        lines[li - 1] = re.sub(r'const val (\w+)\s*=\s*$', r'val \1: String get() =', lines[li - 1])
                     lines[li] = out
                     changed = True
             if changed:

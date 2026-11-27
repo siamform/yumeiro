@@ -299,7 +299,7 @@ fun VideoScreen(
                 ) {
                     Icon(
                         imageVector = if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
-                        contentDescription = tr(R.string.toggle_grid_list, "Toggle Grid/List"),
+                        contentDescription = "Toggle Grid/List",
                         tint = TextSecondary,
                         modifier = Modifier.size(20.dp)
                     )
