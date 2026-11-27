@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
@@ -164,7 +163,7 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
             } else itemsIndexed(page.items, key = { i, it -> "cv${i}_${it.id}" }) { _, item ->
                 YtVideoCard(item, wide = true, showChannel = false) { onPlay(item, page.items) }
             }
-            if (!page.loading && page.items.isEmpty() && channel != null && page.error == null) item("ch_none") { YtProblem(tr(R.string.this_channel_has_nothing_here_yet, "This channel has nothing here yet."), null) }
+            if (!page.loading && page.items.isEmpty() && channel != null && page.error == null) item("ch_none") { YtProblem("This channel has nothing here yet.", null) }
             if (page.error != null) item("ch_perr") { YtProblem(page.error) { loadTab(tab) } }
             if (page.items.isNotEmpty() && page.loading) item("ch_more") { YtLoadingMore() }
         }

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.telegram.td
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -99,7 +97,7 @@ class TgSession(val client: TdClient, private val params: TgParams, private val 
 
     suspend fun submitPhone(input: String): Boolean {
         val phone = TgAuth.normalizePhone(input)
-            ?: return fail(tr(R.string.that_phone_number_isnt_valid_include, "That phone number isn't valid. Include the country code, like +880…"))
+            ?: return fail("That phone number isn't valid. Include the country code, like +880…")
         return act("phone") {
             client.call("setAuthenticationPhoneNumber") {
                 put("phone_number", phone)
@@ -115,7 +113,7 @@ class TgSession(val client: TdClient, private val params: TgParams, private val 
 
     suspend fun submitCode(input: String): Boolean {
         val code = TgAuth.normalizeCode(input)
-        if (code.isEmpty()) return fail(tr(R.string.type_the_code_telegram_sent_you, "Type the code Telegram sent you."))
+        if (code.isEmpty()) return fail("Type the code Telegram sent you.")
         return act("code") { client.call("checkAuthenticationCode") { put("code", code) } }
     }
 
@@ -124,12 +122,12 @@ class TgSession(val client: TdClient, private val params: TgParams, private val 
     }
 
     suspend fun submitPassword(password: String): Boolean {
-        if (password.isEmpty()) return fail(tr(R.string.type_your_telegram_password_two_step, "Type your Telegram password (two-step verification)."))
+        if (password.isEmpty()) return fail("Type your Telegram password (two-step verification).")
         return act("password") { client.call("checkAuthenticationPassword") { put("password", password) } }
     }
 
     suspend fun register(firstName: String, lastName: String): Boolean {
-        if (firstName.isBlank()) return fail(tr(R.string.type_a_first_name, "Type a first name."))
+        if (firstName.isBlank()) return fail("Type a first name.")
         return act("register") {
             client.call("registerUser") { put("first_name", firstName.trim()); put("last_name", lastName.trim()); put("disable_notification", true) }
         }

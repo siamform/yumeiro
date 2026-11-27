@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -74,10 +73,10 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Time-aware greeting used as the Home headline ("Good evening"). */
 fun greetingForNow(): String = when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
-    in 5..11 -> tr(R.string.good_morning, "Good morning")
-    in 12..16 -> tr(R.string.good_afternoon, "Good afternoon")
-    in 17..21 -> tr(R.string.good_evening, "Good evening")
-    else -> tr(R.string.good_night, "Good night")
+    in 5..11 -> "Good morning"
+    in 12..16 -> "Good afternoon"
+    in 17..21 -> "Good evening"
+    else -> "Good night"
 }
 
 /** 44dp round glass icon button (prototype header style). */
@@ -133,7 +132,7 @@ fun MTTopBar(
     sourceLabel: String? = null,
     /** Replaces the inline library search (e.g. Yumix opens the all-extension search page). */
     onSearchClick: (() -> Unit)? = null,
-    searchDescription: String = tr(R.string.search_your_library, "Search your library"),
+    searchDescription: String = "Search your library",
     /** TV-4 (ADR-036): runs the committed library query as an online Yumix search; null = no button. */
     onSearchOnline: ((String) -> Unit)? = null,
 ) {
@@ -206,7 +205,7 @@ fun MTTopBar(
                 Spacer(Modifier.width(10.dp))
                 GlassIconButton(
                     icon = Icons.Default.Close,
-                    contentDescription = tr(R.string.close_search, "Close search"),
+                    contentDescription = "Close search",
                     onClick = { isSearchExpanded = false; committed = ""; onSearchQueryChange("") },
                     modifier = Modifier.testTag("search_close_button")
                 )
@@ -240,7 +239,7 @@ fun MTTopBar(
                 ) {
                     Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(tr(R.string.search_online_for, "Search online for \"%1\$s\"", online), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Search online for \"$online\"", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             }
@@ -253,7 +252,7 @@ fun MTTopBar(
                 if (showBackButton) {
                     GlassIconButton(
                         icon = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = tr(R.string.back, "Back"),
+                        contentDescription = "Back",
                         onClick = onBackClick,
                         modifier = Modifier.testTag("topbar_back_button")
                     )
@@ -312,7 +311,7 @@ fun MTTopBar(
                     if (!showBackButton && !dev.asfakul.yumeiro.ui.tv.LocalTvMode.current) {
                         TopAction(
                             icon = Icons.Outlined.Settings,
-                            contentDescription = tr(R.string.open_settings_2, "Open Settings"),
+                            contentDescription = "Open Settings",
                             onClick = onSettingsClick,
                             modifier = Modifier.testTag("topbar_settings_action")
                         )
@@ -344,7 +343,7 @@ fun OfflineTag(modifier: Modifier = Modifier) {
 
 private fun Modifier.androidx_semantics_offline(): Modifier =
     this.testTag("offline_banner").then(
-        Modifier.semantics(mergeDescendants = true) { contentDescription = tr(R.string.youre_offline_showing_saved_content_2, "You're offline, showing saved content") }
+        Modifier.semantics(mergeDescendants = true) { contentDescription = "You're offline, showing saved content" }
     )
 
 
@@ -371,7 +370,7 @@ private fun SourceTitle(title: String, style: androidx.compose.ui.text.TextStyle
     val turn by androidx.compose.animation.core.animateFloatAsState(if (expanded) 180f else 0f, YuMotion.move(reduced, 250), label = "chevron")
     Row(
         Modifier.clip(yuRound(14))
-            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) tr(R.string.close_source_menu, "Close source menu") else tr(R.string.change_source, "Change source"), onClick = onClick)
+            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
             .semantics { contentDescription = "Source: $title. ${if (expanded) "Menu open" else "Tap to change"}" }
             .then(if (tag != null) Modifier.testTag(tag) else Modifier)
             .padding(end = 6.dp),
@@ -417,7 +416,7 @@ private fun SourcePill(label: String, expanded: Boolean, onClick: () -> Unit, ta
         modifier.height(if (narrow) 26.dp else 28.dp).clip(shape)
             .background(if (expanded) p.accent.copy(alpha = 0.22f) else p.textPrimary.copy(alpha = if (p.isDark) 0.08f else 0.06f))
             .border(1.dp, if (expanded) p.accent.copy(alpha = 0.6f) else p.textPrimary.copy(alpha = if (p.isDark) 0.18f else 0.14f), shape)
-            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) tr(R.string.close_source_menu, "Close source menu") else tr(R.string.change_source, "Change source"), onClick = onClick)
+            .clickable(role = Role.DropdownList, onClickLabel = if (expanded) "Close source menu" else "Change source", onClick = onClick)
             .semantics { contentDescription = "Source: $label. ${if (expanded) "Menu open" else "Tap to change"}" }
             .then(if (tag != null) Modifier.testTag(tag) else Modifier)
             .tourTarget("topbar_source_pill")

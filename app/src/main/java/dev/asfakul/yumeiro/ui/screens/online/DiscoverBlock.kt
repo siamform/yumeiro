@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
@@ -135,30 +134,30 @@ object Discover {
     /** Pure: the shelves of a section, in order (unit-tested). */
     fun shelves(section: Section): List<Shelf> = when (section) {
         Section.DISCOVER -> listOf(
-            Row("hot", tr(R.string.hot_right_now, "Hot right now"), null, "hot_today"), IfYouLike(), Services("all"), Genres("all"),
-            Row("top_all", tr(R.string.all_time_greats, "All-time greats"), null, "top_movies"),
+            Row("hot", "Hot right now", null, "hot_today"), IfYouLike(), Services("all"), Genres("all"),
+            Row("top_all", "All-time greats", null, "top_movies"),
         )
         Section.MOVIES -> listOf(
-            Row("m_pop", tr(R.string.popular_movies, "Popular movies"), q("movie", HubDiscover.Sort.POPULAR), null), Services("movie"), Genres("movie"),
-            Row("m_new", tr(R.string.new_movies, "New movies"), q("movie", HubDiscover.Sort.NEW), null), Row("m_top", tr(R.string.top_rated_movies, "Top rated movies"), q("movie", HubDiscover.Sort.TOP), null),
+            Row("m_pop", "Popular movies", q("movie", HubDiscover.Sort.POPULAR), null), Services("movie"), Genres("movie"),
+            Row("m_new", "New movies", q("movie", HubDiscover.Sort.NEW), null), Row("m_top", "Top rated movies", q("movie", HubDiscover.Sort.TOP), null),
         )
         Section.TV -> listOf(
-            Row("t_pop", tr(R.string.series_everyone_is_watching, "Series everyone is watching"), q("tv", HubDiscover.Sort.POPULAR), null), Services("tv"), Genres("tv"),
-            Row("t_new", tr(R.string.new_series, "New series"), q("tv", HubDiscover.Sort.NEW), null), Row("t_top", tr(R.string.top_rated_series, "Top rated series"), q("tv", HubDiscover.Sort.TOP), null),
+            Row("t_pop", "Series everyone is watching", q("tv", HubDiscover.Sort.POPULAR), null), Services("tv"), Genres("tv"),
+            Row("t_new", "New series", q("tv", HubDiscover.Sort.NEW), null), Row("t_top", "Top rated series", q("tv", HubDiscover.Sort.TOP), null),
         )
         Section.ANIME -> listOf(
-            Row("a_pop", tr(R.string.popular_anime, "Popular anime"), q("tv", HubDiscover.Sort.POPULAR, anime = true), null), Genres("anime"),
-            Row("a_new", tr(R.string.new_anime, "New anime"), q("tv", HubDiscover.Sort.NEW, anime = true), null),
-            Row("a_top", tr(R.string.top_rated_anime, "Top rated anime"), q("tv", HubDiscover.Sort.TOP, anime = true), null),
-            Row("a_mov", tr(R.string.anime_movies, "Anime movies"), q("movie", HubDiscover.Sort.POPULAR, anime = true), null),
+            Row("a_pop", "Popular anime", q("tv", HubDiscover.Sort.POPULAR, anime = true), null), Genres("anime"),
+            Row("a_new", "New anime", q("tv", HubDiscover.Sort.NEW, anime = true), null),
+            Row("a_top", "Top rated anime", q("tv", HubDiscover.Sort.TOP, anime = true), null),
+            Row("a_mov", "Anime movies", q("movie", HubDiscover.Sort.POPULAR, anime = true), null),
         )
         Section.TOP -> listOf(
-            Row("top_m", tr(R.string.top_rated_movies, "Top rated movies"), q("movie", HubDiscover.Sort.TOP), null), Row("top_t", tr(R.string.top_rated_series, "Top rated series"), q("tv", HubDiscover.Sort.TOP), null),
-            Row("top_a", tr(R.string.top_rated_anime, "Top rated anime"), q("tv", HubDiscover.Sort.TOP, anime = true), null),
+            Row("top_m", "Top rated movies", q("movie", HubDiscover.Sort.TOP), null), Row("top_t", "Top rated series", q("tv", HubDiscover.Sort.TOP), null),
+            Row("top_a", "Top rated anime", q("tv", HubDiscover.Sort.TOP, anime = true), null),
         )
         Section.HOT -> listOf(
-            Row("hot", tr(R.string.hot_right_now, "Hot right now"), null, "hot_today"), IfYouLike(),
-            Row("hot_m", tr(R.string.trending_movies, "Trending movies"), null, "trending_movies"), Row("hot_t", tr(R.string.trending_series, "Trending series"), null, "trending_tv"),
+            Row("hot", "Hot right now", null, "hot_today"), IfYouLike(),
+            Row("hot_m", "Trending movies", null, "trending_movies"), Row("hot_t", "Trending series", null, "trending_tv"),
         )
     }
 
@@ -261,7 +260,7 @@ private fun DiscoverRow(row: Discover.Row, onOpen: (OnlineItem) -> Unit, onGrid:
     if (page != null && page !== Failed && items.isEmpty()) return
     Column(Modifier.testTag("discover_row_${row.key}")) {
         // Group W (B12): See all is laid out while loading too (invisible, not focusable), so the header keeps its height.
-        SectionHeader(row.title, subtitle = tr(R.string.dw_subtitle_shelf, "Yumeiro Cloud · TMDB")) {
+        SectionHeader(row.title, subtitle = "Yumeiro Cloud · TMDB") {
             val ready = items.isNotEmpty()
             Box(if (ready) Modifier else Modifier.alpha(0f).clearAndSetSemantics {}.focusProperties { canFocus = false }) { SeeAllButton { if (ready) onGrid(row) } }
         }
@@ -310,7 +309,7 @@ private fun IfYouLikeRow(seeds: List<OnlineItem>, onOpen: (OnlineItem) -> Unit, 
             Text(stringResource(R.string.if_you_like), color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Box {
                 Row(
-                    Modifier.clip(Chip).clickable(role = Role.DropdownList, onClickLabel = tr(R.string.pick_another_title, "Pick another title")) { menu = true }
+                    Modifier.clip(Chip).clickable(role = Role.DropdownList, onClickLabel = "Pick another title") { menu = true }
                         .padding(horizontal = 8.dp, vertical = 6.dp).testTag("discover_seed"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

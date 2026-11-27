@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.filled.ExpandMore
@@ -150,7 +149,7 @@ fun VideoLibraryContent(
         }
         if (deviceContinue.isNotEmpty()) item("devcont", span = { GridItemSpan(maxLineSpan) }) {
             Column {
-                LibHeader(tr(R.string.on_this_device, "On this device"))
+                LibHeader("On this device")
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(deviceContinue.take(15), key = { it.id }) { v -> DeviceCard(v) { onPlayVideo(v) } }
                 }
@@ -183,17 +182,17 @@ fun VideoLibraryContent(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) {
                     val label = when (status) { null -> null; "FAV" -> "Favorites"; else -> OnlineBookmarks.Status.picks.firstOrNull { it.name == status }?.label }
-                    LibHeader(tr(R.string.my_list, "My List"), subtitle = if (bookmarks.isEmpty()) null else "${bookmarks.size} saved" + (label?.let { " · showing $it" } ?: ""))
+                    LibHeader("My List", subtitle = if (bookmarks.isEmpty()) null else "${bookmarks.size} saved" + (label?.let { " · showing $it" } ?: ""))
                 }
-                if (bookmarks.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (status != null) 1 else 0, { statusSheet = true }, "library_mylist_filter", tr(R.string.filter_my_list, "Filter My List"))
+                if (bookmarks.isNotEmpty()) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (status != null) 1 else 0, { statusSheet = true }, "library_mylist_filter", "Filter My List")
             }
         }
         if (bookmarks.isEmpty()) item("mlempty", span = { GridItemSpan(maxLineSpan) }) {
-            EmptyCard(Icons.Outlined.BookmarkBorder, tr(R.string.nothing_saved_yet, "Nothing saved yet"), tr(R.string.tap_my_list_on_any_movie, "Tap My List on any movie or show to keep it here — new episodes of saved shows are announced."), tr(R.string.browse_online, "Browse online"), onBrowseOnline)
+            EmptyCard(Icons.Outlined.BookmarkBorder, "Nothing saved yet", "Tap My List on any movie or show to keep it here — new episodes of saved shows are announced.", "Browse online", onBrowseOnline)
         }
         items(shown, key = { "bm_" + it.key }) { b -> BookmarkCard(b) { onOpenTitle(b.toItem()) } }
         if (bookmarks.isEmpty() && downloads.isEmpty() && history.isEmpty() && deviceContinue.isEmpty()) item("allempty", span = { GridItemSpan(maxLineSpan) }) {
-            EmptyCard(Icons.Outlined.VideoLibrary, tr(R.string.your_videos_show_up_here, "Your videos show up here"), tr(R.string.watch_something_on_this_device_or, "Watch something on this device or online and it will be ready to continue."), null, null)
+            EmptyCard(Icons.Outlined.VideoLibrary, "Your videos show up here", "Watch something on this device or online and it will be ready to continue.", null, null)
         }
     }
 }
@@ -220,7 +219,7 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(yuRound(12)).background(DarkSurfaceContainer)) {
             PosterImage(b.posterUrl, b.posterHeaders, Modifier.fillMaxSize())
             if (b.newEpisodes > 0) Text(
-                if (b.newEpisodes == 1) tr(R.string.new_ep, "NEW EP") else "+${b.newEpisodes} EPS", color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontSize = 9.sp, fontWeight = FontWeight.Black,
+                if (b.newEpisodes == 1) "NEW EP" else "+${b.newEpisodes} EPS", color = dev.asfakul.yumeiro.ui.theme.OnAccent, fontSize = 9.sp, fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.TopStart).padding(6.dp).clip(yuRound(6)).background(SpotifyGreen).padding(horizontal = 6.dp, vertical = 2.dp),
             )
             Box(Modifier.align(Alignment.TopEnd)) {
@@ -233,8 +232,8 @@ private fun BookmarkCard(b: OnlineBookmarks.Bookmark, onClick: () -> Unit) {
                     OnlineBookmarks.Status.picks.forEach { s ->
                         DropdownMenuItem(text = { Text((if (s == b.status) "✓ " else "") + s.label) }, onClick = { OnlineBookmarks.setStatus(context, b.api, b.url, s); menu = false })
                     }
-                    DropdownMenuItem(text = { Text(if (b.favorite) tr(R.string.remove_from_favorites_3, "♥ Remove from Favorites") else tr(R.string.add_to_favorites_3, "♡ Add to Favorites")) }, onClick = { OnlineBookmarks.toggleFavorite(context, b.toItem()); menu = false })
-                    DropdownMenuItem(text = { Text(if (b.notify) tr(R.string.turn_off_new_episode_alerts, "Turn off new-episode alerts") else tr(R.string.alert_me_about_new_episodes, "Alert me about new episodes")) }, onClick = { OnlineBookmarks.setNotify(context, b.api, b.url, !b.notify); menu = false })
+                    DropdownMenuItem(text = { Text(if (b.favorite) "♥ Remove from Favorites" else "♡ Add to Favorites") }, onClick = { OnlineBookmarks.toggleFavorite(context, b.toItem()); menu = false })
+                    DropdownMenuItem(text = { Text(if (b.notify) "Turn off new-episode alerts" else "Alert me about new episodes") }, onClick = { OnlineBookmarks.setNotify(context, b.api, b.url, !b.notify); menu = false })
                     DropdownMenuItem(text = { Text(stringResource(R.string.remove_from_my_list)) }, onClick = { OnlineBookmarks.remove(context, b.api, b.url); menu = false })
                 }
             }

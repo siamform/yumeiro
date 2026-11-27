@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.tv
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -121,7 +120,7 @@ fun TvNavRail(
             Row(Modifier.height(52.dp).padding(start = 6.dp).testTag("tv_rail_logo"), verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     painter = painterResource(R.drawable.ic_app_logo),
-                    contentDescription = tr(R.string.app_name, "Yumeiro"),
+                    contentDescription = "Yumeiro",
                     modifier = Modifier.size(40.dp).clip(yuRound(11)),
                 )
                 AnimatedVisibility(focusedInside, enter = fadeIn(tween(160)), exit = fadeOut(tween(90))) {
@@ -142,7 +141,7 @@ fun TvNavRail(
             }
             Spacer(Modifier.weight(1f))
             RailItem(
-                label = tr(R.string.settings, "Settings"),
+                label = "Settings",
                 selected = false,
                 expanded = focusedInside,
                 icon = { sel -> if (sel) Icons.Filled.Settings else Icons.Outlined.Settings },

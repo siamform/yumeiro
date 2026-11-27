@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import com.lagradost.cloudstream3.MainAPI
 import dev.asfakul.yumeiro.online.web.BrowserCheck
 import kotlinx.coroutines.Dispatchers
@@ -36,23 +34,23 @@ object EmptyHome {
         val host = hostOf(site) ?: site
         if (error != null || code == null) {
             val why = error?.let { OnlineErrors.friendly(it, "the site didn't answer") } ?: "the site didn't answer"
-            return Diagnosis(Kind.UNREACHABLE, tr(R.string.couldnt_reach, "Couldn't reach %1\$s: %2\$s", host, why), site)
+            return Diagnosis(Kind.UNREACHABLE, "Couldn't reach $host: $why", site)
         }
         if (verdict == BrowserCheck.Verdict.CHALLENGE)
-            return Diagnosis(Kind.BROWSER_CHECK, tr(R.string.asks_for_a_browser_check_first, "%1\$s asks for a browser check first. Tap Open site, pass the check, then Retry", host), site)
+            return Diagnosis(Kind.BROWSER_CHECK, "$host asks for a browser check first. Tap Open site, pass the check, then Retry", site)
         if (verdict == BrowserCheck.Verdict.BLOCKED)
-            return Diagnosis(Kind.BLOCKED, tr(R.string.s_firewall_blocked_this_connection_try, "%1\$s's firewall blocked this connection. Try another network, or change DNS in Settings › Network", host), site)
+            return Diagnosis(Kind.BLOCKED, "$host's firewall blocked this connection. Try another network, or change DNS in Settings › Network", site)
         if (verdict == BrowserCheck.Verdict.RATE_LIMITED)
-            return Diagnosis(Kind.SITE_ERROR, tr(R.string.is_getting_too_many_requests_right, "%1\$s is getting too many requests right now. Try again in a minute", host), site)
+            return Diagnosis(Kind.SITE_ERROR, "$host is getting too many requests right now. Try again in a minute", site)
         val moved = finalUrl?.let(::hostOf)?.takeIf { bare(it) != bare(host) }
         if (moved != null && code in 200..399) {
             val base = finalUrl.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}" + (if (it.port != defaultPort(it.scheme)) ":${it.port}" else "") }
-            return Diagnosis(Kind.MOVED, tr(R.string.moved_to_tap_use_new_address, "%1\$s moved to %2\$s. Tap Use new address", host, moved), site, base)
+            return Diagnosis(Kind.MOVED, "$host moved to $moved. Tap Use new address", site, base)
         }
-        if (code >= 400) return Diagnosis(Kind.SITE_ERROR, tr(R.string.answered_with_error_the_site_may, "%1\$s answered with error %2\$s. The site may be down; try again later", host, code), site)
+        if (code >= 400) return Diagnosis(Kind.SITE_ERROR, "$host answered with error $code. The site may be down; try again later", site)
         return Diagnosis(
             Kind.NOTHING_PARSED,
-            tr(R.string.works_but_this_extension_found_no, "%1\$s works, but this extension found no titles on it. The extension is probably out of date for the site; update it in Extensions or tell its author", host),
+            "$host works, but this extension found no titles on it. The extension is probably out of date for the site; update it in Extensions or tell its author",
             site,
         )
     }

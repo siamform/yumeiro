@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.notify
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +27,7 @@ object Inbox {
         EPISODE("New episode"), EXTENSION("Extensions"), PLAYLIST("Streams"), UPDATE("App update"),
         NEWS("What's new"), NUDGE("For you"), INFO("Yumeiro"),
         /** Maintenance / outage notices and messages for this device (push). */
-        ALERT(tr(R.string.service_alert, "Service alert"));
+        ALERT("Service alert");
         companion object { fun of(s: String?) = entries.firstOrNull { it.name.equals(s, true) } ?: INFO }
     }
 

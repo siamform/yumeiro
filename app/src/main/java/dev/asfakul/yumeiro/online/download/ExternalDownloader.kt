@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.download
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -37,14 +35,14 @@ object ExternalDownloader {
     val KNOWN = listOf(
         App("idm.internet.download.manager.plus", "1DM+", hls = true),
         App("idm.internet.download.manager", "1DM", hls = true),
-        App("idm.internet.download.manager.adm.lite", tr(R.string.t_1dm_lite, "1DM Lite"), hls = true),
+        App("idm.internet.download.manager.adm.lite", "1DM Lite", hls = true),
         App("com.dv.adm", "ADM", hls = false),
-        App("com.dv.adm.pay", tr(R.string.adm_pro, "ADM Pro"), hls = false),
-        App("com.dv.adm.old", tr(R.string.adm_old, "ADM (old)"), hls = false),
+        App("com.dv.adm.pay", "ADM Pro", hls = false),
+        App("com.dv.adm.old", "ADM (old)", hls = false),
     )
     private const val ONE_DM_ACTIVITY = "idm.internet.download.manager.Downloader"
 
-    fun label(pkg: String): String = when (pkg) { IN_APP -> tr(R.string.yumeiro_built_in, "Yumeiro (built-in)"); CHOOSER -> tr(R.string.ask_each_time, "Ask each time"); else -> KNOWN.firstOrNull { it.pkg == pkg }?.label ?: pkg }
+    fun label(pkg: String): String = when (pkg) { IN_APP -> "Yumeiro (built-in)"; CHOOSER -> "Ask each time"; else -> KNOWN.firstOrNull { it.pkg == pkg }?.label ?: pkg }
 
     fun is1dm(pkg: String) = pkg.startsWith("idm.internet.download.manager")
 
@@ -56,9 +54,9 @@ object ExternalDownloader {
     /** Why [choice] can't take this link (null = it can). DASH never; HLS only where the app saves streams. */
     fun unsupportedReason(choice: String, isHls: Boolean, isDash: Boolean, splitAudio: Boolean = false): String? = when {
         choice == IN_APP -> "built-in"
-        isDash -> tr(R.string.this_source_dash_cant_be_handed, "This source (DASH) can't be handed to another app")
+        isDash -> "This source (DASH) can't be handed to another app"
         // Another app would save the picture without the sound; the built-in downloader joins both.
-        splitAudio -> tr(R.string.this_source_keeps_its_sound_in, "This source keeps its sound in a separate track, so the built-in downloader saves it")
+        splitAudio -> "This source keeps its sound in a separate track, so the built-in downloader saves it"
         isHls && choice != CHOOSER && KNOWN.firstOrNull { it.pkg == choice }?.hls == false -> "${label(choice)} can't save streaming (HLS) links"
         else -> null
     }
@@ -93,7 +91,7 @@ object ExternalDownloader {
      * its headers go only to the app the user picked.
      */
     fun send(context: Context, choice: String, url: String, headers: Map<String, String>, fileName: String?): String? {
-        if (!url.startsWith("http://") && !url.startsWith("https://")) return tr(R.string.this_link_cant_be_opened_in, "This link can't be opened in another app")
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return "This link can't be opened in another app"
         val ex = extras(choice, headers, fileName)
         fun build(): Intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
             ex.forEach { (k, v) ->
@@ -107,7 +105,7 @@ object ExternalDownloader {
         }
         return try {
             when {
-                choice == CHOOSER -> context.startActivity(Intent.createChooser(build().apply { setDataAndType(data, "video/*") }, tr(R.string.download_with, "Download with")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                choice == CHOOSER -> context.startActivity(Intent.createChooser(build().apply { setDataAndType(data, "video/*") }, "Download with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 is1dm(choice) -> try { context.startActivity(build().setClassName(choice, ONE_DM_ACTIVITY)) }
                     catch (_: ActivityNotFoundException) { context.startActivity(build().setPackage(choice)) }
                 else -> context.startActivity(build().setPackage(choice))

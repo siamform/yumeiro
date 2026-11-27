@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -103,7 +102,7 @@ private fun Section(title: String, hint: String? = null, content: @Composable ()
 @Composable
 fun PrivacyScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        SubPageHeader(title = tr(R.string.privacy, "Privacy"), onBack = onBack)
+        SubPageHeader(title = "Privacy", onBack = onBack)
         Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("privacy")).padding(horizontal = 16.dp).padding(bottom = 48.dp)) {
             PrivacyLockSections()
         }
@@ -123,22 +122,22 @@ internal fun PrivacyLockSections() {
     val after by Privacy.lockAfter.collectAsState()
     val hide by Privacy.hideInRecents.collectAsState()
     Column(Modifier.testTag("privacy_lock_sections")) {
-        Section(tr(R.string.incognito_mode, "Incognito mode"), tr(R.string.while_on_nothing_you_watch_read, "While on, nothing you watch, read or listen to is saved: no history, no Continue watching, no tracker updates.")) {
+        Section("Incognito mode", "While on, nothing you watch, read or listen to is saved: no history, no Continue watching, no tracker updates.") {
             SettingsToggleRow("Incognito", if (incognito) "On — history is paused" else "Off", incognito, { Privacy.setIncognito(context, it) }, "privacy_incognito")
         }
-        Section(tr(R.string.app_lock, "App lock"), tr(R.string.ask_for_your_fingerprint_face_or, "Ask for your fingerprint, face or screen lock when Yumeiro opens.")) {
-            SettingsToggleRow(tr(R.string.lock_yumeiro, "Lock Yumeiro"), if (Privacy.canAuthenticate(context)) tr(R.string.uses_the_devices_own_lock, "Uses the device's own lock") else tr(R.string.set_a_screen_lock_in_android, "Set a screen lock in Android settings first"), lock, { on ->
+        Section("App lock", "Ask for your fingerprint, face or screen lock when Yumeiro opens.") {
+            SettingsToggleRow("Lock Yumeiro", if (Privacy.canAuthenticate(context)) "Uses the device's own lock" else "Set a screen lock in Android settings first", lock, { on ->
                 if (activity != null) Privacy.setLockEnabled(activity, on) { ok -> if (!ok && on) AppMessages.error(context, "App lock wasn't turned on") }
             }, "privacy_lock")
             if (lock) {
-                val options = listOf(0 to tr(R.string.every_time, "Every time"), 60 to tr(R.string.after_1_minute, "After 1 minute"), 300 to tr(R.string.after_5_minutes, "After 5 minutes"), 1800 to tr(R.string.after_30_minutes, "After 30 minutes"))
+                val options = listOf(0 to "Every time", 60 to "After 1 minute", 300 to "After 5 minutes", 1800 to "After 30 minutes")
                 Text(stringResource(R.string.lock_again), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
                     options.forEach { (sec, label) ->
                         dev.asfakul.yumeiro.ui.components.FilterPill(label.removePrefix("After "), after == sec, { Privacy.setLockAfter(context, sec) })
                     }
                 }
-                SettingsToggleRow(tr(R.string.hide_content_in_recents, "Hide content in recents"), tr(R.string.blank_preview_in_the_app_switcher, "Blank preview in the app switcher and no screenshots"), hide, { on -> activity?.let { Privacy.setHideInRecents(it, on) } }, "privacy_hide_recents")
+                SettingsToggleRow("Hide content in recents", "Blank preview in the app switcher and no screenshots", hide, { on -> activity?.let { Privacy.setHideInRecents(it, on) } }, "privacy_hide_recents")
             }
         }
     }
@@ -151,7 +150,7 @@ internal fun PrivateDownloadsRows() {
     if (!dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PRIVATE_DOWNLOADS)) return
     val stealth by dev.asfakul.yumeiro.online.download.PrivateDownloads.stealth.collectAsState()
     androidx.compose.runtime.LaunchedEffect(Unit) { dev.asfakul.yumeiro.online.download.PrivateDownloads.loadStealth(context) }
-    SettingsToggleRow(tr(R.string.hide_the_private_entry, "Hide the Private entry"), if (stealth) tr(R.string.open_it_by_long_pressing_the, "Open it by long-pressing the storage card in Downloads") else tr(R.string.private_is_the_lock_at_the, "Private is the lock at the top of Downloads"), stealth,
+    SettingsToggleRow("Hide the Private entry", if (stealth) "Open it by long-pressing the storage card in Downloads" else "Private is the lock at the top of Downloads", stealth,
         { dev.asfakul.yumeiro.online.download.PrivateDownloads.setStealth(context, it) }, "privacy_vault_stealth")
 }
 
@@ -161,7 +160,7 @@ internal fun LyricsOnlineRow() {
     val context = LocalContext.current
     remember { LrcLib.init(context); true }
     val lyricsOnline by LrcLib.enabled.collectAsState()
-    SettingsToggleRow(tr(R.string.find_lyrics_online, "Find lyrics online"), tr(R.string.from_lrclib_a_free_open_lyrics, "From LRCLIB, a free open lyrics library. Sends only the song's title, artist, album and length"), lyricsOnline, { LrcLib.setEnabled(context, it) }, "lyrics_online_toggle")
+    SettingsToggleRow("Find lyrics online", "From LRCLIB, a free open lyrics library. Sends only the song's title, artist, album and length", lyricsOnline, { LrcLib.setEnabled(context, it) }, "lyrics_online_toggle")
 }
 
 // endregion
@@ -192,7 +191,7 @@ fun TrackingScreen(onBack: () -> Unit) {
         .onFailure { AppMessages.error(context, "No browser to sign in with") }
 
     Column(Modifier.fillMaxSize().testTag("tracking_screen")) {
-        SubPageHeader(title = tr(R.string.tracking, "Tracking"), onBack = onBack, subtitle = tr(R.string.watched_episodes_update_your_lists_automatically, "Watched episodes update your lists automatically"))
+        SubPageHeader(title = "Tracking", onBack = onBack, subtitle = "Watched episodes update your lists automatically")
         androidx.compose.runtime.key(refresh) {
             Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("tracking")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(stringResource(R.string.every_tracker_is_free_kitsu_simkl),
@@ -222,7 +221,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                 )
                 GuideCard(SetupGuides.kitsu)
 
-                GroupLabel(tr(R.string.movies_shows, "Movies & shows"))
+                GroupLabel("Movies & shows")
                 TrackerCard(
                     name = "Trakt", tint = TraktRed, user = Trakt.user(), configured = Trakt.configured, tag = "trakt",
                     onSetUp = { traktKeys = true },
@@ -231,7 +230,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                             runCancellable { withContext(Dispatchers.IO) { Trakt.deviceCode(NetworkClient.get(context)) } }
                                 .onSuccess { c -> traktCode = c; open(c.verificationUrl)
                                     runCancellable { Trakt.awaitToken(context, NetworkClient.get(context), c) }
-                                        .onSuccess { AppMessages.success(context, tr(R.string.signed_in_to_trakt_as, "Signed in to Trakt as %1\$s", it)) }
+                                        .onSuccess { AppMessages.success(context, "Signed in to Trakt as $it") }
                                         .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
                                     traktCode = null; refresh++ }
                                 .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
@@ -249,7 +248,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                             runCancellable { withContext(Dispatchers.IO) { Simkl.deviceCode(NetworkClient.get(context)) } }
                                 .onSuccess { c -> simklCode = c; open(c.verificationUrl)
                                     runCancellable { Simkl.awaitToken(context, NetworkClient.get(context), c) }
-                                        .onSuccess { AppMessages.success(context, tr(R.string.signed_in_to_simkl_as, "Signed in to Simkl as %1\$s", it)) }
+                                        .onSuccess { AppMessages.success(context, "Signed in to Simkl as $it") }
                                         .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
                                     simklCode = null; refresh++ }
                                 .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
@@ -269,7 +268,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                             runCancellable { withContext(Dispatchers.IO) { LastFm.requestToken(NetworkClient.get(context)) } }
                                 .onSuccess { (token, url) -> lastfmUrl = url; open(url)
                                     runCancellable { withContext(Dispatchers.IO) { LastFm.awaitSession(context, NetworkClient.get(context), token) } }
-                                        .onSuccess { AppMessages.success(context, tr(R.string.scrobbling_to_last_fm_as, "Scrobbling to Last.fm as %1\$s", it)); Scrobbler.flush(context) }
+                                        .onSuccess { AppMessages.success(context, "Scrobbling to Last.fm as $it"); Scrobbler.flush(context) }
                                         .onFailure { if (it !is kotlinx.coroutines.CancellationException) AppMessages.error(context, OnlineErrors.friendly(it)) }
                                     lastfmUrl = null; refresh++ }
                                 .onFailure { AppMessages.error(context, OnlineErrors.friendly(it)) }
@@ -283,7 +282,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                     val pending by Scrobbler.pending.collectAsState()
                     GlassGroup {
                         Box(Modifier.padding(horizontal = 12.dp)) {
-                            SettingsToggleRow(tr(R.string.scrobble_what_i_play, "Scrobble what I play"), if (pending > 0) tr(R.string.waiting_to_be_sent, "%1\$s waiting to be sent", pending) else tr(R.string.paused_while_incognito, "Paused while incognito"), on, { Scrobbler.setEnabled(context, it) }, "lastfm_scrobble_toggle")
+                            SettingsToggleRow("Scrobble what I play", if (pending > 0) "$pending waiting to be sent" else "Paused while incognito", on, { Scrobbler.setEnabled(context, it) }, "lastfm_scrobble_toggle")
                         }
                     }
                 }
@@ -305,7 +304,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                     Text(if (isAni) "Paste the Client ID from anilist.co/settings/developer. Its redirect URL must be:" else "Paste the Client ID from myanimelist.net/apiconfig (App Type: Android). Its redirect URL must be:",
                         color = TextSecondary, fontSize = 13.sp)
                     val redirect = if (isAni) AniList.REDIRECT else MyAnimeList.REDIRECT
-                    TextButton(onClick = { copyToClipboard(context, tr(R.string.redirect_url, "Redirect URL"), redirect) }) { Text(redirect + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
+                    TextButton(onClick = { copyToClipboard(context, "Redirect URL", redirect) }) { Text(redirect + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
                     OutlinedTextField(text, { text = it }, singleLine = true, label = { Text(stringResource(R.string.client_id)) }, modifier = Modifier.fillMaxWidth().testTag("tracker_client_id"))
                 }
             },
@@ -313,7 +312,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                 TextButton(onClick = {
                     OnlineSettings.setSecret(context, if (isAni) "anilist_client" else "mal_client", text.trim().ifBlank { null })
                     editId = null; refresh++
-                    if (text.isNotBlank()) AppMessages.success(context, tr(R.string.saved_now_tap_sign_in, "Saved. Now tap Sign in"))
+                    if (text.isNotBlank()) AppMessages.success(context, "Saved. Now tap Sign in")
                 }) { Text(stringResource(R.string.save)) }
             },
             dismissButton = { TextButton(onClick = { editId = null }) { Text(stringResource(R.string.cancel)) } },
@@ -347,7 +346,7 @@ fun TrackingScreen(onBack: () -> Unit) {
                     error = null
                     scope.launch {
                         withContext(Dispatchers.IO) { Kitsu.login(context, NetworkClient.get(context), email, pass) }
-                            .onSuccess { AppMessages.success(context, tr(R.string.signed_in_to_kitsu_as, "Signed in to Kitsu as %1\$s", it)); kitsuForm = false; refresh++ }
+                            .onSuccess { AppMessages.success(context, "Signed in to Kitsu as $it"); kitsuForm = false; refresh++ }
                             .onFailure { error = OnlineErrors.friendly(it) }
                         busy = false
                     }
@@ -365,7 +364,7 @@ fun TrackingScreen(onBack: () -> Unit) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.create_a_free_app_at_trakt), color = TextSecondary, fontSize = 13.sp)
-                    TextButton(onClick = { copyToClipboard(context, tr(R.string.redirect_uri, "Redirect URI"), SetupGuides.TRAKT_REDIRECT) }) { Text(SetupGuides.TRAKT_REDIRECT + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
+                    TextButton(onClick = { copyToClipboard(context, "Redirect URI", SetupGuides.TRAKT_REDIRECT) }) { Text(SetupGuides.TRAKT_REDIRECT + "  ·  Copy", color = SpotifyGreen, fontSize = 13.sp) }
                     OutlinedTextField(id, { id = it }, singleLine = true, label = { Text(stringResource(R.string.client_id)) }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(secret, { secret = it }, singleLine = true, label = { Text(stringResource(R.string.client_secret_optional)) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
                 }
@@ -415,7 +414,7 @@ fun TrackingScreen(onBack: () -> Unit) {
             onDismissRequest = {},
             title = { Text(stringResource(R.string.approve_on_last_fm)) },
             text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text(tr(R.string.tap_yes_allow_access_on_last, "Tap \"Yes, allow access\" on Last.fm, then come back. This finishes on its own."), color = TextSecondary)
+                Text("Tap \"Yes, allow access\" on Last.fm, then come back. This finishes on its own.", color = TextSecondary)
                 Spacer(Modifier.size(12.dp))
                 LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
             } },
@@ -454,7 +453,7 @@ private fun TrackerCard(
             Column(Modifier.weight(1f)) {
                 Text(name, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    when { user != null -> tr(R.string.signed_in_as, "Signed in as %1\$s", user); !configured -> tr(R.string.needs_a_free_key_see_the, "Needs a free key. See the guide below"); else -> tr(R.string.ready_to_sign_in, "Ready to sign in") },
+                    when { user != null -> "Signed in as $user"; !configured -> "Needs a free key. See the guide below"; else -> "Ready to sign in" },
                     color = TextTertiary, fontSize = 12.sp,
                 )
             }

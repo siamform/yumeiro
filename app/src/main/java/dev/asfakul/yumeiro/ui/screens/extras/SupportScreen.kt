@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.ClipData
@@ -66,24 +65,24 @@ object SupportInfo {
     data class Group(val title: String, val icon: ImageVector, val entries: List<Entry>, val warning: String? = null)
 
     val groups = listOf(
-        Group(tr(R.string.mobile_banking_bangladesh, "Mobile banking (Bangladesh)"), Icons.Default.PhoneAndroid, listOf(
-            Entry("bKash", "01734737294", tr(R.string.personal_send_money, "Personal · Send Money")),
-            Entry(tr(R.string.nagad, "Nagad"), "01734737294", tr(R.string.personal_send_money, "Personal · Send Money")),
-            Entry(tr(R.string.rocket, "Rocket"), "017347372946", tr(R.string.personal_send_money, "Personal · Send Money")),
+        Group("Mobile banking (Bangladesh)", Icons.Default.PhoneAndroid, listOf(
+            Entry("bKash", "01734737294", "Personal · Send Money"),
+            Entry("Nagad", "01734737294", "Personal · Send Money"),
+            Entry("Rocket", "017347372946", "Personal · Send Money"),
         )),
-        Group(tr(R.string.bank_transfer, "Bank transfer"), Icons.Default.AccountBalance, listOf(
-            Entry(tr(R.string.bank, "Bank"), tr(R.string.dutch_bangla_bank, "DUTCH-BANGLA BANK")),
-            Entry(tr(R.string.account_name, "Account name"), tr(R.string.asfakul_islam, "ASFAKUL ISLAM")),
-            Entry(tr(R.string.account_number, "Account number"), "2067348739614"),
-            Entry(tr(R.string.routing_number, "Routing number"), "090270608"),
+        Group("Bank transfer", Icons.Default.AccountBalance, listOf(
+            Entry("Bank", "DUTCH-BANGLA BANK"),
+            Entry("Account name", "ASFAKUL ISLAM"),
+            Entry("Account number", "2067348739614"),
+            Entry("Routing number", "090270608"),
         )),
         Group("PayPal", Icons.Default.Payments, listOf(
             Entry("PayPal", "asfakulsiam0@gmail.com", "Send as Friends & Family if you can"),
         )),
         Group("Crypto", Icons.Default.CurrencyBitcoin, listOf(
-            Entry(tr(R.string.btc_bnb_usdt, "BTC · BNB · USDT"), "0x17a2dd19ce38b5bbb22e25c526a1c89522fdda88", tr(R.string.bnb_smart_chain_bep_20_only, "BNB Smart Chain (BEP-20) only")),
-            Entry(tr(R.string.trx_usdt, "TRX · USDT"), "TSfzZBBu4LAeZBZYSjjowTyAZ88jiM5gEr", tr(R.string.tron_trc_20_only, "TRON (TRC-20) only")),
-        ), warning = tr(R.string.pick_the_matching_network_when_you, "Pick the matching network when you send. Coins sent on another network (for example BTC on the Bitcoin network) can't be recovered.")),
+            Entry("BTC · BNB · USDT", "0x17a2dd19ce38b5bbb22e25c526a1c89522fdda88", "BNB Smart Chain (BEP-20) only"),
+            Entry("TRX · USDT", "TSfzZBBu4LAeZBZYSjjowTyAZ88jiM5gEr", "TRON (TRC-20) only"),
+        ), warning = "Pick the matching network when you send. Coins sent on another network (for example BTC on the Bitcoin network) can't be recovered."),
     )
 }
 
@@ -97,7 +96,7 @@ fun SupportScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     Box(Modifier.fillMaxSize().pageBackground().testTag("support_screen")) {
         Column(Modifier.fillMaxSize()) {
-            SubPageHeader(title = tr(R.string.buy_me_a_coffee, "Buy me a coffee"), subtitle = tr(R.string.support_yumeiro, "Support Yumeiro"), onBack = onBack)
+            SubPageHeader(title = "Buy me a coffee", subtitle = "Support Yumeiro", onBack = onBack)
             Column(
                 Modifier.fillMaxSize().verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("support")).padding(horizontal = 16.dp).padding(bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),

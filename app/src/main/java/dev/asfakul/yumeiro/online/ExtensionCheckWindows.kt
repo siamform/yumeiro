@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -130,8 +128,8 @@ object ExtensionCheckWindows {
         if (!conceal(root, lp)) { Log.w(TAG, "could not hide $extName's check window; it stays as the extension opened it"); return }
         val host0 = webHost(root) ?: lastHost[extKey]
         host0?.let { h ->
-            if (VerificationCenter.isBlocked(h)) { close(root, tr(R.string.blocks_this_network, "%1\$s blocks this network", h)); return }
-            if (!VerificationCenter.mayAsk(h)) { close(root, tr(R.string.is_paused_after_the_user_closed, "%1\$s is paused after the user closed its check", h)); return }
+            if (VerificationCenter.isBlocked(h)) { close(root, "$h blocks this network"); return }
+            if (!VerificationCenter.mayAsk(h)) { close(root, "$h is paused after the user closed its check"); return }
             shown[h]?.takeIf { it !== root && it.isAttachedToWindow }?.let { close(root, "a check for $h is already open"); return }
         }
         Log.i(TAG, "$extName opened a check window (site ${host0 ?: "not loaded yet"}); reading its page before showing it")
@@ -167,7 +165,7 @@ object ExtensionCheckWindows {
             if (!root.isAttachedToWindow) { finish(host); return@Runnable }
             val elapsed = SystemClock.uptimeMillis() - start
             if (host != null && !revealed && (VerificationCenter.isBlocked(host) || !VerificationCenter.mayAsk(host))) {
-                if (!closing) { closing = true; close(root, tr(R.string.is_on_hold, "%1\$s is on hold", host)) }
+                if (!closing) { closing = true; close(root, "$host is on hold") }
                 main.postDelayed(tick, POLL_MS); return@Runnable
             }
             val web = firstWeb(root)
@@ -257,7 +255,7 @@ object ExtensionCheckWindows {
     }
 
     /** Pure → unit-tested. */
-    fun handOffText(extName: String, host: String) = tr(R.string.needs_a_quick_check_on_tap, "%1\$s needs a quick check on %2\$s. Tap Verify when you're ready.", extName, host)
+    fun handOffText(extName: String, host: String) = "$extName needs a quick check on $host. Tap Verify when you're ready."
 
     /** The site's pass cookie (cf_clearance / DDoS-Guard), or null. Worker thread. */
     private fun clearance(host: String): String? = runCatching { CookieManager.getInstance().getCookie("https://$host/") }.getOrNull()
@@ -269,7 +267,7 @@ object ExtensionCheckWindows {
 
     /** The one note shown when a check window was a firewall block. Pure → unit-tested. */
     fun blockedText(extName: String, host: String) =
-        tr(R.string.cant_reach_the_sites_firewall_blocks, "%1\$s can't reach %2\$s: the site's firewall blocks this network, so its check was closed. Try Wi-Fi or mobile data, or turn off a VPN.", extName, host)
+        "$extName can't reach $host: the site's firewall blocks this network, so its check was closed. Try Wi-Fi or mobile data, or turn off a VPN."
 
     /**
      * Closes the extension's window the way a person would: its own Close / Cancel button, else Back.

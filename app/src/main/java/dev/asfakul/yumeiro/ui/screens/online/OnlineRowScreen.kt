@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Row
@@ -119,12 +118,12 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
                 hasNext = r.hasNext && fresh.isNotEmpty()
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 OnlineRowDiag.lastError = e
-                error = OnlineErrors.friendly(e, tr(R.string.couldnt_load_more, "Couldn't load more"))
+                error = OnlineErrors.friendly(e, "Couldn't load more")
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 OnlineRowDiag.lastError = e
-                error = OnlineErrors.friendly(e, tr(R.string.couldnt_load_more, "Couldn't load more"))
+                error = OnlineErrors.friendly(e, "Couldn't load more")
             } finally { loading = false }
         }
     }
@@ -160,10 +159,10 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
             )
         }
         when {
-            missing -> StateMessage(Icons.Default.Extension, tr(R.string.source_not_available, "Source not available"), tr(R.string.the_extension_that_provides_isnt_installed, "The extension that provides “%1\$s” isn't installed or is turned off.", api),
+            missing -> StateMessage(Icons.Default.Extension, "Source not available", "The extension that provides “$api” isn't installed or is turned off.",
                 primary = "Manage extensions" to onOpenExtensions, secondary = "Go back" to onBack, testTag = "online_row_missing")
             items.isEmpty() && loading -> PosterGridSkeleton(rows = 4)
-            items.isEmpty() && error != null -> StateMessage(Icons.Default.ErrorOutline, tr(R.string.couldnt_load, "Couldn't load"), error.orEmpty(), tint = ErrorColor,
+            items.isEmpty() && error != null -> StateMessage(Icons.Default.ErrorOutline, "Couldn't load", error.orEmpty(), tint = ErrorColor,
                 primary = "Retry" to { error = null; request++ }, secondary = "Go back" to onBack, testTag = "online_row_error")
             items.isEmpty() && !hasNext -> StateMessage(Icons.Default.ErrorOutline, "Nothing here", "This list is empty right now.", tint = TextSecondary, testTag = "online_row_empty")
             else -> LazyVerticalGrid(
@@ -243,7 +242,7 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
                 IconButton(onClick = { confirmSelected = true }, enabled = selected.isNotEmpty(), modifier = Modifier.testTag("history_delete_selected")) {
                     Icon(Icons.Default.Delete, stringResource(R.string.hx_delete_selected), tint = if (selected.isNotEmpty()) ErrorColor else TextTertiary)
                 }
-            } else SubPageHeader(title = if (showAdult) "18+ history" else tr(R.string.widget_name, "Continue watching"), subtitle = "${entries.size} title${if (entries.size == 1) "" else "s"}", onBack = { if (showAdult) showAdult = false else onBack() }) {
+            } else SubPageHeader(title = if (showAdult) "18+ history" else "Continue watching", subtitle = "${entries.size} title${if (entries.size == 1) "" else "s"}", onBack = { if (showAdult) showAdult = false else onBack() }) {
                 if (adultCount > 0 && adultOn) TextButton(onClick = { showAdult = !showAdult }, modifier = Modifier.testTag("online_history_adult")) {
                     Text(if (showAdult) "All" else "18+ ($adultCount)", color = TextSecondary, fontSize = 12.sp)
                 }

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.backup
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import org.json.JSONArray
@@ -142,7 +140,7 @@ object BackupMeta {
             if (plan.from.isNotBlank()) append(" from Yumeiro ${plan.from}")
             if (r.failed > 0) append(" · ${r.failed} couldn't be written")
             append('.')
-            if (plan.redownload) append(tr(R.string.extensions_are_downloading_again_from_their, " Extensions are downloading again from their sources."))
+            if (plan.redownload) append(" Extensions are downloading again from their sources.")
         }
         p(c).edit().putLong("last_restore_at", System.currentTimeMillis()).putString("last_restore_text", text).putBoolean("show_restore_note", true).commit()
     }

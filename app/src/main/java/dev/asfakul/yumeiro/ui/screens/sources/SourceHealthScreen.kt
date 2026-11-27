@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Intent
@@ -98,10 +97,10 @@ fun SourceHealthScreen(onBack: () -> Unit) {
                 if (api.hasMainPage) {
                     val rows = OnlineRepository.home(api, force = true)
                     val n = rows.sumOf { it.items.size }
-                    if (n > 0) Health(true, System.currentTimeMillis() - t0, tr(R.string.titles_on_home, "%1\$s titles on home", n)) else Health(false, System.currentTimeMillis() - t0, dev.asfakul.yumeiro.online.EmptyHome.probe(api, dev.asfakul.yumeiro.network.NetworkClient.get()).message) // B-32
+                    if (n > 0) Health(true, System.currentTimeMillis() - t0, "$n titles on home") else Health(false, System.currentTimeMillis() - t0, dev.asfakul.yumeiro.online.EmptyHome.probe(api, dev.asfakul.yumeiro.network.NetworkClient.get()).message) // B-32
                 } else {
                     val r = dev.asfakul.yumeiro.online.ExtensionCall.bounded(25_000) { api.search("the", 1) }?.items.orEmpty()
-                    if (r.isNotEmpty()) Health(true, System.currentTimeMillis() - t0, "${r.size} search results") else Health(false, System.currentTimeMillis() - t0, tr(R.string.search_returned_nothing, "Search returned nothing"))
+                    if (r.isNotEmpty()) Health(true, System.currentTimeMillis() - t0, "${r.size} search results") else Health(false, System.currentTimeMillis() - t0, "Search returned nothing")
                 }
             } }
         }.getOrElse {
@@ -119,9 +118,9 @@ fun SourceHealthScreen(onBack: () -> Unit) {
 
     fun share() {
         val text = buildString {
-            appendLine(tr(R.string.yumeiro_source_status, "Yumeiro source status — ") + java.text.DateFormat.getDateTimeInstance().format(java.util.Date()))
+            appendLine("Yumeiro source status — " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date()))
             appendLine()
-            appendLine(tr(R.string.source_type_status_time_details, "| Source | Type | Status | Time | Details |"))
+            appendLine("| Source | Type | Status | Time | Details |")
             appendLine("|---|---|---|---|---|")
             apis.forEach { a ->
                 val h = results[a.name]
@@ -132,7 +131,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        SubPageHeader(title = tr(R.string.source_status, "Source status"), onBack = onBack, subtitle = if (results.isEmpty()) (when (apis.size) { 0 -> if (engine.ready) tr(R.string.no_sources_installed_yet, "No sources installed yet") else tr(R.string.loading_sources, "Loading sources…"); 1 -> "1 source installed"; else -> "${apis.size} sources installed" }) else "${results.count { it.value.ok }} of ${results.size} working") {
+        SubPageHeader(title = "Source status", onBack = onBack, subtitle = if (results.isEmpty()) (when (apis.size) { 0 -> if (engine.ready) "No sources installed yet" else "Loading sources…"; 1 -> "1 source installed"; else -> "${apis.size} sources installed" }) else "${results.count { it.value.ok }} of ${results.size} working") {
             if (results.isNotEmpty()) IconButton(onClick = ::share) { Icon(Icons.Default.Share, stringResource(R.string.share_report), tint = TextSecondary) }
         }
         if (running) LinearProgressIndicator(progress = { if (apis.isEmpty()) 0f else done / apis.size.toFloat() }, color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
@@ -140,7 +139,7 @@ fun SourceHealthScreen(onBack: () -> Unit) {
             item("run") {
                 Button(onClick = { runAll() }, enabled = !running && apis.isNotEmpty(), shape = yuRound(20), modifier = Modifier.testTag("source_health_run"),
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) {
-                    Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text(if (results.isEmpty()) tr(R.string.check_all_sources, "Check all sources") else tr(R.string.check_again, "Check again"))
+                    Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text(if (results.isEmpty()) "Check all sources" else "Check again")
                 }
                 Text(stringResource(R.string.checks_run_on_your_phone_and), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
                 val uri = androidx.compose.ui.platform.LocalUriHandler.current
@@ -151,15 +150,15 @@ fun SourceHealthScreen(onBack: () -> Unit) {
             if (apis.isEmpty() && engine.ready) item("empty") {
                 dev.asfakul.yumeiro.ui.components.StateMessage(
                     icon = Icons.Default.Extension,
-                    title = tr(R.string.nothing_to_check_yet, "Nothing to check yet"),
-                    message = tr(R.string.install_a_yumix_source_from_videos, "Install a Yumix source from Videos, then come back to see which ones work on your network."),
+                    title = "Nothing to check yet",
+                    message = "Install a Yumix source from Videos, then come back to see which ones work on your network.",
                     modifier = Modifier.padding(top = 24.dp),
                     testTag = "source_status_empty",
                 )
             }
             items(apis, key = { it.name }) { a ->
                 val h = results[a.name]
-                HubCard(a.name, h?.let { "${it.detail} · ${it.ms} ms" } ?: tr(R.string.not_checked, "Not checked"), badge = SourceHub.ecosystemOf(a).label) {
+                HubCard(a.name, h?.let { "${it.detail} · ${it.ms} ms" } ?: "Not checked", badge = SourceHub.ecosystemOf(a).label) {
                     Box(Modifier.size(12.dp).background(when { h == null -> TextTertiary.copy(alpha = 0.4f); h.ok -> dev.asfakul.yumeiro.ui.theme.SuccessTone; else -> dev.asfakul.yumeiro.ui.theme.DangerTone }, CircleShape))
                 }
             }

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.security.TrustedSources
 import android.content.Context
 import dev.asfakul.yumeiro.network.NetworkClient
@@ -134,8 +132,8 @@ object ExtensionMarket {
                 _state.value = State.Ready(cat)
                 cat
             } catch (e: Exception) {
-                val msg = if (e.message?.contains("404") == true) tr(R.string.the_market_is_being_prepared_try, "The market is being prepared. Try again in a few minutes") else OnlineErrors.friendly(e)
-                _state.value = if (cached != null) State.Ready(cached, warning = tr(R.string.offline_showing_saved_market, "Offline — showing saved market (%1\$s)", msg)) else State.Error(msg)
+                val msg = if (e.message?.contains("404") == true) "The market is being prepared. Try again in a few minutes" else OnlineErrors.friendly(e)
+                _state.value = if (cached != null) State.Ready(cached, warning = "Offline — showing saved market ($msg)") else State.Error(msg)
                 cached
             }
         }

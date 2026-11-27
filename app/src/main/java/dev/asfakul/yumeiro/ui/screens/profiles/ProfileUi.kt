@@ -1,6 +1,5 @@
 package dev.asfakul.yumeiro.ui.screens.profiles
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.app.Activity
@@ -244,7 +243,7 @@ fun UnlockProfileDialog(activity: Activity, profile: Profiles.Profile, title: St
         return
     }
     PinPadDialog(
-        title = title, subtitle = if (bioOk) tr(R.string.enter_the_pin_or_use_your, "Enter the PIN or use your fingerprint") else tr(R.string.enter_the_pin, "Enter the PIN"),
+        title = title, subtitle = if (bioOk) "Enter the PIN or use your fingerprint" else "Enter the PIN",
         error = error,
         onBiometric = if (bioOk) ({ bio() }) else null,
         onForgot = { forgot = true },
@@ -252,7 +251,7 @@ fun UnlockProfileDialog(activity: Activity, profile: Profiles.Profile, title: St
         onPin = { pin ->
             when (Profiles.checkPin(context, profile.id, pin)) {
                 Profiles.PinCheck.OK, Profiles.PinCheck.NO_PIN -> { error = null; onUnlocked() }
-                Profiles.PinCheck.WRONG -> error = tr(R.string.wrong_pin, "Wrong PIN")
+                Profiles.PinCheck.WRONG -> error = "Wrong PIN"
                 Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, profile.id))}"
             }
         },

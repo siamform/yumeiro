@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.web
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
@@ -529,7 +527,7 @@ object BrowserCheck {
 
     /** The firewall notice. Pure → unit-testable. */
     fun blockedMessage(host: String) =
-        tr(R.string.s_firewall_refused_this_source_so, "%1\$s's firewall refused this source, so Yumeiro skipped it. Turning off a VPN or custom DNS can help.", host)
+        "$host's firewall refused this source, so Yumeiro skipped it. Turning off a VPN or custom DNS can help."
 
     /** NET-2: one notice for every site blocked at about the same time. Pure → unit-testable. */
     fun blockedMessage(hosts: List<String>): String = when (hosts.size) {

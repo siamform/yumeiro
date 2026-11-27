@@ -7,7 +7,6 @@
 
 package dev.asfakul.yumeiro.ui.screens.video
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -216,10 +215,10 @@ fun AspectRatioDialog(
     onZoom: ((Int) -> Unit)? = null,
 ) {
     val modes = listOf(
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, tr(R.string.fit_letterbox, "Fit (Letterbox)"), tr(R.string.maintains_original_aspect_ratio_with_black, "Maintains original aspect ratio with black bars if necessary")),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, tr(R.string.crop_fill, "Crop / Fill"), tr(R.string.zooms_video_to_fill_the_entire, "Zooms video to fill the entire screen (eliminates black bars)")),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIT, "Fit (Letterbox)", "Maintains original aspect ratio with black bars if necessary"),
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, "Crop / Fill", "Zooms video to fill the entire screen (eliminates black bars)"),
         Triple(AspectRatioFrameLayout.RESIZE_MODE_FILL, "Stretch", "Stretches the video picture to touch all display borders"),
-        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "100% Original", tr(R.string.renders_without_scaling_at_native_pixel, "Renders without scaling at native pixel size"))
+        Triple(AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH, "100% Original", "Renders without scaling at native pixel size")
     )
 
     TsukiDialog(
@@ -327,7 +326,7 @@ fun AudioTrackDialog(
             Column {
                 Text(stringResource(R.string.audio), style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
                 Text(
-                    if (audioTracks.size > 1) "${audioTracks.size} tracks · tap one to switch" else tr(R.string.language_and_sound_of_this_video, "Language and sound of this video"),
+                    if (audioTracks.size > 1) "${audioTracks.size} tracks · tap one to switch" else "Language and sound of this video",
                     color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Normal,
                 )
             }
@@ -795,17 +794,17 @@ fun VideoInfoDialog(
                 rows.forEach { (label, value) -> InfoRow(label = label, value = value) }
 
                 videoFormat?.let { vf ->
-                    InfoRow(label = tr(R.string.video_codec, "Video codec"), value = vf.sampleMimeType ?: tr(R.string.hardware_h_264_hevc, "Hardware H.264/HEVC"))
+                    InfoRow(label = "Video codec", value = vf.sampleMimeType ?: "Hardware H.264/HEVC")
                     if (vf.frameRate > 0) {
-                        InfoRow(label = tr(R.string.frame_rate, "Frame rate"), value = "%.2f fps".format(vf.frameRate))
+                        InfoRow(label = "Frame rate", value = "%.2f fps".format(vf.frameRate))
                     }
                     if (vf.bitrate > 0) {
-                        InfoRow(label = tr(R.string.bitrate, "Bitrate"), value = "${vf.bitrate / 1000} kbps")
+                        InfoRow(label = "Bitrate", value = "${vf.bitrate / 1000} kbps")
                     }
                 }
 
                 audioFormat?.let { af ->
-                    InfoRow(label = tr(R.string.audio_codec, "Audio codec"), value = af.sampleMimeType ?: tr(R.string.aac_pcm, "AAC / PCM"))
+                    InfoRow(label = "Audio codec", value = af.sampleMimeType ?: "AAC / PCM")
                     if (af.channelCount > 0) {
                         val ch = when (af.channelCount) {
                             1 -> "Mono"
@@ -813,13 +812,13 @@ fun VideoInfoDialog(
                             6 -> "5.1 Surround"
                             else -> "${af.channelCount} channels"
                         }
-                        InfoRow(label = tr(R.string.channels_2, "Channels"), value = ch)
+                        InfoRow(label = "Channels", value = ch)
                     }
                 }
 
                 if (video.folderName.isNotBlank()) InfoRow(label = "Folder", value = video.folderName)
                 if (video.folderPath.isNotBlank()) {
-                    InfoRow(label = tr(R.string.path, "Path"), value = video.folderPath)
+                    InfoRow(label = "Path", value = video.folderPath)
                 }
                 healthNow?.let { h -> StreamHealthSection(h, dnsSource) }
             }
@@ -849,7 +848,7 @@ internal fun videoDetailRows(
     audioFormat: Format? = null,
 ): List<Pair<String, String>> {
     val facts = dev.asfakul.yumeiro.player.PlaybackFacts.of(snap)
-    val notProvided = if (facts.pending) "Reading…" else tr(R.string.not_provided_by_the_source, "Not provided by the source")
+    val notProvided = if (facts.pending) "Reading…" else "Not provided by the source"
     val w = video.width.takeIf { it > 0 } ?: snap.width.takeIf { it > 0 } ?: videoFormat?.width?.takeIf { it > 0 } ?: 0
     val h = video.height.takeIf { it > 0 } ?: snap.height.takeIf { it > 0 } ?: videoFormat?.height?.takeIf { it > 0 } ?: 0
     val resolution = when {
@@ -865,7 +864,7 @@ internal fun videoDetailRows(
     }
     val size = when {
         video.sizeBytes > 0 -> formatFileSize(video.sizeBytes)
-        snap.live -> tr(R.string.live_stream, "Live stream")
+        snap.live -> "Live stream"
         facts.size != null -> if (facts.sizeEstimated) "${facts.size} (estimated from bitrate)" else facts.size
         else -> notProvided
     }
@@ -874,7 +873,7 @@ internal fun videoDetailRows(
         audioLabel = audioFormat.label,
         audioChannels = audioFormat.channelCount.coerceAtLeast(0),
     ) else snap
-    val audio = dev.asfakul.yumeiro.player.PlaybackFacts.audioName(audioSnap) ?: if (facts.pending) "Reading…" else tr(R.string.language_not_tagged_in_the_stream, "Language not tagged in the stream")
+    val audio = dev.asfakul.yumeiro.player.PlaybackFacts.audioName(audioSnap) ?: if (facts.pending) "Reading…" else "Language not tagged in the stream"
     return listOf(
         "Title" to video.title,
         "Resolution" to resolution,
@@ -914,7 +913,7 @@ fun PlaybackErrorOverlay(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     onNextVideo: (() -> Unit)? = null,
-    title: String = tr(R.string.cant_play_this_video, "Can't play this video"),
+    title: String = "Can't play this video",
     /** Full explanation; when null the generic decoder text is shown with [errorMessage] appended. */
     detail: String? = null,
     actionLabel: String? = null,
@@ -972,7 +971,7 @@ fun PlaybackErrorOverlay(
                 }
                 val parsed = remember(detail, errorMessage, title) {
                     dev.asfakul.yumeiro.ui.components.ErrorHelp.parse(
-                        detail ?: errorMessage.ifBlank { tr(R.string.this_phones_decoders_couldnt_play_this, "This phone's decoders couldn't play this file, or the file is damaged.") }
+                        detail ?: errorMessage.ifBlank { "This phone's decoders couldn't play this file, or the file is damaged." }
                     ).let { if (it.tips.isEmpty()) it.copy(tips = dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor("$title $errorMessage")) else it }
                 }
                 Column(
@@ -1063,16 +1062,16 @@ fun PlaybackErrorOverlay(
 private fun StreamHealthSection(h: dev.asfakul.yumeiro.player.PlaybackHealth, dnsSource: ((String) -> String?)?) {
     Spacer(modifier = Modifier.height(4.dp))
     Text(stringResource(R.string.stream_health), style = MaterialTheme.typography.titleSmall, color = SpotifyGreen, fontWeight = FontWeight.Bold)
-    if (h.height > 0) InfoRow(label = tr(R.string.playing, "Playing"), value = "${h.width} × ${h.height}" + if (h.videoBitrate > 0) " · ${h.videoBitrate / 1000} kbps" else "")
-    InfoRow(label = tr(R.string.bandwidth, "Bandwidth"), value = if (h.bandwidthBps > 0) "%.1f Mbps (estimated)".format(h.bandwidthBps / 1_000_000.0) else "Measuring…")
-    InfoRow(label = tr(R.string.buffer, "Buffer"), value = "%.1f s ahead".format(h.bufferedMs / 1000.0))
-    h.liveOffsetMs?.let { InfoRow(label = tr(R.string.live_latency, "Live latency"), value = "%.1f s behind live".format(it / 1000.0)) }
-    InfoRow(label = tr(R.string.rebuffers, "Rebuffers"), value = h.rebuffers.toString())
-    InfoRow(label = tr(R.string.dropped_frames, "Dropped frames"), value = h.droppedFrames.toString())
-    if (h.qualitySwitches > 0) InfoRow(label = tr(R.string.quality_changes, "Quality changes"), value = h.qualitySwitches.toString())
-    if (h.loadErrors > 0) InfoRow(label = tr(R.string.load_retries, "Load retries"), value = h.loadErrors.toString())
+    if (h.height > 0) InfoRow(label = "Playing", value = "${h.width} × ${h.height}" + if (h.videoBitrate > 0) " · ${h.videoBitrate / 1000} kbps" else "")
+    InfoRow(label = "Bandwidth", value = if (h.bandwidthBps > 0) "%.1f Mbps (estimated)".format(h.bandwidthBps / 1_000_000.0) else "Measuring…")
+    InfoRow(label = "Buffer", value = "%.1f s ahead".format(h.bufferedMs / 1000.0))
+    h.liveOffsetMs?.let { InfoRow(label = "Live latency", value = "%.1f s behind live".format(it / 1000.0)) }
+    InfoRow(label = "Rebuffers", value = h.rebuffers.toString())
+    InfoRow(label = "Dropped frames", value = h.droppedFrames.toString())
+    if (h.qualitySwitches > 0) InfoRow(label = "Quality changes", value = h.qualitySwitches.toString())
+    if (h.loadErrors > 0) InfoRow(label = "Load retries", value = h.loadErrors.toString())
     h.host?.let { host ->
-        InfoRow(label = tr(R.string.server, "Server"), value = host)
+        InfoRow(label = "Server", value = host)
         dnsSource?.invoke(host)?.let { InfoRow(label = "DNS", value = it) }
     }
 }
@@ -1105,7 +1104,7 @@ fun QualityDialog(
         text = {
             LazyColumn {
                 if (autoLabel != null) item {
-                    QualityRow(autoLabel, tr(R.string.adapts_to_your_connection, "Adapts to your connection"), selected == null) { onSelect(null); onDismiss() }
+                    QualityRow(autoLabel, "Adapts to your connection", selected == null) { onSelect(null); onDismiss() }
                 }
                 itemsIndexed(options) { _, o ->
                     val sub = o.note ?: if (o.bitrate > 0) "${o.bitrate / 1000} kbps" else null
@@ -1173,7 +1172,7 @@ internal fun codecLabel(mime: String?): String {
         m.startsWith("av01") || m == "av1" -> "AV1"
         m.startsWith("x-vnd.on2.vp9") || m.startsWith("vp9") || m.startsWith("vp09") -> "VP9"
         m.startsWith("avc") -> "H.264"
-        m.startsWith("dolby-vision") -> tr(R.string.dolby_vision, "Dolby Vision")
+        m.startsWith("dolby-vision") -> "Dolby Vision"
         else -> m.uppercase()
     }
 }

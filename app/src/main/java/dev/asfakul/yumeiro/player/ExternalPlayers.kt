@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.player
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -25,9 +23,9 @@ object ExternalPlayers {
     enum class App(val pkg: String, val label: String) {
         VLC("org.videolan.vlc", "VLC"),
         MPV("is.xyz.mpv", "mpv"),
-        MX("com.mxtech.videoplayer.ad", tr(R.string.mx_player, "MX Player")),
-        MX_PRO("com.mxtech.videoplayer.pro", tr(R.string.mx_player_pro, "MX Player Pro")),
-        JUST("com.brouken.player", tr(R.string.just_player, "Just Player")),
+        MX("com.mxtech.videoplayer.ad", "MX Player"),
+        MX_PRO("com.mxtech.videoplayer.pro", "MX Player Pro"),
+        JUST("com.brouken.player", "Just Player"),
     }
 
     data class Sub(val url: String, val name: String)

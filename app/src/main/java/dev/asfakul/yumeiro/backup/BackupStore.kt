@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.backup
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.Manifest
 import android.content.ContentValues
 import android.content.Context
@@ -60,9 +58,9 @@ object BackupStore {
 
     /** Human description of where the next backup goes. */
     fun locationLabel(c: Context): String = when {
-        folderUri(c) != null -> tr(R.string.your_chosen_folder, "Your chosen folder: ") + (folderUri(c)?.let { DocumentsContract.getTreeDocumentId(it).substringAfter(':').ifBlank { "storage root" } } ?: "")
-        Build.VERSION.SDK_INT >= 29 || !legacyNeedsPermission(c) -> tr(R.string.phone_storage_download_yumeiro_backups, "Phone storage › Download › Yumeiro › Backups")
-        else -> tr(R.string.app_storage_removed_if_you_uninstall, "App storage (removed if you uninstall). Allow storage access to keep backups in Downloads")
+        folderUri(c) != null -> "Your chosen folder: " + (folderUri(c)?.let { DocumentsContract.getTreeDocumentId(it).substringAfter(':').ifBlank { "storage root" } } ?: "")
+        Build.VERSION.SDK_INT >= 29 || !legacyNeedsPermission(c) -> "Phone storage › Download › Yumeiro › Backups"
+        else -> "App storage (removed if you uninstall). Allow storage access to keep backups in Downloads"
     }
 
     fun rememberFolder(c: Context, tree: Uri) {

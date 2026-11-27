@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.youtube.music
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import androidx.compose.runtime.Immutable
 import dev.asfakul.yumeiro.youtube.YtItem
 import dev.asfakul.yumeiro.youtube.YouTube
@@ -114,7 +112,7 @@ fun YmItem.Song.toYt(): YtItem = YtItem(
     id = videoId,
     url = YouTube.watchUrl(videoId),
     title = title,
-    channel = artistLine.ifBlank { tr(R.string.youtube_music, "YouTube Music") },
+    channel = artistLine.ifBlank { "YouTube Music" },
     channelUrl = artists.firstOrNull()?.browseId?.let { "https://music.youtube.com/channel/$it" },
     thumbnail = thumbnail,
     durationSec = durationSec,

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -165,7 +164,7 @@ internal fun LazyListScope.liveFeedItems(rows: List<LiveChannelFeed.Row>, column
 @Composable
 internal fun LiveFeedFooter(shown: Int, total: Int, loading: Int) {
     val text = buildString {
-        append(if (shown < total) tr(R.string.showing_of_more_load_as_you, "Showing %1\$s of %2\$s · more load as you scroll", shown, total) else tr(R.string.all_channels, "All %1\$s channels", total))
+        append(if (shown < total) "Showing $shown of $total · more load as you scroll" else "All $total channels")
         if (loading > 0) append(" · loading $loading more playlist" + if (loading == 1) "" else "s")
     }
     Text(text, color = TextTertiary, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp).testTag("live_feed_footer"))
@@ -243,10 +242,10 @@ internal fun LiveSearchBox(query: String, onQuery: (String) -> Unit, matches: In
     Column(Modifier.fillMaxWidth().testTag("live_search")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                query = query, onQuery = { onQuery(it.take(60)) }, hint = tr(R.string.search_channels, "Search channels"), tag = "live_search_field",
+                query = query, onQuery = { onQuery(it.take(60)) }, hint = "Search channels", tag = "live_search_field",
                 modifier = Modifier.weight(1f), fieldModifier = Modifier.focusRequester(focus),
             )
-            LiveIconButton(Icons.Default.Close, tr(R.string.close_search, "Close search"), "live_search_close", onClick = onClose)
+            LiveIconButton(Icons.Default.Close, "Close search", "live_search_close", onClick = onClose)
         }
         if (query.isNotBlank() && matches != null) Text(
             if (matches == 1) "1 channel" else "$matches channels", color = TextTertiary, fontSize = 12.sp,
@@ -263,7 +262,7 @@ internal fun LiveSearchEmpty(query: String, scoped: String?, onClear: () -> Unit
     Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(yuRound(16)).background(GlassFill).padding(16.dp).testTag("live_search_empty")) {
         Text("No channel called \"${query.trim()}\"", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Text(
-            if (scoped != null) tr(R.string.only_is_searched_now_search_every, "Only %1\$s is searched now. Search every channel, or check the spelling.", scoped) else tr(R.string.check_the_spelling_or_try_fewer, "Check the spelling, or try fewer words (for example \"sports\")."),
+            if (scoped != null) "Only $scoped is searched now. Search every channel, or check the spelling." else "Check the spelling, or try fewer words (for example \"sports\").",
             color = TextSecondary, fontSize = 12.sp,
         )
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -315,15 +314,15 @@ internal fun LiveCountrySheet(
                 )
             }
             if (countries.size > 6) dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                query = query, onQuery = { query = it.take(40) }, hint = tr(R.string.search_countries, "Search countries"), tag = "live_country_search",
+                query = query, onQuery = { query = it.take(40) }, hint = "Search countries", tag = "live_country_search",
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
             )
             androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max = 560.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
-                if (query.isBlank()) item("any") { LiveCountryRow(null, tr(R.string.every_country, "Every country"), tr(R.string.all_channels, "All %1\$s channels", total), selected == null) { onPick(null) } }
+                if (query.isBlank()) item("any") { LiveCountryRow(null, "Every country", "All $total channels", selected == null) { onPick(null) } }
                 if (recentRows.isNotEmpty()) {
                     item("h_recent") { LiveSheetHead("Recent") }
                     items(recentRows, key = { "r_" + it.key }) { c -> LiveCountryRow(c, c.label, "${c.count} channels", selected.equals(c.key, ignoreCase = true), tagPrefix = "live_country_recent") { onPick(c) } }
-                    item("h_all") { LiveSheetHead(tr(R.string.all_countries, "All countries")) }
+                    item("h_all") { LiveSheetHead("All countries") }
                 }
                 if (shown.isEmpty()) item("none") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("live_country_empty")) {

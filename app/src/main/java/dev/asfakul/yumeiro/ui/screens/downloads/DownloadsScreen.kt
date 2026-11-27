@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.downloads
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -157,7 +156,7 @@ fun DownloadsScreen(onBack: () -> Unit, onPlayVideo: (VideoItem) -> Unit, onBrow
                 Icon(Icons.Default.Lock, stringResource(R.string.private_locked), tint = TextPrimary)
             }
             // GROUP C catch-all: the All/Offline/Permanent/Active chips moved behind a filter icon.
-            if (!split.isEmpty) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (filter != DownloadFilter.ALL) 1 else 0, { filterSheet = true }, "downloads_filter", tr(R.string.filter_downloads, "Filter downloads"))
+            if (!split.isEmpty) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (filter != DownloadFilter.ALL) 1 else 0, { filterSheet = true }, "downloads_filter", "Filter downloads")
             IconButton(onClick = { settingsOpen = !settingsOpen }, modifier = Modifier.testTag("downloads_settings")) {
                 Icon(Icons.Default.Settings, stringResource(R.string.offline_settings), tint = if (settingsOpen) SpotifyGreen else TextPrimary)
             }
@@ -197,7 +196,7 @@ fun LazyGridScope.downloadSections(
             val context = LocalContext.current
             val failed = split.active.count { it.status == OnlineDownloads.Status.FAILED }
             val paused = split.active.count { it.status == OnlineDownloads.Status.PAUSED }
-            SectionHead(Icons.Default.Download, tr(R.string.in_progress, "In progress"), "${split.active.size} · newest first",
+            SectionHead(Icons.Default.Download, "In progress", "${split.active.size} · newest first",
                 action = when {
                     failed + paused > 0 -> "Resume all" to { split.active.filter { !it.active }.forEach { OnlineDownloads.start(context, it.id) } }
                     else -> "Pause all" to { split.active.forEach { OnlineDownloads.pause(context, it.id) } }
@@ -255,7 +254,7 @@ private fun StorageCard(used: Long, free: Long, days: Int, quality: Int, paralle
                 Icon(Icons.Default.DownloadForOffline, null, tint = SpotifyGreen)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(listOfNotNull((DownloadPrompt.sizeText(used).takeIf { it.isNotBlank() && used > 0 }?.let { "$it used" } ?: tr(R.string.no_space_used_yet, "No space used yet")), if (free > 0) DownloadPrompt.sizeText(free) + " free" else null).joinToString(" · "),
+                    Text(listOfNotNull((DownloadPrompt.sizeText(used).takeIf { it.isNotBlank() && used > 0 }?.let { "$it used" } ?: "No space used yet"), if (free > 0) DownloadPrompt.sizeText(free) + " free" else null).joinToString(" · "),
                         color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     Text(stringResource(R.string.auto_delete_quality_at_once, DownloadSettings.autoDeleteLabel(days), DownloadSettings.qualityLabel(quality), parallel),
                         color = TextTertiary, fontSize = 12.sp)
@@ -281,12 +280,12 @@ private fun TipsCard(onClose: () -> Unit) {
                 IconButton(onClick = onClose) { Icon(Icons.Default.Close, stringResource(R.string.hide_tips), tint = TextTertiary) }
             }
             listOf(
-                tr(R.string.anime_and_movies_open_a_title, "Anime and movies: open a title and tap Download (this season, all, next 5), or the arrow next to one episode."),
-                tr(R.string.youtube_and_youtube_music_tap_download, "YouTube and YouTube Music: tap Download under the video, then pick a quality or Audio only."),
-                tr(R.string.each_series_gets_its_own_folder, "Each series gets its own folder, like Solo Leveling-(HiAnime-(Sub))."),
-                tr(R.string.permanent_copies_stay_until_you_delete, "Permanent copies stay until you delete them. Offline copies are deleted by the auto-delete timer."),
-                tr(R.string.tap_the_pin_on_a_folder, "Tap the pin on a folder or episode to switch between Permanent and Offline."),
-                tr(R.string.everything_plays_without_internet_from_here, "Everything plays without internet from here or Library → Videos."),
+                "Anime and movies: open a title and tap Download (this season, all, next 5), or the arrow next to one episode.",
+                "YouTube and YouTube Music: tap Download under the video, then pick a quality or Audio only.",
+                "Each series gets its own folder, like Solo Leveling-(HiAnime-(Sub)).",
+                "Permanent copies stay until you delete them. Offline copies are deleted by the auto-delete timer.",
+                "Tap the pin on a folder or episode to switch between Permanent and Offline.",
+                "Everything plays without internet from here or Library → Videos.",
             ).forEach { Text("• $it", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 4.dp, end = 10.dp)) }
         }
     }
@@ -330,10 +329,10 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
             val line = when (d.status) {
                 OnlineDownloads.Status.DONE -> listOfNotNull(
                     if (d.keep) "Permanent" else "Offline", d.quality, DownloadPrompt.sizeText(d.bytes).ifBlank { null },
-                    if (d.publicUri != null) "on phone" else null, if (d.fileName.endsWith(".ts", true)) tr(R.string.ts_file, "TS file") else null, deleteLine(d, days),
+                    if (d.publicUri != null) "on phone" else null, if (d.fileName.endsWith(".ts", true)) "TS file" else null, deleteLine(d, days),
                 ).joinToString(" · ")
-                OnlineDownloads.Status.RUNNING -> if (d.stage == "convert") tr(R.string.converting_to_mp4, "Converting to MP4…") else if (d.total > 0) "${(d.fraction * 100).toInt()}% · ${DownloadPrompt.sizeText(d.bytes)} of ~${DownloadPrompt.sizeText(d.total)}" else "Downloading · ${DownloadPrompt.sizeText(d.bytes).ifBlank { "starting" }}"
-                OnlineDownloads.Status.QUEUED -> tr(R.string.waiting_for_a_free_slot, "Waiting for a free slot…")
+                OnlineDownloads.Status.RUNNING -> if (d.stage == "convert") "Converting to MP4…" else if (d.total > 0) "${(d.fraction * 100).toInt()}% · ${DownloadPrompt.sizeText(d.bytes)} of ~${DownloadPrompt.sizeText(d.total)}" else "Downloading · ${DownloadPrompt.sizeText(d.bytes).ifBlank { "starting" }}"
+                OnlineDownloads.Status.QUEUED -> "Waiting for a free slot…"
                 OnlineDownloads.Status.PAUSED -> "Paused · ${DownloadPrompt.sizeText(d.bytes).ifBlank { "0 MB" }} · tap ↓ to resume"
                 OnlineDownloads.Status.FAILED -> d.error ?: "Failed"
             }
@@ -352,10 +351,10 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
                         else dev.asfakul.yumeiro.online.download.PrivateDownloads.hide(context, d.id)
                     }
                     if (!ok) AppMessages.error(context, if (d.hidden) "Couldn't move it back (not enough space?)" else "Couldn't hide it (not enough space?)")
-                    else AppMessages.success(context, if (d.hidden) tr(R.string.back_in_downloads, "Back in Downloads") else tr(R.string.moved_to_private, "Moved to Private"))
+                    else AppMessages.success(context, if (d.hidden) "Back in Downloads" else "Moved to Private")
                 }
             }, modifier = Modifier.testTag(if (d.hidden) "download_unhide" else "download_hide")) {
-                Icon(if (d.hidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, if (d.hidden) tr(R.string.unhide_back_to_downloads, "Unhide (back to Downloads)") else tr(R.string.hide_in_private, "Hide in Private"), tint = TextTertiary)
+                Icon(if (d.hidden) Icons.Default.Visibility else Icons.Default.VisibilityOff, if (d.hidden) "Unhide (back to Downloads)" else "Hide in Private", tint = TextTertiary)
             }
             OnlineDownloads.Status.RUNNING, OnlineDownloads.Status.QUEUED -> IconButton(onClick = { OnlineDownloads.pause(context, d.id) }) { Icon(Icons.Default.Pause, stringResource(R.string.pause), tint = TextPrimary) }
             OnlineDownloads.Status.PAUSED -> IconButton(onClick = { OnlineDownloads.start(context, d.id) }) { Icon(Icons.Default.Download, stringResource(R.string.widget_resume), tint = TextPrimary) }
@@ -365,7 +364,7 @@ internal fun DownloadRow(d: OnlineDownloads.Item, days: Int, onPlayVideo: (Video
             OnlineDownloads.setKeep(context, d.id, !d.keep)
             AppMessages.success(context, if (!d.keep) "Permanent: kept forever" else "Offline: the auto-delete timer applies")
         }, modifier = Modifier.testTag("library_download_keep")) {
-            Icon(if (d.keep) Icons.Default.PushPin else Icons.Outlined.PushPin, if (d.keep) tr(R.string.permanent_tap_to_make_offline, "Permanent (tap to make offline)") else tr(R.string.offline_tap_to_keep_forever, "Offline (tap to keep forever)"), tint = if (d.keep) SpotifyGreen else TextTertiary)
+            Icon(if (d.keep) Icons.Default.PushPin else Icons.Outlined.PushPin, if (d.keep) "Permanent (tap to make offline)" else "Offline (tap to keep forever)", tint = if (d.keep) SpotifyGreen else TextTertiary)
         }
         IconButton(onClick = { OnlineDownloads.delete(context, d.id) }) { Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = TextTertiary) }
     }
@@ -435,7 +434,7 @@ internal fun DownloadFolderRow(f: DownloadGroups.Folder, days: Int, expanded: Bo
             OnlineDownloads.setKeepFolder(context, realFolder, !allKept)
             AppMessages.success(context, if (!allKept) "${f.name}: moved to Permanent" else "${f.name}: moved to Offline")
         }, modifier = Modifier.testTag("library_folder_keep")) {
-            Icon(if (allKept) Icons.Default.PushPin else Icons.Outlined.PushPin, if (allKept) tr(R.string.permanent_tap_to_make_offline, "Permanent (tap to make offline)") else tr(R.string.keep_whole_folder_forever, "Keep whole folder forever"), tint = if (allKept) SpotifyGreen else TextTertiary)
+            Icon(if (allKept) Icons.Default.PushPin else Icons.Outlined.PushPin, if (allKept) "Permanent (tap to make offline)" else "Keep whole folder forever", tint = if (allKept) SpotifyGreen else TextTertiary)
         }
         IconButton(onClick = { confirm = true }) { Icon(Icons.Default.Delete, stringResource(R.string.delete_folder), tint = TextTertiary) }
         Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, if (expanded) "Collapse" else "Expand", tint = TextSecondary)

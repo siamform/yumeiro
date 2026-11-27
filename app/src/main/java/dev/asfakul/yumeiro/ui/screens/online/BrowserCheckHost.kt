@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.annotation.SuppressLint
@@ -86,13 +85,13 @@ fun BrowserCheckHost() {
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     val login = p.purpose == BrowserCheck.Purpose.LOGIN
-                    Text(if (!p.manual) tr(R.string.verify_youre_human, "Verify you're human") else if (login) "Sign in to ${p.host}" else "Open ${p.host}",
+                    Text(if (!p.manual) "Verify you're human" else if (login) "Sign in to ${p.host}" else "Open ${p.host}",
                         color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
                     Text(
                         when {
                             !p.manual -> "${p.host} checks visitors — tap the box if one is shown. This closes on its own."
-                            login -> tr(R.string.sign_in_on_the_site_then, "Sign in on the site, then tap Done. Yumeiro keeps the login for this site only.")
-                            else -> tr(R.string.solve_the_captcha_or_sign_in, "Solve the captcha or sign in if the site asks, then tap Done.")
+                            login -> "Sign in on the site, then tap Done. Yumeiro keeps the login for this site only."
+                            else -> "Solve the captcha or sign in if the site asks, then tap Done."
                         },
                         color = TextSecondary, fontSize = 11.sp, lineHeight = 14.sp,
                     )
@@ -286,11 +285,11 @@ internal fun AdShieldBar(count: Int, canOpen: Boolean, onOpen: () -> Unit, modif
 /** Steps for signing in to a site, and for making an account when the user has none. Pure text → [SignupSteps]. */
 object SignupSteps {
     fun steps(host: String): List<String> = listOf(
-        tr(R.string.look_for_sign_up_register_or, "Look for Sign up, Register or Create account on %1\$s (often in the top menu or ☰).", host),
-        tr(R.string.use_a_spare_email_you_can, "Use a spare email you can open, and a password you don't use anywhere else."),
-        tr(R.string.open_the_confirmation_email_if_the, "Open the confirmation email if the site sends one — the link opens here or in your mail app."),
-        tr(R.string.sign_in_on_this_page_then, "Sign in on this page, then tap Done. If a captcha shows, solve it first."),
-        tr(R.string.never_pay_or_enter_card_details, "Never pay or enter card details for a free site — close it and pick another source instead."),
+        "Look for Sign up, Register or Create account on $host (often in the top menu or ☰).",
+        "Use a spare email you can open, and a password you don't use anywhere else.",
+        "Open the confirmation email if the site sends one — the link opens here or in your mail app.",
+        "Sign in on this page, then tap Done. If a captcha shows, solve it first.",
+        "Never pay or enter card details for a free site — close it and pick another source instead.",
     )
 }
 
@@ -299,7 +298,7 @@ private fun SignupGuide(host: String) {
     var open by remember(host) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().background(SpotifyGreen.copy(alpha = 0.08f)).padding(horizontal = 16.dp, vertical = 8.dp).testTag("signup_guide")) {
         androidx.compose.material3.TextButton(onClick = { open = !open }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) {
-            Text(if (open) tr(R.string.hide_the_guide, "Hide the guide") else tr(R.string.no_account_quick_sign_up_guide, "No account? Quick sign-up guide"), color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(if (open) "Hide the guide" else "No account? Quick sign-up guide", color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         }
         if (open) SignupSteps.steps(host).forEachIndexed { i, step ->
             Text("${i + 1}. $step", color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(bottom = 4.dp))

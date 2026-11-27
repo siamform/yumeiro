@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedContent
@@ -61,12 +60,12 @@ internal fun YumeiroHubCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val on by dev.asfakul.yumeiro.sources.hub.YumeiroHub.enabled.collectAsState()
     BuiltinSourceCard(
-        name = dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME, glyph = "夢", kind = tr(R.string.official_all_in_one_no_install, "Official · all in one · no install"), on = on, tag = "market_builtin_yumeiro",
-        about = tr(R.string.everything_yumeiro_brings_by_itself_in, "Everything Yumeiro brings by itself in one source: short dramas from DramaBox, ShortMax, NetShort and more, plus classic films, ") +
+        name = dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME, glyph = "夢", kind = "Official · all in one · no install", on = on, tag = "market_builtin_yumeiro",
+        about = "Everything Yumeiro brings by itself in one source: short dramas from DramaBox, ShortMax, NetShort and more, plus classic films, " +
             "film noir, sci-fi, silent films, documentaries, cartoons, old TV and films by country (India, France, Germany, Italy, Japan, Russia and more) " +
             "that are free to watch, and free anime episodes from the official channels of Muse Asia, Ani-One Asia, Gundam, VIZ Media, RetroCrush and Tezuka Productions. " +
-            tr(R.string.one_home_one_search_one_switch, "One home, one search, one switch."),
-        note = tr(R.string.legal_sources_only_public_drama_index, "Legal sources only: public drama index, the Internet Archive and official distributor channels · no account · never bypasses paywalls, DRM or region limits · no 18+"),
+            "One home, one search, one switch.",
+        note = "Legal sources only: public drama index, the Internet Archive and official distributor channels · no account · never bypasses paywalls, DRM or region limits · no 18+",
         modifier = modifier,
     ) { dev.asfakul.yumeiro.sources.hub.YumeiroHub.setEnabled(context, !on) }
 }
@@ -81,9 +80,9 @@ internal fun DramaBuiltinCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val on by YumeiroDrama.enabled.collectAsState()
     BuiltinSourceCard(
-        name = YumeiroDrama.NAME, glyph = "劇", kind = tr(R.string.built_in_short_drama_no_install, "Built in · Short drama · no install"), on = on, tag = "market_builtin_drama",
-        about = tr(R.string.vertical_short_dramas_from_dramabox_shortmax, "Vertical short dramas from DramaBox, ShortMax, NetShort, DramaWave, GoodShort and FlexTV in one place — shelves per studio, search across all of them, every episode in order."),
-        note = tr(R.string.reads_a_public_drama_index_no, "Reads a public drama index · no account · never bypasses paywalls or DRM"),
+        name = YumeiroDrama.NAME, glyph = "劇", kind = "Built in · Short drama · no install", on = on, tag = "market_builtin_drama",
+        about = "Vertical short dramas from DramaBox, ShortMax, NetShort, DramaWave, GoodShort and FlexTV in one place — shelves per studio, search across all of them, every episode in order.",
+        note = "Reads a public drama index · no account · never bypasses paywalls or DRM",
         modifier = modifier,
     ) { YumeiroDrama.setEnabled(context, !on) }
 }
@@ -95,10 +94,10 @@ internal fun ClassicsBuiltinCard(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val on by dev.asfakul.yumeiro.sources.classics.YumeiroClassics.enabled.collectAsState()
     BuiltinSourceCard(
-        name = dev.asfakul.yumeiro.sources.classics.YumeiroClassics.NAME, glyph = "映", kind = tr(R.string.official_movies_cartoons_tv_no_install, "Official · Movies, cartoons, TV · no install"), on = on,
+        name = dev.asfakul.yumeiro.sources.classics.YumeiroClassics.NAME, glyph = "映", kind = "Official · Movies, cartoons, TV · no install", on = on,
         tag = "market_builtin_classics",
-        about = tr(R.string.thousands_of_classic_films_film_noir, "Thousands of classic films, film noir, sci-fi, silent films, cartoons and old TV shows that are free to watch and download, from the Internet Archive."),
-        note = tr(R.string.public_domain_and_freely_licensed_only, "Public domain and freely licensed only · no account · no 18+"),
+        about = "Thousands of classic films, film noir, sci-fi, silent films, cartoons and old TV shows that are free to watch and download, from the Internet Archive.",
+        note = "Public domain and freely licensed only · no account · no 18+",
         modifier = modifier,
     ) { dev.asfakul.yumeiro.sources.classics.YumeiroClassics.setEnabled(context, !on) }
 }
@@ -112,8 +111,8 @@ private fun BuiltinSourceCard(
     fun toggle() {
         setOn()
         OnlineRepository.clearCaches()
-        if (!on) AppMessages.show(context, tr(R.string.is_on_find_it_in_yumix, "%1\$s is on — find it in Yumix", name), AppMessages.Kind.SUCCESS)
-        else AppMessages.show(context, tr(R.string.turned_off, "%1\$s turned off", name), AppMessages.Kind.INFO)
+        if (!on) AppMessages.show(context, "$name is on — find it in Yumix", AppMessages.Kind.SUCCESS)
+        else AppMessages.show(context, "$name turned off", AppMessages.Kind.INFO)
     }
     Surface(
         shape = yuRound(20), color = GlassFill,

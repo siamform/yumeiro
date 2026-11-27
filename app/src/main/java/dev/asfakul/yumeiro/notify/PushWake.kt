@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.notify
 
-import dev.asfakul.yumeiro.l10n.tr
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -200,9 +199,9 @@ object PushWake {
 
     internal fun onFailed(c: Context, reason: FailedReason) {
         setError(c, when (reason) {
-            FailedReason.NETWORK -> tr(R.string.the_push_app_couldnt_reach_its, "The push app couldn't reach its server. It will retry when you're online")
+            FailedReason.NETWORK -> "The push app couldn't reach its server. It will retry when you're online"
             FailedReason.ACTION_REQUIRED -> "Open the push app once and finish its setup, then try again"
-            else -> tr(R.string.the_push_app_refused_the_registration, "The push app refused the registration (%1\$s)", reason)
+            else -> "The push app refused the registration ($reason)"
         })
     }
 
@@ -280,9 +279,9 @@ object PushWake {
     /** Sends one wake-up right now through the push server, to prove the whole path works. */
     suspend fun sendTest(c: Context): String? = withContext(Dispatchers.IO) {
         init(c)
-        val url = PushPlan.publishUrl(OnlineSettings.secret(SECRET)) ?: return@withContext tr(R.string.no_push_address_yet_open_the, "No push address yet. Open the push app and wait a moment")
+        val url = PushPlan.publishUrl(OnlineSettings.secret(SECRET)) ?: return@withContext "No push address yet. Open the push app and wait a moment"
         runCatching { publish(url, 0) }.fold(
-            onSuccess = { (code, _) -> if (code in 200..299) null else tr(R.string.the_push_server_answered_http, "The push server answered HTTP %1\$s", code) },
+            onSuccess = { (code, _) -> if (code in 200..299) null else "The push server answered HTTP $code" },
             onFailure = { "Couldn't reach ${url.toHttpUrlOrNull()?.host ?: "the push server"}: ${it.message}" },
         )
     }
@@ -291,12 +290,12 @@ object PushWake {
     internal fun foregroundInfo(c: Context): ForegroundInfo {
         val nm = c.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm?.getNotificationChannel(SYNC_CHANNEL) == null) runCatching {
-            nm?.createNotificationChannel(NotificationChannel(SYNC_CHANNEL, tr(R.string.background_checks, "Background checks"), NotificationManager.IMPORTANCE_MIN).apply {
-                description = tr(R.string.shown_briefly_while_yumeiro_checks_for, "Shown briefly while Yumeiro checks for new episodes"); setShowBadge(false)
+            nm?.createNotificationChannel(NotificationChannel(SYNC_CHANNEL, "Background checks", NotificationManager.IMPORTANCE_MIN).apply {
+                description = "Shown briefly while Yumeiro checks for new episodes"; setShowBadge(false)
             })
         }
         val n = NotificationCompat.Builder(c, SYNC_CHANNEL).setSmallIcon(R.drawable.ic_stat_yumeiro)
-            .setContentTitle(tr(R.string.checking_for_new_episodes, "Checking for new episodes")).setPriority(NotificationCompat.PRIORITY_MIN).setOngoing(true).setSilent(true).build()
+            .setContentTitle("Checking for new episodes").setPriority(NotificationCompat.PRIORITY_MIN).setOngoing(true).setSilent(true).build()
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(SYNC_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else ForegroundInfo(SYNC_ID, n)
     }
 

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.navigation
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -98,10 +96,10 @@ object NavPrefs {
         // B15: live scores and fixtures (Live TV → Tools → Sports), pinnable like the other tools.
         SPORTS("sports", "Sports", "Live scores and fixtures", nav("sports", "Sports", Icons.Filled.SportsSoccer, Icons.Outlined.SportsSoccer)),
         YUMIX("yumix", "Yumix", "Anime, movies and shows from your extensions", nav("yumix", "Yumix", dev.asfakul.yumeiro.ui.components.YumixLogo.Filled, dev.asfakul.yumeiro.ui.components.YumixLogo.Icon)),
-        YTMUSIC("ytmusic", tr(R.string.youtube_music, "YouTube Music"), tr(R.string.songs_albums_and_artists_online, "Songs, albums and artists online"), nav("ytmusic", tr(R.string.yt_music, "YT Music"), Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic)),
+        YTMUSIC("ytmusic", "YouTube Music", "Songs, albums and artists online", nav("ytmusic", "YT Music", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic)),
         MIX("mix", "Music mix", "Your songs and YouTube Music woven together", nav("mix", "Mix", Icons.Filled.Shuffle, Icons.Outlined.Shuffle)),
         DEVICE_VIDEOS("device_videos", "Device videos", "Videos and folders on this phone", nav("device_videos", "Device", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary)),
-        MY_LIST("mylist", tr(R.string.my_list, "My List"), tr(R.string.titles_you_saved_in_yumix, "Titles you saved in Yumix"), nav("mylist", tr(R.string.my_list, "My List"), Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks)),
+        MY_LIST("mylist", "My List", "Titles you saved in Yumix", nav("mylist", "My List", Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks)),
         HISTORY("history", "History", "Continue what you were watching", nav("history", "History", Icons.Filled.History, Icons.Outlined.History)),
         MARKET("market", "Extension market", "Find and install new extensions", nav("market", "Market", Icons.Filled.Storefront, Icons.Outlined.Storefront)),
         HEALTH("health", "Source health", "Which sources work right now", nav("health", "Health", Icons.Filled.MonitorHeart, Icons.Outlined.MonitorHeart)),

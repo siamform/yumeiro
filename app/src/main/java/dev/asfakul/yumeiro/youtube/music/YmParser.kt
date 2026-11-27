@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.youtube.music
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -129,7 +127,7 @@ object YmParser {
         o["musicCardShelfRenderer"].obj?.let { c ->
             // Search's "Top result" card.
             val item = cardItem(c) ?: return null
-            return YmShelf(text(c["header"].obj?.get("musicCardShelfHeaderBasicRenderer").obj?.get("title")) ?: tr(R.string.top_result, "Top result"), items = listOf(item), style = YmShelf.Style.LIST)
+            return YmShelf(text(c["header"].obj?.get("musicCardShelfHeaderBasicRenderer").obj?.get("title")) ?: "Top result", items = listOf(item), style = YmShelf.Style.LIST)
         }
         return null
     }

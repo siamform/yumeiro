@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -77,8 +76,8 @@ fun ProxySettingsCard() {
     SettingsCard {
         Text(stringResource(R.string.proxy), color = TextPrimary, style = MaterialTheme.typography.titleMedium)
         Text(
-            tr(R.string.send_yumeiros_traffic_through_your_own, "Send Yumeiro's traffic through your own proxy: streams, extensions, images, downloads, subtitles, updates and web pages. ") +
-                tr(R.string.use_it_when_your_network_blocks, "Use it when your network blocks a site by its address (DNS can't fix that). Local devices (casting, home servers) stay direct."),
+            "Send Yumeiro's traffic through your own proxy: streams, extensions, images, downloads, subtitles, updates and web pages. " +
+                "Use it when your network blocks a site by its address (DNS can't fix that). Local devices (casting, home servers) stay direct.",
             color = TextSecondary, style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(8.dp))
@@ -111,17 +110,17 @@ fun ProxySettingsCard() {
         }
         SettingsDivider()
         Text(
-            result ?: if (saved.on) "In use: ${saved.summary}" else tr(R.string.not_in_use, "Not in use."),
+            result ?: if (saved.on) "In use: ${saved.summary}" else "Not in use.",
             color = if (result?.startsWith("Failed") == true) MaterialTheme.colorScheme.error else TextSecondary,
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth().testTag("proxy_status"),
         )
         if (saved.on) {
             Text(
                 when (web) {
-                    AppProxy.WebState.ON -> tr(R.string.web_pages_use_the_proxy_too, "Web pages use the proxy too.")
-                    AppProxy.WebState.UNSUPPORTED -> tr(R.string.this_devices_webview_cant_use_a, "This device's WebView can't use a proxy, so web pages (site browser, checks) go direct. Update Android System WebView to fix it.")
-                    AppProxy.WebState.FAILED -> tr(R.string.web_pages_couldnt_be_set_to, "Web pages couldn't be set to use the proxy; they go direct.")
-                    else -> tr(R.string.setting_up_web_pages, "Setting up web pages…")
+                    AppProxy.WebState.ON -> "Web pages use the proxy too."
+                    AppProxy.WebState.UNSUPPORTED -> "This device's WebView can't use a proxy, so web pages (site browser, checks) go direct. Update Android System WebView to fix it."
+                    AppProxy.WebState.FAILED -> "Web pages couldn't be set to use the proxy; they go direct."
+                    else -> "Setting up web pages…"
                 },
                 color = TextTertiary, fontSize = 11.sp, modifier = Modifier.testTag("proxy_web_state"),
             )
@@ -143,15 +142,15 @@ fun ProxySettingsCard() {
                     val d = draft()
                     scope.launch {
                         val err = withContext(Dispatchers.IO) { AppProxy.save(context, d) }
-                        result = err?.let { "Failed · $it" } ?: if (d.type == AppProxy.Type.OFF) tr(R.string.proxy_turned_off, "Proxy turned off.") else "Saved. New connections use ${d.type.label} ${d.host}:${d.port}."
+                        result = err?.let { "Failed · $it" } ?: if (d.type == AppProxy.Type.OFF) "Proxy turned off." else "Saved. New connections use ${d.type.label} ${d.host}:${d.port}."
                     }
                 },
                 modifier = Modifier.testTag("proxy_save"),
             ) { Text(stringResource(R.string.save), color = SpotifyGreen, fontWeight = FontWeight.SemiBold) }
         }
         Text(
-            tr(R.string.not_covered_torrent_peers_and_dns, "Not covered: torrent peers and DNS-over-TLS / plain DNS lookups (with a proxy on, sites are looked up by the proxy). ") +
-                tr(R.string.your_proxy_sees_which_sites_you, "Your proxy sees which sites you open; use one you trust."),
+            "Not covered: torrent peers and DNS-over-TLS / plain DNS lookups (with a proxy on, sites are looked up by the proxy). " +
+                "Your proxy sees which sites you open; use one you trust.",
             color = TextTertiary, fontSize = 11.sp,
         )
     }

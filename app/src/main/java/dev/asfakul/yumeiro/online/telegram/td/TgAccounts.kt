@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.telegram.td
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.os.Build
 import dev.asfakul.yumeiro.BuildConfig
@@ -51,9 +49,9 @@ object TgAccounts {
 
     /** TG-PAGE-1: why sign-in can't be offered on this phone, or null when it can. */
     fun unavailableReason(context: Context): String? = when {
-        !FeatureFlags.on(context, FeatureFlags.Flag.TELEGRAM_LOGIN) -> tr(R.string.telegram_sign_in_is_turned_off, "Telegram sign-in is turned off in this build.")
-        !TdEngine.available() -> tr(R.string.telegram_sign_in_needs_telegrams_own, "Telegram sign-in needs Telegram's own library (TDLib), and there is no copy for this phone's processor (") +
-            Build.SUPPORTED_ABIS.firstOrNull().orEmpty() + tr(R.string.public_channels_still_work, "). Public channels still work.")
+        !FeatureFlags.on(context, FeatureFlags.Flag.TELEGRAM_LOGIN) -> "Telegram sign-in is turned off in this build."
+        !TdEngine.available() -> "Telegram sign-in needs Telegram's own library (TDLib), and there is no copy for this phone's processor (" +
+            Build.SUPPORTED_ABIS.firstOrNull().orEmpty() + "). Public channels still work."
         else -> null
     }
 

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -220,9 +219,9 @@ internal fun PlaylistsHeader(
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.playlists), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else tr(R.string.defaults_update_daily, "Defaults update daily"), color = TextTertiary, fontSize = 11.sp)
+                Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Defaults update daily", color = TextTertiary, fontSize = 11.sp)
             }
-            if (searchOpen != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, onToggleSearch, "playlists_search_open", tr(R.string.search_playlists, "Search playlists"))
+            if (searchOpen != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, onToggleSearch, "playlists_search_open", "Search playlists")
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlists_more")) { Icon(Icons.Default.MoreVert, stringResource(R.string.more_playlist_actions), tint = TextSecondary) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = DarkSurface) {
@@ -270,12 +269,12 @@ internal fun PlaylistEditDialog(
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val colors = streamFieldColors()
-    val title = when { playlist != null -> tr(R.string.edit_playlist, "Edit playlist"); remote -> tr(R.string.add_playlist_from_url, "Add playlist from URL"); else -> tr(R.string.new_playlist, "New playlist") }
+    val title = when { playlist != null -> "Edit playlist"; remote -> "Add playlist from URL"; else -> "New playlist" }
 
     fun run(block: suspend () -> Unit) {
         busy = true; error = null
         scope.launch {
-            try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, tr(R.string.something_went_wrong_try_again, "Something went wrong. Try again.")) }
+            try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Something went wrong. Try again.") }
             busy = false
         }
     }
@@ -328,7 +327,7 @@ private fun AnalysisSummary(a: PlaylistAnalysis) {
             if (a.drmChannels > 0 || a.headerChannels > 0) Line("Extras", "${a.drmChannels} DRM · ${a.headerChannels} with custom headers")
             a.lastUpdatedNote?.let { Line("Source", it) }
             a.epgUrl?.let { Line("EPG", it) }
-            if (a.groups.isNotEmpty()) Line(tr(R.string.top_groups, "Top groups"), a.groups.take(6).joinToString(", ") { "${it.first} (${it.second})" })
+            if (a.groups.isNotEmpty()) Line("Top groups", a.groups.take(6).joinToString(", ") { "${it.first} (${it.second})" })
         }
     }
 }
@@ -425,8 +424,8 @@ internal fun ConfirmDeleteDialog(playlist: StreamPlaylist, onDismiss: () -> Unit
         title = { Text(stringResource(R.string.delete_2, playlist.name), color = TextPrimary) },
         text = {
             Text(
-                if (playlist.isDefault) tr(R.string.this_default_playlist_will_be_removed, "This default playlist will be removed. You can bring it back with Restore default playlist.")
-                else tr(R.string.the_playlist_and_its_saved_streams, "The playlist and its saved streams will be removed from this device."),
+                if (playlist.isDefault) "This default playlist will be removed. You can bring it back with Restore default playlist."
+                else "The playlist and its saved streams will be removed from this device.",
                 color = TextSecondary,
             )
         },
@@ -450,7 +449,7 @@ internal fun MarketEntryCard(installed: Int, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.playlist_market), color = TextPrimary, fontWeight = FontWeight.Bold)
                 Text(
-                    if (installed > 0) tr(R.string.installed_find_more_iptv_playlists_from, "%1\$s installed · find more IPTV playlists from GitHub", installed) else tr(R.string.install_iptv_playlists_collected_from_github, "Install IPTV playlists collected from GitHub"),
+                    if (installed > 0) "$installed installed · find more IPTV playlists from GitHub" else "Install IPTV playlists collected from GitHub",
                     color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -469,7 +468,7 @@ internal fun OpenedListCard(name: String?, count: Int, onOpen: () -> Unit, onClo
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(name ?: tr(R.string.opened_list, "Opened list"), color = TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name ?: "Opened list", color = TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(stringResource(R.string.streams_opened_not_saved, count), color = TextTertiary, fontSize = 12.sp)
             }
             IconButton(onClick = onClose) { Icon(Icons.Default.Close, stringResource(R.string.close_list), tint = TextSecondary) }

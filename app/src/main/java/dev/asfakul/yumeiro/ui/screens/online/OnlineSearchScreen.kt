@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
@@ -223,7 +222,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
 
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {
         SubPageHeader(
-            title = tr(R.string.search_online, "Search online"), onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}",
+            title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}",
             actions = {
                 TextButton(onClick = { blackSource = true }, modifier = Modifier.testTag("online_search_blacksource")) {
                     Text(stringResource(R.string.bs_open), color = SpotifyGreen, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
@@ -300,7 +299,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         when {
             !engine.ready -> PosterGridSkeleton(rows = 3)
             providers.isEmpty() -> StateMessage(
-                Icons.Default.Extension, tr(R.string.no_sources_to_search, "No sources to search"), tr(R.string.install_or_turn_on_an_extension, "Install or turn on an extension first."),
+                Icons.Default.Extension, "No sources to search", "Install or turn on an extension first.",
                 primary = "Extensions" to onOpenExtensions, testTag = "online_search_no_sources",
             )
             submitted.isBlank() -> RecentSearches(history, onClear = { SearchHistory.clear(context); history.clear() }) { h -> text = h; submitted = h }
@@ -424,9 +423,9 @@ private fun SearchResultsBody(
                 if (searching > 0) Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
                 PosterGridSkeleton(rows = 3)
             }
-        failed != null -> StateMessage(Icons.Default.SearchOff, tr(R.string.couldnt_search, "%1\$s couldn't search", filter), failed, tint = WarnColor,
+        failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,
             primary = "Retry" to onRetry, testTag = "online_search_failed")
-        shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, tr(R.string.no_results_for, "No results for “%1\$s”", submitted),
+        shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”",
             dev.asfakul.yumeiro.online.SearchAdapters.emptyReason(way, filter!!, submitted), testTag = "online_search_empty")
         shown.isEmpty() -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”", "Try another spelling or a shorter title.", testTag = "online_search_empty")
         filter == null && names.size > 1 && SearchView.grouped -> {
@@ -525,7 +524,7 @@ private fun GroupedResults(
         }
         if (plan.failed.isNotEmpty()) item("g_failed") {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("online_search_group_failed"), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr(R.string.couldnt_search_2, "Couldn't search: ") + plan.failed.joinToString(", "), color = WarnColor, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text("Couldn't search: " + plan.failed.joinToString(", "), color = WarnColor, fontSize = 12.sp, modifier = Modifier.weight(1f))
                 TextButton(onClick = onRetry, modifier = Modifier.testTag("online_search_group_retry")) { Text(stringResource(R.string.retry), color = SpotifyGreen) }
             }
         }

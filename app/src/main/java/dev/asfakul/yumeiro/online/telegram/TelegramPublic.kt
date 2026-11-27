@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.telegram
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
@@ -92,13 +90,13 @@ object TelegramPublic {
     }
 
     object Messages {
-        val PRIVATE: String get() = tr(R.string.this_is_a_private_telegram_link, "This is a private Telegram link. Yumeiro reads only public channels, without a Telegram account.")
-        val OFFLINE: String get() = tr(R.string.couldnt_reach_telegram_check_the_connection, "Couldn't reach Telegram. Check the connection and try again.")
-        val APP_ONLY: String get() = tr(R.string.telegram_shows_this_video_only_in, "Telegram shows this video only in its own app, not on its web preview, so Yumeiro can't play it.")
-        fun noPosts(channel: String) = tr(R.string.telegram_shows_no_public_posts_for, "Telegram shows no public posts for @%1\$s. The channel may be private, renamed or have its web preview turned off. ", channel) +
-            tr(R.string.if_you_are_a_member_open, "If you are a member, open it from your own signed-in Telegram account.")
-        fun noVideo(channel: String, id: Int) = tr(R.string.post_of_has_no_video_on, "Post %1\$s of @%2\$s has no video on Telegram's web preview.", id, channel)
-        fun layout() = tr(R.string.telegrams_web_preview_changed_and_yumeiro, "Telegram's web preview changed and Yumeiro couldn't read it. Open the post in Telegram instead.")
+        const val PRIVATE = "This is a private Telegram link. Yumeiro reads only public channels, without a Telegram account."
+        const val OFFLINE = "Couldn't reach Telegram. Check the connection and try again."
+        const val APP_ONLY = "Telegram shows this video only in its own app, not on its web preview, so Yumeiro can't play it."
+        fun noPosts(channel: String) = "Telegram shows no public posts for @$channel. The channel may be private, renamed or have its web preview turned off. " +
+            "If you are a member, open it from your own signed-in Telegram account."
+        fun noVideo(channel: String, id: Int) = "Post $id of @$channel has no video on Telegram's web preview."
+        fun layout() = "Telegram's web preview changed and Yumeiro couldn't read it. Open the post in Telegram instead."
     }
 
     // ---- Links (pure) ----

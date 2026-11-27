@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.online.ExtensionMarket
 import dev.asfakul.yumeiro.security.TrustedSources
@@ -159,7 +157,7 @@ object SourceMarket {
         return when {
             d < 1 -> "today"
             d < 2 -> "yesterday"
-            d < 30 -> tr(R.string.days_ago, "%1\$s days ago", d)
+            d < 30 -> "$d days ago"
             d < 365 -> "${d / 30} mo ago"
             else -> "${d / 365} yr ago"
         }

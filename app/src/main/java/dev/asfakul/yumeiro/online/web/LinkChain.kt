@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.web
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.os.SystemClock
 import android.view.InputDevice
@@ -175,22 +173,22 @@ object LinkChainPolicy {
      */
     fun next(st: State, scan: LinkChain.Scan?, url: String, host: String, now: Long, adPage: Boolean = false): Pair<State, Action> {
         if (st.stopped || st.destination != null) return st to Action.Idle
-        if (scan == null) return st to (if (st.active) Action.Wait(tr(R.string.reading_the_page, "Reading the page")) else Action.Idle)
+        if (scan == null) return st to (if (st.active) Action.Wait("Reading the page") else Action.Idle)
         if (!scan.chain) {
             if (!st.active) return st to Action.Idle
             // Still on a chain host (the next step is loading) or an ad page in between.
-            if (host in st.chainHosts) return st.copy(destScans = 0) to Action.Wait(tr(R.string.opening_the_next_step, "Opening the next step"))
+            if (host in st.chainHosts) return st.copy(destScans = 0) to Action.Wait("Opening the next step")
             val revealed = st.revealed
             if (adPage) {
-                if (st.recoveries >= MAX_RECOVERIES) return st.copy(stopped = true) to Action.GiveUp(tr(R.string.an_ad_page_keeps_taking_over, "An ad page keeps taking over. Use Back, or turn the filter off for this page."))
+                if (st.recoveries >= MAX_RECOVERIES) return st.copy(stopped = true) to Action.GiveUp("An ad page keeps taking over. Use Back, or turn the filter off for this page.")
                 val s = st.copy(recoveries = st.recoveries + 1, destScans = 0)
-                return if (revealed != null) s to Action.Open(revealed, tr(R.string.an_ad_took_over_opening_the, "An ad took over; opening the real link"))
-                else s to Action.Back(tr(R.string.an_ad_took_over_going_back, "An ad took over; going back"))
+                return if (revealed != null) s to Action.Open(revealed, "An ad took over; opening the real link")
+                else s to Action.Back("An ad took over; going back")
             }
             val n = st.destScans + 1
             val destUrl = if (revealed != null && ChainDestination.sameSite(revealed, url)) revealed else url
             return if (n >= DEST_SCANS) st.copy(destScans = n, destination = host) to Action.Done(host, destUrl)
-            else st.copy(destScans = n) to Action.Wait(tr(R.string.opening_the_link, "Opening the link"))
+            else st.copy(destScans = n) to Action.Wait("Opening the link")
         }
         val page = url.substringBefore('#').substringBefore('?')
         var s = st.copy(
@@ -205,14 +203,14 @@ object LinkChainPolicy {
         // A captcha waits for the person, however long they take; only a page that stops moving is "stuck".
         if (pKey != s.progressKey || s.lastProgressAt == 0L || scan.step == LinkChain.Step.CAPTCHA) s = s.copy(progressKey = pKey, lastProgressAt = now)
         if (now - s.lastProgressAt > STUCK_MS) {
-            return s.copy(stopped = true) to Action.GiveUp(tr(R.string.this_link_stopped_moving_you_can, "This link stopped moving. You can go on by hand on the page."))
+            return s.copy(stopped = true) to Action.GiveUp("This link stopped moving. You can go on by hand on the page.")
         }
         return when (scan.step) {
-            LinkChain.Step.CAPTCHA -> s.copy(readyKey = null) to Action.AskUser(tr(R.string.tick_the_box_on_the_page, "Tick the box on the page to continue"))
+            LinkChain.Step.CAPTCHA -> s.copy(readyKey = null) to Action.AskUser("Tick the box on the page to continue")
             LinkChain.Step.TIMER -> s.copy(readyKey = null) to Action.Wait(
-                scan.secs?.takeIf { it > 0 }?.let { tr(R.string.waiting_s_the_sites_timer, "Waiting %1\$s s (the site's timer)", it) } ?: tr(R.string.waiting_for_the_sites_timer, "Waiting for the site's timer"),
+                scan.secs?.takeIf { it > 0 }?.let { "Waiting $it s (the site's timer)" } ?: "Waiting for the site's timer",
             )
-            LinkChain.Step.SCROLL, LinkChain.Step.COVERED, LinkChain.Step.NONE -> s.copy(readyKey = null) to Action.Wait(tr(R.string.reading_the_page, "Reading the page"))
+            LinkChain.Step.SCROLL, LinkChain.Step.COVERED, LinkChain.Step.NONE -> s.copy(readyKey = null) to Action.Wait("Reading the page")
             LinkChain.Step.READY -> ready(s, scan, page, now)
         }
     }
@@ -220,11 +218,11 @@ object LinkChainPolicy {
     private fun ready(s: State, scan: LinkChain.Scan, page: String, now: Long): Pair<State, Action> {
         val label = scan.label ?: "Continue"
         val key = "$page|$label"
-        if (s.readyKey != key) return s.copy(readyKey = key, readySince = now) to Action.Wait(tr(R.string.opening_the_real_link, "Opening the real link"))
+        if (s.readyKey != key) return s.copy(readyKey = key, readySince = now) to Action.Wait("Opening the real link")
         if (s.taps >= MAX_TAPS || (s.tappedKey == key && s.sameKeyTaps >= SAME_BUTTON_TAPS)) {
-            return s to Action.AskUser(tr(R.string.tap_on_the_page_to_continue, "Tap “%1\$s” on the page to continue", label))
+            return s to Action.AskUser("Tap “$label” on the page to continue")
         }
-        if (now - s.readySince < SETTLE_MS || now - s.lastTapAt < TAP_GAP_MS) return s to Action.Wait(tr(R.string.opening_the_real_link, "Opening the real link"))
+        if (now - s.readySince < SETTLE_MS || now - s.lastTapAt < TAP_GAP_MS) return s to Action.Wait("Opening the real link")
         val same = if (s.tappedKey == key) s.sameKeyTaps + 1 else 1
         return s.copy(taps = s.taps + 1, lastTapAt = now, readyKey = null, tappedKey = key, sameKeyTaps = same) to
             Action.Tap(scan.x, scan.y, scan.vw, scan.vh, label)
@@ -232,5 +230,5 @@ object LinkChainPolicy {
 
     /** The banner's first line: "Opening the real link · Step 2". */
     fun title(st: State, stepText: String?): String =
-        tr(R.string.opening_the_real_link_step, "Opening the real link · Step ") + (stepText ?: st.stepNumber.toString())
+        "Opening the real link · Step " + (stepText ?: st.stepNumber.toString())
 }

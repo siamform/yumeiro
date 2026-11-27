@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -85,7 +83,7 @@ fun OnlineHomePicks(
                 name = row.api, title = row.title, count = row.items.size,
                 cover = row.items.firstOrNull { it.posterUrl != null },
                 onClick = { if (onOpenRow != null && row.pageData != null) onOpenRow(row) else onSeeAll() },
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), height = 120.dp, action = tr(R.string.browse, "Browse"),
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp), height = 120.dp, action = "Browse",
             )
             if (items.isNotEmpty()) PosterGrid(items, onClick = onOpenTitle, horizontal = row.horizontal, rows = 1, padding = 0.dp)
         }

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -54,20 +53,20 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
  * the reminder card all say the same honest thing: giving is optional, the app stays free.
  */
 object SupportMessage {
-    val TITLE: String get() = tr(R.string.yumeiro_is_free_keeping_it_alive, "Yumeiro is free. Keeping it alive isn't.")
-    val OPTIONAL: String get() = tr(R.string.donating_is_never_required_yumeiro_stays, "Donating is never required. Yumeiro stays free for everyone, with no ads and no tracking, whether you give or not.")
+    const val TITLE = "Yumeiro is free. Keeping it alive isn't."
+    const val OPTIONAL = "Donating is never required. Yumeiro stays free for everyone, with no ads and no tracking, whether you give or not."
     val paragraphs = listOf(
         OPTIONAL,
-        tr(R.string.we_all_spend_a_little_on, "We all spend a little on things that simply make the day nicer: a coffee, a snack, one more subscription. ") +
-            tr(R.string.if_yumeiro_has_given_you_a, "If Yumeiro has given you a good evening, a song on repeat or just one more episode, maybe it has earned a coffee too."),
+        "We all spend a little on things that simply make the day nicer: a coffee, a snack, one more subscription. " +
+            "If Yumeiro has given you a good evening, a song on repeat or just one more episode, maybe it has earned a coffee too.",
         "Yumeiro is still in active development. ${DeveloperInfo.NAME} and the small Yumeiro team build it in their own time, " +
             "with no funding, and keeping the community going is a real struggle.",
-        tr(R.string.your_support_keeps_the_community_alive, "Your support keeps the community alive, keeps our developer motivated and keeps new features coming. ") +
-            tr(R.string.cant_donate_a_star_on_github, "Can't donate? A star on GitHub costs nothing and means a lot. Thank you for being here and for loving Yumeiro."),
+        "Your support keeps the community alive, keeps our developer motivated and keeps new features coming. " +
+            "Can't donate? A star on GitHub costs nothing and means a lot. Thank you for being here and for loving Yumeiro.",
     )
-    val SHORT: String get() = tr(R.string.donating_is_never_required_and_yumeiro, "Donating is never required, and Yumeiro will always be free with no ads. But it's still in development, ") +
+    const val SHORT = "Donating is never required, and Yumeiro will always be free with no ads. But it's still in development, " +
         "and the developer and the Yumeiro team keep it alive on their own. If it has earned a coffee, it would mean a lot."
-    val STAR: String get() = tr(R.string.a_star_costs_nothing_helps_more, "A star costs nothing, helps more people find Yumeiro and tells our developer the late nights are worth it.")
+    const val STAR = "A star costs nothing, helps more people find Yumeiro and tells our developer the late nights are worth it."
 }
 
 private val CoffeeYellow = Color(0xFFFFDD00)

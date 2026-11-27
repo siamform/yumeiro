@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.animation.animateColorAsState
@@ -96,7 +95,7 @@ fun NavigationBarSettingsCard() {
             val layoutPref by dev.asfakul.yumeiro.ui.tv.TvMode.pref.collectAsState()
             val detectedTv = remember(context) { dev.asfakul.yumeiro.ui.tv.TvMode.detect(context) }
             Text(
-                tr(R.string.tv_layout_puts_a_rail_on, "TV layout puts a rail on the left and is made for a remote. Automatic picks it on TVs") +
+                "TV layout puts a rail on the left and is made for a remote. Automatic picks it on TVs" +
                     (if (detectedTv) " (this device is one)." else "; this device looks like a phone or tablet."),
                 color = TextSecondary, fontSize = 13.sp,
             )
@@ -111,7 +110,7 @@ fun NavigationBarSettingsCard() {
         }
         var confirmReset by rememberSaveable { mutableStateOf(false) }
         SettingsCard {
-            SettingsActionRow(tr(R.string.reset_to_default, "Reset to default"), tr(R.string.home_music_videos_and_library, "Home, Music, Videos and Library"), "nav_settings_reset") { confirmReset = true }
+            SettingsActionRow("Reset to default", "Home, Music, Videos and Library", "nav_settings_reset") { confirmReset = true }
         }
         if (confirmReset) {
             val done = stringResource(R.string.nav_edit_reset_done)
@@ -193,7 +192,7 @@ fun AudioQualityCard() {
     SettingsCard {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NetTab("Wi-Fi", wifi.label, Icons.Default.Wifi, !onMobile, "audio_quality_tab_wifi", Modifier.weight(1f)) { onMobile = false }
-            NetTab(tr(R.string.mobile_data, "Mobile data"), mobile.label, Icons.Default.NetworkCell, onMobile, "audio_quality_tab_mobile", Modifier.weight(1f)) { onMobile = true }
+            NetTab("Mobile data", mobile.label, Icons.Default.NetworkCell, onMobile, "audio_quality_tab_mobile", Modifier.weight(1f)) { onMobile = true }
         }
         Spacer(Modifier.height(12.dp))
         Column(Modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -205,8 +204,8 @@ fun AudioQualityCard() {
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            tr(R.string.your_own_files_and_home_servers, "Your own files and home servers play exactly as stored: lossless stays lossless and Atmos goes to the phone's decoder when it supports it. ") +
-                tr(R.string.youtube_music_streams_reach_about_256, "YouTube Music streams reach about 256 kbps AAC or 160 kbps Opus, so higher tiers there mean the best it offers."),
+            "Your own files and home servers play exactly as stored: lossless stays lossless and Atmos goes to the phone's decoder when it supports it. " +
+                "YouTube Music streams reach about 256 kbps AAC or 160 kbps Opus, so higher tiers there mean the best it offers.",
             color = TextTertiary, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.testTag("audio_quality_note"),
         )
     }
@@ -296,8 +295,8 @@ internal fun TorrServerCard() {
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.built_in_torrent_engine), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     Text(
-                        if (accepted) tr(R.string.magnet_and_torrent_links_play_in, "Magnet and .torrent links play in Yumeiro. TorrServer below is only a fallback.")
-                        else tr(R.string.play_magnet_and_torrent_links_in, "Play magnet and .torrent links in Yumeiro, no TorrServer needed."),
+                        if (accepted) "Magnet and .torrent links play in Yumeiro. TorrServer below is only a fallback."
+                        else "Play magnet and .torrent links in Yumeiro, no TorrServer needed.",
                         color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp,
                     )
                 }
@@ -326,8 +325,8 @@ internal fun TorrServerCard() {
     SettingsCard {
         Text(stringResource(R.string.torrserver_address), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         Text(
-            tr(R.string.magnet_and_torrent_links_stream_through, "Magnet and .torrent links stream through a TorrServer you run on this phone or your network (default port 8090). ") +
-                tr(R.string.leave_empty_to_open_torrent_links, "Leave empty to open torrent links in another app."),
+            "Magnet and .torrent links stream through a TorrServer you run on this phone or your network (default port 8090). " +
+                "Leave empty to open torrent links in another app.",
             color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp,
         )
         Spacer(Modifier.height(10.dp))
@@ -344,8 +343,8 @@ internal fun TorrServerCard() {
                 onClick = {
                     if (dev.asfakul.yumeiro.stream.TorrentSettings.setServer(context, text)) {
                         text = dev.asfakul.yumeiro.stream.TorrentSettings.server.value
-                        dev.asfakul.yumeiro.ui.components.AppMessages.info(context, if (text.isEmpty()) tr(R.string.torrent_links_open_in_another_app, "Torrent links open in another app") else tr(R.string.torrserver_saved, "TorrServer saved"))
-                    } else error = tr(R.string.enter_an_address_like_192_168, "Enter an address like 192.168.1.5:8090")
+                        dev.asfakul.yumeiro.ui.components.AppMessages.info(context, if (text.isEmpty()) "Torrent links open in another app" else "TorrServer saved")
+                    } else error = "Enter an address like 192.168.1.5:8090"
                 },
                 modifier = Modifier.testTag("torrserver_save"),
             ) { Text(stringResource(R.string.save), fontWeight = FontWeight.Bold) }

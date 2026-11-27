@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.notify
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 
@@ -19,15 +17,15 @@ object WhatsNew {
     private const val TAG = "WhatsNew"
     const val ID = "whatsnew_1.9"
 
-    val BODY: String get() = tr(R.string.settings_is_now_grouped_by_subject, "Settings is now grouped by subject: You, Video, Music, Downloads & library, Sources & accounts, System. ") +
+    const val BODY = "Settings is now grouped by subject: You, Video, Music, Downloads & library, Sources & accounts, System. " +
         "Profiles: Settings → Profiles. Each person gets their own history, Continue watching and lists, with an optional PIN or fingerprint and their own 18+ switch. " +
-        tr(R.string.private_downloads_the_lock_at_the, "Private downloads: the lock at the top of Downloads, or Settings → Downloads. ") +
+        "Private downloads: the lock at the top of Downloads, or Settings → Downloads. " +
         "Statistics: Settings → Your statistics, or the Statistics card in Library music. " +
-        tr(R.string.telegram_channels_no_login_settings_telegram, "Telegram channels (no login): Settings → Telegram, then type @channel or a t.me link. TeraBox and DiskWala links work there too. ") +
-        tr(R.string.script_repos_vega_nuvio_skystream_the, "Script repos (Vega, Nuvio, SkyStream): the Script repos tab in Sources. ") +
-        tr(R.string.video_quality_anime4k_and_torrents_settings, "Video quality, Anime4K and torrents: Settings → Video quality & playback. Subtitles and skip intro: Settings → Subtitles & intros. ") +
-        tr(R.string.hi_res_audio_equalizer_and_lyrics, "Hi-Res audio, equalizer and lyrics: Settings → Music & sound. DNS fallback and proxy: Settings → Network. ") +
-        tr(R.string.hold_the_video_for_2x_speed, "Hold the video for 2x speed.")
+        "Telegram channels (no login): Settings → Telegram, then type @channel or a t.me link. TeraBox and DiskWala links work there too. " +
+        "Script repos (Vega, Nuvio, SkyStream): the Script repos tab in Sources. " +
+        "Video quality, Anime4K and torrents: Settings → Video quality & playback. Subtitles and skip intro: Settings → Subtitles & intros. " +
+        "Hi-Res audio, equalizer and lyrics: Settings → Music & sound. DNS fallback and proxy: Settings → Network. " +
+        "Hold the video for 2x speed."
 
     fun shouldPost(firstInstall: Long, lastUpdate: Long, version: String): Boolean =
         // 2.0.0 is the 1.9.0 feature set with the player crash fixed; most users skip 1.9.0, so the

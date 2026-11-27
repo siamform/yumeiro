@@ -5,9 +5,6 @@
  */
 package dev.asfakul.yumeiro.stats
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
-
 /**
  * F-17: pure rules behind the profile statistics (unit-tested). One [Day] per calendar day with activity:
  * listening time, watching time and plays per [Kind]. At most [MAX_DAYS] days are kept (about a year).
@@ -91,7 +88,7 @@ object StatsMath {
         val s = streaks(days, today)
         val h = t.totalMs / 3_600_000L
         return buildList {
-            if (t.activeDays >= 1) add(Milestone("first_day", tr(R.string.first_day_with_yumeiro, "First day with Yumeiro")))
+            if (t.activeDays >= 1) add(Milestone("first_day", "First day with Yumeiro"))
             if (s.longest >= 7) add(Milestone("streak_7", "7 days in a row"))
             if (s.longest >= 30) add(Milestone("streak_30", "30 days in a row"))
             if (h >= 10) add(Milestone("hours_10", "10 hours played"))

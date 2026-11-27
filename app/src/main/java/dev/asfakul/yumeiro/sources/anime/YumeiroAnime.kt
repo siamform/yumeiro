@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.anime
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -49,7 +47,7 @@ import java.util.concurrent.ConcurrentHashMap
  * It is one part of the built-in "Yumeiro" source and follows its one switch.
  */
 object YumeiroAnime {
-    val NAME: String get() = tr(R.string.yumeiro_anime, "Yumeiro Anime")
+    const val NAME = "Yumeiro Anime"
     const val PLUGIN = "yumeiro-builtin:anime"
 
     @Volatile internal var app: Context? = null
@@ -133,7 +131,7 @@ class YumeiroAnimeProvider(
             posterUrl = card?.thumbnail ?: full.first().thumbnail
             backgroundPosterUrl = full.first().thumbnail
             plot = "Full episodes published free by ${card?.channel ?: full.first().channel} on its official YouTube channel. " +
-                tr(R.string.some_episodes_may_only_play_in, "Some episodes may only play in the countries the distributor licensed them for.")
+                "Some episodes may only play in the countries the distributor licensed them for."
             tags = listOf("Official", "Free")
         }
     }
@@ -184,18 +182,18 @@ class YumeiroAnimeProvider(
         private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         private val loading = ConcurrentHashMap<String, Deferred<List<Series>>>()
         const val ALL = "all"
-        val ALL_SHELF: String get() = tr(R.string.official_anime_full_series, "Official anime · full series")
+        const val ALL_SHELF = "Official anime · full series"
         /** A video shorter than this is a clip, preview or trailer, not an episode. */
         const val MIN_EPISODE_SEC = 8 * 60L
 
         /** Official channels of rights holders / licensed distributors (checked on youtube.com 2026-11-24). */
         internal val CHANNELS = listOf(
-            AnimeChannel("UCGbshtvS9t-8CW11W7TooQg", tr(R.string.muse_asia_new_and_seasonal_anime, "Muse Asia · new and seasonal anime")),
-            AnimeChannel("UC0wNSTMWIL3qaorLx0jie6A", tr(R.string.ani_one_asia_full_series, "Ani-One Asia · full series")),
-            AnimeChannel("UCejtUitnpnf8Be-v5NuDSLw", tr(R.string.gundam_official_full_series, "Gundam · official full series")),
-            AnimeChannel("UCV1da9peoqEwqr45bpTJsbQ", tr(R.string.viz_media_free_anime, "VIZ Media · free anime")),
-            AnimeChannel("UCPZkYpT5XIUou8sV8zk-3jQ", tr(R.string.retrocrush_classic_anime, "RetroCrush · classic anime")),
-            AnimeChannel("UCLGBzNvdJmFFVUlhRkv9L4A", tr(R.string.tezuka_productions_classics, "Tezuka Productions · classics")),
+            AnimeChannel("UCGbshtvS9t-8CW11W7TooQg", "Muse Asia · new and seasonal anime"),
+            AnimeChannel("UC0wNSTMWIL3qaorLx0jie6A", "Ani-One Asia · full series"),
+            AnimeChannel("UCejtUitnpnf8Be-v5NuDSLw", "Gundam · official full series"),
+            AnimeChannel("UCV1da9peoqEwqr45bpTJsbQ", "VIZ Media · free anime"),
+            AnimeChannel("UCPZkYpT5XIUou8sV8zk-3jQ", "RetroCrush · classic anime"),
+            AnimeChannel("UCLGBzNvdJmFFVUlhRkv9L4A", "Tezuka Productions · classics"),
         )
 
         private val cache = ConcurrentHashMap<String, Pair<Long, List<Series>>>()

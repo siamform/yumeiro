@@ -5,9 +5,6 @@
  */
 package dev.asfakul.yumeiro.player
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
-
 /**
  * H-8 (owner item 8): Song info showed no duration (0:00) and no file size when the library row had 0 for
  * them (MediaStore leaves both 0 for some files and providers; online songs have no file). The best known
@@ -27,7 +24,7 @@ object SongFacts {
         // B13: a streamed song shows the size of the audio it streams (an estimate is marked as one).
         bytes != null && streamed(uri) -> if (estimated(uri)) "About ${format(bytes)} (streamed)" else "${format(bytes)} (streamed)"
         bytes != null -> format(bytes)
-        streamed(uri) -> tr(R.string.streamed_no_file, "Streamed (no file)")
+        streamed(uri) -> "Streamed (no file)"
         else -> "Unknown"
     }
 

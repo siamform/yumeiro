@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.youtube
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.data.model.AudioTrack
 import dev.asfakul.yumeiro.stream.IncomingMedia
@@ -79,12 +77,12 @@ object YouTubePlayback {
     fun toTrack(item: YtItem): AudioTrack = AudioTrack(
         id = "yt:${item.id}",
         title = item.title,
-        artist = item.channel.removeSuffix(" - Topic").ifBlank { tr(R.string.youtube_music, "YouTube Music") },
-        album = tr(R.string.youtube_music, "YouTube Music"),
+        artist = item.channel.removeSuffix(" - Topic").ifBlank { "YouTube Music" },
+        album = "YouTube Music",
         durationMs = (item.durationSec.coerceAtLeast(0)) * 1000L,
         uri = YouTubeAudioDataSource.uriFor(item.id),
         albumArtUri = squareArt(item),
-        folderName = tr(R.string.youtube_music, "YouTube Music"),
+        folderName = "YouTube Music",
         folderPath = item.url,
     )
 

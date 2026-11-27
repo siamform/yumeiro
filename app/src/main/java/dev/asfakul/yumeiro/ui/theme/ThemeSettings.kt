@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.theme
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,10 +13,10 @@ import java.util.Calendar
 
 enum class ThemeMode(val label: String, val description: String) {
     SYSTEM("System", "Tsuki Night / Washi Day — follows the device light / dark setting"),
-    LIGHT(tr(R.string.washi_day, "Washi Day"), tr(R.string.always_light_warm_paper_with_a, "Always light — warm paper with a deep amber accent")),
-    DARK(tr(R.string.tsuki_night, "Tsuki Night"), tr(R.string.always_dark_sumi_ink_with_a, "Always dark — sumi ink with a moonlight-gold accent")),
-    DYNAMIC(tr(R.string.material_you, "Material You"), tr(R.string.colors_from_your_wallpaper_android_12, "Colors from your wallpaper (Android 12+)")),
-    TIME(tr(R.string.time_of_day, "Time of day"), tr(R.string.morning_noon_afternoon_evening_and_midnight, "Morning, noon, afternoon, evening and midnight moods")),
+    LIGHT("Washi Day", "Always light — warm paper with a deep amber accent"),
+    DARK("Tsuki Night", "Always dark — sumi ink with a moonlight-gold accent"),
+    DYNAMIC("Material You", "Colors from your wallpaper (Android 12+)"),
+    TIME("Time of day", "Morning, noon, afternoon, evening and midnight moods"),
     AFTERGLOW("Afterglow", "Warm ember accent on deep black"),
 }
 

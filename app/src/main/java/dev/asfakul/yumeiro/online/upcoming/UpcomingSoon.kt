@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.upcoming
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import java.time.LocalDate
 
 /**
@@ -50,6 +48,6 @@ object UpcomingSoon {
     fun whenLabel(day: LocalDate, today: LocalDate): String = when (val d = java.time.temporal.ChronoUnit.DAYS.between(today, day)) {
         0L -> "Today"
         1L -> "Tomorrow"
-        else -> tr(R.string.in_days, "In %1\$s days", d)
+        else -> "In $d days"
     }
 }

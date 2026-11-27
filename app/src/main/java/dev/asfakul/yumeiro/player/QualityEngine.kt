@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.player
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.stream.StreamRequest
 
@@ -80,8 +78,8 @@ object QualityEngine {
         return levels.map { h ->
             when {
                 h == src -> Alt(label(h), h, note = "Original from the source", current = selected == null) { _, _ -> null }
-                h > src -> Alt(label(h), h, note = tr(R.string.upscaled_by_yumeiro_anime4k, "Upscaled by Yumeiro (Anime4K)"), current = selected == h, engineHeight = h, upscale = true) { _, _ -> null }
-                else -> Alt(label(h), h, note = tr(R.string.scaled_by_yumeiro_uses_less_gpu, "Scaled by Yumeiro (uses less GPU, same data)"), current = selected == h, engineHeight = h) { _, _ -> null }
+                h > src -> Alt(label(h), h, note = "Upscaled by Yumeiro (Anime4K)", current = selected == h, engineHeight = h, upscale = true) { _, _ -> null }
+                else -> Alt(label(h), h, note = "Scaled by Yumeiro (uses less GPU, same data)", current = selected == h, engineHeight = h) { _, _ -> null }
             }
         }
     }

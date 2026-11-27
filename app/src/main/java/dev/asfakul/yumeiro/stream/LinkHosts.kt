@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.stream
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -172,15 +170,15 @@ object LinkHosts {
             dev.asfakul.yumeiro.online.telegram.TelegramPublic.Private -> return TelegramPrivate
             else -> Unit
         }
-        googleDriveId(u)?.let { return Direct(googleDriveDirect(it), tr(R.string.google_drive, "Google Drive")) }
+        googleDriveId(u)?.let { return Direct(googleDriveDirect(it), "Google Drive") }
         dropboxDirect(u)?.let { return Direct(it, "Dropbox") }
         pixeldrainDirect(u)?.let { return Direct(it, "Pixeldrain") }
         oneDriveDirect(u)?.let { return Direct(it, "OneDrive") }
         if (TERABOX.any { under(host, it) }) return Browser(u, "TeraBox",
-            tr(R.string.terabox_only_gives_the_video_to, "TeraBox only gives the video to its own web player. Yumeiro opens the share, starts that player and plays its stream here. ") +
-                tr(R.string.if_terabox_asks_you_to_sign, "If TeraBox asks you to sign in or solve a check, the page appears so you can do it once."), auto = true)
+            "TeraBox only gives the video to its own web player. Yumeiro opens the share, starts that player and plays its stream here. " +
+                "If TeraBox asks you to sign in or solve a check, the page appears so you can do it once.", auto = true)
         if (DISKWALA.any { under(host, it) }) return Browser(u, "DiskWala",
-            tr(R.string.diskwala_only_plays_its_files_inside, "DiskWala only plays its files inside the DiskWala app; Yumeiro checks the link and opens it there."), auto = true)
+            "DiskWala only plays its files inside the DiskWala app; Yumeiro checks the link and opens it there.", auto = true)
         return null
     }
 

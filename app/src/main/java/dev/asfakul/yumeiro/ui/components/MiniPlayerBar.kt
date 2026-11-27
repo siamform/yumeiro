@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -136,11 +134,11 @@ fun MiniPlayerBar(
                             Offset(inset, top), Size(trackW * p, h), cornerRadius = androidx.compose.ui.geometry.CornerRadius(h)
                         )
                     }
-                    .clickable(onClickLabel = tr(R.string.open_player, "Open player"), onClick = onClick)
+                    .clickable(onClickLabel = "Open player", onClick = onClick)
                     .semantics {
                         customActions = listOf(
-                            CustomAccessibilityAction(tr(R.string.next_track, "Next track")) { onNext(); true },
-                            CustomAccessibilityAction(tr(R.string.previous_track, "Previous track")) { onPrevious(); true },
+                            CustomAccessibilityAction("Next track") { onNext(); true },
+                            CustomAccessibilityAction("Previous track") { onPrevious(); true },
                         )
                     }
                     .testTag("mini_player_bar")
@@ -195,7 +193,7 @@ fun MiniPlayerBar(
                         Text(track.artist, style = MaterialTheme.typography.bodySmall, color = sub, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     }
-                    MiniButton(Icons.Default.SkipPrevious, tr(R.string.previous_track, "Previous track"), content, onPrevious, "mini_player_previous_button")
+                    MiniButton(Icons.Default.SkipPrevious, "Previous track", content, onPrevious, "mini_player_previous_button")
                     Box(
                         Modifier
                             .size(48.dp)
@@ -212,8 +210,8 @@ fun MiniPlayerBar(
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                    MiniButton(Icons.Default.SkipNext, tr(R.string.next_track, "Next track"), content, onNext, "mini_player_next_button")
-                    MiniButton(Icons.Default.Close, tr(R.string.stop_and_close_player, "Stop and close player"), sub, onClose, "mini_player_close_button", 20)
+                    MiniButton(Icons.Default.SkipNext, "Next track", content, onNext, "mini_player_next_button")
+                    MiniButton(Icons.Default.Close, "Stop and close player", sub, onClose, "mini_player_close_button", 20)
                 }
             }
         }

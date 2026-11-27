@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.player
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.app.Activity
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
@@ -64,10 +62,10 @@ object PipController {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun actions(context: Context, playing: Boolean): List<RemoteAction> = listOf(
-        action(context, CONTROL_REWIND, android.R.drawable.ic_media_rew, tr(R.string.rewind_10s, "Rewind 10s")),
+        action(context, CONTROL_REWIND, android.R.drawable.ic_media_rew, "Rewind 10s"),
         if (playing) action(context, CONTROL_PLAY_PAUSE, android.R.drawable.ic_media_pause, "Pause")
         else action(context, CONTROL_PLAY_PAUSE, android.R.drawable.ic_media_play, "Play"),
-        action(context, CONTROL_FORWARD, android.R.drawable.ic_media_ff, tr(R.string.forward_10s, "Forward 10s")),
+        action(context, CONTROL_FORWARD, android.R.drawable.ic_media_ff, "Forward 10s"),
     )
 
     @RequiresApi(Build.VERSION_CODES.O)

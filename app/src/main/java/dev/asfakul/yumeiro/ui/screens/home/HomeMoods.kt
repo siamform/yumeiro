@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.online.OnlineRow
 
@@ -29,13 +27,13 @@ internal data class HomeMood(
 )
 
 internal object HomeMoods {
-    val MORNING = HomeMood("morning", "朝", tr(R.string.morning_light, "Morning light"), tr(R.string.soft_bright_and_easy, "Soft, bright and easy"), "morning acoustic chill", "anime opening 4k", listOf("slice", "comedy", "family", "popular", "trending"))
-    val DAY = HomeMood("day", "昼", tr(R.string.daytime_energy, "Daytime energy"), tr(R.string.upbeat_songs_and_action_picks, "Upbeat songs and action picks"), "upbeat jpop hits", "amv edit", listOf("action", "adventure", "sports", "trending", "popular"))
-    val EVENING = HomeMood("evening", "夕", tr(R.string.golden_hour, "Golden hour"), tr(R.string.city_pop_and_stories_to_sink, "City pop and stories to sink into"), "city pop 80s japanese", "anime movie trailer", listOf("drama", "romance", "movie", "film"))
-    val NIGHT = HomeMood("night", "夜", tr(R.string.midnight_drift, "Midnight drift"), tr(R.string.lo_fi_slow_songs_and_late, "Lo-fi, slow songs and late-night watches"), "lofi hip hop", "anime night ambience", listOf("horror", "thriller", "mystery", "romance", "psychological"))
-    val ANIME = HomeMood("anime", "歌", tr(R.string.anime_songs, "Anime songs"), tr(R.string.openings_endings_and_j_pop, "Openings, endings and J-pop"), "anime songs jpop", "anime opening 4k", listOf("anime", "seasonal", "airing"))
-    val HITS = HomeMood("hits", "熱", tr(R.string.top_hits, "Top hits"), tr(R.string.what_everyone_is_playing, "What everyone is playing"), "top hits this week", "trending music video", listOf("trending", "popular", "top"))
-    val FOCUS = HomeMood("focus", "静", tr(R.string.deep_focus, "Deep focus"), tr(R.string.calm_sounds_to_work_to, "Calm sounds to work to"), "study music focus", "relaxing anime scenery", listOf("documentary", "slice", "drama"))
+    val MORNING = HomeMood("morning", "朝", "Morning light", "Soft, bright and easy", "morning acoustic chill", "anime opening 4k", listOf("slice", "comedy", "family", "popular", "trending"))
+    val DAY = HomeMood("day", "昼", "Daytime energy", "Upbeat songs and action picks", "upbeat jpop hits", "amv edit", listOf("action", "adventure", "sports", "trending", "popular"))
+    val EVENING = HomeMood("evening", "夕", "Golden hour", "City pop and stories to sink into", "city pop 80s japanese", "anime movie trailer", listOf("drama", "romance", "movie", "film"))
+    val NIGHT = HomeMood("night", "夜", "Midnight drift", "Lo-fi, slow songs and late-night watches", "lofi hip hop", "anime night ambience", listOf("horror", "thriller", "mystery", "romance", "psychological"))
+    val ANIME = HomeMood("anime", "歌", "Anime songs", "Openings, endings and J-pop", "anime songs jpop", "anime opening 4k", listOf("anime", "seasonal", "airing"))
+    val HITS = HomeMood("hits", "熱", "Top hits", "What everyone is playing", "top hits this week", "trending music video", listOf("trending", "popular", "top"))
+    val FOCUS = HomeMood("focus", "静", "Deep focus", "Calm sounds to work to", "study music focus", "relaxing anime scenery", listOf("documentary", "slice", "drama"))
 
     val all = listOf(MORNING, DAY, EVENING, NIGHT, ANIME, HITS, FOCUS)
 
@@ -48,7 +46,7 @@ internal object HomeMoods {
     }
 
     /** A mood built from one of your own YouTube Music topics. */
-    fun fromTopic(topic: String) = HomeMood("topic:$topic", "好", topic, tr(R.string.one_of_your_topics, "One of your topics"), topic, topic, topic.split(' ').filter { it.length > 2 })
+    fun fromTopic(topic: String) = HomeMood("topic:$topic", "好", topic, "One of your topics", topic, topic, topic.split(' ').filter { it.length > 2 })
 
     /**
      * The mood Home opens with: usually the hour's own mood, sometimes (about one time in three)

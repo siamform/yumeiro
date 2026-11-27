@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.equalizer
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.GlassFill
@@ -107,9 +106,9 @@ fun EqualizerScreen(
             .testTag("equalizer_screen_root"),
         topBar = {
             dev.asfakul.yumeiro.ui.components.SubPageHeader(
-                title = tr(R.string.equalizer, "Equalizer"),
+                title = "Equalizer",
                 onBack = onBackClick,
-                subtitle = tr(R.string.shape_how_every_song_sounds, "Shape how every song sounds"),
+                subtitle = "Shape how every song sounds",
                 handleBack = false,
                 modifier = Modifier.testTag("equalizer_back_button"),
             ) {
@@ -182,7 +181,7 @@ fun EqualizerScreen(
                                     color = TextPrimary
                                 )
                                 Text(
-                                    text = if (state.isEnabled) tr(R.string.on_applied_to_everything_you_play, "On · applied to everything you play") else tr(R.string.off_you_hear_the_original_sound, "Off · you hear the original sound"),
+                                    text = if (state.isEnabled) "On · applied to everything you play" else "Off · you hear the original sound",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (state.isEnabled) SpotifyGreen else TextTertiary
                                 )
@@ -297,7 +296,7 @@ fun EqualizerScreen(
 
             if (state.bands.isEmpty()) item("bands_empty") {
                 Text(
-                    text = if (state.isSupportedOnDevice) tr(R.string.bands_appear_once_a_song_starts, "Bands appear once a song starts playing.") else tr(R.string.this_phones_audio_driver_doesnt_offer, "This phone's audio driver doesn't offer equalizer bands. Presets and enhancements still work where available."),
+                    text = if (state.isSupportedOnDevice) "Bands appear once a song starts playing." else "This phone's audio driver doesn't offer equalizer bands. Presets and enhancements still work where available.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     modifier = Modifier.padding(vertical = 4.dp).testTag("equalizer_bands_empty")
@@ -328,8 +327,8 @@ fun EqualizerScreen(
             // Bass Boost Card
             item {
                 EffectSliderCard(
-                    title = tr(R.string.bass_boost, "Bass boost"),
-                    subtitle = if (state.isBassBoostSupported) tr(R.string.more_low_end_punch, "More low-end punch") else tr(R.string.not_available_on_this_phone, "Not available on this phone"),
+                    title = "Bass boost",
+                    subtitle = if (state.isBassBoostSupported) "More low-end punch" else "Not available on this phone",
                     value = state.bassBoostStrength,
                     maxValue = 1000,
                     icon = Icons.AutoMirrored.Filled.VolumeUp,
@@ -342,8 +341,8 @@ fun EqualizerScreen(
             // Virtualizer / 3D Audio Card
             item {
                 EffectSliderCard(
-                    title = tr(R.string.surround, "Surround"),
-                    subtitle = if (state.isVirtualizerSupported) tr(R.string.wider_roomier_sound, "Wider, roomier sound") else tr(R.string.not_available_on_this_phone, "Not available on this phone"),
+                    title = "Surround",
+                    subtitle = if (state.isVirtualizerSupported) "Wider, roomier sound" else "Not available on this phone",
                     value = state.virtualizerStrength,
                     maxValue = 1000,
                     icon = Icons.Default.SurroundSound,

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.semantics.selected
@@ -85,7 +84,7 @@ import dev.asfakul.yumeiro.ui.theme.palette
 import dev.asfakul.yumeiro.ui.theme.yuRound
 
 object DeveloperInfo {
-    val NAME: String get() = tr(R.string.asfakul_siam, "Asfakul Siam")
+    const val NAME = "Asfakul Siam"
     const val HANDLE = "siamform"
     const val WEBSITE = dev.asfakul.yumeiro.notify.Reminders.WEBSITE_URL
     const val GITHUB = "https://github.com/siamform"
@@ -160,7 +159,7 @@ fun AppearanceSettingsCard() {
         BackdropSettingsSection()
         SettingsDivider()
         SettingsToggleRow(
-            title = tr(R.string.pure_black_amoled, "Pure black (AMOLED)"),
+            title = "Pure black (AMOLED)",
             subtitle = "Use true black backgrounds in dark themes",
             checked = amoled,
             onCheckedChange = { ThemeSettings.setAmoled(context, it) },
@@ -168,8 +167,8 @@ fun AppearanceSettingsCard() {
         )
         SettingsDivider()
         SettingsToggleRow(
-            title = tr(R.string.ambient_colour_from_artwork, "Ambient colour from artwork"),
-            subtitle = tr(R.string.tint_the_background_glow_with_the, "Tint the background glow with the colour of what's playing"),
+            title = "Ambient colour from artwork",
+            subtitle = "Tint the background glow with the colour of what's playing",
             checked = ambient,
             onCheckedChange = { ThemeSettings.setAmbient(context, it) },
             testTag = "toggle_ambient",
@@ -178,8 +177,8 @@ fun AppearanceSettingsCard() {
         LanguageRow()
         SettingsDivider()
         SettingsToggleRow(
-            title = tr(R.string.compact_text_and_corners, "Compact text and corners"),
-            subtitle = tr(R.string.slightly_smaller_text_and_softer_tighter, "Slightly smaller text and softer, tighter corners across Yumeiro. Off: the larger standard size. If you chose large text in Android settings, your size is kept"),
+            title = "Compact text and corners",
+            subtitle = "Slightly smaller text and softer, tighter corners across Yumeiro. Off: the larger standard size. If you chose large text in Android settings, your size is kept",
             checked = dev.asfakul.yumeiro.ui.theme.UiScale.compact,
             onCheckedChange = { on ->
                 dev.asfakul.yumeiro.ui.theme.UiScale.set(context, on)
@@ -192,8 +191,8 @@ fun AppearanceSettingsCard() {
         )
         SettingsDivider()
         SettingsToggleRow(
-            title = tr(R.string.japanese_accents, "Japanese accents"),
-            subtitle = tr(R.string.small_kana_labels_such_as_and, "Small kana labels such as 設定 and 音楽 above page titles. Off: English only"),
+            title = "Japanese accents",
+            subtitle = "Small kana labels such as 設定 and 音楽 above page titles. Off: English only",
             checked = kana,
             onCheckedChange = { ThemeSettings.setKana(context, it) },
             testTag = "toggle_kana",
@@ -208,8 +207,8 @@ private fun AccentToneSection(mode: ThemeMode) {
     val accent by ThemeSettings.accent.collectAsState()
     Text(stringResource(R.string.accent_colour), color = TextPrimary, style = MaterialTheme.typography.titleMedium)
     Text(
-        if (mode == ThemeMode.DYNAMIC) tr(R.string.material_you_uses_your_wallpaper_colours, "Material You uses your wallpaper colours; the accent applies to the other themes")
-        else tr(R.string.buttons_highlights_and_the_selected_tab, "Buttons, highlights and the selected tab"),
+        if (mode == ThemeMode.DYNAMIC) "Material You uses your wallpaper colours; the accent applies to the other themes"
+        else "Buttons, highlights and the selected tab",
         color = TextSecondary, style = MaterialTheme.typography.bodySmall,
     )
     Spacer(Modifier.height(10.dp))
@@ -243,7 +242,7 @@ fun SubtitleDisplayCard() {
     remember(context) { PlayerSettings.init(context); PlayerSettings }
     val cc by PlayerSettings.captionsDefault.collectAsState()
     SettingsCard {
-        SettingsToggleRow(tr(R.string.captions_on_by_default, "Captions on by default"), tr(R.string.show_embedded_or_loaded_subtitles_automatically, "Show embedded or loaded subtitles automatically (CC)"), cc,
+        SettingsToggleRow("Captions on by default", "Show embedded or loaded subtitles automatically (CC)", cc,
             { PlayerSettings.setCaptionsDefault(context, it) }, "toggle_cc_default")
         SettingsDivider()
         var subStyleOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
@@ -267,7 +266,7 @@ fun VideoPlayerSettingsCard() {
     val bg by PlayerSettings.backgroundPlay.collectAsState()
     val pip by PlayerSettings.autoPip.collectAsState()
     SettingsCard {
-        SettingsToggleRow(tr(R.string.background_play, "Background play"), tr(R.string.keep_videos_playing_with_the_screen, "Keep videos playing with the screen off or in other apps, with controls in the notification. Off: the video pauses when you leave the app"), bg,
+        SettingsToggleRow("Background play", "Keep videos playing with the screen off or in other apps, with controls in the notification. Off: the video pauses when you leave the app", bg,
             { PlayerSettings.setBackgroundPlay(context, it) }, "toggle_bg_play")
         SettingsDivider()
         SettingsToggleRow("Picture-in-picture", "Show the PiP button and shrink the video into a floating window when you leave the app. Off: PiP is disabled", pip,
@@ -275,7 +274,7 @@ fun VideoPlayerSettingsCard() {
         SettingsDivider()
         if (!dev.asfakul.yumeiro.Edition.isTv) {
             val boostOn by PlayerSettings.volumeBoost.collectAsState()
-            SettingsToggleRow(tr(R.string.volume_boost_up_to_200, "Volume boost up to 200 %"), tr(R.string.swipe_up_past_full_volume_to, "Swipe up past full volume to make quiet videos louder. It resets for every video. Loud sound can damage your hearing and small speakers"), boostOn,
+            SettingsToggleRow("Volume boost up to 200 %", "Swipe up past full volume to make quiet videos louder. It resets for every video. Loud sound can damage your hearing and small speakers", boostOn,
                 { PlayerSettings.setVolumeBoost(context, it) }, "toggle_volume_boost")
             SettingsDivider()
         }

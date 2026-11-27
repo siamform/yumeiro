@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.stream
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -44,7 +42,7 @@ object DiskWalaApi {
             if (!r.isSuccessful) return null
             val o = (Json.parseToJsonElement(r.body?.string().orEmpty()) as JsonObject)["fileInfo"] as? JsonObject ?: return null
             fun s(k: String) = runCatching { o[k]?.jsonPrimitive?.content }.getOrNull()
-            FileInfo(s("name") ?: tr(R.string.diskwala_file, "DiskWala file"), s("size")?.toLongOrNull() ?: 0L, s("type").orEmpty())
+            FileInfo(s("name") ?: "DiskWala file", s("size")?.toLongOrNull() ?: 0L, s("type").orEmpty())
         }
     }.getOrNull()
 
@@ -55,8 +53,8 @@ object DiskWalaApi {
     }
 
     /** DW-BOT-1: shown while the downloader bot's mini app gets the file. */
-    val VIA_BOT: String get() = tr(R.string.opening_it_through_a_telegram_downloader, "Opening it through a Telegram downloader bot (a third party) with your Telegram account.")
-    val SIGN_IN_HINT: String get() = tr(R.string.to_play_it_in_yumeiro_sign, "To play it in Yumeiro, sign in to Telegram (Websites > Telegram); DiskWala links then open through a Telegram downloader bot.")
+    const val VIA_BOT = "Opening it through a Telegram downloader bot (a third party) with your Telegram account."
+    const val SIGN_IN_HINT = "To play it in Yumeiro, sign in to Telegram (Websites > Telegram); DiskWala links then open through a Telegram downloader bot."
 
-    val APP_ONLY: String get() = tr(R.string.diskwala_only_plays_its_files_inside_2, "DiskWala only plays its files inside the DiskWala app; its website shows a download page, not the video.")
+    const val APP_ONLY = "DiskWala only plays its files inside the DiskWala app; its website shows a download page, not the video."
 }

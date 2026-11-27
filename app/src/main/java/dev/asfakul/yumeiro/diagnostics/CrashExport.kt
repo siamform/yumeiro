@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.diagnostics
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.ContentValues
 import android.content.Context
 import android.os.Build
@@ -56,7 +54,7 @@ object CrashExport {
                 }, null, null)
                 true
             } else {
-                val dir = File(context.getExternalFilesDir(null) ?: return@runCatching false, tr(R.string.crash_reports, "Crash reports")).apply { mkdirs() }
+                val dir = File(context.getExternalFilesDir(null) ?: return@runCatching false, "Crash reports").apply { mkdirs() }
                 report.copyTo(File(dir, "yumeiro-" + report.name), overwrite = true)
                 true
             }

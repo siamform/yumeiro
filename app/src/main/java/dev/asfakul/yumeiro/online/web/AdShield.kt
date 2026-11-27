@@ -5,9 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.web
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
-
 /**
  * Decides which page loads a site's WebView may make while the user solves a captcha or signs in.
  *
@@ -113,5 +110,5 @@ document.addEventListener('DOMContentLoaded',kill);setTimeout(kill,1500);setTime
 
 /** Wording for the shield bar. Pure → unit-tested. */
 object AdShieldText {
-    fun blocked(count: Int): String = if (count == 1) tr(R.string.blocked_1_ad_or_pop_up, "Blocked 1 ad or pop-up") else tr(R.string.blocked_ads_pop_ups, "Blocked %1\$s ads & pop-ups", count)
+    fun blocked(count: Int): String = if (count == 1) "Blocked 1 ad or pop-up" else "Blocked $count ads & pop-ups"
 }

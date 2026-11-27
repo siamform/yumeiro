@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.profiles
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
@@ -38,18 +36,18 @@ object ProfilePhotos {
 
     /** Imports [uri] as [id]'s picture. Null on success, otherwise a message for the user. */
     suspend fun import(context: Context, id: String, uri: Uri): String? = withContext(Dispatchers.IO) {
-        if (Profiles.find(context, id) == null) return@withContext tr(R.string.that_profile_no_longer_exists, "That profile no longer exists.")
+        if (Profiles.find(context, id) == null) return@withContext "That profile no longer exists."
         val cr = context.contentResolver
         val type = runCatching { cr.getType(uri) }.getOrNull().orEmpty()
-        if (type.startsWith("video/")) return@withContext tr(R.string.thats_a_video_pick_a_photo, "That's a video. Pick a photo instead.")
+        if (type.startsWith("video/")) return@withContext "That's a video. Pick a photo instead."
         val size = runCatching { cr.openAssetFileDescriptor(uri, "r")?.use { it.length } }.getOrNull() ?: -1L
-        if (size > 60L * 1024 * 1024) return@withContext tr(R.string.that_picture_is_over_60_mb, "That picture is over 60 MB. Pick a smaller one.")
+        if (size > 60L * 1024 * 1024) return@withContext "That picture is over 60 MB. Pick a smaller one."
         val error = runCatching {
             // Shares the backdrop's decoder: down-sampled while decoding, EXIF rotation applied (Android 9+),
             // and a cut-off or damaged file is refused instead of saved half grey.
             val src = dev.asfakul.yumeiro.ui.theme.BackdropSettings.decodeScaled(context, uri, SIZE)
-                ?: return@runCatching tr(R.string.this_pictures_format_isnt_supported_here, "This picture's format isn't supported here. Try a JPEG or PNG.")
-            if (src.width < 64 || src.height < 64) { src.recycle(); return@runCatching tr(R.string.that_picture_is_too_small_use, "That picture is too small. Use one at least 64 × 64 px.") }
+                ?: return@runCatching "This picture's format isn't supported here. Try a JPEG or PNG."
+            if (src.width < 64 || src.height < 64) { src.recycle(); return@runCatching "That picture is too small. Use one at least 64 × 64 px." }
             val (l, t, side) = centreSquare(src.width, src.height)
             val square = Bitmap.createBitmap(src, l, t, side, side)
             val out = if (side > SIZE) Bitmap.createScaledBitmap(square, SIZE, SIZE, true) else square
@@ -62,12 +60,12 @@ object ProfilePhotos {
             if (!tmp.renameTo(dest)) { tmp.copyTo(dest, overwrite = true); tmp.delete() }
             null
         }.getOrElse { e ->
-            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal(tr(R.string.profile_picture_import_bytes, "Profile picture import (%1\$s, %2\$s bytes)", type, size), e)
+            dev.asfakul.yumeiro.diagnostics.CrashLog.nonFatal("Profile picture import ($type, $size bytes)", e)
             when (e) {
-                is java.io.FileNotFoundException, is SecurityException -> tr(R.string.yumeiro_couldnt_read_that_picture_if, "Yumeiro couldn't read that picture. If it's only in the cloud, download it to the phone first.")
-                is OutOfMemoryError -> tr(R.string.that_picture_is_too_large_to, "That picture is too large to open on this phone. Pick a smaller one.")
-                is dev.asfakul.yumeiro.ui.theme.BackdropSettings.BrokenPicture -> tr(R.string.that_picture_couldnt_be_opened_the, "That picture couldn't be opened: the file is damaged or incomplete. Try another copy.")
-                else -> tr(R.string.that_picture_couldnt_be_opened_try, "That picture couldn't be opened. Try a JPEG or PNG.")
+                is java.io.FileNotFoundException, is SecurityException -> "Yumeiro couldn't read that picture. If it's only in the cloud, download it to the phone first."
+                is OutOfMemoryError -> "That picture is too large to open on this phone. Pick a smaller one."
+                is dev.asfakul.yumeiro.ui.theme.BackdropSettings.BrokenPicture -> "That picture couldn't be opened: the file is damaged or incomplete. Try another copy."
+                else -> "That picture couldn't be opened. Try a JPEG or PNG."
             }
         }
         if (error != null) return@withContext error

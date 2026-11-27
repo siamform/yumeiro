@@ -67,7 +67,7 @@ UI_CALL = re.compile(r'\b(Text|SectionHeader|Chip|SettingsRow|ToggleRow|ActionRo
 
 TEMPLATE = re.compile(r'(?<!\\)\$(?:\{([^{}"]*)\}|([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*))')
 CODEY = re.compile(r'(://|\b(?:AND|OR|NOT) \w+:|\w:\(|=;|;\s*[A-Z][\w-]*=|\\r|\r|[A-Za-z]/[A-Za-z]|^[A-Z][\w-]+: |\w/\d|\(\w+;|\bHTTP/|\\u|<[a-zA-Z/!]|[{}]|=\s|^\s*[a-z0-9_.\-]+\s*$|\.kt\b|\.json\b|\.m3u8?\b|\.mp4\b|%[0-9.]*[dfx]|'
-                   r'^[A-Z0-9_]+$|[a-z][A-Z][a-z]+[A-Z]|\b(val|fun|return|null|true|false)\b\s|\(\)|&&|\|\||\\\\|^(?=.*(?:MMM|yyyy|dd|HH|EEE))[EMdyHhmsa ,.:/\x27-]+$)')
+                   r'^[A-Z0-9_]+$|[a-z][A-Z][a-z]+[A-Z]|\b(val|fun|return|null|true|false)\b\s|\(\)|&&|\|\||\\\\|^(?=.*(?:MMM|yyyy|dd|HH|EEE))[EMdyHhmsazZX ,.:/\x27-]+$)')
 
 
 def slug(text):

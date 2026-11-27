@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.home
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.yuEntrance
@@ -189,7 +188,7 @@ data class ResumeVideo(
 /** COUNT-1: the Yumix tile counts feed sources (the same number the Yumix header shows); -1 falls back to extensions. */
 internal fun yumixTileLabel(extensions: Int, sources: Int): String {
     val n = if (sources < 0) extensions else sources
-    return if (n > 0) "$n source${if (n == 1) "" else "s"}" else tr(R.string.add_sources, "Add sources")
+    return if (n > 0) "$n source${if (n == 1) "" else "s"}" else "Add sources"
 }
 
 /** One tile of the Spaces grid. */
@@ -405,7 +404,7 @@ fun HomeScreen(
             Feature("quick_card_ytmusic", "YT Music", "Songs", Icons.Default.Album, "歌", SpaceHues.Fuji, onOpenYouTubeMusic),
             Feature("quick_card_store", "Extensions", if (huesCount > 0) "$huesCount on" else "Get some", Icons.Default.Extension, "拡", SpaceHues.Yamabuki, onOpenHueStore),
             Feature("quick_card_manga", "Manga", if (mangaCount > 0) "$mangaCount sources" else "Add sources", Icons.AutoMirrored.Filled.MenuBook, "読", SpaceHues.Wakatake, onOpenManga),
-            Feature("quick_card_live", tr(R.string.live_tv, "Live TV"), tr(R.string.iptv_links, "IPTV · links"), Icons.Default.LiveTv, "生", SpaceHues.Sora, onOpenLive),
+            Feature("quick_card_live", "Live TV", "IPTV · links", Icons.Default.LiveTv, "生", SpaceHues.Sora, onOpenLive),
             Feature("quick_card_sources", "Sources", "All sources", Icons.Default.Hub, "源", SpaceHues.Ai, onOpenSources),
             Feature("quick_card_downloads", "Downloads", if (activeDownloads > 0) "$activeDownloads active" else "Offline", Icons.Default.DownloadForOffline, "保", SpaceHues.Seiji, onOpenDownloads,
                 badge = activeDownloads.takeIf { it > 0 }?.toString()),
@@ -421,19 +420,19 @@ fun HomeScreen(
         listOfNotNull(
             if (newer) Feature("quick_card_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, "電", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.TELEGRAM) }) else null,
             if (newer) Feature("quick_card_profiles", "Profiles", "Who's watching", Icons.Default.AccountCircle, "人", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.PROFILES) }) else null,
-            if (newer && stats) Feature("quick_card_stats", tr(R.string.your_stats, "Your stats"), tr(R.string.streaks_totals, "Streaks · totals"), Icons.Default.Insights, "績", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.STATS) }) else null,
-            if (newer) Feature("quick_card_upcoming", tr(R.string.airing_soon, "Airing soon"), tr(R.string.new_episodes, "New episodes"), Icons.Default.CalendarMonth, "暦", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.UPCOMING) }) else null,
+            if (newer && stats) Feature("quick_card_stats", "Your stats", "Streaks · totals", Icons.Default.Insights, "績", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.STATS) }) else null,
+            if (newer) Feature("quick_card_upcoming", "Airing soon", "New episodes", Icons.Default.CalendarMonth, "暦", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.UPCOMING) }) else null,
             if (newer) Feature("quick_card_reading", "Reading", "Manga you read", Icons.Default.AutoStories, "頁", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.READING) }) else null,
             Feature("quick_card_novels", "Novels", "Web novels", Icons.Default.AutoStories, "文", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.NOVELS) }),
             if (newer) Feature("quick_card_inbox", "Inbox", "News · messages", Icons.Default.Inbox, "便", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.INBOX) }) else null,
             Feature("quick_card_search", "Search", "All sources", Icons.Default.Search, "探", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SEARCH) }),
-            Feature("quick_card_mylist", tr(R.string.my_list, "My List"), tr(R.string.saved_titles, "Saved titles"), Icons.Default.Bookmarks, "栞", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.MY_LIST) }),
+            Feature("quick_card_mylist", "My List", "Saved titles", Icons.Default.Bookmarks, "栞", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.MY_LIST) }),
             Feature("quick_card_history", "History", "Keep watching", Icons.Default.History, "歴", SpaceHues.Fuji, onClick = { onOpenShortcut(HomeShortcut.HISTORY) }),
             Feature("quick_card_market", "Market", "New extensions", Icons.Default.Storefront, "市", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.MARKET) }),
             Feature("quick_card_websites", "Websites", "Saved sites", Icons.Default.Language, "網", SpaceHues.Ai, onClick = { onOpenShortcut(HomeShortcut.WEBSITES) }),
-            Feature("quick_card_mix", tr(R.string.music_mix, "Music mix"), tr(R.string.songs_yt_music, "Songs + YT Music"), Icons.Default.Shuffle, "混", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.MIX) }),
+            Feature("quick_card_mix", "Music mix", "Songs + YT Music", Icons.Default.Shuffle, "混", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.MIX) }),
             Feature("quick_card_equalizer", "Equalizer", "Sound presets", Icons.Default.Equalizer, "響", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.EQUALIZER) }),
-            Feature("quick_card_health", tr(R.string.source_health, "Source health"), tr(R.string.what_works_now, "What works now"), Icons.Default.MonitorHeart, "診", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.SOURCE_HEALTH) }),
+            Feature("quick_card_health", "Source health", "What works now", Icons.Default.MonitorHeart, "診", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.SOURCE_HEALTH) }),
             Feature("quick_card_together", "Together", "Watch in sync", Icons.Default.Groups, "共", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.TOGETHER) }),
         )
     }
@@ -446,19 +445,19 @@ fun HomeScreen(
             Feature("quick_card_network", "Network", "VPN · blocked sites", Icons.Default.Wifi, "通", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.NETWORK) }),
             Feature("quick_card_tracking", "Tracking", "AniList · MAL", Icons.Default.TrackChanges, "記", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.TRACKING) }),
             Feature("quick_card_player", "Player", "PiP · captions", Icons.Default.PlayCircle, "奏", SpaceHues.Wakatake, onClick = { onOpenShortcut(HomeShortcut.PLAYER) }),
-            Feature("quick_card_navbar", tr(R.string.nav_bar, "Nav bar"), tr(R.string.tabs_shortcuts, "Tabs · shortcuts"), Icons.Default.SpaceDashboard, "道", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.NAV_BAR) }),
+            Feature("quick_card_navbar", "Nav bar", "Tabs · shortcuts", Icons.Default.SpaceDashboard, "道", SpaceHues.Yamabuki, onClick = { onOpenShortcut(HomeShortcut.NAV_BAR) }),
             Feature("quick_card_alerts", "Alerts", "Notifications", Icons.Default.Notifications, "知", SpaceHues.Kobai, onClick = { onOpenShortcut(HomeShortcut.NOTIFICATIONS) }),
             Feature("quick_card_privacy", "Privacy", "Lock · incognito", Icons.Default.Lock, "錠", SpaceHues.Seiji, onClick = { onOpenShortcut(HomeShortcut.PRIVACY) }),
             Feature("quick_card_backup", "Backup", "Save · restore", Icons.Default.Backup, "蔵", SpaceHues.Ai, onClick = { onOpenShortcut(HomeShortcut.BACKUP) }),
-            Feature("quick_card_yt_account", tr(R.string.yt_account, "YT account"), tr(R.string.optional_sign_in, "Optional sign-in"), Icons.Default.AccountCircle, "鍵", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.YOUTUBE_ACCOUNT) }),
+            Feature("quick_card_yt_account", "YT account", "Optional sign-in", Icons.Default.AccountCircle, "鍵", SpaceHues.Shu, onClick = { onOpenShortcut(HomeShortcut.YOUTUBE_ACCOUNT) }),
             if (tvLayout) null else Feature("quick_card_settings", "Settings", "Every option", Icons.Default.Settings, "設", SpaceHues.Sora, onClick = { onOpenShortcut(HomeShortcut.SETTINGS) }),
         )
     }
     var spacesExpanded by rememberSaveable { mutableStateOf(false) }
     val contextLine = when {
         freshSeries == 1 -> "${episodeCards.first { it.fresh }.bookmark.name} has a new episode waiting."
-        freshSeries > 1 -> tr(R.string.series_you_follow_have_new_episodes, "%1\$s series you follow have new episodes.", freshSeries)
-        !isOnline -> tr(R.string.youre_offline_music_and_videos_on, "You're offline. Music and videos on this phone still play.")
+        freshSeries > 1 -> "$freshSeries series you follow have new episodes."
+        !isOnline -> "You're offline. Music and videos on this phone still play."
         else -> null
     }
 
@@ -524,7 +523,7 @@ fun HomeScreen(
                         label = "spacesMore",
                     ) {
                         Column(Modifier.fillMaxWidth().testTag("home_spaces_more_block")) {
-                            listOf("go" to ("移" to tr(R.string.go_to, "Go to")), "settings" to ("設" to tr(R.string.quick_settings, "Quick settings"))).forEach { (gk, label) ->
+                            listOf("go" to ("移" to "Go to"), "settings" to ("設" to "Quick settings")).forEach { (gk, label) ->
                                 val list = if (gk == "go") moreGo else moreSettings
                                 SpacesGroupLabel(label.first, label.second)
                                 list.chunked(spaceColumns).forEach { row ->
@@ -572,9 +571,9 @@ fun HomeScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(RowGap)) {
                     ContinueCard(
                         modifier = Modifier.weight(1f), tag = "home_continue_card",
-                        eyebrow = if (isCurrent && isPlaying) tr(R.string.music_playing, "Music · playing") else tr(R.string.music_last_played, "Music · last played"),
-                        title = continueTrack?.title ?: tr(R.string.nothing_yet, "Nothing yet"),
-                        subtitle = continueTrack?.artist ?: tr(R.string.play_a_song_to_see_it, "Play a song to see it here"),
+                        eyebrow = if (isCurrent && isPlaying) "Music · playing" else "Music · last played",
+                        title = continueTrack?.title ?: "Nothing yet",
+                        subtitle = continueTrack?.artist ?: "Play a song to see it here",
                         progress = { if (isCurrent && durationMs > 0) positionMs().toFloat() / durationMs else savedAudio?.fraction ?: 0f },
                         onClick = {
                             when {
@@ -593,9 +592,9 @@ fun HomeScreen(
                     }
                     ContinueCard(
                         modifier = Modifier.weight(1f), tag = "home_continue_video",
-                        eyebrow = tr(R.string.video_last_watched, "Video · last watched"),
-                        title = resumeVideo?.title ?: tr(R.string.nothing_yet, "Nothing yet"),
-                        subtitle = resumeVideo?.subtitle ?: tr(R.string.watch_a_video_to_see_it, "Watch a video to see it here"),
+                        eyebrow = "Video · last watched",
+                        title = resumeVideo?.title ?: "Nothing yet",
+                        subtitle = resumeVideo?.subtitle ?: "Watch a video to see it here",
                         progress = { resumeVideo?.progress ?: 0f },
                         onClick = resumeVideo?.onClick ?: onNavigateToVideos,
                         kanji = "映",
@@ -620,12 +619,12 @@ fun HomeScreen(
                     YuSection(
                         "新着", if (latest) "Latest from your extensions" else "New episodes",
                         when {
-                            freshSeries > 0 -> tr(R.string.new_episodes_are_out, "New episodes are out")
-                            episodeCards.isNotEmpty() -> tr(R.string.up_next_on_your_list, "Up next on your list")
-                            latest -> tr(R.string.just_released, "Just released")
-                            else -> tr(R.string.new_episodes, "New episodes")
+                            freshSeries > 0 -> "New episodes are out"
+                            episodeCards.isNotEmpty() -> "Up next on your list"
+                            latest -> "Just released"
+                            else -> "New episodes"
                         },
-                        action = if (episodeCards.isNotEmpty() || latest) tr(R.string.see_all, "See all") else null, onAction = onOpenHues,
+                        action = if (episodeCards.isNotEmpty() || latest) "See all" else null, onAction = onOpenHues,
                     )
                 }
                 item(key = "episodes", contentType = "episodes") {
@@ -682,7 +681,7 @@ fun HomeScreen(
             // ---- 新作 New arrivals (from extensions) -------------------------------------------------
             if ("new" !in hidden && arrivals.isNotEmpty()) {
                 item(key = "new_header", contentType = "header") {
-                    YuSection("新作", tr(R.string.new_arrivals, "New arrivals"), tr(R.string.fresh_from_your_extensions, "Fresh from your extensions"), action = tr(R.string.see_all, "See all"), onAction = onOpenHues)
+                    YuSection("新作", "New arrivals", "Fresh from your extensions", action = "See all", onAction = onOpenHues)
                 }
                 item(key = "new_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_new_arrivals")) {
@@ -693,7 +692,7 @@ fun HomeScreen(
                 // No extensions yet: the newest files on this phone stand in.
                 val local = (allTracks.sortedByDescending { it.dateAdded }.take(10).map { it.dateAdded to (it as Any) } +
                     recentVideos.sortedByDescending { it.dateAdded }.take(6).map { it.dateAdded to (it as Any) }).sortedByDescending { it.first }.take(12).map { it.second }
-                item(key = "new_header", contentType = "header") { YuSection("新作", tr(R.string.new_arrivals, "New arrivals"), tr(R.string.newest_on_this_phone, "Newest on this phone")) }
+                item(key = "new_header", contentType = "header") { YuSection("新作", "New arrivals", "Newest on this phone") }
                 item(key = "new_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth().testTag("home_new_arrivals")) {
                         items(local, key = { a -> if (a is AudioTrack) "nt_${a.id}" else "nv_${(a as VideoItem).id}" }) { a ->
@@ -749,7 +748,7 @@ fun HomeScreen(
             // ---- YouTube for you -------------------------------------------------------------------
             if ("yt" !in hidden && ytRelated.isNotEmpty()) {
                 item(key = "yt_header", contentType = "header") {
-                    YuSection("映像", tr(R.string.on_youtube, "On YouTube"), tr(R.string.because_of_what_you_watched, "Because of what you watched"), action = tr(R.string.see_all, "See all"), onAction = onOpenYouTube)
+                    YuSection("映像", "On YouTube", "Because of what you watched", action = "See all", onAction = onOpenYouTube)
                 }
                 item(key = "yt_row", contentType = "row") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(RowGap), modifier = Modifier.fillMaxWidth()) {
@@ -789,7 +788,7 @@ fun HomeScreen(
                             random.loadingMore -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 repeat(randomColumns) { SkeletonBlock(null, 150.dp, Modifier.weight(1f), yuRound(14)) }
                             }
-                            random.finished -> EndNote(tr(R.string.thats_everything_your_extensions_have_for, "That's everything your extensions have for now. Shuffle for a new mix."))
+                            random.finished -> EndNote("That's everything your extensions have for now. Shuffle for a new mix.")
                             else -> MoreButton("Load more") { scope.launch { random.more(channels, feed.providers) } }
                         }
                     }
@@ -812,7 +811,7 @@ fun HomeScreen(
                     }
                     item(key = "random_more", contentType = "more") {
                         if (deviceShown < devicePool.size) MoreButton("Show ${minOf(6, devicePool.size - deviceShown)} more") { deviceShown += 6 }
-                        else EndNote(tr(R.string.thats_every_video_on_this_phone, "That's every video on this phone. Add a Yumix source for endless picks."))
+                        else EndNote("That's every video on this phone. Add a Yumix source for endless picks.")
                     }
                 }
             }
@@ -820,16 +819,16 @@ fun HomeScreen(
             if (allTracks.isEmpty() && recentVideos.isEmpty() && channels.isEmpty()) item(key = "empty_device") {
                 Box(Modifier.padding(top = 24.dp)) {
                     EmptyMediaView(
-                        title = tr(R.string.nothing_on_this_device_yet, "Nothing on this device yet"),
-                        subtitle = tr(R.string.put_music_or_videos_in_local, "Put music or videos in local storage and tap Scan — or use Yumix, YouTube or Online music above."),
-                        buttonText = tr(R.string.scan_storage, "Scan storage"),
+                        title = "Nothing on this device yet",
+                        subtitle = "Put music or videos in local storage and tap Scan — or use Yumix, YouTube or Online music above.",
+                        buttonText = "Scan storage",
                         onButtonClick = onRescanClick
                     )
                 }
             }
             item(key = "end") {
                 Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    GlassPill(tr(R.string.customize_home, "Customize home"), onClick = { customizing = true }, leading = Icons.Default.Tune, tag = "home_customize")
+                    GlassPill("Customize home", onClick = { customizing = true }, leading = Icons.Default.Tune, tag = "home_customize")
                     Text(
                         stringResource(R.string.youre_all_caught_up), style = MaterialTheme.typography.bodySmall, color = p.textTertiary,
                         modifier = Modifier.padding(top = 12.dp).testTag("home_end"),
@@ -1072,7 +1071,7 @@ private fun SpacesMoreButton(expanded: Boolean, count: Int, preview: List<Featur
             .clip(shape)
             .background(p.textPrimary.copy(alpha = if (p.isDark) 0.06f else 0.05f))
             .border(1.dp, p.textPrimary.copy(alpha = 0.08f), shape)
-            .clickable(role = Role.Button, onClickLabel = if (expanded) tr(R.string.show_fewer_spaces, "Show fewer spaces") else tr(R.string.show_all_spaces, "Show all spaces"), onClick = onClick)
+            .clickable(role = Role.Button, onClickLabel = if (expanded) "Show fewer spaces" else "Show all spaces", onClick = onClick)
             .semantics { stateDescription = if (expanded) "Expanded" else "Collapsed" }
             .padding(horizontal = 14.dp, vertical = 10.dp)
             .testTag("home_spaces_more")
@@ -1107,9 +1106,9 @@ private fun SpacesMoreButton(expanded: Boolean, count: Int, preview: List<Featur
             label = "spacesMoreText",
         ) { open ->
             Column {
-                Text(if (open) tr(R.string.see_less, "See less") else tr(R.string.see_more, "See more"), color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(if (open) "See less" else "See more", color = p.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(
-                    if (open) tr(R.string.fold_the_extra_shortcuts_away, "Fold the extra shortcuts away") else tr(R.string.more_theme_dns_tracking_network, "%1\$s more · theme, DNS, tracking, network…", count),
+                    if (open) "Fold the extra shortcuts away" else "$count more · theme, DNS, tracking, network…",
                     color = p.textTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
             }
@@ -1196,7 +1195,7 @@ private fun MoodSection(
         }
         Spacer(Modifier.height(12.dp))
         if (!online) {
-            HintRow(Icons.Default.CloudOff, tr(R.string.moods_need_the_internet, "Moods need the internet"), tr(R.string.your_own_songs_still_play_offline, "Your own songs still play offline."), tr(R.string.my_music, "My music"), onOffline, tag = "home_moods_offline")
+            HintRow(Icons.Default.CloudOff, "Moods need the internet", "Your own songs still play offline.", "My music", onOffline, tag = "home_moods_offline")
             return@Column
         }
         val list = songs
@@ -1204,8 +1203,8 @@ private fun MoodSection(
         when {
             list != null && vids != null && list.isEmpty() && vids.isEmpty() && picks.isEmpty() -> HintRow(
                 Icons.Default.Album,
-                if (failed) "Couldn't load ${mood.title}" else tr(R.string.tap_to_load_this_mood, "Tap to load this mood"),
-                if (failed) tr(R.string.check_your_connection_then_try_again, "Check your connection, then try again.") else tr(R.string.songs_and_videos_come_from_youtube, "Songs and videos come from YouTube."),
+                if (failed) "Couldn't load ${mood.title}" else "Tap to load this mood",
+                if (failed) "Check your connection, then try again." else "Songs and videos come from YouTube.",
                 if (failed) "Try again" else "Load", onClick = { tick++ }, tag = "home_moods_retry",
             )
             else -> Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -1292,7 +1291,7 @@ private fun RandomGroupHeader(api: String, onSeeAll: (() -> Unit)?) {
         Text(api, style = MaterialTheme.typography.titleSmall, color = p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         if (onSeeAll != null) Text(
             stringResource(R.string.more), color = p.accent, fontWeight = FontWeight.Bold, fontSize = 12.sp,
-            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClickLabel = tr(R.string.more_from, "More from %1\$s", api), onClick = onSeeAll).padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClickLabel = "More from $api", onClick = onSeeAll).padding(horizontal = 10.dp, vertical = 8.dp),
         )
     }
 }
@@ -1367,7 +1366,7 @@ internal fun YtCard(item: YtItem, square: Boolean, onClick: () -> Unit) {
 /** Kept public for other callers: a plain section header with an optional "See all". */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier, onSeeAll: (() -> Unit)? = null) {
-    YuSection(androidx.compose.runtime.remember(title) { dev.asfakul.yumeiro.ui.components.Kana.forTitle(title) }, title, title, modifier, action = if (onSeeAll != null) tr(R.string.see_all, "See all") else null, onAction = onSeeAll)
+    YuSection(androidx.compose.runtime.remember(title) { dev.asfakul.yumeiro.ui.components.Kana.forTitle(title) }, title, title, modifier, action = if (onSeeAll != null) "See all" else null, onAction = onSeeAll)
 }
 
 /** Kept for callers/tests that referenced the old Home helpers. */

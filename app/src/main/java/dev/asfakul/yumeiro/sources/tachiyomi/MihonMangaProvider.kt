@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.tachiyomi
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.sources.manga.MangaChapter
 import dev.asfakul.yumeiro.sources.manga.MangaDetails
 import dev.asfakul.yumeiro.sources.manga.MangaImage
@@ -122,7 +120,7 @@ class MihonMangaProvider(private val source: CatalogueSource, private val memos:
             SManga.COMPLETED -> "Completed"
             SManga.PUBLISHING_FINISHED -> "Finished"
             SManga.CANCELLED -> "Cancelled"
-            SManga.ON_HIATUS -> tr(R.string.bs9_s_hiatus, "On hiatus")
+            SManga.ON_HIATUS -> "On hiatus"
             else -> null
         }
     }

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.update.ui
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.OnAccent
@@ -206,7 +205,7 @@ private fun AvailableContent(
     // (InfoScreen: scrolling body, buttons in a bottom bar), the body scrolls and the buttons stay put.
     Column {
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
-            Header(icon = Icons.Default.SystemUpdate, title = tr(R.string.update_available, "Update available"), pulse = true) {
+            Header(icon = Icons.Default.SystemUpdate, title = "Update available", pulse = true) {
                 VersionChip(from = currentVersion, to = release.versionName)
             }
             Column(Modifier.padding(horizontal = 22.dp)) {
@@ -355,7 +354,7 @@ private fun ReadyContent(
                 onClick = onInstall,
                 modifier = Modifier.weight(1.4f).height(48.dp).testTag("update_install"),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-            ) { Text(if (needsPermission) tr(R.string.allow_install, "Allow & install") else tr(R.string.install_now, "Install now"), fontWeight = FontWeight.Bold) }
+            ) { Text(if (needsPermission) "Allow & install" else "Install now", fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -464,7 +463,7 @@ private fun MetaRow(release: ReleaseInfo) {
         Dot()
         MetaItem(
             if (release.source == UpdateSource.AUTHENTICATED) Icons.Default.Lock else Icons.Default.Public,
-            tr(R.string.official_release, "Official release"),
+            "Official release",
         )
     }
 }

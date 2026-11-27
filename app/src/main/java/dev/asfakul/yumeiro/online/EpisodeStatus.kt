@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlin.math.ceil
 
@@ -18,9 +16,9 @@ import kotlin.math.ceil
 sealed interface EpisodeStatus {
     val label: String
 
-    data object Watched : EpisodeStatus { override val label = tr(R.string.watched, "Watched") }
-    data class InProgress(val minutesLeft: Int) : EpisodeStatus { override val label = tr(R.string.min_left, "%1\$s min left", minutesLeft) }
-    data object Fresh : EpisodeStatus { override val label = tr(R.string.fresh, "Fresh") }
+    data object Watched : EpisodeStatus { override val label = "Watched" }
+    data class InProgress(val minutesLeft: Int) : EpisodeStatus { override val label = "$minutesLeft min left" }
+    data object Fresh : EpisodeStatus { override val label = "Fresh" }
 
     companion object {
         /** Below this, a start was a blip (opened by mistake), not "in progress". Same 1 % the progress bar uses. */

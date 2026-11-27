@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.meta
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.network.NetworkClient
@@ -311,14 +309,14 @@ object TitleFacts {
 
     /** The labelled rows of the About block, in order, without the ones that are missing. */
     fun rows(f: Facts, kind: OnlineKind): List<Pair<String, String>> = buildList {
-        f.released?.let { add((if (kind == OnlineKind.MOVIE) tr(R.string.release_date, "Release date") else tr(R.string.first_aired, "First aired")) to dateText(it)) }
+        f.released?.let { add((if (kind == OnlineKind.MOVIE) "Release date" else "First aired") to dateText(it)) }
         f.certification?.let { add("Certificate" to it) }
         if (f.countries.isNotEmpty()) add((if (f.countries.size == 1) "Country" else "Countries") to f.countries.joinToString(", "))
         if (f.languages.isNotEmpty()) add((if (f.languages.size == 1) "Language" else "Languages") to f.languages.joinToString(", "))
         if (f.directors.isNotEmpty()) add((if (f.directors.size == 1) "Director" else "Directors") to f.directors.joinToString(", "))
         if (f.writers.isNotEmpty()) add((if (f.writers.size == 1) "Writer" else "Writers") to f.writers.joinToString(", "))
         f.network?.let { add("Network" to it) }
-        if (f.companies.isNotEmpty()) add((if (f.companies.size == 1) tr(R.string.production_company, "Production company") else tr(R.string.production_companies, "Production companies")) to f.companies.joinToString(", "))
+        if (f.companies.isNotEmpty()) add((if (f.companies.size == 1) "Production company" else "Production companies") to f.companies.joinToString(", "))
     }
 
     /** YouTube id of a trailer address, for its thumbnail; null for other hosts. */

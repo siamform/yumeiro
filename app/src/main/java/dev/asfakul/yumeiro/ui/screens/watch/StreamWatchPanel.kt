@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Intent
@@ -337,13 +336,13 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                 val current = modes[currentUrl]
                 val rows = buildList {
                     if (alternatives.size > 1) add(
-                        WatchServerRow(tr(R.string.sources_for_this_channel, "Sources for this channel"), Icons.Default.LiveTv, alternatives.mapIndexed { i, alt ->
+                        WatchServerRow("Sources for this channel", Icons.Default.LiveTv, alternatives.mapIndexed { i, alt ->
                             WatchServer("Source ${i + 1}", alt.url == currentUrl, "stream_server_link",
                                 detail = listOfNotNull(alt.resolvedFormat().label, runCatching { android.net.Uri.parse(alt.url).host }.getOrNull()?.removePrefix("www.")).joinToString(" · ")) { StreamWatch.play(context, alt) }
                         })
                     )
                     add(
-                        WatchServerRow(tr(R.string.open_it_as, "Open it as"), Icons.Default.Tune, StreamWatch.MODES.mapNotNull { (label, step) ->
+                        WatchServerRow("Open it as", Icons.Default.Tune, StreamWatch.MODES.mapNotNull { (label, step) ->
                             if (step != null && AccessLadder.variant(base, step, base.pageUrl).let { it == null || it == base }) return@mapNotNull null
                             WatchServer(label, current == step, "stream_server_mode") { StreamWatch.openWithMode(context, base, step) }
                         })
@@ -352,7 +351,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                 WatchServerBox(
                     watching = title,
                     hint = buildString {
-                        append(tr(R.string.stuck_on_black_tap_another_source_2, "Stuck on black? Tap another source or open-as mode. Yumeiro already tries each one on its own and remembers what works."))
+                        append("Stuck on black? Tap another source or open-as mode. Yumeiro already tries each one on its own and remembers what works.")
                         if (learned != null) append(" Last good mode here: ${StreamWatch.MODES.firstOrNull { it.second == learned }?.first ?: learned.name.lowercase()}.")
                     },
                     rows = rows,
@@ -362,12 +361,12 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                 WatchActionsRow {
                     WatchAction(Icons.Default.Share, "Share", "stream_watch_share") {
                         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "$title\n$currentUrl")
-                        runCatching { context.startActivity(Intent.createChooser(send, tr(R.string.share_stream, "Share stream")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        runCatching { context.startActivity(Intent.createChooser(send, "Share stream").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     }
-                    WatchAction(Icons.Default.ContentCopy, tr(R.string.copy_link, "Copy link"), "stream_watch_copy") {
+                    WatchAction(Icons.Default.ContentCopy, "Copy link", "stream_watch_copy") {
                         context.getSystemService(android.content.ClipboardManager::class.java)
-                            ?.setPrimaryClip(android.content.ClipData.newPlainText(tr(R.string.stream_link, "Stream link"), currentUrl))
-                        dev.asfakul.yumeiro.ui.components.AppMessages.success(context, tr(R.string.link_copied, "Link copied"))
+                            ?.setPrimaryClip(android.content.ClipData.newPlainText("Stream link", currentUrl))
+                        dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Link copied")
                     }
                     // BUG-7 7a: links and website videos can be saved from the player, as on the Play link page.
                     if (base != null && dev.asfakul.yumeiro.stream.StreamDownload.canSave(base)) {
@@ -376,9 +375,9 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                             dev.asfakul.yumeiro.ui.screens.downloads.StreamDownloadAsk.ask(context, base, base.pageUrl ?: currentUrl)
                         }
                     }
-                    WatchAction(Icons.AutoMirrored.Filled.OpenInNew, tr(R.string.other_player, "Other player"), "stream_watch_external") {
+                    WatchAction(Icons.AutoMirrored.Filled.OpenInNew, "Other player", "stream_watch_external") {
                         val i = Intent(Intent.ACTION_VIEW).setDataAndType(android.net.Uri.parse(currentUrl), "video/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        runCatching { context.startActivity(Intent.createChooser(i, tr(R.string.open_with, "Open with")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                        runCatching { context.startActivity(Intent.createChooser(i, "Open with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                     }
                 }
             }
@@ -387,21 +386,21 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(if (inPlaylist) "Channels" else "Videos", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                            Text(if (inPlaylist) tr(R.string.up_next_on_this_list, "Up next on this list") else "Up next from ${queue?.label.orEmpty()}", color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(if (inPlaylist) "Up next on this list" else "Up next from ${queue?.label.orEmpty()}", color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("${channels.size}", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         // GROUP C catch-all: search and the group filter are icons; the field and the group list open on demand.
                         dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
                             if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
-                        }, "stream_watch_search_open", if (inPlaylist) tr(R.string.find_a_channel, "Find a channel") else tr(R.string.find_a_video, "Find a video"))
-                        if (groups.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (group != null) 1 else 0, { groupSheet = true }, "stream_watch_filter", tr(R.string.filter_by_group, "Filter by group"))
+                        }, "stream_watch_search_open", if (inPlaylist) "Find a channel" else "Find a video")
+                        if (groups.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (group != null) 1 else 0, { groupSheet = true }, "stream_watch_filter", "Filter by group")
                     }
                 }
                 if (searchOpen || query.isNotEmpty()) item(key = "search") {
-                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(true, query, { query = it }, if (inPlaylist) tr(R.string.find_a_channel, "Find a channel") else tr(R.string.find_a_video, "Find a video"), "stream_watch_search", horizontalPadding = 12.dp)
+                    dev.asfakul.yumeiro.ui.components.HeaderSearchField(true, query, { query = it }, if (inPlaylist) "Find a channel" else "Find a video", "stream_watch_search", horizontalPadding = 12.dp)
                 }
                 if (list.isEmpty()) item(key = "none") {
-                    Text(tr(R.string.no_channel_matches, "No channel matches \"%1\$s\".", query), color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
+                    Text("No channel matches \"$query\".", color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp))
                 }
                 items(list.size, key = { "ch_" + list[it].index + list[it].value.url }) { k ->
                     val (i, ch) = list[k]
@@ -462,7 +461,7 @@ private fun ChannelRow(number: Int, ch: StreamRequest, playing: Boolean, striped
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
             Text(ch.displayTitle, color = if (playing) p.accent else TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            val sub = listOfNotNull(if (playing) tr(R.string.now_playing, "Now playing") else null, ch.group).joinToString(" · ")
+            val sub = listOfNotNull(if (playing) "Now playing" else null, ch.group).joinToString(" · ")
             if (sub.isNotBlank()) Text(sub, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (playing) Icon(Icons.Default.PlayArrow, stringResource(R.string.now_playing), tint = p.accent, modifier = Modifier.padding(end = 14.dp).size(20.dp))

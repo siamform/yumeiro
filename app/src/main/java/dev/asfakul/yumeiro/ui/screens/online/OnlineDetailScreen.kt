@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.filled.CheckCircle
@@ -149,8 +148,8 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
         state = result.fold(
             { DetailState.Ready(it) },
             { e ->
-                if (shown != null) { dev.asfakul.yumeiro.ui.components.AppMessages.show(context, OnlineErrors.friendly(e, tr(R.string.couldnt_refresh, "Couldn't refresh")), dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO); shown }
-                else DetailState.Failed(OnlineErrors.friendly(e, tr(R.string.couldnt_open_this_title, "Couldn't open this title")))
+                if (shown != null) { dev.asfakul.yumeiro.ui.components.AppMessages.show(context, OnlineErrors.friendly(e, "Couldn't refresh"), dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO); shown }
+                else DetailState.Failed(OnlineErrors.friendly(e, "Couldn't open this title"))
             },
         )
         (state as? DetailState.Ready)?.let { r ->
@@ -165,12 +164,12 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
             DetailState.Loading -> DetailSkeleton(preview, onBack)
             is DetailState.MissingSource -> Column {
                 SubPageHeader(preview?.name ?: "Title", onBack)
-                StateMessage(Icons.Default.Extension, tr(R.string.source_not_available, "Source not available"), tr(R.string.the_extension_that_provides_isnt_installed, "The extension that provides “%1\$s” isn't installed or is turned off.", api),
+                StateMessage(Icons.Default.Extension, "Source not available", "The extension that provides “$api” isn't installed or is turned off.",
                     primary = "Manage extensions" to onOpenExtensions, secondary = "Go back" to onBack, testTag = "online_detail_missing")
             }
             is DetailState.Failed -> Column {
                 SubPageHeader(preview?.name ?: "Title", onBack)
-                StateMessage(Icons.Default.ErrorOutline, tr(R.string.couldnt_open_this_title, "Couldn't open this title"), s.message, tint = ErrorColor,
+                StateMessage(Icons.Default.ErrorOutline, "Couldn't open this title", s.message, tint = ErrorColor,
                     primary = "Retry" to { attempt++ }, secondary = "Go back" to onBack, testTag = "online_detail_error")
             }
             is DetailState.Ready -> PullToRefreshBox(isRefreshing = refreshing, onRefresh = { refreshing = true; attempt++ }) {
@@ -298,7 +297,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                         val epLabel = targetEp?.let { e -> listOfNotNull(e.season?.let { "S$it" }, e.episode?.let { "E$it" }).joinToString("").ifBlank { "episode ${target + 1}" } }
                         Text(
                             when {
-                                d.playData != null && d.kind == OnlineKind.LIVE -> tr(R.string.watch_live, "Watch live")
+                                d.playData != null && d.kind == OnlineKind.LIVE -> "Watch live"
                                 resume != null && targetEp != null && resumeIndex != null -> "Continue $epLabel"
                                 resume != null && targetEp == null && resume.positionMs > 15_000 -> "Resume"
                                 targetEp != null -> "Play $epLabel"
@@ -353,7 +352,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                 Row(Modifier.fillMaxWidth().padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.weight(1f)) { SectionHeader(if (seasons.size > 1) season?.title ?: "Episodes" else "Episodes", episodeCountText(episodes.map { it.value }, episodes.mapNotNull { labelled[it.index].second }.distinct().size)) }
                     IconButton(onClick = { gridMode = !gridMode }, modifier = Modifier.testTag("online_episode_layout")) {
-                        Icon(if (gridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, if (gridMode) tr(R.string.show_as_list, "Show as list") else tr(R.string.show_as_grid, "Show as grid"), tint = TextSecondary)
+                        Icon(if (gridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView, if (gridMode) "Show as list" else "Show as grid", tint = TextSecondary)
                     }
                 }
             }
@@ -378,7 +377,7 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
         if (d.recommendations.isNotEmpty()) {
             item("recs") {
                 Column {
-                    SectionHeader(tr(R.string.more_like_this, "More like this"))
+                    SectionHeader("More like this")
                     PosterGrid(d.recommendations, onClick = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) })
                 }
             }
@@ -483,13 +482,13 @@ private fun MyListButton(d: OnlineDetail) {
             onClick = {
                 val item = OnlineItem(d.name, d.url, d.api, d.posterUrl, d.posterHeaders, d.type)
                 val now = dev.asfakul.yumeiro.online.OnlineBookmarks.toggle(context, item, dev.asfakul.yumeiro.online.NewEpisodesWorker.episodeCount(d))
-                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) tr(R.string.added_to_my_list, "Added to My List") else tr(R.string.removed_from_my_list, "Removed from My List"))
+                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (now) "Added to My List" else "Removed from My List")
             },
             shape = yuRound(24), modifier = Modifier.weight(1f).height(46.dp).testTag("online_detail_mylist"),
         ) {
             Icon(if (b != null) Icons.Default.Check else Icons.Default.Add, null, tint = if (b != null) SpotifyGreen else TextPrimary)
             Spacer(Modifier.width(6.dp))
-            Text(if (b != null) tr(R.string.in_my_list, "In My List") else tr(R.string.my_list, "My List"), color = TextPrimary, fontWeight = FontWeight.SemiBold)
+            Text(if (b != null) "In My List" else "My List", color = TextPrimary, fontWeight = FontWeight.SemiBold)
         }
         if (b != null) Box {
             androidx.compose.material3.OutlinedButton(onClick = { menu = true }, shape = yuRound(24), modifier = Modifier.height(46.dp)) {
@@ -507,7 +506,7 @@ private fun MyListButton(d: OnlineDetail) {
             onClick = {
                 val item = OnlineItem(d.name, d.url, d.api, d.posterUrl, d.posterHeaders, d.type)
                 val c = dev.asfakul.yumeiro.online.OnlineBookmarks.toggleFavorite(context, item)
-                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (c == dev.asfakul.yumeiro.online.OnlineBookmarks.Change.ADDED) tr(R.string.added_to_favorites, "Added to Favorites") else tr(R.string.removed_from_favorites, "Removed from Favorites"))
+                dev.asfakul.yumeiro.ui.components.AppMessages.show(context, if (c == dev.asfakul.yumeiro.online.OnlineBookmarks.Change.ADDED) "Added to Favorites" else "Removed from Favorites")
             },
             shape = yuRound(24), contentPadding = PaddingValues(horizontal = 14.dp),
             modifier = Modifier.height(46.dp).testTag("online_detail_favorite").semantics { contentDescription = if (fav) "Remove from Favorites" else "Add to Favorites" },

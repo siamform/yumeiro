@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -133,7 +131,7 @@ internal fun libraryShortcuts(
     LibraryShortcut("Videos", Icons.Default.VideoLibrary, Color(0xFFFF5F6D), Color(0xFFFF9A44), "lib_sc_videos", onClick = onVideos),
     LibraryShortcut("Reading", Icons.AutoMirrored.Filled.MenuBook, Color(0xFF8E5CFF), Color(0xFFC77DFF), "lib_sc_reading", onClick = onReading),
     LibraryShortcut("Equalizer", Icons.Default.Equalizer, Color(0xFF00B89C), Color(0xFF43E3A5), "lib_eq_card", onClick = onEqualizer),
-    LibraryShortcut(tr(R.string.new_playlist, "New playlist"), Icons.Default.Add, Color(0xFFFFA41B), Color(0xFFFFD43B), "add_playlist_button", onClick = onNewPlaylist),
+    LibraryShortcut("New playlist", Icons.Default.Add, Color(0xFFFFA41B), Color(0xFFFFD43B), "add_playlist_button", onClick = onNewPlaylist),
     LibraryShortcut("Rescan", Icons.Default.Refresh, Color(0xFF2D7BFF), Color(0xFF5CC8FF), "banner_rescan_button", busy = scanning, onClick = onRescan),
     LibraryShortcut("History", Icons.Default.History, Color(0xFFFF3D8B), Color(0xFFFF7EB6), "lib_sc_history", onClick = onHistory),
     LibraryShortcut("Downloads", Icons.Default.CloudDownload, Color(0xFF4F46E5), Color(0xFF7C8CFF), "lib_sc_downloads", onClick = onDownloads),

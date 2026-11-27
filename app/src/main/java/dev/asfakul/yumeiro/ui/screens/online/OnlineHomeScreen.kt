@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -326,7 +325,7 @@ fun OnlineHomeScreen(
             homes[name] = if (rows != null) ProviderHome.Ready(rows)
                 else if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.EXT_NEEDS_SETUP) &&
                     dev.asfakul.yumeiro.online.ExtensionSetup.needsSetup(api, result.exceptionOrNull())) ProviderHome.NeedsSetup
-                else ProviderHome.Failed(diagnosis?.message ?: result.exceptionOrNull()?.let { OnlineErrors.friendly(it, tr(R.string.couldnt_load, "Couldn't load")) } ?: tr(R.string.nothing_came_back_from_this_extension, "Nothing came back from this extension"), diagnosis)
+                else ProviderHome.Failed(diagnosis?.message ?: result.exceptionOrNull()?.let { OnlineErrors.friendly(it, "Couldn't load") } ?: "Nothing came back from this extension", diagnosis)
             // R15: an old saved copy was shown; fetch the live page now and merge it in.
             if (!force && !fresh.isNullOrEmpty() && OnlineRepository.takeStaleHome(name)) refreshStale(api)
             YumixFeed.broughtNew(prev, fresh)
@@ -414,9 +413,9 @@ fun OnlineHomeScreen(
         // page and keeps the market / extension manager one tap away.
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp).testTag("online_extension_bar"), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) tr(R.string.no_extensions_yet, "No extensions yet") else tr(R.string.all_extensions_off, "All extensions off")) else "${providers.size} source${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
+                dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} source${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
                 style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, color = TextTertiary, maxLines = 1,
-                modifier = Modifier.weight(1f).clickable(onClickLabel = tr(R.string.manage_extensions, "Manage extensions"), onClick = onOpenExtensions).padding(vertical = 12.dp),
+                modifier = Modifier.weight(1f).clickable(onClickLabel = "Manage extensions", onClick = onOpenExtensions).padding(vertical = 12.dp),
             )
             Row(Modifier.tourTarget("yumix_sources")) {
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_market")) {
@@ -432,7 +431,7 @@ fun OnlineHomeScreen(
             // sheet listing every extension that's on; a dot shows when the feed is narrowed to one.
             if (providers.size > 1) IconButton(onClick = { showFilter = true }, modifier = Modifier.testTag("online_filter")) {
                 BadgedBox(badge = { if (selected != null) Badge(containerColor = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent) }) {
-                    Icon(Icons.Default.FilterList, if (selected != null) "Filter: $selected" else tr(R.string.filter_by_extension, "Filter by extension"), tint = if (selected != null) dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent else TextPrimary)
+                    Icon(Icons.Default.FilterList, if (selected != null) "Filter: $selected" else "Filter by extension", tint = if (selected != null) dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent else TextPrimary)
                 }
             }
             }
@@ -465,7 +464,7 @@ fun OnlineHomeScreen(
                 // B18: a changed default takes effect now: one default opens on its own page, several open the mix.
                 selected = picked.singleOrNull()
                 android.util.Log.i("YuYumix", "default extensions: ${if (picked.isEmpty()) "every extension" else picked.sorted().joinToString()}")
-                dev.asfakul.yumeiro.ui.components.AppMessages.success(context, if (picked.isEmpty()) tr(R.string.yumix_will_mix_every_extension, "Yumix will mix every extension") else "Yumix will open with ${picked.size} extension${if (picked.size == 1) "" else "s"}")
+                dev.asfakul.yumeiro.ui.components.AppMessages.success(context, if (picked.isEmpty()) "Yumix will mix every extension" else "Yumix will open with ${picked.size} extension${if (picked.size == 1) "" else "s"}")
             },
         )
 
@@ -478,8 +477,8 @@ fun OnlineHomeScreen(
             engine.installed.isEmpty() && providers.isEmpty() -> GetStarted(onOpenMarket = onOpenMarket, onAddManually = onOpenExtensions)
             providers.isEmpty() -> StateMessage(
                 icon = Icons.Default.Extension,
-                title = tr(R.string.all_extensions_are_turned_off, "All extensions are turned off"),
-                message = tr(R.string.turn_an_extension_on_to_see, "Turn an extension on to see its videos here."),
+                title = "All extensions are turned off",
+                message = "Turn an extension on to see its videos here.",
                 primary = "Manage extensions" to onOpenExtensions,
                 secondary = "Open market" to onOpenMarket,
                 testTag = "online_empty",
@@ -500,12 +499,12 @@ fun OnlineHomeScreen(
                     when (YumixFeed.afterRefresh(answered, dev.asfakul.yumeiro.network.Connectivity.isOnline(context))) {
                         YumixFeed.AfterRefresh.START_OVER -> { YumixMemory.resetExplore(); YumixMemory.syncExplore(readyNow()) }
                         YumixFeed.AfterRefresh.NOTHING_NEW -> dev.asfakul.yumeiro.ui.components.AppMessages.show(
-                            context, tr(R.string.nothing_new_yet_showing_what_was, "Nothing new yet. Showing what was already loaded."), dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+                            context, "Nothing new yet. Showing what was already loaded.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
                         YumixFeed.AfterRefresh.OFFLINE -> {
                             // X9-8: a first fill from a saved copy is added, never a start-over.
                             if (answered > 0) YumixMemory.syncExplore(readyNow())
                             dev.asfakul.yumeiro.ui.components.AppMessages.show(
-                                context, tr(R.string.couldnt_refresh_youre_offline_showing_what, "Couldn't refresh: you're offline. Showing what was already loaded."), dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
+                                context, "Couldn't refresh: you're offline. Showing what was already loaded.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.INFO)
                         }
                     }
                 } },
@@ -671,7 +670,7 @@ fun OnlineHomeScreen(
                         val mine = saved.filter { it.listed }
                         val favorites = saved.filter { it.favorite }
                         if (mine.isNotEmpty()) st.item("mylist") {
-                            PosterShelf(tr(R.string.my_list, "My List"), null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
+                            PosterShelf("My List", null, mine.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
                         }
                         if (favorites.isNotEmpty()) st.item("favorites") {
                             PosterShelf("Favorites", null, favorites.map { it.toItem() }, horizontal = false, onClick = { onOpenTitle(it) }, onSeeAll = onOpenLibrary)
@@ -682,10 +681,10 @@ fun OnlineHomeScreen(
                             UpcomingBanner(onOpenUpcoming, onSearch = { q -> OnlineSearchPending.query = q; onOpenSearch() })
                         }
                         if (picks.isNotEmpty()) st.item("feed_label") {
-                            PosterShelf(tr(R.string.fresh_from_your_sources, "Fresh from your sources"), "Mixed from ${ready.size} of ${providers.size} sources", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
+                            PosterShelf("Fresh from your sources", "Mixed from ${ready.size} of ${providers.size} sources", picks, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         if (latest.isNotEmpty()) st.item("latest") {
-                            PosterShelf(tr(R.string.latest_episodes, "Latest episodes"), "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
+                            PosterShelf("Latest episodes", "New from ${ready.count { (_, rows) -> rows.any { YumixFeed.isLatestRow(it.title) } }} extension(s)", latest, horizontal = false, onClick = openInfo, onSeeAll = null)
                         }
                         groups.forEach { g ->
                             // Round 2, order 4: no "extension name + View" header between sections; the
@@ -860,20 +859,20 @@ fun videoSourceOptions(extensionCount: Int, deviceCount: Int, online: Boolean): 
         when (v) {
             VideoSource.ONLINE -> dev.asfakul.yumeiro.ui.components.SourceOption(
                 v.tag, "Yumix", "Anime, movies and shows from your extensions",
-                when { extensionCount == 0 -> tr(R.string.add_sources, "Add sources"); !online -> tr(R.string.needs_internet, "Needs internet"); else -> "$extensionCount sources" },
+                when { extensionCount == 0 -> "Add sources"; !online -> "Needs internet"; else -> "$extensionCount sources" },
                 dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "video_source_" + v.tag, attention = extensionCount == 0 || !online,
             )
             VideoSource.YOUTUBE -> dev.asfakul.yumeiro.ui.components.SourceOption(
                 v.tag, "YouTube", "Watch YouTube without signing in",
-                if (online) tr(R.string.no_login, "No login") else tr(R.string.needs_internet, "Needs internet"), Icons.Default.SmartDisplay, "video_source_" + v.tag, attention = !online,
+                if (online) "No login" else "Needs internet", Icons.Default.SmartDisplay, "video_source_" + v.tag, attention = !online,
             )
             VideoSource.DEVICE -> dev.asfakul.yumeiro.ui.components.SourceOption(
                 v.tag, "Device", "Videos and folders on this phone",
                 if (deviceCount == 1) "1 file" else "$deviceCount files", Icons.Default.VideoLibrary, "video_source_" + v.tag,
             )
             VideoSource.LIVE -> dev.asfakul.yumeiro.ui.components.SourceOption(
-                v.tag, tr(R.string.live_tv, "Live TV"), tr(R.string.iptv_channels_from_m3u_playlists, "IPTV channels from M3U playlists"),
-                if (online) tr(R.string.iptv_m3u, "IPTV · M3U") else tr(R.string.needs_internet, "Needs internet"), Icons.Default.LiveTv, "video_source_" + v.tag, attention = !online,
+                v.tag, "Live TV", "IPTV channels from M3U playlists",
+                if (online) "IPTV · M3U" else "Needs internet", Icons.Default.LiveTv, "video_source_" + v.tag, attention = !online,
             )
         }
     }
@@ -893,7 +892,7 @@ fun VideoSourceSwitch(
                 VideoSource.ONLINE -> ModeOption(v.tag, "Yumix", if (extensionCount == 0) "Add sources" else "$extensionCount sources", dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "video_source_" + v.tag)
                 VideoSource.YOUTUBE -> ModeOption(v.tag, "YouTube", "No login", Icons.Default.SmartDisplay, "video_source_" + v.tag)
                 VideoSource.DEVICE -> ModeOption(v.tag, "Device", "$deviceCount files", Icons.Default.VideoLibrary, "video_source_" + v.tag)
-                VideoSource.LIVE -> ModeOption(v.tag, tr(R.string.live_tv, "Live TV"), tr(R.string.iptv_m3u, "IPTV · M3U"), Icons.Default.LiveTv, "video_source_" + v.tag)
+                VideoSource.LIVE -> ModeOption(v.tag, "Live TV", "IPTV · M3U", Icons.Default.LiveTv, "video_source_" + v.tag)
             }
         },
         selectedKey = source.tag,

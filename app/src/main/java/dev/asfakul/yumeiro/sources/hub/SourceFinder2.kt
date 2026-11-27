@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.hub
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -71,13 +69,13 @@ object SourceFinder2 {
 
     /** Pure (after Zangetsu's sweepFailureDetail): one true sentence about why nothing plays. */
     fun detail(o: List<Outcome>, sources: Int): String {
-        if (sources == 0) return tr(R.string.install_a_video_source_to_play, "Install a video source to play this title. Yumeiro finds it in your sources.")
-        names(o, Reason.TIMED_OUT)?.let { return tr(R.string.took_too_long_to_answer_try, "%1\$s took too long to answer. Try again, or open the title in that source.", it) }
-        names(o, Reason.BLOCKED)?.let { return tr(R.string.is_blocking_this_phone_for_now, "%1\$s is blocking this phone for now (site security). Try again later.", it) }
-        names(o, Reason.NO_LINKS)?.let { return tr(R.string.has_this_title_but_gave_no, "%1\$s has this title but gave no playable links.", it) }
-        names(o, Reason.EPISODE_MISSING)?.let { return tr(R.string.has_this_title_but_not_this, "%1\$s has this title but not this episode yet.", it) }
-        names(o, Reason.FAILED)?.let { return tr(R.string.ran_into_an_error_try_again, "%1\$s ran into an error. Try again in a moment.", it) }
-        return tr(R.string.none_of_your_sources_has_this, "None of your %1\$s sources has this title.", sources)
+        if (sources == 0) return "Install a video source to play this title. Yumeiro finds it in your sources."
+        names(o, Reason.TIMED_OUT)?.let { return "$it took too long to answer. Try again, or open the title in that source." }
+        names(o, Reason.BLOCKED)?.let { return "$it is blocking this phone for now (site security). Try again later." }
+        names(o, Reason.NO_LINKS)?.let { return "$it has this title but gave no playable links." }
+        names(o, Reason.EPISODE_MISSING)?.let { return "$it has this title but not this episode yet." }
+        names(o, Reason.FAILED)?.let { return "$it ran into an error. Try again in a moment." }
+        return "None of your $sources sources has this title."
     }
 
     // ── Remembered matches (title → source + page), prefs "yu_find2", newest 300 ─────────────────────────────────

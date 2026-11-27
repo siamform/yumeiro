@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.horizontalScroll
@@ -116,7 +115,7 @@ fun DrcCustomSliders(modifier: Modifier = Modifier) {
         DrcSlider("Threshold", "${c.thresholdDb.roundToInt()} dB", "Sounds louder than this are turned down", c.thresholdDb, -60f..0f, 59, "drc_threshold", save) { edit(c.copy(thresholdDb = it)) }
         DrcSlider("Ratio", "${"%.1f".format(c.ratio)}:1", "How strongly they are turned down", c.ratio, 1f..20f, 37, "drc_ratio", save) { edit(c.copy(ratio = it)) }
         DrcSlider(stringResource(R.string.drc_knee), "${c.kneeDb.roundToInt()} dB", stringResource(R.string.drc_knee_hint), c.kneeDb, 0f..24f, 23, "drc_knee", save) { edit(c.copy(kneeDb = it)) }
-        DrcSlider(tr(R.string.make_up_gain, "Make-up gain"), "+${c.makeupDb.roundToInt()} dB", tr(R.string.turns_the_whole_sound_back_up, "Turns the whole sound back up"), c.makeupDb, 0f..24f, 23, "drc_makeup", save) { edit(c.copy(makeupDb = it)) }
+        DrcSlider("Make-up gain", "+${c.makeupDb.roundToInt()} dB", "Turns the whole sound back up", c.makeupDb, 0f..24f, 23, "drc_makeup", save) { edit(c.copy(makeupDb = it)) }
         DrcSlider("Attack", "${"%.1f".format(c.attackMs)} ms", "How fast a loud sound is caught", c.attackMs, 0.5f..200f, 0, "drc_attack", save) { edit(c.copy(attackMs = it)) }
         DrcSlider("Release", "${c.releaseMs.roundToInt()} ms", "How fast the sound comes back", c.releaseMs, 10f..2000f, 0, "drc_release", save) { edit(c.copy(releaseMs = it)) }
         androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {

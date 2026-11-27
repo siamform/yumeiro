@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -89,14 +88,14 @@ internal fun WebsiteSettingsSheet(onDismiss: () -> Unit, onImport: () -> Unit, o
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = p.surfaceContainerHigh, dragHandle = sheetDragHandle(), modifier = Modifier.testTag("site_settings_sheet")) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
             Text(stringResource(R.string.website_settings), style = dev.asfakul.yumeiro.ui.theme.SectionTitleStyle, color = p.textPrimary, modifier = Modifier.padding(bottom = 6.dp))
-            SettingSwitch(tr(R.string.remember_sites_i_visit, "Remember sites I visit"), tr(R.string.shown_under_recently_visited_on_this, "Shown under Recently visited, on this phone only"), remember, "recent_switch") { SiteHistory.setOn(context, it) }
-            SettingSwitch(tr(R.string.block_ads_and_pop_ups, "Block ads and pop-ups"), tr(R.string.ad_sites_never_load_pop_ups, "Ad sites never load, pop-ups and pop-unders stay closed. The shield in a page's menu turns it off there only"), ads, "filter_ads_switch") { BrowserFilters.setFilterAds(context, it) }
-            SettingSwitch(tr(R.string.open_the_real_link_behind_short, "Open the real link behind short links"), tr(R.string.waits_out_the_timers_and_taps, "Waits out the timers and taps Continue on link-shortener pages; a check that needs you is left to you"), links, "resolve_links_switch") { BrowserFilters.setResolveLinks(context, it) }
-            SettingSwitch(tr(R.string.stop_redirects, "Stop redirects"), tr(R.string.a_page_cant_send_you_to, "A page can't send you to another site by itself; a bar lets you open it. App links never leave Yumeiro"), redirects, "stop_redirects_switch") { BrowserFilters.setStopRedirects(context, it) }
-            SettingLink(Icons.Default.VisibilityOff, tr(R.string.manage_ads, "Manage ads"), tr(R.string.parts_of_pages_you_hid_with, "Parts of pages you hid with Hide an element"), "site_manage_ads") { manage = true }
+            SettingSwitch("Remember sites I visit", "Shown under Recently visited, on this phone only", remember, "recent_switch") { SiteHistory.setOn(context, it) }
+            SettingSwitch("Block ads and pop-ups", "Ad sites never load, pop-ups and pop-unders stay closed. The shield in a page's menu turns it off there only", ads, "filter_ads_switch") { BrowserFilters.setFilterAds(context, it) }
+            SettingSwitch("Open the real link behind short links", "Waits out the timers and taps Continue on link-shortener pages; a check that needs you is left to you", links, "resolve_links_switch") { BrowserFilters.setResolveLinks(context, it) }
+            SettingSwitch("Stop redirects", "A page can't send you to another site by itself; a bar lets you open it. App links never leave Yumeiro", redirects, "stop_redirects_switch") { BrowserFilters.setStopRedirects(context, it) }
+            SettingLink(Icons.Default.VisibilityOff, "Manage ads", "Parts of pages you hid with Hide an element", "site_manage_ads") { manage = true }
             HorizontalDivider(Modifier.padding(vertical = 8.dp), color = p.textPrimary.copy(alpha = 0.08f))
-            SettingLink(Icons.AutoMirrored.Filled.PlaylistAdd, tr(R.string.add_websites_from_a_list, "Add websites from a list"), tr(R.string.paste_links_one_per_line, "Paste links, one per line"), "site_import") { onDismiss(); onImport() }
-            if (onExport != null) SettingLink(Icons.Default.FileUpload, tr(R.string.send_your_website_list, "Send your website list"), tr(R.string.as_text_to_keep_or_to, "As text, to keep or to move to another phone"), "site_export") { onDismiss(); onExport() }
+            SettingLink(Icons.AutoMirrored.Filled.PlaylistAdd, "Add websites from a list", "Paste links, one per line", "site_import") { onDismiss(); onImport() }
+            if (onExport != null) SettingLink(Icons.Default.FileUpload, "Send your website list", "As text, to keep or to move to another phone", "site_export") { onDismiss(); onExport() }
         }
     }
 }
@@ -248,7 +247,7 @@ internal fun WebsiteTabsSheet(onDismiss: () -> Unit) {
             Text(stringResource(R.string.new_tab), color = p.textSecondary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 dev.asfakul.yumeiro.ui.screens.watch.WatchSearchField(
-                    query = address, onQuery = { address = it.take(800) }, hint = tr(R.string.address_or_search, "Address or search"), tag = "browser_new_tab_field",
+                    query = address, onQuery = { address = it.take(800) }, hint = "Address or search", tag = "browser_new_tab_field",
                     modifier = Modifier.weight(1f), leadingIcon = Icons.Default.Add, keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri, onDone = { go() },
                 )
                 Spacer(Modifier.width(8.dp))

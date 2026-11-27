@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.web
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.channels.BufferOverflow
@@ -256,14 +254,14 @@ object VerificationPolicy {
             else -> "a moment"
         }
         return when (s.state) {
-            VerificationCenter.State.CLEAR -> tr(R.string.verified_yumeiro_reuses_this_pass_until, "Verified. Yumeiro reuses this pass until the site asks again.")
-            VerificationCenter.State.NEEDS_YOU -> tr(R.string.waiting_for_you_to_tap_the, "Waiting for you to tap the site's check.")
+            VerificationCenter.State.CLEAR -> "Verified. Yumeiro reuses this pass until the site asks again."
+            VerificationCenter.State.NEEDS_YOU -> "Waiting for you to tap the site's check."
             VerificationCenter.State.PAUSED ->
-                if (holding(s, now)) tr(R.string.you_closed_the_check_it_wont, "You closed the check. It won't open by itself for %1\$s.", holdText) else tr(R.string.you_closed_the_check_it_can, "You closed the check. It can ask again.")
+                if (holding(s, now)) "You closed the check. It won't open by itself for $holdText." else "You closed the check. It can ask again."
             VerificationCenter.State.BLOCKED ->
-                if (holding(s, now)) tr(R.string.the_sites_firewall_blocks_this_network, "The site's firewall blocks this network, so no check is shown. Try Wi-Fi or mobile data, or turn off a VPN.")
-                else tr(R.string.the_sites_firewall_blocked_this_network, "The site's firewall blocked this network earlier. It will be tried again.")
-            VerificationCenter.State.FAILED -> tr(R.string.the_last_check_didnt_finish_it, "The last check didn't finish. It will be tried again.")
+                if (holding(s, now)) "The site's firewall blocks this network, so no check is shown. Try Wi-Fi or mobile data, or turn off a VPN."
+                else "The site's firewall blocked this network earlier. It will be tried again."
+            VerificationCenter.State.FAILED -> "The last check didn't finish. It will be tried again."
         }
     }
 }

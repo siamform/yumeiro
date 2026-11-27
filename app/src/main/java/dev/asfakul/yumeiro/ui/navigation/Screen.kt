@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.navigation
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.outlined.LiveTv
@@ -126,28 +124,28 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem(
         route = Screen.Home.route,
-        label = tr(R.string.home, "Home"),
+        label = "Home",
         selectedIcon = NavIcons.HomeFilled,
         unselectedIcon = NavIcons.HomeOutline,
         testTag = "nav_tab_home"
     ),
     BottomNavItem(
         route = Screen.Music.route,
-        label = tr(R.string.music, "Music"),
+        label = "Music",
         selectedIcon = NavIcons.MusicFilled,
         unselectedIcon = NavIcons.MusicOutline,
         testTag = "nav_tab_music"
     ),
     BottomNavItem(
         route = Screen.Videos.route,
-        label = tr(R.string.videos, "Videos"),
+        label = "Videos",
         selectedIcon = NavIcons.VideosFilled,
         unselectedIcon = NavIcons.VideosOutline,
         testTag = "nav_tab_videos"
     ),
     BottomNavItem(
         route = Screen.Library.route,
-        label = tr(R.string.library, "Library"),
+        label = "Library",
         selectedIcon = NavIcons.LibraryFilled,
         unselectedIcon = NavIcons.LibraryOutline,
         testTag = "nav_tab_library"

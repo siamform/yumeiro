@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.downloads
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -152,7 +151,7 @@ object DownloadPrompt {
         }
         if (err != null) { AppMessages.error(context, err); return }
         val mode = if (keep) "Permanent" else "Offline"
-        AppMessages.show(context, "Downloading ${r.what} · $mode", AppMessages.Kind.SUCCESS, tr(R.string.view_downloads, "View downloads")) { DownloadsNav.open() }
+        AppMessages.show(context, "Downloading ${r.what} · $mode", AppMessages.Kind.SUCCESS, "View downloads") { DownloadsNav.open() }
     }
 
     fun sizeText(b: Long): String = when {
@@ -301,9 +300,9 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
         Text(stringResource(R.string.keep_as), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         Spacer(Modifier.height(6.dp))
         KeepOption(
-            selected = !keep, icon = Icons.Default.Schedule, title = tr(R.string.offline_copy, "Offline copy"),
+            selected = !keep, icon = Icons.Default.Schedule, title = "Offline copy",
             body = if (days > 0) "Deleted automatically ${DownloadSettings.autoDeleteLabel(days)} after it finishes. Good for watch-once episodes."
-            else tr(R.string.auto_delete_is_off_so_it, "Auto-delete is off, so it stays until you delete it. Pick a timer below."),
+            else "Auto-delete is off, so it stays until you delete it. Pick a timer below.",
             tag = "download_mode_offline",
         ) { onKeep(false) }
         if (!keep) FlowRow(Modifier.padding(start = 8.dp, top = 2.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -313,8 +312,8 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
             }
         }
         KeepOption(
-            selected = keep, icon = Icons.Default.PushPin, title = tr(R.string.permanent, "Permanent"),
-            body = tr(R.string.kept_forever_the_timer_never_touches, "Kept forever, the timer never touches it. You can switch any time in Downloads."),
+            selected = keep, icon = Icons.Default.PushPin, title = "Permanent",
+            body = "Kept forever, the timer never touches it. You can switch any time in Downloads.",
             tag = "download_mode_permanent",
         ) { onKeep(true) }
 
@@ -339,17 +338,17 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
 }
 
 internal fun tipsFor(type: DownloadPrompt.Type): List<String> = buildList {
-    add(tr(R.string.downloads_keep_going_in_the_background, "Downloads keep going in the background. Progress shows in your notifications and in Downloads."))
+    add("Downloads keep going in the background. Progress shows in your notifications and in Downloads.")
     when (type) {
         DownloadPrompt.Type.EPISODES, DownloadPrompt.Type.MOVIE, DownloadPrompt.Type.CURRENT -> {
-            add(tr(R.string.one_episode_per_extension_downloads_at, "One episode per extension downloads at a time, so the site doesn't block you."))
-            add(tr(R.string.a_fresh_link_is_found_when, "A fresh link is found when each episode starts, so long queues don't expire."))
+            add("One episode per extension downloads at a time, so the site doesn't block you.")
+            add("A fresh link is found when each episode starts, so long queues don't expire.")
         }
-        DownloadPrompt.Type.YT_VIDEO -> add(tr(R.string.hd_video_and_its_sound_download, "HD video and its sound download separately and are joined on your phone."))
-        DownloadPrompt.Type.YT_AUDIO -> add(tr(R.string.audio_only_is_the_smallest_download, "Audio only is the smallest download and plays like any song."))
-        DownloadPrompt.Type.LINK -> add(tr(R.string.saved_as_one_video_file_streams, "Saved as one video file. Streams (HLS, DASH) are fetched piece by piece and joined on your phone."))
+        DownloadPrompt.Type.YT_VIDEO -> add("HD video and its sound download separately and are joined on your phone.")
+        DownloadPrompt.Type.YT_AUDIO -> add("Audio only is the smallest download and plays like any song.")
+        DownloadPrompt.Type.LINK -> add("Saved as one video file. Streams (HLS, DASH) are fetched piece by piece and joined on your phone.")
     }
-    add(tr(R.string.uses_mobile_data_when_wi_fi, "Uses mobile data when Wi-Fi is off. Quality and parallel downloads are in Settings → Downloads."))
+    add("Uses mobile data when Wi-Fi is off. Quality and parallel downloads are in Settings → Downloads.")
 }
 
 @Composable

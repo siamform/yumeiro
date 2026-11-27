@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.ecosystem
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.cloudstream3.HomePageList
 import com.lagradost.cloudstream3.HomePageResponse
@@ -164,12 +162,12 @@ object SkyStreamAdapter : RuntimeAdapter {
 
     fun streamOf(o: JsonObject, sourceName: String): Stream {
         if (o.str("drmKid") != null || o.str("drmKey") != null || o.str("licenseUrl") != null) return Stream.Skip("DRM")
-        var url = o.str("url") ?: return Stream.Skip(tr(R.string.no_link, "No link"))
-        if (url.startsWith("magic_m3u8:")) return Stream.Skip(tr(R.string.generated_playlist, "Generated playlist"))
+        var url = o.str("url") ?: return Stream.Skip("No link")
+        if (url.startsWith("magic_m3u8:")) return Stream.Skip("Generated playlist")
         // SkyStream's byte proxy only adds the plugin's headers; Yumeiro's player sends them itself.
-        if (url.startsWith(MAGIC_PROXY)) url = url.removePrefix(MAGIC_PROXY).decodeBase64()?.utf8() ?: return Stream.Skip(tr(R.string.no_link, "No link"))
+        if (url.startsWith(MAGIC_PROXY)) url = url.removePrefix(MAGIC_PROXY).decodeBase64()?.utf8() ?: return Stream.Skip("No link")
         if (url.startsWith("magnet:", true) || url.substringBefore('?').endsWith(".torrent", true)) return Stream.Skip("Torrent")
-        if (!url.startsWith("https://") && !url.startsWith("http://")) return Stream.Skip(tr(R.string.unsupported_link, "Unsupported link"))
+        if (!url.startsWith("https://") && !url.startsWith("http://")) return Stream.Skip("Unsupported link")
         val headers = (o["headers"] as? JsonObject)?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty()
         val q = o.str("quality")
         val qualityNum = VegaAdapter.qualityOf(q, o.str("name"), o.str("source"))

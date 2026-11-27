@@ -5,9 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.download
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
-
 /**
  * How the Downloads page and Library sort downloads (pure, unit-tested):
  * - **In progress**: queued, running, paused or failed.
@@ -45,5 +42,5 @@ object DownloadGroups {
     }
 
     /** Folder name for downloads saved without a series folder. */
-    val LOOSE: String get() = tr(R.string.other_downloads, "Other downloads")
+    const val LOOSE = "Other downloads"
 }

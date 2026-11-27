@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
@@ -148,7 +147,7 @@ fun VolumeHUD(
                     stringResource(R.string.loud_protect_your_hearing), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(end = 6.dp).clip(yuRound(8)).background(Color(0xCC8A2A12)).padding(horizontal = 8.dp, vertical = 4.dp).testTag("volume_boost_warning"),
                 )
-                VerticalLevelBar(boost, icon, tr(R.string.volume_boost, "Volume boost"), "volume_hud", number = dev.asfakul.yumeiro.player.VolumeBoost.percent(volumeLevel, maxVolume, boost), fill = Color(0xFFFF8A3D))
+                VerticalLevelBar(boost, icon, "Volume boost", "volume_hud", number = dev.asfakul.yumeiro.player.VolumeBoost.percent(volumeLevel, maxVolume, boost), fill = Color(0xFFFF8A3D))
             }
         } else VerticalLevelBar(ratio, icon, "Volume", "volume_hud")
     }

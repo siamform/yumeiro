@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.notify
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import androidx.work.BackoffPolicy
@@ -61,11 +59,11 @@ object FcmPush {
 
     enum class Status(val label: String) {
         OFF("Off"),
-        UNAVAILABLE(tr(R.string.not_available_in_this_build, "Not available in this build")),
-        NO_PLAY_SERVICES(tr(R.string.needs_google_play_services, "Needs Google Play services")),
+        UNAVAILABLE("Not available in this build"),
+        NO_PLAY_SERVICES("Needs Google Play services"),
         CONNECTING("Connecting…"),
         ON("On"),
-        ERROR(tr(R.string.couldnt_connect_will_retry, "Couldn't connect — will retry")),
+        ERROR("Couldn't connect — will retry"),
     }
 
     private val _status = MutableStateFlow(Status.OFF)

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import android.content.Context
@@ -120,34 +119,34 @@ data class TourStop(
  */
 object ExploreTour {
     val stops: List<TourStop> = listOf(
-        TourStop("home", "topbar_title", tr(R.string.hi_im_yume_your_guide, "Hi, I'm Yume — your guide"),
-            tr(R.string.this_is_home_the_greeting_follows, "This is Home. The greeting follows the time of day, and everything waiting for you — new episodes, where you left off — gathers below it. Two minutes, and you'll know your way around."), TourPlace.HOME),
+        TourStop("home", "topbar_title", "Hi, I'm Yume — your guide",
+            "This is Home. The greeting follows the time of day, and everything waiting for you — new episodes, where you left off — gathers below it. Two minutes, and you'll know your way around.", TourPlace.HOME),
         TourStop("spaces", "home_spaces_grid", "Spaces: every feature, one tap away",
-            tr(R.string.each_tile_opens_a_part_of, "Each tile opens a part of Yumeiro — Yumix, YouTube, Manga, Live TV and more. The small line under a tile tells you its state, like \"Add sources\"."), TourPlace.HOME),
-        TourStop("spaces_more", "home_spaces_more", tr(R.string.more_shortcuts_live_here, "More shortcuts live here"),
-            tr(R.string.see_more_unfolds_the_rest_in, "See more unfolds the rest in place — theme, DNS, tracking, network… — and See less folds them away again."), TourPlace.HOME,
-            tryIt = tr(R.string.your_turn_tap_see_more, "Your turn: tap See more")),
+            "Each tile opens a part of Yumeiro — Yumix, YouTube, Manga, Live TV and more. The small line under a tile tells you its state, like \"Add sources\".", TourPlace.HOME),
+        TourStop("spaces_more", "home_spaces_more", "More shortcuts live here",
+            "See more unfolds the rest in place — theme, DNS, tracking, network… — and See less folds them away again.", TourPlace.HOME,
+            tryIt = "Your turn: tap See more"),
         TourStop("tab_music", "nav_tab_music", "Music",
-            tr(R.string.the_note_icon_in_the_bar, "The note icon in the bar at the bottom opens Music: songs on this phone and YouTube Music, side by side."), TourPlace.HOME,
-            advanceOnRoute = "music", tryIt = tr(R.string.your_turn_tap_the_note_icon, "Your turn: tap the note icon")),
-        TourStop("music_source", "topbar_source_pill", tr(R.string.choose_where_music_comes_from, "Choose where music comes from"),
-            tr(R.string.this_pill_beside_the_title_switches, "This pill beside the title switches between On device, Online and Mix. Every source keeps its own lists and search."), TourPlace.MUSIC,
-            menuStop = true, tryIt = tr(R.string.your_turn_tap_the_pill_then, "Your turn: tap the pill, then pick one")),
-        TourStop("tab_videos", "nav_tab_videos", tr(R.string.videos_and_streaming, "Videos and streaming"),
-            tr(R.string.the_play_icon_opens_videos_extensions, "The play icon opens Videos: extensions, YouTube, this phone's videos and Live TV in one place."), TourPlace.MUSIC,
-            advanceOnRoute = "videos", tryIt = tr(R.string.your_turn_tap_the_play_icon, "Your turn: tap the play icon")),
-        TourStop("video_source", "topbar_source_pill", tr(R.string.pick_what_to_watch, "Pick what to watch"),
-            tr(R.string.same_pill_new_choices_yumix_youtube, "Same pill, new choices: Yumix, YouTube, Device and Live TV. Each keeps its own screen and search."), TourPlace.VIDEOS_YUMIX,
-            menuStop = true, tryIt = tr(R.string.tap_the_pill_to_look_or, "Tap the pill to look — or Next to carry on")),
-        TourStop("yumix", "yumix_sources", tr(R.string.extensions_and_sources, "Extensions and sources"),
-            tr(R.string.the_shop_opens_the_extension_market, "The shop opens the Extension Market — anime, movies, Asian and short dramas. The puzzle piece manages the ones you've installed. Yumix then mixes what they offer."), TourPlace.VIDEOS_YUMIX),
+            "The note icon in the bar at the bottom opens Music: songs on this phone and YouTube Music, side by side.", TourPlace.HOME,
+            advanceOnRoute = "music", tryIt = "Your turn: tap the note icon"),
+        TourStop("music_source", "topbar_source_pill", "Choose where music comes from",
+            "This pill beside the title switches between On device, Online and Mix. Every source keeps its own lists and search.", TourPlace.MUSIC,
+            menuStop = true, tryIt = "Your turn: tap the pill, then pick one"),
+        TourStop("tab_videos", "nav_tab_videos", "Videos and streaming",
+            "The play icon opens Videos: extensions, YouTube, this phone's videos and Live TV in one place.", TourPlace.MUSIC,
+            advanceOnRoute = "videos", tryIt = "Your turn: tap the play icon"),
+        TourStop("video_source", "topbar_source_pill", "Pick what to watch",
+            "Same pill, new choices: Yumix, YouTube, Device and Live TV. Each keeps its own screen and search.", TourPlace.VIDEOS_YUMIX,
+            menuStop = true, tryIt = "Tap the pill to look — or Next to carry on"),
+        TourStop("yumix", "yumix_sources", "Extensions and sources",
+            "The shop opens the Extension Market — anime, movies, Asian and short dramas. The puzzle piece manages the ones you've installed. Yumix then mixes what they offer.", TourPlace.VIDEOS_YUMIX),
         TourStop("tab_library", "nav_tab_library", "Library",
-            tr(R.string.playlists_favourites_history_downloads_and_your, "Playlists, favourites, history, downloads and your manga shelf."), TourPlace.VIDEOS_YUMIX,
-            advanceOnRoute = "library", tryIt = tr(R.string.your_turn_tap_the_library_icon, "Your turn: tap the library icon")),
-        TourStop("actions", "topbar_actions", tr(R.string.search_alerts_and_settings, "Search, alerts and settings"),
-            tr(R.string.the_magnifier_searches_the_tab_youre, "The magnifier searches the tab you're on. The bell collects new episodes, downloads and reminders. The gear opens Settings — sources, network, look and sound."), TourPlace.LIBRARY),
-        TourStop("finish", null, tr(R.string.youre_ready, "You're ready"),
-            tr(R.string.thats_the_whole_map_replay_this, "That's the whole map. Replay this tour or open the quick setup any time from Settings → Setup guide."), TourPlace.LIBRARY),
+            "Playlists, favourites, history, downloads and your manga shelf.", TourPlace.VIDEOS_YUMIX,
+            advanceOnRoute = "library", tryIt = "Your turn: tap the library icon"),
+        TourStop("actions", "topbar_actions", "Search, alerts and settings",
+            "The magnifier searches the tab you're on. The bell collects new episodes, downloads and reminders. The gear opens Settings — sources, network, look and sound.", TourPlace.LIBRARY),
+        TourStop("finish", null, "You're ready",
+            "That's the whole map. Replay this tour or open the quick setup any time from Settings → Setup guide.", TourPlace.LIBRARY),
     )
 
     private val _step = MutableStateFlow<Int?>(null)
@@ -399,8 +398,8 @@ private fun TourCard(
             }
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!last) TourText(tr(R.string.skip_tour, "Skip tour"), p.textTertiary, "tour_skip", onSkip)
-                else TourText(tr(R.string.open_quick_setup, "Open quick setup"), p.accent, "tour_open_setup", onOpenSetup)
+                if (!last) TourText("Skip tour", p.textTertiary, "tour_skip", onSkip)
+                else TourText("Open quick setup", p.accent, "tour_open_setup", onOpenSetup)
                 Spacer(Modifier.weight(1f))
                 if (index > 0 && !last) TourText("Back", p.textSecondary, "tour_back", onBack)
                 Box(

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +72,7 @@ private fun MarketFrame(
         if (!expanded) return@Column
         when (val s = state) {
             is SourceMarket.State.Ready -> {
-                dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, tr(R.string.name_language_or_source, "Name, language or source"), tag + "_search", horizontalPadding = 0.dp)
+                dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Name, language or source", tag + "_search", horizontalPadding = 0.dp)
                 controls()
                 content(s.catalog, query, expanded)
                 Text(stringResource(R.string.listed_automatically_from_github_and_public),
@@ -101,8 +100,8 @@ internal fun RepoMarket(
     var sort by rememberSaveable(kind.key + "_sort") { mutableStateOf(SourceMarket.Sort.TOP) }
     var limit by remember(kind) { mutableIntStateOf(PAGE) }
     MarketFrame(
-        title = tr(R.string.discover, "Discover"),
-        hint = tr(R.string.repositories_found_on_github_ranked_by, "%1\$s repositories found on GitHub, ranked by stars, updates and size", label),
+        title = "Discover",
+        hint = "$label repositories found on GitHub, ranked by stars, updates and size",
         tag = "market_${kind.key}",
         startExpanded = startExpanded,
         controls = {
@@ -144,8 +143,8 @@ internal fun AddonMarket(isAdded: (String) -> Boolean, startExpanded: Boolean, o
     var type by rememberSaveable { mutableStateOf("") }
     var limit by remember { mutableIntStateOf(PAGE) }
     MarketFrame(
-        title = tr(R.string.discover, "Discover"),
-        hint = tr(R.string.add_ons_from_stremios_official_and, "Add-ons from Stremio's official and community catalogs, each one checked"),
+        title = "Discover",
+        hint = "Add-ons from Stremio's official and community catalogs, each one checked",
         tag = "market_stremio",
         startExpanded = startExpanded,
         controls = {

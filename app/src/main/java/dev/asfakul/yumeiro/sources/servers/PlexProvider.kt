@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.servers
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -163,7 +161,7 @@ class PlexProvider(val server: HomeServers.Server, displayName: String) : MainAP
         part?.s("key")?.let { k -> callback(newExtractorLink(name, "Original", "${server.url}$k?X-Plex-Token=$token", ExtractorLinkType.VIDEO) { quality = 0 }) }
         val hls = "${server.url}/video/:/transcode/universal/start.m3u8?path=${URLEncoder.encode("/library/metadata/$rk", "UTF-8")}" +
             "&protocol=hls&directPlay=0&directStream=1&X-Plex-Token=$token&X-Plex-Client-Identifier=${HomeServers.deviceId(ctx)}&X-Plex-Product=Yumeiro&X-Plex-Platform=Android"
-        callback(newExtractorLink(name, tr(R.string.transcoded_hls, "Transcoded (HLS)"), hls, ExtractorLinkType.M3U8) { quality = 0 })
+        callback(newExtractorLink(name, "Transcoded (HLS)", hls, ExtractorLinkType.M3U8) { quality = 0 })
         part?.arr("Stream")?.filter { it.n("streamType") == 3 && it.s("key") != null }?.forEach { s ->
             subtitleCallback(SubtitleFile(s.s("displayTitle") ?: s.s("language") ?: "Subtitle", "${server.url}${s.s("key")}?X-Plex-Token=$token"))
         }

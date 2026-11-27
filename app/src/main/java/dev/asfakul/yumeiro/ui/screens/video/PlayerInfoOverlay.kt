@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -76,7 +74,7 @@ fun PlayerInfoOverlay(player: ExoPlayer, title: String, modifier: Modifier = Mod
                 val value: String? = when (f) {
                     InfoField.RESOLUTION -> v?.takeIf { it.width > 0 }?.let { "${it.width}×${it.height}" }
                     InfoField.SOURCE -> link?.let { l -> l.name.ifBlank { l.source } } ?: title
-                    InfoField.PROVIDER -> online?.api?.takeIf { link != null } ?: link?.source ?: tr(R.string.this_device, "This device")
+                    InfoField.PROVIDER -> online?.api?.takeIf { link != null } ?: link?.source ?: "This device"
                     InfoField.QUALITY -> v?.let { minOf(it.width, it.height).takeIf { h -> h > 0 } }?.let { h -> dev.asfakul.yumeiro.player.QualityEngine.label(dev.asfakul.yumeiro.player.QualityEngine.snap(h)) }
                     InfoField.VIDEO_CODEC -> v?.let(::codecName)
                     InfoField.AUDIO_CODEC -> a?.let { codecName(it) + (it.channelCount.takeIf { c -> c > 0 }?.let { c -> " · ${c}ch" } ?: "") + (it.sampleRate.takeIf { r -> r > 0 }?.let { r -> " · ${r / 1000.0}kHz" } ?: "") }

@@ -2,7 +2,7 @@
 """F2: turn reviewed translation tables into Android string resources.
 
 tools/l10n/translations/<lang>.tsv holds one `key<TAB>text` row per English
-string, in plain text (no XML escaping). This script writes
+string, in plain text (no XML escaping; a literal \\n stands for a line break). This script writes
 app/src/main/res/values-<lang>/strings.xml. It refuses to write when a row is
 missing, a key is unknown, or the format placeholders differ from English,
 so a broken translation never reaches a build. No machine translation is
@@ -67,7 +67,8 @@ def build(lang: str, en: dict) -> int:
         key, _, text = line.partition("\t")
         if key in rows:
             sys.exit(f"{lang}.tsv:{n}: duplicate key {key}")
-        rows[key] = text
+        # A literal backslash-n in a table row stands for a line break.
+        rows[key] = text.replace("\\n", "\n")
     errors = []
     for key in en:
         if key not in rows:

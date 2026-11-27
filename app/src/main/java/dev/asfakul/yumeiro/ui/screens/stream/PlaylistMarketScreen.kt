@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -152,7 +151,7 @@ fun PlaylistMarketScreen(
             try {
                 val r = PlaylistStore.applyMarketUpdates(app, cat, onlyAuto = false, ids = ids)
                 when {
-                    r.updated.isEmpty() && r.failed.isEmpty() -> AppMessages.show(context, tr(R.string.everything_is_up_to_date, "Everything is up to date"))
+                    r.updated.isEmpty() && r.failed.isEmpty() -> AppMessages.show(context, "Everything is up to date")
                     r.failed.isEmpty() -> AppMessages.success(context, "Updated ${r.updated.size} playlist${if (r.updated.size == 1) "" else "s"}")
                     else -> AppMessages.error(context, "Updated ${r.updated.size}, failed: ${r.failed.joinToString()}", "Retry") { update(ids) }
                 }
@@ -192,21 +191,21 @@ fun PlaylistMarketScreen(
     }
     Column(modifier.fillMaxSize().testTag("market_screen")) {
         SubPageHeader(
-            title = tr(R.string.playlist_market, "Playlist market"),
+            title = "Playlist market",
             subtitle = catalog?.let { c -> "${c.entries.size} playlists · catalog ${relativeTime(c.generated.takeIf { it > 0 } ?: c.fetchedAt)}" }
                 ?: if (state is PlaylistMarket.State.Error) "Offline" else "Loading…",
             onBack = onBack,
         ) {
-            if (ready != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(open = searching || query.isNotEmpty(), onToggle = { searching = !(searching || query.isNotEmpty()); if (!searching) query = "" }, tag = "market_search_toggle", description = tr(R.string.search_playlists, "Search playlists"))
+            if (ready != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(open = searching || query.isNotEmpty(), onToggle = { searching = !(searching || query.isNotEmpty()); if (!searching) query = "" }, tag = "market_search_toggle", description = "Search playlists")
             // GROUP C catch-all: category / Installed / Updates chips moved into a filter sheet.
-            if (ready != null) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (filter != null) 1 else 0, { filterSheet = true }, "market_filter", tr(R.string.filter_playlists, "Filter playlists"))
+            if (ready != null) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (filter != null) 1 else 0, { filterSheet = true }, "market_filter", "Filter playlists")
             val refreshing = ready?.refreshing == true || state is PlaylistMarket.State.Loading
             IconButton(onClick = { reload() }, enabled = !refreshing, modifier = Modifier.testTag("market_reload")) {
                 if (refreshing) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                 else Icon(Icons.Default.Refresh, stringResource(R.string.check_for_updates), tint = TextSecondary)
             }
         }
-        if (ready != null) dev.asfakul.yumeiro.ui.components.HeaderSearchField(open = searching || query.isNotEmpty(), query = query, onQuery = { query = it }, placeholder = tr(R.string.search_playlists_countries_repos, "Search playlists, countries, repos"), tag = "market_search")
+        if (ready != null) dev.asfakul.yumeiro.ui.components.HeaderSearchField(open = searching || query.isNotEmpty(), query = query, onQuery = { query = it }, placeholder = "Search playlists, countries, repos", tag = "market_search")
         when (val s = state) {
             PlaylistMarket.State.Idle, PlaylistMarket.State.Loading -> Column(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("market_loading"),
@@ -218,7 +217,7 @@ fun PlaylistMarketScreen(
             }
             is PlaylistMarket.State.Error -> StateMessage(
                 icon = Icons.Default.CloudOff, tint = MaterialTheme.colorScheme.error,
-                title = tr(R.string.market_unavailable, "Market unavailable"), message = s.message,
+                title = "Market unavailable", message = s.message,
                 primary = "Retry" to { reload() }, secondary = "Back" to onBack, testTag = "market_error",
             )
             is PlaylistMarket.State.Ready -> PullToRefreshBox(isRefreshing = s.refreshing, onRefresh = { reload() }, modifier = Modifier.fillMaxSize()) {
@@ -241,13 +240,13 @@ fun PlaylistMarketScreen(
                             Icon(Icons.Default.SystemUpdate, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
                             Text("${updates.size} update${if (updates.size == 1) "" else "s"} available", color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                            PillButton(if (updatingAll) "Updating…" else tr(R.string.update_all_2, "Update all"), enabled = !updatingAll, tag = "market_update_all") { update(null) }
+                            PillButton(if (updatingAll) "Updating…" else "Update all", enabled = !updatingAll, tag = "market_update_all") { update(null) }
                         }
                     }
                     if (visible.isEmpty()) item(key = "none") {
                         StateMessage(
-                            icon = Icons.Default.SearchOff, title = tr(R.string.no_playlists_found, "No playlists found"),
-                            message = if (query.isNotBlank()) "Nothing matches “${query.trim()}”." else tr(R.string.nothing_in_this_section_yet, "Nothing in this section yet."),
+                            icon = Icons.Default.SearchOff, title = "No playlists found",
+                            message = if (query.isNotBlank()) "Nothing matches “${query.trim()}”." else "Nothing in this section yet.",
                             primary = "Clear filters" to { query = ""; filter = null }, testTag = "market_empty",
                         )
                     } else items(visible, key = { "m_${it.id}" }, contentType = { "entry" }) { e ->
@@ -262,9 +261,9 @@ fun PlaylistMarketScreen(
                     }
                     item(key = "note") {
                         Text(
-                            tr(R.string.playlists_are_collected_from_public_github, "Playlists are collected from public GitHub repositories, repaired and checked every 3 days. ") +
-                                tr(R.string.responding_is_measured_from_githubs_servers, "\"Responding\" is measured from GitHub's servers, so region-locked lists (e.g. BDIX) may work only in their country. ") +
-                                tr(R.string.yumeiro_does_not_host_or_bypass, "Yumeiro does not host or bypass protection of any stream."),
+                            "Playlists are collected from public GitHub repositories, repaired and checked every 3 days. " +
+                                "\"Responding\" is measured from GitHub's servers, so region-locked lists (e.g. BDIX) may work only in their country. " +
+                                "Yumeiro does not host or bypass protection of any stream.",
                             color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 6.dp),
                         )
                     }
@@ -371,8 +370,8 @@ private fun MarketCard(
             Spacer(Modifier.width(8.dp))
             when {
                 busy -> CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(24.dp).testTag("market_busy_${entry.id}"))
-                installed != null && hasUpdate -> PillButton(tr(R.string.update, "Update"), tag = "market_update_${entry.id}", onClick = onUpdate)
-                installed != null -> PillButton(tr(R.string.widget_open, "Open"), filled = false, tag = "market_open_${entry.id}", onClick = onOpen)
+                installed != null && hasUpdate -> PillButton("Update", tag = "market_update_${entry.id}", onClick = onUpdate)
+                installed != null -> PillButton("Open", filled = false, tag = "market_open_${entry.id}", onClick = onOpen)
                 else -> Row(
                     Modifier.clip(RoundedCornerShape(50)).background(SpotifyGreen).clickable(onClick = onInstall)
                         .padding(horizontal = 12.dp, vertical = 7.dp).testTag("market_install_${entry.id}"),

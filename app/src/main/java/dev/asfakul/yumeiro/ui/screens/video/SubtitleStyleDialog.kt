@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -100,7 +99,7 @@ fun SubtitleStyleEditor(modifier: Modifier = Modifier) {
         Label("SIZE")
         ChipRow(SubtitleStyle.SIZES.map { "${(it * 100).toInt()}%" to it }, current = s.size.takeIf { !s.followSystem }, tag = "sub_size") { v -> change { it.copy(size = v) } }
 
-        Label(tr(R.string.text_colour, "TEXT COLOUR"))
+        Label("TEXT COLOUR")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SubtitleStyle.TextColor.entries.forEach { c ->
                 val sel = !s.followSystem && s.color == c
@@ -123,7 +122,7 @@ fun SubtitleStyleEditor(modifier: Modifier = Modifier) {
                 colors = SwitchDefaults.colors(checkedThumbColor = OnAccent, checkedTrackColor = SpotifyGreen), modifier = Modifier.testTag("sub_bold"))
         }
 
-        Label(tr(R.string.height_from_bottom, "HEIGHT FROM BOTTOM"))
+        Label("HEIGHT FROM BOTTOM")
         Slider(
             value = if (s.followSystem) 0f else s.lift,
             onValueChange = { v -> change { it.copy(lift = v) } },

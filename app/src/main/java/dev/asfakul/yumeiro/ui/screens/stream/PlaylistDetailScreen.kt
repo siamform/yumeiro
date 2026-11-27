@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -160,14 +159,14 @@ fun PlaylistDetailScreen(
     fun msg(text: String) = AppMessages.show(context, text)
     fun fail(text: String) = AppMessages.error(context, text)
     fun launchSafe(onError: (String) -> Unit = ::fail, block: suspend () -> Unit) = scope.launch {
-        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, tr(R.string.something_went_wrong_try_again, "Something went wrong. Try again."))) }
+        try { block() } catch (e: CancellationException) { throw e } catch (e: Exception) { onError(dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Something went wrong. Try again.")) }
     }
 
     // R16 (G7): a failed start showed "not found" instead of the reason (and no Retry for it).
     var storeError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         try { PlaylistStore.init(app) } catch (e: CancellationException) { throw e } catch (e: Exception) {
-            storeError = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, tr(R.string.couldnt_open_your_playlists_try_again, "Couldn't open your playlists. Try again."))
+            storeError = dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't open your playlists. Try again.")
         }
         storeReady = true
     }
@@ -176,7 +175,7 @@ fun PlaylistDetailScreen(
     LaunchedEffect(slug, storeReady, attempt) {
         if (!storeReady) return@LaunchedEffect
         if (storeError != null && attempt > 0) storeError = try { PlaylistStore.init(app); null }
-            catch (e: CancellationException) { throw e } catch (e: Exception) { dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, tr(R.string.couldnt_open_your_playlists_try_again, "Couldn't open your playlists. Try again.")) }
+            catch (e: CancellationException) { throw e } catch (e: Exception) { dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Couldn't open your playlists. Try again.") }
         storeError?.let { state = LoadState.Failed(it, network = false); return@LaunchedEffect }
         if (isOpened) { state = if (repoId == null && repoChannels.isNotEmpty()) LoadState.Ready else LoadState.NotFound; return@LaunchedEffect }
         val p = PlaylistStore.get(slug) ?: run { state = LoadState.NotFound; return@LaunchedEffect }
@@ -216,7 +215,7 @@ fun PlaylistDetailScreen(
         if (uri != null) launchSafe {
             val n = if (playlist != null) PlaylistStore.export(app, playlist.id, uri)
             else { PlaylistStore.exportChannels(app, repoName, channels, uri); channels.size }
-            AppMessages.success(context, tr(R.string.exported_streams, "Exported %1\$s streams", n))
+            AppMessages.success(context, "Exported $n streams")
         }
     }
 
@@ -257,7 +256,7 @@ fun PlaylistDetailScreen(
                             onClick = {
                                 menu = false
                                 launchSafe {
-                                    val p = PlaylistStore.createLocal(app, repoName ?: tr(R.string.imported_playlist, "Imported playlist"), channels)
+                                    val p = PlaylistStore.createLocal(app, repoName ?: "Imported playlist", channels)
                                     StreamRepository.setPlaylist(p.name, channels, p.id)
                                     AppMessages.success(context, "Saved as ${p.name}")
                                 }
@@ -266,7 +265,7 @@ fun PlaylistDetailScreen(
                         if (playlist != null) DropdownMenuItem(text = { Text(stringResource(R.string.edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; editing = true })
                         if (channels.isNotEmpty() || playlist != null) DropdownMenuItem(
                             text = { Text(stringResource(R.string.export_as_m3u)) }, leadingIcon = { Icon(Icons.Default.FileDownload, null) },
-                            onClick = { menu = false; runCatching { exportLauncher.launch(fileNameFor(title)) }.onFailure { fail(tr(R.string.no_app_available_to_save_files, "No app available to save files")) } },
+                            onClick = { menu = false; runCatching { exportLauncher.launch(fileNameFor(title)) }.onFailure { fail("No app available to save files") } },
                         )
                         if (playlist != null && playlist.enabled) DropdownMenuItem(
                             text = { Text(stringResource(R.string.disable)) }, leadingIcon = { Icon(Icons.Default.VisibilityOff, null) },
@@ -291,8 +290,8 @@ fun PlaylistDetailScreen(
             when (val s = state) {
                 LoadState.NotFound -> StateMessage(
                     icon = Icons.Default.SearchOff,
-                    title = if (isOpened) tr(R.string.no_list_is_open, "No list is open") else tr(R.string.playlist_not_found, "Playlist not found"),
-                    message = if (isOpened) tr(R.string.open_a_playlist_link_or_an, "Open a playlist link or an M3U file from Videos → Live TV.") else tr(R.string.it_may_have_been_deleted_or, "It may have been deleted or renamed. Your other playlists are still in Videos → Live TV."),
+                    title = if (isOpened) "No list is open" else "Playlist not found",
+                    message = if (isOpened) "Open a playlist link or an M3U file from Videos → Live TV." else "It may have been deleted or renamed. Your other playlists are still in Videos → Live TV.",
                     primary = "Back to Stream" to onBack,
                     secondary = "Browse playlist market" to onOpenMarket,
                     testTag = "playlist_not_found",
@@ -325,7 +324,7 @@ fun PlaylistDetailScreen(
                         if (playlist != null) item(key = "info") {
                             PlaylistInfoCard(
                                 playlist = playlist, updateAvailable = updateAvailable, refreshing = refreshing,
-                                onAutoUpdate = { on -> launchSafe { PlaylistStore.setAutoUpdate(app, playlist.id, on); msg(if (on) tr(R.string.auto_update_on, "Auto-update on") else tr(R.string.auto_update_off_update_manually, "Auto-update off — update manually")) } },
+                                onAutoUpdate = { on -> launchSafe { PlaylistStore.setAutoUpdate(app, playlist.id, on); msg(if (on) "Auto-update on" else "Auto-update off — update manually") } },
                                 onUpdate = { refresh(marketEntry?.sha256) },
                                 onEnable = { launchSafe { PlaylistStore.setEnabled(app, playlist.id, true); attempt++ } },
                             )
@@ -337,7 +336,7 @@ fun PlaylistDetailScreen(
                                     dev.asfakul.yumeiro.ui.components.YuSectionHeader("${channels.size} streams", group?.let { "Group: $it" }) {
                                         dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
                                             if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
-                                        }, "channel_search_open", tr(R.string.search_streams, "Search streams"))
+                                        }, "channel_search_open", "Search streams")
                                         if (groups.size > 1) dev.asfakul.yumeiro.ui.components.FilterIconButton(if (group != null) 1 else 0, { groupSheet = true }, "channel_group_filter", "Groups")
                                     }
                                     dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search ${channels.size} streams", "channel_search", horizontalPadding = 0.dp)
@@ -354,15 +353,15 @@ fun PlaylistDetailScreen(
                             playlist?.enabled == false -> Unit
                             channels.isEmpty() -> item(key = "empty") {
                                 StateMessage(
-                                    icon = Icons.Default.LiveTv, title = if (editable) tr(R.string.no_streams_yet, "No streams yet") else tr(R.string.this_playlist_is_empty, "This playlist is empty"),
-                                    message = if (editable) tr(R.string.save_streams_here_from_videos_live, "Save streams here from Videos → Live TV or from any other playlist.") else tr(R.string.the_source_has_no_channels_right, "The source has no channels right now. Pull down to try again later."),
+                                    icon = Icons.Default.LiveTv, title = if (editable) "No streams yet" else "This playlist is empty",
+                                    message = if (editable) "Save streams here from Videos → Live TV or from any other playlist." else "The source has no channels right now. Pull down to try again later.",
                                     primary = if (editable) null else "Refresh" to { refresh() },
                                     testTag = "playlist_empty",
                                 )
                             }
                             visible.isEmpty() -> item(key = "no_match") {
                                 StateMessage(
-                                    icon = Icons.Default.SearchOff, title = tr(R.string.no_matching_streams, "No matching streams"),
+                                    icon = Icons.Default.SearchOff, title = "No matching streams",
                                     message = "Nothing matches \"${query.trim()}\"${group?.let { " in $it" } ?: ""}.",
                                     primary = "Clear filters" to { query = ""; group = null }, testTag = "playlist_no_match",
                                 )
@@ -379,7 +378,7 @@ fun PlaylistDetailScreen(
                                         launchSafe {
                                             val next = PlaylistStore.removeChannel(app, id, index)
                                             StreamRepository.setPlaylist(playlist.name, next, id)
-                                            AppMessages.show(context, "Removed ${ch.displayTitle}", actionLabel = tr(R.string.hx_undo, "Undo"), action = {
+                                            AppMessages.show(context, "Removed ${ch.displayTitle}", actionLabel = "Undo", action = {
                                                 launchSafe { val restored = PlaylistStore.addChannels(app, id, listOf(ch)); StreamRepository.setPlaylist(playlist.name, restored, id) }
                                             })
                                         }
@@ -448,10 +447,10 @@ private fun PlaylistInfoCard(
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             playlist.description?.let { Text(it, color = TextSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis) }
             val origin = when {
-                playlist.isLocal -> tr(R.string.your_playlist_stored_on_this_device, "Your playlist · stored on this device")
-                playlist.isMarket -> tr(R.string.from_the_playlist_market, "From the playlist market") + (playlist.repo?.let { " · $it" } ?: "")
-                playlist.isDefault -> tr(R.string.default_playlist_synced_every_3_days, "Default playlist · synced every 3 days")
-                else -> tr(R.string.added_from_a_link, "Added from a link")
+                playlist.isLocal -> "Your playlist · stored on this device"
+                playlist.isMarket -> "From the playlist market" + (playlist.repo?.let { " · $it" } ?: "")
+                playlist.isDefault -> "Default playlist · synced every 3 days"
+                else -> "Added from a link"
             }
             Text(origin, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             playlist.lastError?.let { Text(stringResource(R.string.last_update_failed, it), color = MaterialTheme.colorScheme.error, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
@@ -470,8 +469,8 @@ private fun PlaylistInfoCard(
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.auto_update), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Text(
-                            if (playlist.autoUpdate) (if (playlist.isMarket) tr(R.string.installs_new_versions_automatically, "Installs new versions automatically") else tr(R.string.refreshes_when_older_than_2_hours, "Refreshes when older than 2 hours"))
-                            else tr(R.string.only_when_you_tap_refresh_update, "Only when you tap Refresh / Update"),
+                            if (playlist.autoUpdate) (if (playlist.isMarket) "Installs new versions automatically" else "Refreshes when older than 2 hours")
+                            else "Only when you tap Refresh / Update",
                             color = TextTertiary, fontSize = 12.sp,
                         )
                     }

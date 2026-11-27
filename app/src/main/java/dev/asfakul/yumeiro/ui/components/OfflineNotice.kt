@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -90,8 +89,8 @@ fun OfflineNotice(what: String, modifier: Modifier = Modifier, tag: String = "of
         }
         Spacer(Modifier.height(10.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OfflineChip(Icons.Default.LibraryMusic, tr(R.string.device_music, "Device music"), "offline_exit_music", exits.deviceMusic)
-            OfflineChip(Icons.Default.VideoLibrary, tr(R.string.device_videos, "Device videos"), "offline_exit_videos", exits.deviceVideos)
+            OfflineChip(Icons.Default.LibraryMusic, "Device music", "offline_exit_music", exits.deviceMusic)
+            OfflineChip(Icons.Default.VideoLibrary, "Device videos", "offline_exit_videos", exits.deviceVideos)
             OfflineChip(Icons.Default.Download, "Downloads", "offline_exit_downloads", exits.downloads)
             OfflineChip(Icons.Default.Bookmarks, "Library", "offline_exit_library", exits.library)
         }

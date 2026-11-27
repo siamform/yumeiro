@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.net.Uri
 import dev.asfakul.yumeiro.stream.StreamRequest
 import java.util.concurrent.ConcurrentHashMap
@@ -32,13 +30,13 @@ object AccessLadder {
     val ACCESS_CODES = setOf(401, 403, 405, 407, 410, 428, 451)
 
     enum class Step(val label: String) {
-        BROWSER(tr(R.string.retrying_like_a_browser, "Retrying like a browser")),
-        SITE_REFERER(tr(R.string.retrying_with_the_site_as_referer, "Retrying with the site as referer")),
-        SELF_REFERER(tr(R.string.retrying_with_the_host_as_referer, "Retrying with the host as referer")),
-        NO_REFERER(tr(R.string.retrying_without_referer, "Retrying without referer")),
-        PLAYER_UA(tr(R.string.retrying_as_a_media_player, "Retrying as a media player")),
-        VLC_UA(tr(R.string.retrying_as_vlc, "Retrying as VLC")),
-        SELF_BROWSER(tr(R.string.retrying_like_the_hosts_own_web, "Retrying like the host's own web player")),
+        BROWSER("Retrying like a browser"),
+        SITE_REFERER("Retrying with the site as referer"),
+        SELF_REFERER("Retrying with the host as referer"),
+        NO_REFERER("Retrying without referer"),
+        PLAYER_UA("Retrying as a media player"),
+        VLC_UA("Retrying as VLC"),
+        SELF_BROWSER("Retrying like the host's own web player"),
     }
 
     data class Attempt(val step: Step, val request: StreamRequest)

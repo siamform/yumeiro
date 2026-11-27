@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
@@ -108,7 +106,7 @@ class NewEpisodesWorker(context: Context, params: WorkerParameters) : CoroutineW
                     dev.asfakul.yumeiro.notify.Inbox.Item(
                         id = "ep-${b.key}-${now / 3_600_000}", kind = dev.asfakul.yumeiro.notify.Inbox.Kind.EPISODE,
                         title = "${b.name} has a new episode".let { if (n > 1) "${b.name}: $n new episodes" else it },
-                        body = if (n == 1) tr(R.string.a_new_episode_is_out_tap, "A new episode is out. Tap to watch.") else tr(R.string.new_episodes_are_out_tap_to, "%1\$s new episodes are out. Tap to watch.", n),
+                        body = if (n == 1) "A new episode is out. Tap to watch." else "$n new episodes are out. Tap to watch.",
                         at = now,
                     ),
                     notificationId = 0x6000 + (b.key.hashCode() and 0xfff),

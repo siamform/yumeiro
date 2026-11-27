@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.tachiyomi
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageInfo
@@ -443,8 +441,8 @@ object TachiyomiExtensions {
             Kind.ANIME -> lib != null && lib in SUPPORTED_ANIME_LIB
             Kind.MANGA -> lib != null && lib in MIN_MANGA_LIB..MAX_MANGA_LIB
         }
-        if (!libOk) return LoadResult(base.copy(error = tr(R.string.extension_library_isnt_supported_yet, "Extension library %1\$s isn't supported yet", lib)))
-        if (sig == null) return LoadResult(base.copy(error = tr(R.string.this_extension_isnt_signed, "This extension isn't signed")))
+        if (!libOk) return LoadResult(base.copy(error = "Extension library $lib isn't supported yet"))
+        if (sig == null) return LoadResult(base.copy(error = "This extension isn't signed"))
         if (!trusted) return LoadResult(base) // Shown as "Trust this extension?" in the UI.
         if (nsfw && !OnlineSettings.adult.value) return LoadResult(base.copy(error = "18+ — turn on adult content to load it"))
 

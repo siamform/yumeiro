@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
@@ -50,7 +49,7 @@ import kotlinx.coroutines.delay
 
 /** "12:04" style remaining time for a countdown, or null. */
 @Composable
-fun rememberSleepRemaining(state: SleepTimer.State?, endLabel: String = tr(R.string.end_of_song, "End of song")): String? {
+fun rememberSleepRemaining(state: SleepTimer.State?, endLabel: String = "End of song"): String? {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(state) {
         while (state is SleepTimer.State.Countdown) { now = System.currentTimeMillis(); delay(1000) }
@@ -76,7 +75,7 @@ fun SleepTimerSheet(
     onDismiss: () -> Unit,
     /** R17: the video player uses the same sheet ("Video", "End of this video"). */
     subject: String = "Music",
-    endLabel: String = tr(R.string.end_of_song, "End of song"),
+    endLabel: String = "End of song",
     endIcon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.MusicNote,
 ) {
     val p = LocalMtPalette.current
@@ -90,7 +89,7 @@ fun SleepTimerSheet(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                if (state is SleepTimer.State.EndOfTrack) tr(R.string.pauses_at_the_end_of_this, "%1\$s pauses at the end of this one", subject) else if (remaining != null) tr(R.string.pauses_in, "%1\$s pauses in %2\$s", subject, remaining) else tr(R.string.fades_out_and_pauses_when_the, "%1\$s fades out and pauses when the timer ends", subject),
+                if (state is SleepTimer.State.EndOfTrack) "$subject pauses at the end of this one" else if (remaining != null) "$subject pauses in $remaining" else "$subject fades out and pauses when the timer ends",
                 color = p.textSecondary, style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.testTag("sleep_timer_status"),
             )

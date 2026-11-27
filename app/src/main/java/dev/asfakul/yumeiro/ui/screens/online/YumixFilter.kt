@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.animation.animateColorAsState
@@ -145,7 +144,7 @@ internal fun SourceFilterSheet(
                     onClick = { if (searching) { searching = false; query = "" } else searching = true },
                     modifier = Modifier.size(48.dp).testTag("${t.tag}-search-open"),
                 ) {
-                    Icon(if (searching) Icons.Default.Close else Icons.Default.Search, if (searching) tr(R.string.close_search, "Close search") else t.searchHint, tint = if (searching) p.accent else p.textSecondary)
+                    Icon(if (searching) Icons.Default.Close else Icons.Default.Search, if (searching) "Close search" else t.searchHint, tint = if (searching) p.accent else p.textSecondary)
                 }
                 if (selected != null) TextButton(onClick = { onPick(null) }, modifier = Modifier.testTag("${t.tag}_clear")) {
                     Text(stringResource(R.string.clear), color = p.accent, fontWeight = FontWeight.SemiBold)
@@ -177,7 +176,7 @@ internal fun SourceFilterSheet(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp).testTag("${t.tag}-sources"),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                SourceChip(tr(R.string.nx_all_sources, "All sources"), names.size, source == null, "${t.tag}-source-all") { source = null }
+                SourceChip("All sources", names.size, source == null, "${t.tag}-source-all") { source = null }
                 groups.forEach { (g, n) -> SourceChip(g, n, source == g, "${t.tag}-source-$g") { source = if (source == g) null else g } }
             }
             val pinnedShown = remember(shown, pins) { shown.count { it in pins } }
@@ -189,7 +188,7 @@ internal fun SourceFilterSheet(
                 }
                 if (shown.isEmpty()) item("none") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("${t.tag}_empty")) {
-                        Text(if (query.isBlank()) tr(R.string.nothing_from_this_source, "Nothing from this source") else "${t.noneCalled} \"${query.trim()}\"", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (query.isBlank()) "Nothing from this source" else "${t.noneCalled} \"${query.trim()}\"", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Text(if (query.isBlank()) "Pick another source, or show all ${names.size}." else "Check the spelling, or clear the search to see all ${names.size}.", color = p.textSecondary, fontSize = 12.sp)
                         TextButton(onClick = { query = ""; source = null }, modifier = Modifier.testTag("${t.tag}_search_clear")) { Text(stringResource(R.string.clear_search), color = p.accent, fontWeight = FontWeight.SemiBold) }
                     }
@@ -201,7 +200,7 @@ internal fun SourceFilterSheet(
                     val sub = when (val st = status(n)) {
                         SourceStatus.Loading -> "Loading…"
                         SourceStatus.Failed -> t.failed
-                        SourceStatus.NeedsSetup -> tr(R.string.needs_setup, "Needs setup")
+                        SourceStatus.NeedsSetup -> "Needs setup"
                         is SourceStatus.Ready -> t.ready(st.titles)
                     }
                     val info = remember(n, details) { details?.invoke(n) }
@@ -286,15 +285,15 @@ internal data class SourceFilterTexts(
 ) {
     companion object {
         val Extensions = SourceFilterTexts(
-            tag = "online_filter", title = tr(R.string.show_videos_from, "Show videos from"), subtitle = { tr(R.string.sources_on_pick_one_to_filter, "%1\$s sources on · pick one to filter Yumix", it) },
-            allTitle = tr(R.string.all_extensions, "All extensions"), allSub = tr(R.string.everything_mixed_in_one_feed, "Everything mixed in one feed"), searchHint = tr(R.string.search_extensions, "Search extensions"),
-            noneCalled = tr(R.string.no_extension_called, "No extension called"), failed = tr(R.string.didnt_load_open_it_to_retry, "Didn't load. Open it to retry"),
-            ready = { if (it == 0) tr(R.string.search_only, "Search only") else tr(R.string.titles_on_its_home, "%1\$s titles on its home", it) },
+            tag = "online_filter", title = "Show videos from", subtitle = { "$it sources on · pick one to filter Yumix" },
+            allTitle = "All extensions", allSub = "Everything mixed in one feed", searchHint = "Search extensions",
+            noneCalled = "No extension called", failed = "Didn't load. Open it to retry",
+            ready = { if (it == 0) "Search only" else "$it titles on its home" },
         )
         val Playlists = SourceFilterTexts(
-            tag = "live_filter", title = tr(R.string.show_videos_from, "Show videos from"), subtitle = { tr(R.string.playlists_on_pick_one_to_filter, "%1\$s playlists on · pick one to filter Live TV", it) },
-            allTitle = tr(R.string.all_playlists, "All playlists"), allSub = tr(R.string.every_channel_grouped_by_category, "Every channel, grouped by category"), searchHint = tr(R.string.search_playlists, "Search playlists"),
-            noneCalled = tr(R.string.no_playlist_called, "No playlist called"), failed = tr(R.string.didnt_load_retry_from_playlists, "Didn't load. Retry from Playlists"),
+            tag = "live_filter", title = "Show videos from", subtitle = { "$it playlists on · pick one to filter Live TV" },
+            allTitle = "All playlists", allSub = "Every channel, grouped by category", searchHint = "Search playlists",
+            noneCalled = "No playlist called", failed = "Didn't load. Retry from Playlists",
             ready = { "$it channels" },
         )
     }
@@ -374,7 +373,7 @@ private fun DefaultsEditor(
             androidx.compose.material3.Button(
                 onClick = { onSave(picked.toSet()) }, enabled = picked.isNotEmpty(),
                 modifier = Modifier.heightIn(min = 48.dp).testTag("${tag}_defaults_save"),
-            ) { Text(if (picked.isEmpty()) tr(R.string.pick_one_or_more, "Pick one or more") else "Save ${picked.size}") }
+            ) { Text(if (picked.isEmpty()) "Pick one or more" else "Save ${picked.size}") }
         }
     }
 }
@@ -428,7 +427,7 @@ internal fun ActiveFilterBar(name: String, onChange: () -> Unit, onClear: () -> 
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
             Modifier.clip(CircleShape).background(p.accent.copy(alpha = 0.14f)).border(1.dp, p.accent.copy(alpha = 0.45f), CircleShape)
-                .clickable(onClickLabel = tr(R.string.change_filter, "Change filter"), onClick = onChange).padding(start = 12.dp, end = 2.dp)
+                .clickable(onClickLabel = "Change filter", onClick = onChange).padding(start = 12.dp, end = 2.dp)
                 .testTag("online_filter_active"),
             verticalAlignment = Alignment.CenterVertically,
         ) {

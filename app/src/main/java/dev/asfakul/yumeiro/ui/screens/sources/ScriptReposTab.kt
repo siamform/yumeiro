@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -84,10 +83,10 @@ internal fun ScriptReposTab() {
         LazyColumn(Modifier.fillMaxSize().testTag("hub_scripts"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_scripts"),
             contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item("repos") {
-                RepoHeader("Vega manifest.json links you trust", "hub_scripts", tr(R.string.add_a_script_repository, "Add a script repository"), tr(R.string.about_script_repositories, "About script repositories"),
-                    tr(R.string.vega_provider_repositories_run_in_a, "Vega provider repositories run in a sandboxed JavaScript engine: no access to your files, your apps or your home network, ") +
+                RepoHeader("Vega manifest.json links you trust", "hub_scripts", "Add a script repository", "About script repositories",
+                    "Vega provider repositories run in a sandboxed JavaScript engine: no access to your files, your apps or your home network, " +
                         "and each call is time-limited. Nuvio and SkyStream repositories are recognised but can't run in this version. " +
-                        tr(R.string.streams_that_need_drm_keys_from, "Streams that need DRM keys from a provider are not played.")) { add = true }
+                        "Streams that need DRM keys from a provider are not played.") { add = true }
             }
             if (state.repos.isEmpty()) item("norepo") {
                 Text(stringResource(R.string.no_repositories_yet), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
@@ -99,7 +98,7 @@ internal fun ScriptReposTab() {
             }
             item("inst") { SectionTitle("Installed", "${state.installed.size} sources") }
             items(state.installed, key = { "i" + it.key }) { p ->
-                HubCard(p.name, "v${p.version}", badge = p.ecosystem.label, warning = problems[p.key]?.let { tr(R.string.not_loaded_2, "Not loaded: %1\$s", it) },
+                HubCard(p.name, "v${p.version}", badge = p.ecosystem.label, warning = problems[p.key]?.let { "Not loaded: $it" },
                     modifier = Modifier.testTag("script_installed")) {
                     IconButton(onClick = {
                         scope.launch { withContext(Dispatchers.IO) { EcosystemRegistry.uninstall(context, p.key) }; OnlineRepository.clearCaches() }
@@ -127,7 +126,7 @@ internal fun ScriptReposTab() {
             }
         }
     }
-    if (add) UrlDialog(tr(R.string.add_script_repository, "Add script repository"), "manifest.json link", "Vega provider repositories (manifest.json). Only add repositories you trust.", { add = false }) { url ->
+    if (add) UrlDialog("Add script repository", "manifest.json link", "Vega provider repositories (manifest.json). Only add repositories you trust.", { add = false }) { url ->
         add = false
         addRepo(url)
     }

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.stream
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -57,7 +55,7 @@ sealed interface Resolution {
 @OptIn(UnstableApi::class)
 object StreamResolver {
     private const val MAX_PAGE_CANDIDATES = 6
-    internal val CHECK_PAGE_REASON: String get() = tr(R.string.this_site_checks_visitors_before_it, "This site checks visitors before it shows the page. Open it in the page browser: ") +
+    internal const val CHECK_PAGE_REASON = "This site checks visitors before it shows the page. Open it in the page browser: " +
         "if the site asks you to tick a box, do it there (Yumeiro doesn't answer these checks for you). A short link then " +
         "walks on to its real link by itself, and a video on the page is picked up."
     private const val MAX_IFRAME_DEPTH = 1
@@ -87,7 +85,7 @@ object StreamResolver {
             val opened = try {
                 dev.asfakul.yumeiro.stream.torrent.TorrentStreams.open(context, torrent.link, request.title, NetworkClient.get(context))
             } catch (e: java.io.IOException) {
-                if (TorrentSettings.server.value.isBlank()) return@withContext Resolution.Failed(tr(R.string.torrent_cant_play, "Torrent can't play"), e.message ?: tr(R.string.the_torrent_didnt_start, "The torrent didn't start."))
+                if (TorrentSettings.server.value.isBlank()) return@withContext Resolution.Failed("Torrent can't play", e.message ?: "The torrent didn't start.")
                 null
             }
             if (opened != null) return@withContext Resolution.Playable(
@@ -126,15 +124,15 @@ object StreamResolver {
         TORRENT_ENGINE_OFF,
     )
 
-    internal val TORRENT_ENGINE_OFF: String get() = tr(R.string.torrents_play_in_yumeiro_once_you, "Torrents play in Yumeiro once you turn on the built-in torrent engine in ") +
-        tr(R.string.settings_video_quality_playback_torrent_streamin, "Settings › Video quality & playback › Torrent streaming (it explains first what sharing a torrent means). You can also add a TorrServer address there, ") +
+    internal const val TORRENT_ENGINE_OFF = "Torrents play in Yumeiro once you turn on the built-in torrent engine in " +
+        "Settings › Video quality & playback › Torrent streaming (it explains first what sharing a torrent means). You can also add a TorrServer address there, " +
         "or open this link in a torrent app."
 
     /** F-02 (ADR-042): plays the video Telegram's public web preview links for this post. */
     private fun resolveTelegram(request: StreamRequest, route: LinkHosts.TelegramPost, client: OkHttpClient): Resolution {
         val tg = dev.asfakul.yumeiro.online.telegram.TelegramPublic
         return when (val r = tg.fetchPost(client, route.channel, route.post)) {
-            is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Result.Failed -> Resolution.Failed(tr(R.string.telegram_post_cant_play, "Telegram post can't play"), r.message)
+            is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Result.Failed -> Resolution.Failed("Telegram post can't play", r.message)
             is dev.asfakul.yumeiro.online.telegram.TelegramPublic.Result.Ok -> Resolution.Playable(
                 request.copy(
                     url = r.value.videoUrl!!,
@@ -161,12 +159,12 @@ object StreamResolver {
             dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.NeedsSignIn ->
                 Resolution.Failed(TELEGRAM_SIGN_IN_TITLE, dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.NEEDS_SIGN_IN + " " + dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.WHERE_SIGN_IN)
             is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Unavailable ->
-                Resolution.Failed(tr(R.string.telegram_post_cant_play, "Telegram post can't play"), dev.asfakul.yumeiro.online.telegram.TelegramPublic.Messages.APP_ONLY + " " + a.reason)
-            is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Failed -> Resolution.Failed(tr(R.string.telegram_post_cant_play, "Telegram post can't play"), a.message)
+                Resolution.Failed("Telegram post can't play", dev.asfakul.yumeiro.online.telegram.TelegramPublic.Messages.APP_ONLY + " " + a.reason)
+            is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Failed -> Resolution.Failed("Telegram post can't play", a.message)
         }
     }
 
-    val TELEGRAM_SIGN_IN_TITLE: String get() = tr(R.string.sign_in_to_telegram_to_play, "Sign in to Telegram to play this")
+    const val TELEGRAM_SIGN_IN_TITLE = "Sign in to Telegram to play this"
 
     /**
      * DW-BOT-1: true when a Telegram account is signed in on this profile (set by MTApplication; no TDLib start).
@@ -180,9 +178,9 @@ object StreamResolver {
      * one it is handed to the DiskWala app, and the reason says how to play it here instead.
      */
     internal fun resolveDiskWala(route: LinkHosts.Browser, client: OkHttpClient, request: StreamRequest = StreamRequest(route.pageUrl)): Resolution {
-        val id = DiskWalaApi.shareId(route.pageUrl) ?: return Resolution.Failed(tr(R.string.diskwala_link_cant_play, "DiskWala link can't play"), tr(R.string.this_diskwala_link_has_no_file, "This DiskWala link has no file in it. Copy the full share link."))
+        val id = DiskWalaApi.shareId(route.pageUrl) ?: return Resolution.Failed("DiskWala link can't play", "This DiskWala link has no file in it. Copy the full share link.")
         val info = DiskWalaApi.info(client, id)
-            ?: return Resolution.Failed(tr(R.string.diskwala_file_not_found, "DiskWala file not found"), tr(R.string.diskwala_doesnt_know_this_file_it, "DiskWala doesn't know this file; it may have been removed."))
+            ?: return Resolution.Failed("DiskWala file not found", "DiskWala doesn't know this file; it may have been removed.")
         val file = "${info.name} (${DiskWalaApi.sizeLabel(info.bytes)})."
         if (telegramSignedIn()) {
             val bot = dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.diskWalaLink(id)
@@ -248,7 +246,7 @@ object StreamResolver {
                 Sniff(MediaKind.VIDEO, "TeraBox", "api"),
             )
             TeraBoxApi.Result.NeedsSignIn -> Resolution.NeedsBrowser(TERABOX_SIGN_IN, TeraBoxApi.SIGN_IN_REASON, request, auto = false)
-            is TeraBoxApi.Result.Failed -> Resolution.Failed(tr(R.string.terabox_link_cant_play, "TeraBox link can't play"), r.reason + ".")
+            is TeraBoxApi.Result.Failed -> Resolution.Failed("TeraBox link can't play", r.reason + ".")
             // OWN-10: the user does TeraBox's own check on the share page; nothing is captured automatically.
             TeraBoxApi.Result.NeedsVerify -> Resolution.NeedsBrowser(route.pageUrl, TeraBoxApi.VERIFY_REASON, request, auto = false)
         }
@@ -274,13 +272,13 @@ object StreamResolver {
                 val server = TorrentSettings.server.value
                 if (server.isBlank()) return Resolution.Handoff(
                     route.link, "a torrent app",
-                    tr(R.string.yumeiro_streams_torrents_through_torrserver_add, "Yumeiro streams torrents through TorrServer. Add your TorrServer address in Settings › Video quality & playback › Torrent streaming, or open this link in a torrent app."),
+                    "Yumeiro streams torrents through TorrServer. Add your TorrServer address in Settings › Video quality & playback › Torrent streaming, or open this link in a torrent app.",
                 )
                 return resolveBlocking(request.copy(url = LinkHosts.torrServerUrl(server, route.link, request.title), format = StreamFormat.AUTO), userAgent, client, thorough = true)
-                    .let { r -> if (r is Resolution.Failed) Resolution.Failed(tr(R.string.torrserver_didnt_answer, "TorrServer didn't answer"), "Check that TorrServer is running at $server. ${r.message}") else r }
+                    .let { r -> if (r is Resolution.Failed) Resolution.Failed("TorrServer didn't answer", "Check that TorrServer is running at $server. ${r.message}") else r }
             }
             is LinkHosts.TelegramPost -> return resolveTelegram(request, route, client)
-            LinkHosts.TelegramPrivate -> return Resolution.Failed(tr(R.string.private_telegram_link, "Private Telegram link"), dev.asfakul.yumeiro.online.telegram.TelegramPublic.Messages.PRIVATE)
+            LinkHosts.TelegramPrivate -> return Resolution.Failed("Private Telegram link", dev.asfakul.yumeiro.online.telegram.TelegramPublic.Messages.PRIVATE)
             null -> Unit
         }
         val url = request.url.trim()
@@ -289,10 +287,10 @@ object StreamResolver {
             "rtsp", "rtsps" -> return Resolution.Playable(request.copy(url = url, format = StreamFormat.RTSP), Sniff(MediaKind.VIDEO, "RTSP", "url"))
             "http", "https" -> Unit
             "rtmp", "rtmps", "udp", "rtp", "mms", "srt" -> return Resolution.Failed(
-                tr(R.string.unsupported_protocol, "Unsupported protocol"),
+                "Unsupported protocol",
                 "${scheme.uppercase()} links aren't supported by the player. Use the HLS (.m3u8) or DASH (.mpd) address of the same stream if the provider offers one.",
             )
-            else -> return Resolution.Failed(tr(R.string.invalid_link, "Invalid link"), "Enter an http(s):// or rtsp:// address.")
+            else -> return Resolution.Failed("Invalid link", "Enter an http(s):// or rtsp:// address.")
         }
 
         when (val rule = PlatformRules.ruleFor(url)) {
@@ -332,7 +330,7 @@ object StreamResolver {
             MediaKind.WEB_PAGE -> resolvePage(probe, req, userAgent, client, depth = 0)
             // Unknown binary: let the player's extractors sniff it (they recognise many more containers).
             MediaKind.UNKNOWN -> if (probe.text != null && probe.text.isNotBlank() && !probe.text.trimStart().startsWith("#"))
-                Resolution.Failed(tr(R.string.not_a_media_stream, "Not a media stream"), "The link returned text (${probe.contentType ?: "unknown type"}) that isn't a playlist or a media manifest. Check that it's the stream address, not a web page or an API response.")
+                Resolution.Failed("Not a media stream", "The link returned text (${probe.contentType ?: "unknown type"}) that isn't a playlist or a media manifest. Check that it's the stream address, not a web page or an API response.")
             else Resolution.Playable(req.copy(format = StreamFormat.PROGRESSIVE), probe.sniff)
         }
     }
@@ -345,7 +343,7 @@ object StreamResolver {
             probe.sniff.container == "PLS" -> PlsParser.parse(text)
             else -> M3uParser.parse(text, request)
         }
-        if (channels.isEmpty()) return Resolution.Failed(tr(R.string.empty_playlist, "Empty playlist"), tr(R.string.the_playlist_was_downloaded_but_contains, "The playlist was downloaded but contains no playable channels."))
+        if (channels.isEmpty()) return Resolution.Failed("Empty playlist", "The playlist was downloaded but contains no playable channels.")
         // A one-entry list is just a wrapper around a single stream: play it directly.
         if (channels.size == 1) {
             val only = channels.first()
@@ -421,10 +419,10 @@ object StreamResolver {
         val reason = buildString {
             when {
                 sessionRule != null -> append(sessionRule.note)
-                page.hasLoginForm -> append(tr(R.string.this_page_asks_you_to_sign, "This page asks you to sign in before it shows its player. Open it in the page browser, sign in, and start playback there; the authorised stream will be picked up."))
-                else -> append(tr(R.string.this_link_is_a_web_page, "This link is a web page, not a media file, and its HTML doesn't publish a stream address — the site's player loads it at runtime. Open it in the page browser and start playback; the stream the page plays is picked up with the headers it needs."))
+                page.hasLoginForm -> append("This page asks you to sign in before it shows its player. Open it in the page browser, sign in, and start playback there; the authorised stream will be picked up.")
+                else -> append("This link is a web page, not a media file, and its HTML doesn't publish a stream address — the site's player loads it at runtime. Open it in the page browser and start playback; the stream the page plays is picked up with the headers it needs.")
             }
-            if (page.mentionsDrm && sessionRule == null) append(tr(R.string.the_page_uses_drm_encrypted_media, "\n\nThe page uses DRM (encrypted media). DRM streams play only when the site's licence server accepts this device."))
+            if (page.mentionsDrm && sessionRule == null) append("\n\nThe page uses DRM (encrypted media). DRM streams play only when the site's licence server accepts this device.")
         }
         return Resolution.NeedsBrowser(pageUrl, reason, request.copy(title = request.title.ifBlank { page.title.orEmpty() }))
     }
@@ -449,41 +447,41 @@ object StreamResolver {
             if (!dev.asfakul.yumeiro.network.Connectivity.online.value &&
                 (f == NetworkFailure.DNS || f == NetworkFailure.TIMEOUT || f == NetworkFailure.CONNECTION)
             ) return Resolution.Failed(
-                tr(R.string.no_internet_connection, "No internet connection"),
-                tr(R.string.this_device_is_offline_turn_on, "This device is offline. Turn on Wi-Fi or mobile data, then try again."),
+                "No internet connection",
+                "This device is offline. Turn on Wi-Fi or mobile data, then try again.",
                 suggestDns = false,
             )
             return when (f) {
                 NetworkFailure.DNS -> Resolution.Failed(
-                    tr(R.string.cant_find_the_server, "Can't find the server"),
+                    "Can't find the server",
                     if (dns.usesAlternative) "$host couldn't be resolved by the system DNS or ${dns.provider.label}. Check the address and your connection."
-                    else tr(R.string.couldnt_be_resolved_by_the_system, "%1\$s couldn't be resolved by the system DNS. Check the address, or turn on an alternative DNS (Cloudflare 1.1.1.1, Quad9 or Google) in Settings → Network, which is used only when the system DNS fails.", host),
+                    else "$host couldn't be resolved by the system DNS. Check the address, or turn on an alternative DNS (Cloudflare 1.1.1.1, Quad9 or Google) in Settings → Network, which is used only when the system DNS fails.",
                     suggestDns = !dns.usesAlternative,
                 )
-                NetworkFailure.TIMEOUT -> Resolution.Failed(tr(R.string.connection_timed_out, "Connection timed out"), tr(R.string.didnt_answer_in_time_the_server, "%1\$s didn't answer in time. The server may be overloaded or blocked on this network; try again later or on another network.", host))
-                NetworkFailure.CONNECTION -> Resolution.Failed(tr(R.string.cant_connect, "Can't connect"), tr(R.string.the_connection_to_was_refused_or, "The connection to %1\$s was refused or unreachable. The stream may be offline, or the port may be blocked on this network.", host))
-                NetworkFailure.TLS -> Resolution.Failed(tr(R.string.secure_connection_failed, "Secure connection failed"), "The HTTPS certificate of $host couldn't be verified (${p.failureMessage}). Yumeiro only trusts valid system certificates.")
-                NetworkFailure.OTHER -> Resolution.Failed(tr(R.string.network_error, "Network error"), p.failureMessage ?: tr(R.string.the_link_couldnt_be_opened, "The link couldn't be opened."))
+                NetworkFailure.TIMEOUT -> Resolution.Failed("Connection timed out", "$host didn't answer in time. The server may be overloaded or blocked on this network; try again later or on another network.")
+                NetworkFailure.CONNECTION -> Resolution.Failed("Can't connect", "The connection to $host was refused or unreachable. The stream may be offline, or the port may be blocked on this network.")
+                NetworkFailure.TLS -> Resolution.Failed("Secure connection failed", "The HTTPS certificate of $host couldn't be verified (${p.failureMessage}). Yumeiro only trusts valid system certificates.")
+                NetworkFailure.OTHER -> Resolution.Failed("Network error", p.failureMessage ?: "The link couldn't be opened.")
             }
         }
         return when (p.status) {
             in 200..299 -> null
-            401 -> Resolution.Failed(tr(R.string.sign_in_required_http_401, "Sign-in required (HTTP 401)"), "$host requires authorization${p.wwwAuthenticate?.let { " (${it.substringBefore(' ')})" }.orEmpty()}. Add the Cookie or Authorization header the provider gave you under Headers & DRM.")
-            403 -> Resolution.Failed(tr(R.string.access_denied_http_403, "Access denied (HTTP 403)"), forbiddenAdvice(request))
-            404, 410 -> Resolution.Failed("Stream not found (HTTP ${p.status})", tr(R.string.the_stream_is_offline_or_the, "The stream is offline or the link has expired. Get a fresh link from the provider or refresh the playlist."))
-            429 -> Resolution.Failed(tr(R.string.too_many_requests_http_429, "Too many requests (HTTP 429)"), "$host is rate-limiting requests${p.retryAfterSeconds?.let { "; it asks to wait ${it}s" }.orEmpty()}. Try again later.")
-            451 -> Resolution.Failed(tr(R.string.unavailable_here_http_451, "Unavailable here (HTTP 451)"), tr(R.string.the_provider_blocks_this_content_in, "The provider blocks this content in your region for legal or licensing reasons. Yumeiro doesn't bypass regional restrictions."))
-            in 500..599 -> Resolution.Failed("Server error (HTTP ${p.status})", tr(R.string.had_an_internal_problem_try_again, "%1\$s had an internal problem. Try again in a moment.", host))
+            401 -> Resolution.Failed("Sign-in required (HTTP 401)", "$host requires authorization${p.wwwAuthenticate?.let { " (${it.substringBefore(' ')})" }.orEmpty()}. Add the Cookie or Authorization header the provider gave you under Headers & DRM.")
+            403 -> Resolution.Failed("Access denied (HTTP 403)", forbiddenAdvice(request))
+            404, 410 -> Resolution.Failed("Stream not found (HTTP ${p.status})", "The stream is offline or the link has expired. Get a fresh link from the provider or refresh the playlist.")
+            429 -> Resolution.Failed("Too many requests (HTTP 429)", "$host is rate-limiting requests${p.retryAfterSeconds?.let { "; it asks to wait ${it}s" }.orEmpty()}. Try again later.")
+            451 -> Resolution.Failed("Unavailable here (HTTP 451)", "The provider blocks this content in your region for legal or licensing reasons. Yumeiro doesn't bypass regional restrictions.")
+            in 500..599 -> Resolution.Failed("Server error (HTTP ${p.status})", "$host had an internal problem. Try again in a moment.")
             else -> Resolution.Failed("HTTP ${p.status}", "$host answered with HTTP ${p.status}.")
         }
     }
 
     fun forbiddenAdvice(request: StreamRequest): String = buildString {
-        append(tr(R.string.the_server_refused_this_link_even, "The server refused this link even after Yumeiro automatically retried it like a browser, like the host's own web player, as VLC and as a media player. What usually helps:\n"))
-        append(tr(R.string.the_link_contains_a_token_that, "• The link contains a token that has expired — get a fresh link or refresh the playlist.\n"))
-        if (request.referer == null && request.origin == null) append(tr(R.string.the_host_only_accepts_its_own, "• The host only accepts its own web player — add its Referer / Origin under Headers & DRM.\n"))
-        if (request.userAgent == null) append(tr(R.string.the_host_blocks_unknown_players_pick, "• The host blocks unknown players — pick a browser User-Agent.\n"))
-        if (request.cookie == null) append(tr(R.string.a_session_cookie_is_required_add, "• A session cookie is required — add the Cookie header.\n"))
-        append(tr(R.string.the_stream_is_limited_to_some, "• The stream is limited to some countries. Yumeiro doesn't bypass geo-blocking or access controls."))
+        append("The server refused this link even after Yumeiro automatically retried it like a browser, like the host's own web player, as VLC and as a media player. What usually helps:\n")
+        append("• The link contains a token that has expired — get a fresh link or refresh the playlist.\n")
+        if (request.referer == null && request.origin == null) append("• The host only accepts its own web player — add its Referer / Origin under Headers & DRM.\n")
+        if (request.userAgent == null) append("• The host blocks unknown players — pick a browser User-Agent.\n")
+        if (request.cookie == null) append("• A session cookie is required — add the Cookie header.\n")
+        append("• The stream is limited to some countries. Yumeiro doesn't bypass geo-blocking or access controls.")
     }
 }

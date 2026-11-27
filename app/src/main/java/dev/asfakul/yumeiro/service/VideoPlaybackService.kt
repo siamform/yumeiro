@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.service
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -67,7 +65,7 @@ class VideoPlaybackService : MediaSessionService() {
             val nm = getSystemService(android.app.NotificationManager::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm?.getNotificationChannel(SHUTDOWN_CHANNEL) == null) {
                 nm?.createNotificationChannel(
-                    android.app.NotificationChannel(SHUTDOWN_CHANNEL, tr(R.string.video_playback, "Video playback"), android.app.NotificationManager.IMPORTANCE_MIN),
+                    android.app.NotificationChannel(SHUTDOWN_CHANNEL, "Video playback", android.app.NotificationManager.IMPORTANCE_MIN),
                 )
             }
             val n = androidx.core.app.NotificationCompat.Builder(this, SHUTDOWN_CHANNEL)

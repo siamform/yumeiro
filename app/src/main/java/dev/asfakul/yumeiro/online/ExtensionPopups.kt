@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -184,7 +182,7 @@ object ExtensionPopups {
     private fun card(h: Held) {
         // G10 ER-29: the card waits for a message on screen instead of replacing it.
         dev.asfakul.yumeiro.ui.components.AppMessages.showQuiet(
-            appContext, cardText(h), actionLabel = tr(R.string.show, "Show"), action = { reveal(h.id) },
+            appContext, cardText(h), actionLabel = "Show", action = { reveal(h.id) },
         )
     }
 
@@ -227,7 +225,7 @@ object ExtensionPopups {
     private fun cardText(h: Held) = cardText(h.extName, h.functional)
 
     internal fun cardText(extName: String, functional: Boolean) =
-        if (functional) tr(R.string.needs_a_quick_check, "%1\$s needs a quick check", extName) else tr(R.string.has_a_message, "%1\$s has a message", extName)
+        if (functional) "$extName needs a quick check" else "$extName has a message"
 
     /** The activity is going away: held windows belong to it and must not outlive it. */
     fun clear() {

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.player
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.net.ConnectivityManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,13 +23,13 @@ import kotlinx.coroutines.flow.asStateFlow
 object AudioQuality {
 
     enum class Tier(val label: String, val spec: String, val detail: String, val kana: String, val streamCapKbps: Int) {
-        ATMOS(tr(R.string.dolby_atmos, "Dolby Atmos"), tr(R.string.spatial_immersive_audio, "Spatial · immersive audio"), tr(R.string.atmos_tracks_e_ac_3_joc, "Atmos tracks (E-AC-3 JOC / AC-4) play with spatial sound on phones and headphones that support it"), "空間", Int.MAX_VALUE),
-        HIRES_MAX(tr(R.string.hi_res_max, "Hi-Res Max"), tr(R.string.up_to_24_bit_192_khz, "Up to 24-bit / 192 kHz · FLAC"), tr(R.string.studio_master_lossless_files_play_bit, "Studio-master lossless files play bit for bit"), "極", Int.MAX_VALUE),
+        ATMOS("Dolby Atmos", "Spatial · immersive audio", "Atmos tracks (E-AC-3 JOC / AC-4) play with spatial sound on phones and headphones that support it", "空間", Int.MAX_VALUE),
+        HIRES_MAX("Hi-Res Max", "Up to 24-bit / 192 kHz · FLAC", "Studio-master lossless files play bit for bit", "極", Int.MAX_VALUE),
         HIRES("Hi-Res", "24-bit / 96 kHz · FLAC", "High-resolution lossless; larger files", "高", Int.MAX_VALUE),
-        CD(tr(R.string.cd_lossless, "CD Lossless"), "16-bit / 44.1 kHz · FLAC", tr(R.string.the_same_quality_as_an_audio, "The same quality as an audio CD"), "盤", Int.MAX_VALUE),
+        CD("CD Lossless", "16-bit / 44.1 kHz · FLAC", "The same quality as an audio CD", "盤", Int.MAX_VALUE),
         HIGH("High", "320 kbps · MP3 / AAC", "Near-transparent compressed audio", "良", 320),
-        YOUTUBE(tr(R.string.youtube_music, "YouTube Music"), "128–256 kbps · AAC / Opus", tr(R.string.what_youtube_music_streams_the_best, "What YouTube Music streams; the best it offers is picked"), "標", 256),
-        SAVER(tr(R.string.data_saver, "Data saver"), "96 kbps · HE-AAC / Opus", tr(R.string.smallest_streams_for_mobile_data, "Smallest streams, for mobile data"), "節", 96),
+        YOUTUBE("YouTube Music", "128–256 kbps · AAC / Opus", "What YouTube Music streams; the best it offers is picked", "標", 256),
+        SAVER("Data saver", "96 kbps · HE-AAC / Opus", "Smallest streams, for mobile data", "節", 96),
         ;
         val lossless get() = this == HIRES_MAX || this == HIRES || this == CD
     }

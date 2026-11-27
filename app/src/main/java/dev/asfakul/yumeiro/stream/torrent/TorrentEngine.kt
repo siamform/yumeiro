@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.stream.torrent
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
@@ -85,7 +83,7 @@ object TorrentEngine {
             lock.withLock {
                 if (loaded) return@withLock true
                 val pin = pick(abis, runCatching { javaVersion() }.getOrDefault(""))
-                    ?: run { _state.value = State.Failed(tr(R.string.built_in_torrent_playback_isnt_available, "Built-in torrent playback isn't available for this device yet.")); return@withLock false }
+                    ?: run { _state.value = State.Failed("Built-in torrent playback isn't available for this device yet."); return@withLock false }
                 val root = File(context.noBackupFilesDir, "torrent-engine")
                 val dir = File(root, "${pin.version}/${pin.abi}")
                 val lib = File(dir, "libtorrent4j.so")
@@ -106,9 +104,9 @@ object TorrentEngine {
                 } catch (e: Throwable) {
                     _state.value = State.Failed(
                         when (e) {
-                            is SecurityException -> tr(R.string.the_torrent_engine_download_was_damaged, "The torrent engine download was damaged and was deleted. Try again.")
-                            is UnsatisfiedLinkError -> tr(R.string.the_torrent_engine_cant_run_on, "The torrent engine can't run on this device.")
-                            else -> tr(R.string.couldnt_download_the_torrent_engine_check, "Couldn't download the torrent engine. Check your connection and try again.")
+                            is SecurityException -> "The torrent engine download was damaged and was deleted. Try again."
+                            is UnsatisfiedLinkError -> "The torrent engine can't run on this device."
+                            else -> "Couldn't download the torrent engine. Check your connection and try again."
                         }
                     )
                     false

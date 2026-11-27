@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.drama
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -41,7 +39,7 @@ import kotlinx.coroutines.withTimeoutOrNull
  * details, the player, downloads, history and bookmarks.
  */
 object YumeiroDrama {
-    val NAME: String get() = tr(R.string.yumeiro_drama, "Yumeiro Drama")
+    const val NAME = "Yumeiro Drama"
     private const val PREFS = "yumeiro_drama"
     private const val KEY_ON = "enabled"
 
@@ -188,7 +186,7 @@ class YumeiroDramaProvider(
         dev.asfakul.yumeiro.player.StartTimeline.mark("drama series page")
         val (streams, via) = streamsOrMirror(c, s, n)
         dev.asfakul.yumeiro.player.StartTimeline.mark("drama streams", via ?: "own")
-        val audio = s.language?.let { languageLabel(it) }?.let { "$it audio" } ?: tr(R.string.original_audio, "Original audio")
+        val audio = s.language?.let { languageLabel(it) }?.let { "$it audio" } ?: "Original audio"
         streams.sources.entries.sortedByDescending { DramaStreams.qualityOf(it.key) }.forEach { (q, u) ->
             val type = if (u.contains(".m3u8", true)) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
             val label = listOfNotNull(c.label, via ?: s.platform, q.substringBefore('~').takeIf { it.isNotBlank() }?.let { "${it}p" }, q.substringAfter('~', "").takeIf { it.isNotBlank() }?.let { "server ${it.toInt() + 1}" }, audio).joinToString(" · ")
@@ -241,7 +239,7 @@ class YumeiroDramaProvider(
         val why = first.exceptionOrNull()?.message ?: "its video server refused the link"
         throw java.io.IOException(
             "${s.platform ?: c.label} isn't serving this episode right now (the studio's server refused it" +
-                (why?.let { ": $it" } ?: "") + tr(R.string.no_other_copy_of_this_drama, "). No other copy of this drama was found. Try another title."),
+                (why?.let { ": $it" } ?: "") + "). No other copy of this drama was found. Try another title.",
         )
     }
 

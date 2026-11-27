@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.anime
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.net.Uri
 import android.util.Log
@@ -174,5 +172,5 @@ object AnimeSync {
     internal fun signInMessage(service: String, before: String?, after: String?, user: String?): String =
         if (after != null && after != before) "Signed in to $service as ${user ?: service}"
         else if (before != null) "$service sign-in failed. You are still signed in as ${user ?: service}"
-        else tr(R.string.sign_in_failed, "%1\$s sign-in failed", service)
+        else "$service sign-in failed"
 }

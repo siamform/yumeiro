@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online.telegram.td
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -116,9 +114,9 @@ object TgAuth {
             "FIRSTNAME_INVALID" in msg -> "Type a first name."
             "API_ID_INVALID" in msg || "API_ID_PUBLISHED_FLOOD" in msg -> "This Yumeiro build can't sign in to Telegram. Update Yumeiro."
             "Telegram is closed" in msg -> "Telegram stopped. Open it again."
-            e is kotlinx.coroutines.TimeoutCancellationException -> tr(R.string.telegram_didnt_answer_check_your_connection, "Telegram didn't answer. Check your connection and try again.")
-            msg.isBlank() -> tr(R.string.something_went_wrong_try_again, "Something went wrong. Try again.")
-            else -> tr(R.string.telegram_says, "Telegram says: %1\$s", msg)
+            e is kotlinx.coroutines.TimeoutCancellationException -> "Telegram didn't answer. Check your connection and try again."
+            msg.isBlank() -> "Something went wrong. Try again."
+            else -> "Telegram says: $msg"
         }
     }
 

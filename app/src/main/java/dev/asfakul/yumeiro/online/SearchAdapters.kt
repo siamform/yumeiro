@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import com.lagradost.cloudstream3.MainAPI
 
 /**
@@ -25,14 +23,14 @@ object SearchAdapters {
     /** One line under the results when a single source is picked; null for an ordinary source. */
     fun note(way: Way, name: String): String? = when (way) {
         Way.NATIVE -> null
-        Way.TITLE_LOOKUP -> tr(R.string.has_no_search_of_its_own, "%1\$s has no search of its own, so Yumeiro looked the title up. Its streams appear when you play one.", name)
-        Way.LOCAL_CATALOG -> tr(R.string.has_no_search_of_its_own_2, "%1\$s has no search of its own, so Yumeiro searched its catalog.", name)
+        Way.TITLE_LOOKUP -> "$name has no search of its own, so Yumeiro looked the title up. Its streams appear when you play one."
+        Way.LOCAL_CATALOG -> "$name has no search of its own, so Yumeiro searched its catalog."
     }
 
     /** The empty-state reason for one source that answered with nothing. */
     fun emptyReason(way: Way, name: String, query: String): String = when (way) {
-        Way.NATIVE -> tr(R.string.found_nothing_for_try_another_spelling, "%1\$s found nothing for “%2\$s”. Try another spelling or a shorter title.", name, query)
-        Way.TITLE_LOOKUP -> tr(R.string.no_title_matched_try_the_original, "No title matched “%1\$s”. Try the original title or add the year.", query)
+        Way.NATIVE -> "$name found nothing for “$query”. Try another spelling or a shorter title."
+        Way.TITLE_LOOKUP -> "No title matched “$query”. Try the original title or add the year."
         Way.LOCAL_CATALOG -> "“$query” isn't in $name's catalog pages. Its search covers only what the add-on lists."
     }
 
@@ -41,8 +39,8 @@ object SearchAdapters {
         if (searching + withResults + empty + failed == 0) return null
         val parts = buildList {
             if (searching > 0) add("searching $searching")
-            if (withResults > 0) add(tr(R.string.with_results, "%1\$s with results", withResults))
-            if (empty > 0) add(tr(R.string.found_nothing, "%1\$s found nothing", empty))
+            if (withResults > 0) add("$withResults with results")
+            if (empty > 0) add("$empty found nothing")
             if (failed > 0) add("$failed failed")
         }
         return parts.joinToString(" · ").replaceFirstChar { it.uppercase() }

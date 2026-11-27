@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -134,7 +133,7 @@ fun ExtensionReviewHost() {
             if (!r.report.readable) Unit
             else if (danger) TextButton(onClick = { if (!confirmDanger) confirmDanger = true else if (canConfirm) ExtensionReview.answer(true) },
                 modifier = Modifier.testTag("extension_review_install_anyway")) {
-                Text(if (confirmDanger && canConfirm) tr(R.string.tap_again_to_install, "Tap again to install") else tr(R.string.install_anyway, "Install anyway"), color = ErrorColor)
+                Text(if (confirmDanger && canConfirm) "Tap again to install" else "Install anyway", color = ErrorColor)
             }
             else TextButton(onClick = { ExtensionReview.answer(true) }, modifier = Modifier.testTag("extension_review_install")) {
                 Text(if (r.isUpdate) "Update" else "Install", color = SpotifyGreen, fontWeight = FontWeight.Bold)

@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.online
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import android.content.res.AssetManager
 import android.content.res.Resources
@@ -386,8 +384,8 @@ object ExtensionManager {
         val norm = name.trim().lowercase()
         val same = installed.filter { it.name.trim().lowercase() == norm }
         if (same.size < MAX_SAME_NAME) return null
-        val from = same.joinToString(" and ") { it.repoName.ifBlank { tr(R.string.added_manually, "Added manually") } }
-        return tr(R.string.is_already_installed_times_from_remove, "%1\$s is already installed %2\$s times (from %3\$s). Remove one first", name, MAX_SAME_NAME, from)
+        val from = same.joinToString(" and ") { it.repoName.ifBlank { "Added manually" } }
+        return "$name is already installed $MAX_SAME_NAME times (from $from). Remove one first"
     }
 
     private fun checkDuplicateCap(name: String, key: String) {
@@ -471,7 +469,7 @@ object ExtensionManager {
         return mutex.withLock {
             val previous = _state.value.installed.firstOrNull { it.key == RemoteExtension.keyOf(repoUrl, internal) }
             val ext = InstalledExtension(
-                internalName = internal, name = name, version = manifest.version ?: 0, repoUrl = repoUrl, repoName = tr(R.string.added_manually, "Added manually"),
+                internalName = internal, name = name, version = manifest.version ?: 0, repoUrl = repoUrl, repoName = "Added manually",
                 fileName = "", sourceUrl = source, sha256 = sha256(bytes), manual = true, autoUpdate = false,
                 installedAt = previous?.installedAt ?: System.currentTimeMillis(),
             )
@@ -514,10 +512,10 @@ object ExtensionManager {
      */
     suspend fun checkUpdate(context: Context, ext: InstalledExtension): UpdateCheck = withContext(Dispatchers.IO) {
         if (ext.manual) {
-            val src = ext.sourceUrl.takeIf { it.startsWith("http") } ?: return@withContext UpdateCheck.Unavailable(tr(R.string.added_from_a_file_install_a, "Added from a file — install a newer file to update it"))
+            val src = ext.sourceUrl.takeIf { it.startsWith("http") } ?: return@withContext UpdateCheck.Unavailable("Added from a file — install a newer file to update it")
             val bytes = runCatching { downloadFirst(listOf(src)) }.getOrElse { return@withContext UpdateCheck.Unavailable(OnlineErrors.friendly(it)) }
             if (sha256(bytes) == ext.sha256) return@withContext UpdateCheck.UpToDate
-            val m = readManifest(bytes) ?: return@withContext UpdateCheck.Unavailable(tr(R.string.the_link_no_longer_points_to, "The link no longer points to an extension"))
+            val m = readManifest(bytes) ?: return@withContext UpdateCheck.Unavailable("The link no longer points to an extension")
             return@withContext UpdateCheck.Available(RemoteExtension(
                 internalName = ext.internalName, name = m.name ?: ext.name, url = src, version = m.version ?: ext.version,
                 repoUrl = ext.repoUrl, repoName = ext.repoName, origin = "manual",
@@ -528,7 +526,7 @@ object ExtensionManager {
         val pool = fresh.ifEmpty {
             runCatching { ExtensionSources.all(context, force = true).items }.getOrDefault(emptyList()).filter { it.key == ext.key }
         }
-        if (pool.isEmpty()) return@withContext UpdateCheck.Unavailable(tr(R.string.its_repository_didnt_answer_or_no, "Its repository didn't answer or no longer lists it"))
+        if (pool.isEmpty()) return@withContext UpdateCheck.Unavailable("Its repository didn't answer or no longer lists it")
         val newer = updatesForTests(listOf(ext), pool.map { it.copy(repoUrl = ext.repoUrl) }).firstOrNull()?.second
         if (newer != null) UpdateCheck.Available(newer) else UpdateCheck.UpToDate
     }
@@ -632,7 +630,7 @@ object ExtensionManager {
         val url = normalizeRepoUrl(input)
         if (!url.startsWith("https://") && !url.startsWith("http://")) throw ExtensionException("Enter the repository link (https://…/repo.json)")
         val repo = try { ExtensionSources.fetchRepo(url) } catch (e: ExtensionException) { throw e } catch (e: Exception) {
-            throw ExtensionException(OnlineErrors.friendly(e, tr(R.string.could_not_read_this_repository, "Could not read this repository")))
+            throw ExtensionException(OnlineErrors.friendly(e, "Could not read this repository"))
         }
         mutex.withLock {
             _state.update { s ->
@@ -741,7 +739,7 @@ object ExtensionManager {
 
     private fun loadInternal(context: Context, ext: InstalledExtension, opened: ClassLoader? = null): LoadInfo {
         val file = File(pluginDir(context), ext.fileName)
-        if (!file.exists()) return LoadInfo(error = tr(R.string.file_missing_reinstall_it, "File missing — reinstall it"))
+        if (!file.exists()) return LoadInfo(error = "File missing — reinstall it")
         synchronized(plugins) { plugins[ext.key] }?.let { p ->
             return LoadInfo(providersOf(p.filename), loaded = true)
         }
@@ -749,7 +747,7 @@ object ExtensionManager {
             runCatching { file.setReadOnly() }
             val loader = opened ?: loaderFactory(file, context.classLoader)
             val manifestText = loader.getResourceAsStream("manifest.json")?.use { it.readBytes().decodeToString() }
-                ?: return LoadInfo(error = tr(R.string.no_manifest_in_the_extension, "No manifest in the extension"))
+                ?: return LoadInfo(error = "No manifest in the extension")
             val manifest = JSONObject(manifestText)
             val className = manifest.optString("pluginClassName").ifBlank { return LoadInfo(error = "Manifest has no plugin class") }
             val instance = loader.loadClass(className).getDeclaredConstructor().newInstance() as BasePlugin
@@ -870,12 +868,12 @@ object ExtensionManager {
     private fun shortSymbol(s: String): String = s.split('.').takeLast(2).joinToString(".").take(80)
 
     internal fun libraryOf(symbol: String): String? = when {
-        symbol.startsWith("com.lagradost.nicehttp") -> tr(R.string.nicehttp_cloudstreams_web_library, "NiceHttp, CloudStream's web library")
-        symbol.startsWith("com.lagradost.") -> tr(R.string.cloudstream_extension_api, "CloudStream extension API")
+        symbol.startsWith("com.lagradost.nicehttp") -> "NiceHttp, CloudStream's web library"
+        symbol.startsWith("com.lagradost.") -> "CloudStream extension API"
         symbol.startsWith("org.mozilla.javascript") -> "Rhino JavaScript engine"
-        symbol.startsWith("com.fasterxml.jackson") -> tr(R.string.jackson_json, "Jackson JSON")
-        symbol.startsWith("kotlinx.coroutines") -> tr(R.string.kotlin_coroutines, "Kotlin coroutines")
-        symbol.startsWith("kotlin.") -> tr(R.string.kotlin_runtime, "Kotlin runtime")
+        symbol.startsWith("com.fasterxml.jackson") -> "Jackson JSON"
+        symbol.startsWith("kotlinx.coroutines") -> "Kotlin coroutines"
+        symbol.startsWith("kotlin.") -> "Kotlin runtime"
         symbol.startsWith("org.jsoup") -> "Jsoup"
         symbol.startsWith("okhttp3") -> "OkHttp"
         symbol.startsWith("com.google.gson") -> "Gson"
@@ -941,7 +939,7 @@ object ExtensionManager {
             } catch (e: Exception) { last = e }
         }
         val e = last ?: ExtensionException("Nothing to download")
-        throw if (e is ExtensionException) e else ExtensionException(OnlineErrors.friendly(e, tr(R.string.download_failed, "Download failed")), e)
+        throw if (e is ExtensionException) e else ExtensionException(OnlineErrors.friendly(e, "Download failed"), e)
     }
 
     private fun deleteFile(f: File) { runCatching { f.setWritable(true); f.delete() } }

@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
@@ -76,7 +75,7 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
 fun SearchIconButton(open: Boolean, onToggle: () -> Unit, tag: String, description: String = "Search") {
     val p = LocalMtPalette.current
     IconButton(onClick = onToggle, modifier = Modifier.testTag(tag)) {
-        Icon(if (open) Icons.Default.Close else Icons.Default.Search, if (open) tr(R.string.close_search, "Close search") else description, tint = if (open) p.accent else p.textPrimary)
+        Icon(if (open) Icons.Default.Close else Icons.Default.Search, if (open) "Close search" else description, tint = if (open) p.accent else p.textPrimary)
     }
 }
 

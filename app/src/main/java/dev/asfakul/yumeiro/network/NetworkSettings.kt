@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.network
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +25,7 @@ enum class DnsProvider(
     /** Hostname on the resolver's TLS certificate, used for DNS-over-TLS (RFC 7858). */
     val tlsHost: String?,
 ) {
-    SYSTEM(tr(R.string.system_dns, "System DNS"), "", emptyList(), null, null),
+    SYSTEM("System DNS", "", emptyList(), null, null),
     CLOUDFLARE("Cloudflare", "1.1.1.1", listOf("1.1.1.1", "1.0.0.1", "2606:4700:4700::1111", "2606:4700:4700::1001"),
         "https://cloudflare-dns.com/dns-query", "cloudflare-dns.com"),
     QUAD9("Quad9", "9.9.9.9", listOf("9.9.9.9", "149.112.112.112", "2620:fe::fe", "2620:fe::9"),
@@ -38,17 +36,17 @@ enum class DnsProvider(
 
 /** How the alternative resolver is reached. Encrypted transports hide lookups from the network. */
 enum class DnsTransport(val label: String, val description: String) {
-    DOH(tr(R.string.dns_over_https, "DNS over HTTPS"), tr(R.string.encrypted_port_443_works_on_most, "Encrypted, port 443 — works on most networks")),
-    DOT(tr(R.string.dns_over_tls, "DNS over TLS"), tr(R.string.encrypted_port_853_may_be_blocked, "Encrypted, port 853 — may be blocked on some networks")),
-    PLAIN(tr(R.string.plain_dns, "Plain DNS"), tr(R.string.unencrypted_udp_port_53_fastest_visible, "Unencrypted UDP port 53 — fastest, visible to the network")),
+    DOH("DNS over HTTPS", "Encrypted, port 443 — works on most networks"),
+    DOT("DNS over TLS", "Encrypted, port 853 — may be blocked on some networks"),
+    PLAIN("Plain DNS", "Unencrypted UDP port 53 — fastest, visible to the network"),
 }
 
 /** When the alternative resolver is used. */
 enum class DnsMode(val label: String) {
     /** System DNS first; the alternative is tried only after a real resolution failure. */
-    FALLBACK(tr(R.string.only_when_system_dns_fails, "Only when system DNS fails")),
+    FALLBACK("Only when system DNS fails"),
     /** Every lookup goes to the alternative resolver (system DNS is the safety net). */
-    ALWAYS(tr(R.string.always_use_it, "Always use it")),
+    ALWAYS("Always use it"),
 }
 
 data class DnsConfig(
@@ -77,7 +75,7 @@ data class DnsConfig(
     val quick: Boolean = false,
 ) {
     val usesAlternative: Boolean get() = provider != DnsProvider.SYSTEM
-    val summary: String get() = if (!usesAlternative) (if (auto) tr(R.string.system_dns_auto_bypass_for_blocked, "System DNS · auto bypass for blocked sites") else tr(R.string.system_dns, "System DNS")) else "${provider.label} (${provider.primaryIp}) · ${transport.label} · ${mode.label.lowercase()}"
+    val summary: String get() = if (!usesAlternative) (if (auto) "System DNS · auto bypass for blocked sites" else "System DNS") else "${provider.label} (${provider.primaryIp}) · ${transport.label} · ${mode.label.lowercase()}"
 }
 
 /** Persisted network preferences (Settings → Network). System DNS is the default. */

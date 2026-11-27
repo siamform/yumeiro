@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -219,7 +218,7 @@ fun NowPlayingScreen(
             ) {
                 dev.asfakul.yumeiro.ui.components.YumeIconButton(
                     icon = Icons.Default.KeyboardArrowDown,
-                    contentDescription = tr(R.string.collapse_player, "Collapse player"),
+                    contentDescription = "Collapse player",
                     onClick = onClose,
                     modifier = Modifier.testTag("now_playing_collapse_button")
                 )
@@ -231,7 +230,7 @@ fun NowPlayingScreen(
                             if (sleepLeft != null) "おやすみ · " else "再生中 · ", style = OverlineStyle, color = SpotifyGreen, maxLines = 1,
                             modifier = Modifier.clearAndSetSemantics { },
                         )
-                        Text(if (sleepLeft != null) "Sleep timer · ${sleepLeft}" else tr(R.string.now_playing, "Now playing"), style = OverlineStyle,
+                        Text(if (sleepLeft != null) "Sleep timer · ${sleepLeft}" else "Now playing", style = OverlineStyle,
                             color = SpotifyGreen, maxLines = 1)
                     }
                     val from = track?.album?.takeIf { it.isNotBlank() }
@@ -243,7 +242,7 @@ fun NowPlayingScreen(
                 if (onMoreOptions != null) {
                     dev.asfakul.yumeiro.ui.components.YumeIconButton(
                         icon = Icons.Default.MoreHoriz,
-                        contentDescription = tr(R.string.song_options, "Song options"),
+                        contentDescription = "Song options",
                         onClick = onMoreOptions,
                         modifier = Modifier.testTag("now_playing_more_button")
                     )
@@ -265,7 +264,7 @@ fun NowPlayingScreen(
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            playbackState.errorMessage ?: tr(R.string.playback_error, "Playback error"),
+                            playbackState.errorMessage ?: "Playback error",
                             style = MaterialTheme.typography.bodySmall, color = Color(0xFFFFD6DD)
                         )
                         val tip = remember(playbackState.errorMessage) {
@@ -297,7 +296,7 @@ fun NowPlayingScreen(
                             onReload = { lyricsReload++ },
                         )
                         PANEL_QUEUE -> QueuePanel(playbackState, onPlayQueueIndex)
-                        PANEL_INFO -> if (track != null) SongInfoPanel(track, playbackState.audioCodec, playbackState.durationMs) else EmptyPanel(tr(R.string.nothing_is_playing, "Nothing is playing"))
+                        PANEL_INFO -> if (track != null) SongInfoPanel(track, playbackState.audioCodec, playbackState.durationMs) else EmptyPanel("Nothing is playing")
                         else -> ArtworkPanel(
                             track = track,
                             lyrics = lyricsState.lyrics,
@@ -345,7 +344,7 @@ fun NowPlayingScreen(
                     ) {
                         Icon(
                             if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (track.isFavorite) tr(R.string.remove_from_favorites_2, "Remove from favorites") else tr(R.string.add_to_favorites_2, "Add to favorites"),
+                            contentDescription = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
                             tint = if (track.isFavorite) SpotifyGreen else TextPrimary,
                             modifier = Modifier.size(28.dp)
                         )
@@ -367,7 +366,7 @@ fun NowPlayingScreen(
                     Icons.Default.Shuffle, "Shuffle", if (playbackState.isShuffleEnabled) SpotifyGreen else TextSecondary,
                     22, onToggleShuffle, "now_playing_shuffle_button"
                 )
-                RoundControl(Icons.Default.SkipPrevious, tr(R.string.previous_track, "Previous track"), TextPrimary, 34, onPrevious, "now_playing_previous_button", 56)
+                RoundControl(Icons.Default.SkipPrevious, "Previous track", TextPrimary, 34, onPrevious, "now_playing_previous_button", 56)
                 Box(
                     modifier = Modifier
                         .size(76.dp)
@@ -385,11 +384,11 @@ fun NowPlayingScreen(
                         modifier = Modifier.size(38.dp)
                     )
                 }
-                RoundControl(Icons.Default.SkipNext, tr(R.string.next_track, "Next track"), TextPrimary, 34, onNext, "now_playing_next_button", 56)
+                RoundControl(Icons.Default.SkipNext, "Next track", TextPrimary, 34, onNext, "now_playing_next_button", 56)
                 val (repeatIcon, repeatDesc) = when (playbackState.repeatMode) {
-                    PlayerRepeatMode.OFF -> Icons.Default.Repeat to tr(R.string.repeat_off, "Repeat off")
-                    PlayerRepeatMode.ALL -> Icons.Default.Repeat to tr(R.string.repeat_all, "Repeat all")
-                    PlayerRepeatMode.ONE -> Icons.Default.RepeatOne to tr(R.string.repeat_one, "Repeat one")
+                    PlayerRepeatMode.OFF -> Icons.Default.Repeat to "Repeat off"
+                    PlayerRepeatMode.ALL -> Icons.Default.Repeat to "Repeat all"
+                    PlayerRepeatMode.ONE -> Icons.Default.RepeatOne to "Repeat one"
                 }
                 RoundControl(
                     repeatIcon, repeatDesc, if (playbackState.repeatMode == PlayerRepeatMode.OFF) TextSecondary else SpotifyGreen,
@@ -407,7 +406,7 @@ fun NowPlayingScreen(
                 RailTool(Icons.Default.Lyrics, "Lyrics", selected = panel == PANEL_LYRICS,
                     onClick = { panel = if (panel == PANEL_LYRICS) PANEL_ART else PANEL_LYRICS },
                     modifier = Modifier.weight(1f).testTag("now_playing_lyrics_button"), description = "Toggle lyrics")
-                RailTool(Icons.AutoMirrored.Filled.QueueMusic, tr(R.string.up_next, "Up next"), selected = panel == PANEL_QUEUE,
+                RailTool(Icons.AutoMirrored.Filled.QueueMusic, "Up next", selected = panel == PANEL_QUEUE,
                     onClick = { panel = if (panel == PANEL_QUEUE) PANEL_ART else PANEL_QUEUE },
                     modifier = Modifier.weight(1f).testTag("now_playing_queue_toggle_button"), description = "Toggle queue")
                 RailTool(androidx.compose.material.icons.Icons.Outlined.Album, "Info", selected = panel == PANEL_INFO,
@@ -417,7 +416,7 @@ fun NowPlayingScreen(
                     RailTool(Icons.Default.Bedtime, sleepLeft ?: "Sleep", selected = sleepState != null,
                         onClick = { showSleepSheet = true },
                         modifier = Modifier.weight(1f).testTag("now_playing_sleep_button"),
-                        description = if (sleepLeft != null) tr(R.string.sleep_timer_2, "Sleep timer: %1\$s", sleepLeft) else tr(R.string.sleep_timer, "Sleep timer"),
+                        description = if (sleepLeft != null) "Sleep timer: $sleepLeft" else "Sleep timer",
                         dot = if (sleepState != null) "sleep_timer_active_dot" else null)
                 }
                 RailTool(Icons.Default.Equalizer, "EQ", selected = false, onClick = onOpenEqualizer,
@@ -515,7 +514,7 @@ private fun LyricsPanel(
         if (uri != null && id != null) {
             scope.launch {
                 val ok = TrackDetailsRepository.importLyrics(context, id, uri)
-                if (ok) dev.asfakul.yumeiro.ui.components.AppMessages.success(context, tr(R.string.lyrics_imported, "Lyrics imported"))
+                if (ok) dev.asfakul.yumeiro.ui.components.AppMessages.success(context, "Lyrics imported")
                 else dev.asfakul.yumeiro.ui.components.AppMessages.error(context, "That file has no readable lyrics")
                 if (ok) onReload()
             }
@@ -537,7 +536,7 @@ private fun LyricsPanel(
         val lyrics = state.lyrics
         when {
             state.loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp, label = tr(R.string.loading_lyrics, "Loading lyrics"))
+                dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp, label = "Loading lyrics")
             }
             lyrics == null -> Column(
                 Modifier.weight(1f).fillMaxWidth().padding(24.dp),
@@ -553,7 +552,7 @@ private fun LyricsPanel(
                     style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
-                PillButton(Icons.Default.FileOpen, tr(R.string.import_lrc, "Import .lrc"), selected = true, onClick = launchImport,
+                PillButton(Icons.Default.FileOpen, "Import .lrc", selected = true, onClick = launchImport,
                     modifier = Modifier.widthIn(min = 160.dp).testTag("lyrics_import_button"))
             }
             else -> {
@@ -640,7 +639,7 @@ private fun QueuePanel(playbackState: PlaybackState, onPlayQueueIndex: (Int) -> 
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         )
         if (playbackState.queue.isEmpty()) {
-            EmptyPanel(tr(R.string.the_queue_is_empty, "The queue is empty"))
+            EmptyPanel("The queue is empty")
             return@Column
         }
         LazyColumn(

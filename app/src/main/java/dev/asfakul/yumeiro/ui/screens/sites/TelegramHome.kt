@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
@@ -162,9 +161,9 @@ fun TelegramHome(onBack: () -> Unit) {
     BackHandler(enabled = query.isNotEmpty() || searchOpen) { if (query.isNotEmpty()) query = "" else searchOpen = false }
 
     if (adding) AddLinkSheet(
-        title = tr(R.string.add_a_public_telegram_channel, "Add a public Telegram channel"),
+        title = "Add a public Telegram channel",
         placeholder = "@channel or t.me/channel",
-        hint = tr(R.string.its_video_posts_play_in_yumeiro, "Its video posts play in Yumeiro, no login needed."),
+        hint = "Its video posts play in Yumeiro, no login needed.",
         tag = "tg_add",
         onDismiss = { adding = false },
         showRetry = false,
@@ -216,7 +215,7 @@ fun TelegramHome(onBack: () -> Unit) {
     fun exportList() {
         val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
             .putExtra(android.content.Intent.EXTRA_TEXT, SavedSites.export(sites))
-        runCatching { context.startActivity(android.content.Intent.createChooser(send, tr(R.string.share_channel_list, "Share channel list")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        runCatching { context.startActivity(android.content.Intent.createChooser(send, "Share channel list").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
     /** The user button: signed out → sign-in at once; signed in (or sign-in unavailable) → the user sheet. */
@@ -234,17 +233,17 @@ fun TelegramHome(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().testTag("telegram_screen")) {
         SubPageHeader(
-            title = tr(R.string.telegram, "Telegram"), onBack = onBack,
-            subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else tr(R.string.public_channels_no_login, "Public channels, no login"),
+            title = "Telegram", onBack = onBack,
+            subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else "Public channels, no login",
         ) {
-            if (sites.isNotEmpty()) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, { searchOpen = !searchOpen; if (!searchOpen) query = "" }, "tg_home_search_toggle", tr(R.string.search_your_channels, "Search your channels"))
+            if (sites.isNotEmpty()) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, { searchOpen = !searchOpen; if (!searchOpen) query = "" }, "tg_home_search_toggle", "Search your channels")
             IconButton(onClick = { adding = true }, modifier = Modifier.testTag("tg_add_open")) { Icon(Icons.Default.Add, stringResource(R.string.add_channel), tint = p.textPrimary) }
             IconButton(
                 onClick = { onUser() },
                 modifier = Modifier.testTag("tg_user").semantics { stateDescription = if (signedIn) "Signed in" else "Not signed in" },
             ) {
                 if (signedIn) TelegramAvatar(me?.photoPath, me?.name ?: "Telegram", size = 28.dp, modifier = Modifier.testTag("tg_user_avatar"))
-                else Icon(Icons.Default.Person, if (accountEnabled) tr(R.string.sign_in_to_telegram, "Sign in to Telegram") else tr(R.string.telegram_account, "Telegram account"), tint = p.textSecondary)
+                else Icon(Icons.Default.Person, if (accountEnabled) "Sign in to Telegram" else "Telegram account", tint = p.textSecondary)
             }
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.testTag("tg_more")) { Icon(Icons.Default.MoreVert, stringResource(R.string.more), tint = p.textSecondary) }
@@ -347,7 +346,7 @@ internal fun TelegramUserSheet(
                 scope.launch {
                     val ok = runCatching { TgAccounts.session(context)?.logOut() == true }.getOrDefault(false)
                     signingOut = false
-                    if (ok) { AppMessages.info(context, tr(R.string.signed_out_of_telegram, "Signed out of Telegram")); onSignedOut() }
+                    if (ok) { AppMessages.info(context, "Signed out of Telegram"); onSignedOut() }
                     else AppMessages.error(context, "Couldn't sign out. Check the connection and try again.")
                 }
             }, modifier = Modifier.testTag("tg_logout_confirm")) { Text(stringResource(R.string.sign_out)) }
@@ -366,23 +365,23 @@ internal fun TelegramUserSheet(
                         TelegramAvatar(me?.photoPath, me?.name ?: "Telegram", size = 48.dp)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(me?.name ?: tr(R.string.your_telegram_account, "Your Telegram account"), color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(me?.name ?: "Your Telegram account", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(stringResource(R.string.signed_in), color = p.textSecondary, fontSize = 12.sp)
                         }
                     }
-                    SettingLink(Icons.AutoMirrored.Filled.Chat, tr(R.string.your_chats, "Your chats"), tr(R.string.videos_and_audio_from_your_chats, "Videos and audio from your chats, groups and the private channels you joined"), "tg_user_chats") { onChats() }
-                    SettingSwitch(tr(R.string.bot_mini_apps, "Bot mini apps"), tr(R.string.diskwala_links_open_through_a_telegram, "DiskWala links open through a Telegram downloader bot (third party) with this account"), bot, "tg_user_bot") {
+                    SettingLink(Icons.AutoMirrored.Filled.Chat, "Your chats", "Videos and audio from your chats, groups and the private channels you joined", "tg_user_chats") { onChats() }
+                    SettingSwitch("Bot mini apps", "DiskWala links open through a Telegram downloader bot (third party) with this account", bot, "tg_user_bot") {
                         bot = it; TgMiniApp.setConsented(context, it)
                     }
                     HorizontalDivider(Modifier.padding(vertical = 8.dp), color = p.textPrimary.copy(alpha = 0.08f))
-                    SettingLink(Icons.AutoMirrored.Filled.Logout, if (signingOut) tr(R.string.signing_out, "Signing out…") else tr(R.string.sign_out, "Sign out"), tr(R.string.yumeiro_forgets_this_login_on_this, "Yumeiro forgets this login on this phone"), "tg_user_signout") {
+                    SettingLink(Icons.AutoMirrored.Filled.Logout, if (signingOut) "Signing out…" else "Sign out", "Yumeiro forgets this login on this phone", "tg_user_signout") {
                         if (!signingOut) confirmLogout = true
                     }
                 }
                 else -> {
                     Text(stringResource(R.string.your_telegram_account), color = p.textPrimary, fontWeight = FontWeight.SemiBold)
                     Text(TelegramHomeWords.SIGN_IN_LINE, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
-                    SettingLink(Icons.AutoMirrored.Filled.Login, tr(R.string.sign_in, "Sign in"), tr(R.string.telegram_sends_the_code_yumeiro_never, "Telegram sends the code; Yumeiro never sees your password"), "tg_user_sign_in") { onSignIn() }
+                    SettingLink(Icons.AutoMirrored.Filled.Login, "Sign in", "Telegram sends the code; Yumeiro never sees your password", "tg_user_sign_in") { onSignIn() }
                 }
             }
         }
@@ -391,14 +390,14 @@ internal fun TelegramUserSheet(
 
 /** Words of the Telegram page (pure → unit-tested). */
 internal object TelegramHomeWords {
-    val SIGN_IN_LINE: String get() = tr(R.string.watch_videos_from_your_chats_groups_2, "Watch videos from your chats, groups and the private channels you have joined, and the big videos public channels keep for signed-in users.")
+    const val SIGN_IN_LINE = "Watch videos from your chats, groups and the private channels you have joined, and the big videos public channels keep for signed-in users."
 
     fun empty(signInOffered: Boolean) =
-        tr(R.string.add_a_public_channel_with_name, "Add a public channel with @name or a t.me link. Its video posts play in Yumeiro.") +
-            if (signInOffered) tr(R.string.or_sign_in_to_watch_your, " Or sign in to watch your own chats.") else ""
+        "Add a public channel with @name or a t.me link. Its video posts play in Yumeiro." +
+            if (signInOffered) " Or sign in to watch your own chats." else ""
 
     fun imported(added: Int, duplicates: Int, bad: Int, overLimit: Int) = buildString {
-        append(if (added == 1) "1 channel added" else tr(R.string.channels_added, "%1\$s channels added", added))
+        append(if (added == 1) "1 channel added" else "$added channels added")
         if (duplicates > 0) append(", $duplicates already saved")
         if (bad > 0) append(", $bad not channel links")
         if (overLimit > 0) append(", $overLimit over the 200 limit")

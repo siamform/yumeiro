@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.stream
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.security.TrustedSources
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
@@ -147,7 +145,7 @@ object PlaylistMarket {
                 cat
             } catch (e: Exception) {
                 val msg = friendlyError(e)
-                _state.value = if (cached != null) State.Ready(cached, warning = tr(R.string.offline_showing_saved_catalog, "Offline — showing saved catalog (%1\$s)", msg)) else State.Error(msg)
+                _state.value = if (cached != null) State.Ready(cached, warning = "Offline — showing saved catalog ($msg)") else State.Error(msg)
                 cached
             }
         }
@@ -160,9 +158,9 @@ object PlaylistMarket {
         val m = e.message.orEmpty()
         val root = generateSequence(e) { it.cause }.take(8).last()
         return when {
-            m.startsWith("HTTP 404") -> tr(R.string.the_market_is_being_prepared_try, "The market is being prepared. Try again in a few minutes")
-            root is org.json.JSONException -> tr(R.string.the_market_catalog_is_damaged, "The market catalog is damaged")
-            else -> dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, tr(R.string.could_not_load_the_market, "Could not load the market"))
+            m.startsWith("HTTP 404") -> "The market is being prepared. Try again in a few minutes"
+            root is org.json.JSONException -> "The market catalog is damaged"
+            else -> dev.asfakul.yumeiro.online.OnlineErrors.friendly(e, "Could not load the market")
         }
     }
 

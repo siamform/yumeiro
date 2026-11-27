@@ -1,7 +1,5 @@
 package dev.asfakul.yumeiro.stream
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -60,12 +58,12 @@ object TeraBoxApi {
     /** Cookies the user's WebView holds for [url] (a TeraBox sign-in lives here). Set in MTApplication. */
     @Volatile var cookieSource: (String) -> String? = { null }
 
-    val SIGN_IN_REASON: String get() = tr(R.string.terabox_only_gives_the_full_video, "TeraBox only gives the full video to signed-in accounts; without one it plays a 30-second preview, ") +
+    const val SIGN_IN_REASON = "TeraBox only gives the full video to signed-in accounts; without one it plays a 30-second preview, " +
         "so Yumeiro won't use that. Sign in to your free TeraBox account on this page once, then go back and play the link again."
 
     /** Whether this device has any AV1 video decoder (Android 10+ ships one). Set in MTApplication. */
     /** TB-LOGIN: shown instead of sending a signed-in user back to the sign-in page. */
-    val SIGNED_PREVIEW_REASON: String get() = tr(R.string.youre_signed_in_to_terabox_but, "You're signed in to TeraBox, but it still gives only the 30-second preview of this file, ") +
+    const val SIGNED_PREVIEW_REASON = "You're signed in to TeraBox, but it still gives only the 30-second preview of this file, " +
         "so Yumeiro won't play it. Try the link again in a minute, or play it in the TeraBox app."
 
     @Volatile var canPlayAv1: () -> Boolean = { true }
@@ -94,8 +92,8 @@ object TeraBoxApi {
     /** OWN-10: answers that mean "do TeraBox's human check on its page first". */
     internal val VERIFY_ERRNOS = setOf("400210", "460030", "400141")
 
-    val VERIFY_REASON: String get() = tr(R.string.terabox_wants_you_to_confirm_youre, "TeraBox wants you to confirm you're a person before it lists this file. ") +
-        tr(R.string.do_teraboxs_check_on_this_page, "Do TeraBox's check on this page, then go back and play the link again.")
+    const val VERIFY_REASON = "TeraBox wants you to confirm you're a person before it lists this file. " +
+        "Do TeraBox's check on this page, then go back and play the link again."
 
     /** `1qkXq…` from `…/s/1qkXq…` or `…?surl=qkXq…` (surl drops the leading "1"). */
     /** TB-LOGIN: the file name, unless the caller gave a real title (a shared link's title is often just its code). */
@@ -189,7 +187,7 @@ object TeraBoxApi {
     }
 
     fun resolve(client: OkHttpClient, shareUrl: String, userAgent: String = DESKTOP_UA): Result {
-        val short = shortUrl(shareUrl) ?: return Result.Failed(tr(R.string.not_a_terabox_share_link, "Not a TeraBox share link"))
+        val short = shortUrl(shareUrl) ?: return Result.Failed("Not a TeraBox share link")
         var best: Result? = null
         for (origin in origins(shareUrl, cookieSource)) {
             val r = resolveOn(client, shareUrl, short, origin, userAgent)
@@ -235,17 +233,17 @@ object TeraBoxApi {
         val page = get("$origin/wap/share/filelist?surl=${short.removePrefix("1")}")
         var token = page?.let { jsToken(it) }
         if (token == null) token = get("$origin/main")?.let { jsToken(it) }
-        if (token == null) return Result.Failed(if (page == null) tr(R.string.terabox_page_didnt_load, "TeraBox page didn't load") else tr(R.string.terabox_changed_its_page_no_token, "TeraBox changed its page (no token)"), retry = page == null)
+        if (token == null) return Result.Failed(if (page == null) "TeraBox page didn't load" else "TeraBox changed its page (no token)", retry = page == null)
         if (jar.keys.none { it.equals("browserid", true) }) jar["browserid"] = freshBrowserId()
         val info = json(get("$origin/api/shorturlinfo?$QS&jsToken=$token&shorturl=$short&root=1", referer = shareUrl))
-            ?: return Result.Failed(tr(R.string.terabox_didnt_list_the_share, "TeraBox didn't list the share"), retry = true)
+            ?: return Result.Failed("TeraBox didn't list the share", retry = true)
         if (info.str("errno") in VERIFY_ERRNOS) return Result.NeedsVerify
-        if (locked(info)) return Result.Failed(tr(R.string.this_terabox_share_needs_an_extraction, "This TeraBox share needs an extraction code; open it on TeraBox's page instead"))
+        if (locked(info)) return Result.Failed("This TeraBox share needs an extraction code; open it on TeraBox's page instead")
         if (info.str("errno") != "0") return Result.Failed("TeraBox refused the share (error ${info.str("errno")})", retry = true)
         val file = (info["list"] as? JsonArray)?.mapNotNull { it as? JsonObject }
             ?.firstOrNull { it.str("category") == "1" && it.str("isdir") != "1" }
-            ?: return Result.Failed(tr(R.string.this_terabox_share_has_no_video, "This TeraBox share has no video file"))
-        val name = file.str("server_filename") ?: tr(R.string.terabox_video, "TeraBox video")
+            ?: return Result.Failed("This TeraBox share has no video file")
+        val name = file.str("server_filename") ?: "TeraBox video"
         // OWN-10: some shares carry the original-file link in shorturlinfo itself; no list call is needed then.
         file.str("dlink")?.takeIf { it.startsWith("http") && !preferTranscode(name) }?.let { return Result.Ok(it, name, cookie(), userAgent, hls = false) }
         val listQuery = "share/list?$QS&jsToken=$token&sekey=${q(sekey(info.str("randsk")))}&sign=${info.str("sign")}" +
@@ -273,6 +271,6 @@ object TeraBoxApi {
             if (isPreview(body, file.str("size")?.toLongOrNull() ?: 0L)) return Result.NeedsSignIn
             return Result.Ok(url, name, cookie(), userAgent, hls = true)
         }
-        return Result.Failed(tr(R.string.terabox_has_no_stream_for_this, "TeraBox has no stream for this file yet"))
+        return Result.Failed("TeraBox has no stream for this file yet")
     }
 }

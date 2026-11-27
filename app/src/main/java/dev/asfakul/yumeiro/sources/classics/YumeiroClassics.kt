@@ -5,8 +5,6 @@
  */
 package dev.asfakul.yumeiro.sources.classics
 
-import dev.asfakul.yumeiro.l10n.tr
-import dev.asfakul.yumeiro.R
 import android.content.Context
 import com.lagradost.cloudstream3.HomePageResponse
 import com.lagradost.cloudstream3.LoadResponse
@@ -45,7 +43,7 @@ import org.json.JSONObject
  * title/subject words. Built in and on by default (like Yumeiro Drama); one tap turns it off.
  */
 object YumeiroClassics {
-    val NAME: String get() = tr(R.string.yumeiro_classics, "Yumeiro Classics")
+    const val NAME = "Yumeiro Classics"
     private const val PREFS = "yumeiro_classics"
     private const val BRIDGE = "classics"
 

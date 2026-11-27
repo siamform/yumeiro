@@ -5,7 +5,6 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
-import dev.asfakul.yumeiro.l10n.tr
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.ui.semantics.heading
@@ -217,7 +216,7 @@ fun GuideCard(guide: SetupGuide, modifier: Modifier = Modifier, startExpanded: B
                     Text(guide.title, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     if (!open) Text(stringResource(R.string.step_by_step_tap_to_open), color = TextTertiary, fontSize = 11.sp)
                 }
-                Icon(Icons.Default.ExpandMore, if (open) tr(R.string.hide_guide, "Hide guide") else tr(R.string.show_guide, "Show guide"), tint = TextSecondary, modifier = Modifier.rotate(turn))
+                Icon(Icons.Default.ExpandMore, if (open) "Hide guide" else "Show guide", tint = TextSecondary, modifier = Modifier.rotate(turn))
             }
             AnimatedVisibility(open) {
                 Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -251,7 +250,7 @@ private fun GuideStep(n: Int, s: SetupGuide.Step, context: Context) {
                 Row(
                     Modifier.clip(yuRound(10)).background(if (dark) Color.Black.copy(alpha = 0.22f) else BrandGold.copy(alpha = 0.12f))
                         .border(0.5.dp, BrandGold.copy(alpha = 0.35f), yuRound(10))
-                        .clickable { copyToClipboard(context, tr(R.string.yumeiro_setup, "Yumeiro setup"), s.copy) }
+                        .clickable { copyToClipboard(context, "Yumeiro setup", s.copy) }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
