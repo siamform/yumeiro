@@ -76,7 +76,8 @@ class GroupYHistoryDeviceTest {
     }
     private fun open() {
         compose.setContent { FirstRun.AppBackground { Box(Modifier.fillMaxSize()) { OnlineHistoryScreen(onBack = {}, onOpenTitle = {}) } } }
-        waitFor("grid") { has("history_grid") }
+        // The history page with the seeded titles on it (no layout tag, so the old page is measured the same way).
+        waitFor("history page") { has("online_history_screen") && textShown("Aoi") }
     }
     private fun click(tag: String) { compose.onNodeWithTag(tag, true).performClick(); compose.waitForIdle() }
     private fun countText(range: String) = compose.onNodeWithTag("history_range_count_$range", true).fetchSemanticsNode()
