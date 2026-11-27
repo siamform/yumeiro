@@ -228,6 +228,7 @@ object ExtensionManager {
                 runCatching { ExtensionSpeed.init(context) }
                 StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins, ExtensionSpeed::stat, System.currentTimeMillis())
             } else StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins)
+            val pacer = StartupSpeed.PublishPacer(order.size)
             StartupSpeed.loadProgressively(
                 order,
                 ahead = if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 2 else 4,
@@ -239,7 +240,8 @@ object ExtensionManager {
                 load = { ext, loader -> loadInternal(context, ext, loader) },
                 publish = { ext, info ->
                     runtime[ext.key] = info
-                    if (info.loaded) _state.update { it.copy(partial = true, runtime = it.runtime + (ext.key to info), generation = it.generation + 1) }
+                    // B20-PERF-EXT: paced, the final update below carries whatever is still waiting.
+                    if (info.loaded && pacer.loaded()) _state.update { it.copy(partial = true, runtime = it.runtime + runtime, generation = it.generation + 1) }
                 },
             )
             cleanupFiles(context)

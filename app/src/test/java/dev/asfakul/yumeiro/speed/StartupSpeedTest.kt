@@ -89,4 +89,18 @@ class StartupSpeedTest {
         assertEquals(0L, StartupSpeed.firstChecksDelayMs(firstRun = true))
         assertEquals(4_000L, StartupSpeed.firstChecksDelayMs(firstRun = false))
     }
+
+    /** B20-PERF-EXT: the first extension shows at once, then at most one state change per window. */
+    @Test fun b20_publishIsPacedWithManyExtensions() {
+        var t = 0L
+        val pacer = StartupSpeed.PublishPacer(60) { t }
+        assertEquals(1_500L, pacer.windowMs)
+        assertEquals(500L, StartupSpeed.PublishPacer(10).windowMs)
+        // 60 extensions loading every 150 ms (9 s): first at once, then one per 1.5 s.
+        var shown = 0
+        repeat(60) { if (pacer.loaded()) shown++; t += 150 }
+        assertTrue("paced to about 7 changes, got $shown", shown in 6..8)
+        val first = StartupSpeed.PublishPacer(60) { 0L }
+        assertTrue("the first loaded extension is shown at once", first.loaded())
+    }
 }

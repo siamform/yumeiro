@@ -61,6 +61,7 @@ class GroupVManyExtensionsDeviceTest {
     private val watch = MainStallWatch(TAG, dumpAfterMs = 400)
     private val problems = mutableListOf<String>()
     private var clip: Uri? = null
+    private var clipName = CLIP
 
     @Before fun setUp() {
         listOf("android.permission.READ_MEDIA_VIDEO", "android.permission.READ_EXTERNAL_STORAGE")
@@ -73,7 +74,7 @@ class GroupVManyExtensionsDeviceTest {
     @After fun tearDown() {
         watch.stop()
         runCatching { rule.runOnUiThread { PlaybackSession.releaseNow() } }
-        clip?.let { TestClip.remove(ctx, it, CLIP) }
+        clip?.let { TestClip.remove(ctx, it, clipName) }
     }
 
     private fun mem(): String {
@@ -81,6 +82,10 @@ class GroupVManyExtensionsDeviceTest {
         val heapMb = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024)
         return "pssMb=$pssMb heapMb=$heapMb threads=${Thread.getAllStackTraces().size}"
     }
+
+    /** Live threads by name (digits dropped), most common first: where the threads per extension come from. */
+    private fun threadGroups(): String = Thread.getAllStackTraces().keys.groupingBy { it.name.replace(RX_DIGITS, "#") }.eachCount()
+        .entries.sortedByDescending { it.value }.take(6).joinToString(",", "threadsTop=") { "${it.key}=${it.value}" }
 
     private fun gfxReset() { runCatching { FirstRun.shell("dumpsys gfxinfo ${ctx.packageName} reset") } }
     private fun gfxJank(): String = runCatching {
@@ -133,6 +138,7 @@ class GroupVManyExtensionsDeviceTest {
             val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.Default)
             val counter = ExtensionManager.state.onEach { emissions.incrementAndGet() }.launchIn(scope)
             gfxReset()
+            val homeGen0 = dev.asfakul.yumeiro.ui.screens.home.HomeMemory.feed.gen
             var firstMs = -1L
             val (loadMs, loadLag) = measured {
                 val t0 = SystemClock.uptimeMillis()
@@ -144,8 +150,15 @@ class GroupVManyExtensionsDeviceTest {
                 first.cancel()
             }
             counter.cancel()
-            log("GV load n=$n ms=$loadMs firstProviderMs=$firstMs emissions=${emissions.get()} providers=${ExtensionManager.providers().size} " +
-                "maxLagMs=$loadLag ${gfxJank()} ${mem()}")
+            UiLiveness.pump(rule, 500)
+            val homeRestarts = dev.asfakul.yumeiro.ui.screens.home.HomeMemory.feed.gen - homeGen0
+            log("GV load n=$n ms=$loadMs firstProviderMs=$firstMs emissions=${emissions.get()} homeRestarts=$homeRestarts providers=${ExtensionManager.providers().size} " +
+                "maxLagMs=$loadLag ${gfxJank()} ${mem()} ${threadGroups()}")
+            // Each state change makes Home, Yumix, Search and Most played work everything out again.
+            if (n >= 30) budget("load n=$n", emissions.get() <= n / 2, "${emissions.get()} extension state changes in one load")
+            // Home's rows: extensions that finish loading must not restart the rows of the others.
+            budget("load n=$n", homeRestarts <= 1, "Home restarted every extension's rows $homeRestarts times")
+            budget("load n=$n", firstMs in 0..3_000, "first source usable after $firstMs ms")
             budget("load n=$n", loadLag <= FREEZE_MS, "main thread blocked $loadLag ms (stall: ${watch.firstStall.get()?.take(600)})")
 
             // 3. Search across every provider with Home on screen.
@@ -174,11 +187,16 @@ class GroupVManyExtensionsDeviceTest {
     }
 
     private fun playWhileBusy(n: Int) {
-        if (clip == null) clip = TestClip.put(ctx, CLIP)
+        // A new file per size: the same link twice is the same item and is not opened again.
+        clip?.let { TestClip.remove(ctx, it, clipName) }
+        clipName = "yumeiro_test_clip_v$n.mp4"
+        clip = TestClip.put(ctx, clipName, CLIP)
         PlaybackDiagnostics.reset("")
         FirstRun.shell("am start -a android.intent.action.VIEW -d $clip -t video/mp4 -n ${ctx.packageName}/dev.asfakul.yumeiro.MainActivity")
         val started = runCatching { rule.waitUntil(45_000) { PlaybackDiagnostics.state.value.firstFrame }; true }.getOrDefault(false)
-        if (!started) { problems += "play n=$n: no first frame"; return }
+        if (!started) { problems += "play n=$n: no first frame"; FirstRun.shot("groupv_noplay_$n"); return }
+        // The clip is short: loop it so the busy part is measured while it really plays.
+        rule.runOnUiThread { PlaybackSession.playerForTest?.repeatMode = androidx.media3.common.Player.REPEAT_MODE_ONE }
         UiLiveness.pump(rule, 1_500)
         // Idle baseline, 4 s.
         val (d0, r0) = counters(); watch.reset(); UiLiveness.pump(rule, 4_000)
@@ -195,7 +213,7 @@ class GroupVManyExtensionsDeviceTest {
         val idleDrop = d1 - d0; val idleRend = r1 - r0; val busyDrop = d2 - d1; val busyRend = r2 - r1
         val state = PlaybackDiagnostics.state.value.state
         log("GV play n=$n idle rendered=$idleRend dropped=$idleDrop maxLagMs=$idleLag | busy ms=$busyMs rendered=$busyRend dropped=$busyDrop " +
-            "maxLagMs=$busyLag state=$state ${gfxJank()} ${mem()}")
+            "maxLagMs=$busyLag state=$state ${gfxJank()} ${mem()} ${threadGroups()}")
         FirstRun.shot("groupv_play_$n")
         budget("play n=$n", busyRend > 0, "no frames rendered while busy")
         budget("play n=$n", busyDrop * 10 <= busyRend + busyDrop, "$busyDrop of ${busyRend + busyDrop} frames dropped while extensions loaded")
@@ -215,5 +233,6 @@ class GroupVManyExtensionsDeviceTest {
         val RX_TOTAL = Regex("Total frames rendered: (\\d+)")
         val RX_JANKY = Regex("Janky frames: (\\d+) \\(([\\d.]+%)\\)")
         val RX_P90 = Regex("90th percentile: (\\d+)ms")
+        val RX_DIGITS = Regex("\\d+")
     }
 }
