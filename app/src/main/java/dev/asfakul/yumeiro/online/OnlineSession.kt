@@ -474,6 +474,10 @@ object OnlineSession {
      * Device tests only: adds [link] (for example a dead one) to the current episode's sources and
      * returns its index, so a test can pick it by hand through [switchSource].
      */
+    /** Device tests only (Group Y): show [s] as the current session without resolving or playing anything. */
+    @androidx.annotation.VisibleForTesting
+    internal fun setStateForTest(s: State?) { _state.value = s }
+
     @androidx.annotation.VisibleForTesting
     internal fun addLinkForTest(link: OnlineLink): Int {
         var index = -1

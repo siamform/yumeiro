@@ -52,8 +52,7 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
 /**
  * META-1 (owner list 13): the About rows (release date, IMDb votes, country, language, director, writers, companies,
  * network), Cast and Trailers of a title, each only when it has something. Used by the extension title page
- * (tags `online_detail_*`) and, since META-1b, by the watch page under the player (`online_watch_*`), which is where
- * Yumeiro Catalog titles and search results open.
+ * (tags `online_detail_*`). Group Y (B7): no longer shown on the watch page under the player.
  */
 internal fun LazyListScope.titleFactsItems(
     context: Context,

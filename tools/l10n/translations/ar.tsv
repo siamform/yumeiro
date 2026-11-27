@@ -956,3 +956,13 @@ hx_by_type	هذه الأنواع فقط
 hx_any	أي
 hx_confirm_selected	حذف %1$d من العناوين من السجل؟
 hx_confirm_selected_body	تُحذف مواضع الاستئناف أيضًا. يمكنك التراجع مباشرة بعد ذلك.
+drc_saved_summary	إعدادك · %1$s
+drc_knee	الانحناء
+drc_knee_hint	مدى نعومة بدء الخفض قرب العتبة
+drc_delete_saved	حذف %1$s
+drc_save_as	حفظ كإعداد مسبق
+drc_name	الاسم
+drc_default_name	صوتي %1$d
+drc_name_needed	أدخل اسمًا
+drc_full	يمكنك الاحتفاظ بما يصل إلى %1$d من الإعدادات. احذف واحدًا أولًا.
+drc_replaces	سيُستبدل الإعداد الذي يحمل هذا الاسم

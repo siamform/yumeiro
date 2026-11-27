@@ -959,4 +959,14 @@
     <string name="hx_any">أي</string>
     <string name="hx_confirm_selected">حذف %1$d من العناوين من السجل؟</string>
     <string name="hx_confirm_selected_body">تُحذف مواضع الاستئناف أيضًا. يمكنك التراجع مباشرة بعد ذلك.</string>
+    <string name="drc_saved_summary">إعدادك · %1$s</string>
+    <string name="drc_knee">الانحناء</string>
+    <string name="drc_knee_hint">مدى نعومة بدء الخفض قرب العتبة</string>
+    <string name="drc_delete_saved">حذف %1$s</string>
+    <string name="drc_save_as">حفظ كإعداد مسبق</string>
+    <string name="drc_name">الاسم</string>
+    <string name="drc_default_name">صوتي %1$d</string>
+    <string name="drc_name_needed">أدخل اسمًا</string>
+    <string name="drc_full">يمكنك الاحتفاظ بما يصل إلى %1$d من الإعدادات. احذف واحدًا أولًا.</string>
+    <string name="drc_replaces">سيُستبدل الإعداد الذي يحمل هذا الاسم</string>
 </resources>

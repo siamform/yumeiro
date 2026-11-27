@@ -958,4 +958,14 @@
     <string name="hx_any">Any</string>
     <string name="hx_confirm_selected">Delete %1$d titles from history?</string>
     <string name="hx_confirm_selected_body">Their resume spots go too. You can undo right after.</string>
+    <string name="drc_saved_summary">Your preset · %1$s</string>
+    <string name="drc_knee">Knee</string>
+    <string name="drc_knee_hint">How softly it starts turning down near the threshold</string>
+    <string name="drc_delete_saved">Delete %1$s</string>
+    <string name="drc_save_as">Save as preset</string>
+    <string name="drc_name">Name</string>
+    <string name="drc_default_name">My sound %1$d</string>
+    <string name="drc_name_needed">Give it a name</string>
+    <string name="drc_full">You can keep up to %1$d presets. Delete one first.</string>
+    <string name="drc_replaces">A preset with this name is replaced</string>
 </resources>

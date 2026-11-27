@@ -959,4 +959,14 @@
     <string name="hx_any">যেকোনো</string>
     <string name="hx_confirm_selected">ইতিহাস থেকে %1$d টি শিরোনাম মুছবেন?</string>
     <string name="hx_confirm_selected_body">আবার-শুরুর জায়গাও মুছে যাবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।</string>
+    <string name="drc_saved_summary">আপনার প্রিসেট · %1$s</string>
+    <string name="drc_knee">নি</string>
+    <string name="drc_knee_hint">থ্রেশহোল্ডের কাছে কতটা নরমভাবে কমানো শুরু হয়</string>
+    <string name="drc_delete_saved">%1$s মুছুন</string>
+    <string name="drc_save_as">প্রিসেট হিসেবে সংরক্ষণ</string>
+    <string name="drc_name">নাম</string>
+    <string name="drc_default_name">আমার সাউন্ড %1$d</string>
+    <string name="drc_name_needed">একটি নাম দিন</string>
+    <string name="drc_full">সর্বোচ্চ %1$d টি প্রিসেট রাখা যায়। আগে একটি মুছুন।</string>
+    <string name="drc_replaces">এই নামের প্রিসেটটি বদলে যাবে</string>
 </resources>

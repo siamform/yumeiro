@@ -56,8 +56,21 @@ object DynamicRangeCompressor {
         LIGHT("Light", "Takes the edge off explosions", Settings(-18f, 2f, 6f, 10f, 150f, 4f)),
         NIGHT("Night", "Quieter loud scenes, clearer voices", Settings(-24f, 3f, 8f, 5f, 200f, 8f)),
         STRONG("Strong", "Everything at about the same loudness", Settings(-32f, 6f, 6f, 3f, 250f, 14f)),
-        CUSTOM("Custom", "Your own threshold, ratio and timing", null),
+        // Group Y (B8): more starting points. Values chosen from common broadcast / playback practice, own numbers.
+        DIALOGUE("Voices", "Lifts speech over music and effects", Settings(-28f, 4f, 10f, 2f, 160f, 10f)),
+        MOVIE("Movie", "Keeps the punch, tames sudden peaks", Settings(-14f, 4f, 4f, 1f, 120f, 3f)),
+        MUSIC("Music", "Gentle: songs keep their dynamics", Settings(-12f, 1.5f, 12f, 20f, 400f, 2f)),
+        LOUD_PLACE("Noisy place", "Commute or kitchen: quiet parts come right up", Settings(-40f, 8f, 6f, 2f, 220f, 18f)),
+        /** Group Y (B8): "Manual" in the UI (the saved name stays CUSTOM so earlier choices keep working). */
+        CUSTOM("Manual", "Every setting yours: threshold, ratio, knee, attack, release and gain", null),
     }
+
+    /** Group Y (B8): a set of values the person saved under their own name. */
+    data class UserPreset(val name: String, val settings: Settings)
+
+    /** At most this many saved presets. */
+    const val MAX_SAVED = 8
+    const val MAX_NAME = 24
 
     private const val PREFS = "yumeiro_drc"
     private val _preset = MutableStateFlow(Preset.OFF)
@@ -70,9 +83,14 @@ object DynamicRangeCompressor {
     @Volatile var active: Settings? = null
         private set
 
+    private val _saved = MutableStateFlow<List<UserPreset>>(emptyList())
+    /** Group Y (B8): the person's saved presets, oldest first. */
+    val saved: StateFlow<List<UserPreset>> = _saved
+
     fun load(context: Context) {
         if (loaded) return
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        _saved.value = decodeSaved(p.getString("saved", null))
         _preset.value = runCatching { Preset.valueOf(p.getString("preset", Preset.OFF.name)!!) }.getOrDefault(Preset.OFF)
         val d = Preset.NIGHT.settings!!
         _custom.value = Settings(
@@ -116,6 +134,86 @@ object DynamicRangeCompressor {
         else -> p.settings
     }
 
+    /** Group Y (B8): Manual: the person's own values (the last ones they set), saved as the choice. */
+    fun selectManual(context: Context) {
+        load(context)
+        _preset.value = Preset.CUSTOM
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("preset", Preset.CUSTOM.name).apply()
+        refresh()
+    }
+
+    sealed interface SaveResult {
+        data object Saved : SaveResult
+        data object Replaced : SaveResult
+        data object NoName : SaveResult
+        data object Full : SaveResult
+        data object Off : SaveResult
+    }
+
+    /**
+     * Group Y (B8): saves the values in use now under [name] (trimmed, at most [MAX_NAME] characters). The same name
+     * (any case) is replaced; at most [MAX_SAVED] presets.
+     */
+    fun savePreset(context: Context, name: String): SaveResult {
+        load(context)
+        val s = current() ?: return SaveResult.Off
+        val n = cleanName(name) ?: return SaveResult.NoName
+        val list = _saved.value
+        val i = list.indexOfFirst { it.name.equals(n, ignoreCase = true) }
+        val result = if (i >= 0) SaveResult.Replaced else if (list.size >= MAX_SAVED) return SaveResult.Full else SaveResult.Saved
+        _saved.value = if (i >= 0) list.toMutableList().also { it[i] = UserPreset(n, s) } else list + UserPreset(n, s)
+        writeSaved(context)
+        return result
+    }
+
+    fun deletePreset(context: Context, name: String) {
+        load(context)
+        _saved.value = _saved.value.filterNot { it.name == name }
+        writeSaved(context)
+    }
+
+    /** Group Y (B8): use a saved preset (its values become the Manual ones, saved). */
+    fun applySaved(context: Context, p: UserPreset) {
+        setCustom(context, p.settings)
+        // Its values may equal a built-in preset; the person picked their own, so Manual stays the choice.
+        if (_preset.value != Preset.CUSTOM) selectManual(context)
+    }
+
+    /** The saved preset whose values are in use now (Manual only), for the selected chip. */
+    fun activeSaved(preset: Preset, custom: Settings, saved: List<UserPreset>): UserPreset? =
+        if (preset == Preset.CUSTOM) saved.firstOrNull { it.settings == custom } else null
+
+    internal fun cleanName(name: String): String? =
+        name.split(' ', '\t', '\n', '\r').filter { it.isNotEmpty() }.joinToString(" ").take(MAX_NAME).trim().takeIf { it.isNotEmpty() }
+
+    private fun writeSaved(context: Context) {
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("saved", encodeSaved(_saved.value)).apply()
+    }
+
+    internal fun encodeSaved(list: List<UserPreset>): String = org.json.JSONArray().apply {
+        list.forEach { u ->
+            val s = u.settings
+            put(org.json.JSONObject().put("name", u.name).put("threshold", s.thresholdDb.toDouble()).put("ratio", s.ratio.toDouble())
+                .put("knee", s.kneeDb.toDouble()).put("attack", s.attackMs.toDouble()).put("release", s.releaseMs.toDouble()).put("makeup", s.makeupDb.toDouble()))
+        }
+    }.toString()
+
+    /** Never throws: a damaged value gives no saved presets rather than a crash. */
+    internal fun decodeSaved(raw: String?): List<UserPreset> = runCatching {
+        if (raw.isNullOrBlank()) return emptyList()
+        val a = org.json.JSONArray(raw)
+        (0 until a.length()).mapNotNull { i ->
+            val o = a.optJSONObject(i) ?: return@mapNotNull null
+            val n = cleanName(o.optString("name")) ?: return@mapNotNull null
+            val d = DEFAULT
+            UserPreset(n, Settings(
+                o.optDouble("threshold", d.thresholdDb.toDouble()).toFloat(), o.optDouble("ratio", d.ratio.toDouble()).toFloat(),
+                o.optDouble("knee", d.kneeDb.toDouble()).toFloat(), o.optDouble("attack", d.attackMs.toDouble()).toFloat(),
+                o.optDouble("release", d.releaseMs.toDouble()).toFloat(), o.optDouble("makeup", d.makeupDb.toDouble()).toFloat(),
+            ).clamped())
+        }.distinctBy { it.name.lowercase() }.take(MAX_SAVED)
+    }.getOrDefault(emptyList())
+
     /** F15: back to the recommended sound (Night) and its values, saved. */
     fun reset(context: Context) = setCustom(context, DEFAULT)
 
@@ -142,7 +240,7 @@ object DynamicRangeCompressor {
     internal fun setActiveForTest(s: Settings?) { active = s }
 
     fun summary(): String = when (val p = _preset.value) {
-        Preset.CUSTOM -> custom.value.let { "Custom · ${it.thresholdDb.roundToInt()} dB, ${fmt(it.ratio)}:1, +${it.makeupDb.roundToInt()} dB" }
+        Preset.CUSTOM -> custom.value.let { "Manual · ${it.thresholdDb.roundToInt()} dB, ${fmt(it.ratio)}:1, +${it.makeupDb.roundToInt()} dB" }
         else -> p.label
     }
 

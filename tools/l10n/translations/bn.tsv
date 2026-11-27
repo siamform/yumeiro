@@ -956,3 +956,13 @@ hx_by_type	শুধু এই ধরনগুলো
 hx_any	যেকোনো
 hx_confirm_selected	ইতিহাস থেকে %1$d টি শিরোনাম মুছবেন?
 hx_confirm_selected_body	আবার-শুরুর জায়গাও মুছে যাবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।
+drc_saved_summary	আপনার প্রিসেট · %1$s
+drc_knee	নি
+drc_knee_hint	থ্রেশহোল্ডের কাছে কতটা নরমভাবে কমানো শুরু হয়
+drc_delete_saved	%1$s মুছুন
+drc_save_as	প্রিসেট হিসেবে সংরক্ষণ
+drc_name	নাম
+drc_default_name	আমার সাউন্ড %1$d
+drc_name_needed	একটি নাম দিন
+drc_full	সর্বোচ্চ %1$d টি প্রিসেট রাখা যায়। আগে একটি মুছুন।
+drc_replaces	এই নামের প্রিসেটটি বদলে যাবে

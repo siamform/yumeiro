@@ -75,6 +75,6 @@ class GroupNCompressorControlsTest {
 
     @Test fun summaryShowsTheOwnValues() {
         DynamicRangeCompressor.setCustom(ctx, night.copy(thresholdDb = -30f))
-        assertEquals("Custom · -30 dB, 3:1, +8 dB", DynamicRangeCompressor.summary())
+        assertEquals("Manual · -30 dB, 3:1, +8 dB", DynamicRangeCompressor.summary())
     }
 }
