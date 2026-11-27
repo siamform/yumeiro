@@ -130,7 +130,13 @@ object TrackDetailsRepository {
      * for it to show these two rows. Null fields = unknown. Streamed songs return (null, null).
      */
     suspend fun quickFacts(context: Context, uri: String): Pair<Long?, Long?> = withContext(Dispatchers.IO) {
-        if (!uri.startsWith("content:") && !uri.startsWith("file:") && !uri.startsWith("/")) return@withContext null to null
+        if (!uri.startsWith("content:") && !uri.startsWith("file:") && !uri.startsWith("/")) {
+            // B13: a YouTube Music song has no file, but its stream knows the length and the audio size.
+            val yt = dev.asfakul.yumeiro.youtube.YouTubeAudioDataSource.videoIdOf(runCatching { Uri.parse(uri) }.getOrNull())
+                ?: return@withContext null to null
+            val f = dev.asfakul.yumeiro.youtube.YouTubeStreams.audioFactsBlocking(yt) ?: return@withContext null to null
+            return@withContext f.durationMs to f.bytes
+        }
         val app = context.applicationContext
         val t0 = android.os.SystemClock.elapsedRealtime()
         val path = runCatching { resolvePath(app, uri) }.getOrNull()

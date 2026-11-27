@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -53,6 +55,7 @@ import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Round 2, order 9: "Keep notifications on time". Live checklist of the Android settings (each
@@ -70,7 +73,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
     }
     val body: @Composable () -> Unit = {
         Column(Modifier.heightIn(max = 620.dp).verticalScroll(rememberScrollState()).padding(22.dp)) {
-            Text("Keep notifications on time", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text(stringResource(R.string.keep_notifications_on_time), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             Spacer(Modifier.height(6.dp))
             Text(
                 if (status.stalled) "Yumeiro's background checks haven't run for a while, so alerts arrive late. These settings let them run while the app is closed."
@@ -98,7 +101,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(onClick = { ReliabilityGuide.openVendorPage(context, v) }, modifier = Modifier.weight(1f).testTag("guide_vendor_open")) {
-                        Text("Open settings")
+                        Text(stringResource(R.string.open_settings))
                     }
                     Button(
                         onClick = { ReliabilityGuide.markVendorDone(context, !status.vendorDone); tick++ },
@@ -109,7 +112,7 @@ fun ReliabilityGuideDialog(onClose: () -> Unit, inline: Boolean = false) {
             }
             Spacer(Modifier.height(16.dp))
             Button(
-                onClick = onClose, shape = RoundedCornerShape(16.dp),
+                onClick = onClose, shape = yuRound(16),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                 modifier = Modifier.fillMaxWidth().height(48.dp).testTag("guide_close"),
             ) { Text(if (status.allGood) "All set" else "Close", fontWeight = FontWeight.Bold) }
@@ -131,6 +134,6 @@ private fun CheckRow(title: String, fix: String?, ok: Boolean, tag: String, onFi
             Text(title, color = TextPrimary, fontSize = 14.sp)
             if (fix != null) Text(fix, color = TextSecondary, fontSize = 12.sp)
         }
-        if (!ok) TextButton(onClick = onFix, modifier = Modifier.testTag("${tag}_fix")) { Text("Fix") }
+        if (!ok) TextButton(onClick = onFix, modifier = Modifier.testTag("${tag}_fix")) { Text(stringResource(R.string.fix)) }
     }
 }

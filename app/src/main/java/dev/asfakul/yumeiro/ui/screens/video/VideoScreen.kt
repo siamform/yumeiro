@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.components.PillTabRow
 import androidx.activity.compose.BackHandler
@@ -90,6 +92,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 fun VideoScreen(
@@ -166,7 +169,7 @@ fun VideoScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to folders",
+                            contentDescription = stringResource(R.string.back_to_folders),
                             tint = Color.White
                         )
                     }
@@ -218,7 +221,7 @@ fun VideoScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Sort videos",
+                                contentDescription = stringResource(R.string.sort_videos),
                                 tint = SpotifyGreen,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -311,7 +314,7 @@ fun VideoScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Rescan offline videos",
+                        contentDescription = stringResource(R.string.rescan_offline_videos),
                         tint = SpotifyGreen,
                         modifier = Modifier.size(20.dp)
                     )
@@ -376,12 +379,12 @@ fun VideoScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Continue watching",
+                                                text = stringResource(R.string.widget_name),
                                                 style = MaterialTheme.typography.headlineSmall,
                                                 color = TextPrimary
                                             )
                                             TextButton(onClick = { onTabChange(2) }) {
-                                                Text("See all", color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
+                                                Text(stringResource(R.string.see_all), color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
                                             }
                                         }
                                         LazyRow(
@@ -412,7 +415,7 @@ fun VideoScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 6.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(yuRound(12))
                                     .clickable { onManageHiddenFoldersClick() }
                             ) {
                                 Row(
@@ -429,14 +432,14 @@ fun VideoScreen(
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = "${hiddenFolderPaths.size} hidden folder(s)",
+                                            text = stringResource(R.string.hidden_folder_s, hiddenFolderPaths.size),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = TextPrimary,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                     Text(
-                                        text = "Manage",
+                                        text = stringResource(R.string.manage),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = SpotifyGreen,
                                         fontWeight = FontWeight.Bold

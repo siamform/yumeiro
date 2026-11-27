@@ -21,7 +21,7 @@ class SettingsSearchCoverageTest {
     /** Every switch and main action, mapped to the page it lives on (SettingsScreen.kt). */
     private val where: Map<String, Set<Category>> = buildMap {
         fun put(c: Category, vararg names: String) = names.forEach { put(it, setOf(c)) }
-        put(Category.APPEARANCE, "Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents")
+        put(Category.APPEARANCE, "Pure black (AMOLED)", "Ambient colour from artwork", "Japanese accents", "Compact text and corners")
         // FINAL-47: one subject per page (Profiles, Video player, Video quality, Subtitles, Music, Downloads).
         put(Category.PROFILES, "Add profile", "Show 18+ content", "Keep 18+ activity private")
         put(Category.PLAYER, "Background play", "Picture-in-picture", "Volume boost up to 200 %", "Player info overlay", "Back button while a video plays",

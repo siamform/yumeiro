@@ -282,5 +282,7 @@ globalThis.__pluginInfo = function (pluginId) {
     site: plugin.site,
     version: plugin.version,
     filters: plugin.filters,
+    // B7: headers the plugin says its cover images need (LNReader `imageRequestInit`).
+    imageRequestInit: plugin.imageRequestInit || null,
   });
 };

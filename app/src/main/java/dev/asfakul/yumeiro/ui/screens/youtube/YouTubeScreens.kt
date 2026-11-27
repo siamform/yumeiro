@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
@@ -107,6 +109,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private sealed interface Load<out T> {
     data object Loading : Load<Nothing>
@@ -414,7 +417,7 @@ private fun YtBrowse(
                         }
                     }
                 }
-                if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
+                if (res.items.isEmpty() && res.loading) itemsIndexed(List(6) { it }, key = { i, _ -> "sk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), yuRound(22)) }
                 if (res.items.isEmpty() && !res.loading && res.error == null) item("none") { YtProblem("No results for “$sub”.", null) }
                 if (rcols > 1) itemsIndexed(res.items.chunked(rcols), key = { _, r -> "rr_${r.first().id}" }) { _, row ->
                     YtVideoRow(row, rcols, openChannel) { item -> onPlay(item, res.items) }
@@ -428,6 +431,8 @@ private fun YtBrowse(
         }
 
         // Chip row: For you · every planned feed · + Topic. Long-press a topic chip to remove it.
+        // B2: it slides away on scroll down and comes back on scroll up (YouTube's chip bar).
+        dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = chip, header = {
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.testTag("youtube_chips"),
@@ -443,6 +448,7 @@ private fun YtBrowse(
             item("c_add") { YtChip("Topic", false, leading = Icons.Default.Add, modifier = Modifier.testTag("youtube_add_topic")) { addingTopic = true } }
             if (!music && topics.isNotEmpty()) item("c_edit") { YtChip("Edit topics", false, modifier = Modifier.testTag("youtube_edit_topics_chip")) { editingTopics = true } }
         }
+        }) {
 
         val selected = feeds.firstOrNull { it.id == chip }
         if (chip != FOR_YOU && selected != null) {
@@ -459,7 +465,7 @@ private fun YtBrowse(
                         canPin = selected.kind == YtFeed.Kind.QUERY,
                     )
                 }
-                if (page.items.isEmpty() && (page.loading || !page.started) && page.error == null) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(22.dp)) }
+                if (page.items.isEmpty() && (page.loading || !page.started) && page.error == null) itemsIndexed(List(6) { it }, key = { i, _ -> "fsk$i" }) { _, _ -> if (music) SongRowSkeleton() else SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), yuRound(22)) }
                 if (fcols > 1) itemsIndexed(page.items.chunked(fcols), key = { _, r -> "fr_${r.first().id}" }) { _, row ->
                     YtVideoRow(row, fcols, openChannel) { item -> onPlay(item, page.items) }
                 } else itemsIndexed(page.items, key = { _, it -> "fi_${it.id}" }) { _, item ->
@@ -468,7 +474,7 @@ private fun YtBrowse(
                 page.error?.let { e -> item("ferr") { YtProblem(e) { page.retry() } } }
                 if (page.items.isNotEmpty() && page.loading) item("fmore") { YtLoadingMore() }
                 if (!selected.pages && page.items.isNotEmpty()) item("fend") {
-                    Text("That's the whole list. Search or pick another chip for more.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
+                    Text(stringResource(R.string.thats_the_whole_list_search_or), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp))
                 }
             }
         } else if (!music) {
@@ -503,7 +509,7 @@ private fun YtBrowse(
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                 if (videos.isEmpty() && anyLoading && netOnline) itemsIndexed(List(4) { it }, key = { i, _ -> "hsk$i" }) { _, _ ->
                     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        SkeletonBlock(null, 200.dp, shape = RoundedCornerShape(18.dp))
+                        SkeletonBlock(null, 200.dp, shape = yuRound(18))
                         Row(Modifier.padding(top = 10.dp)) {
                             SkeletonBlock(36.dp, 36.dp, shape = CircleShape); Spacer(Modifier.width(12.dp))
                             Column { SkeletonBlock(220.dp, 14.dp); Spacer(Modifier.height(6.dp)); SkeletonBlock(140.dp, 12.dp) }
@@ -545,7 +551,7 @@ private fun YtBrowse(
                 if (videos.isNotEmpty() && paged.any { it.loading }) item("home_more") { YtLoadingMore() }
                 item("note") {
                     Text(
-                        "Streams come straight from YouTube without an account. Your topics, searches and history stay on this device.",
+                        stringResource(R.string.streams_come_straight_from_youtube_without),
                         color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
                     )
                 }
@@ -554,15 +560,15 @@ private fun YtBrowse(
             item("for_you_head") {
                 Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("おすすめ · FOR YOU", color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
+                        Text(stringResource(R.string.for_you), color = SpotifyGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
                         Text(
                             if (mine.isEmpty()) "Play a few things and this page learns what you like" else "Picked from what you play, your topics and today's mix",
                             color = TextSecondary, fontSize = 12.sp,
                         )
                     }
-                    TextButton(onClick = { editingTopics = true }, modifier = Modifier.testTag("youtube_edit_topics")) { Text("Topics", color = SpotifyGreen, fontSize = 13.sp) }
+                    TextButton(onClick = { editingTopics = true }, modifier = Modifier.testTag("youtube_edit_topics")) { Text(stringResource(R.string.topics), color = SpotifyGreen, fontSize = 13.sp) }
                     IconButton(onClick = { shuffle = YtTopics.bumpShuffle(context) }, modifier = Modifier.testTag("youtube_shuffle")) {
-                        Icon(Icons.Default.Shuffle, "Shuffle today's mix", tint = SpotifyGreen)
+                        Icon(Icons.Default.Shuffle, stringResource(R.string.shuffle_todays_mix), tint = SpotifyGreen)
                     }
                 }
             }
@@ -572,7 +578,7 @@ private fun YtBrowse(
             // Featured: the first planned feed as quick picks (music) or big cards (video).
             val featured = feeds.firstOrNull()
             if (featured != null) when (val l = shelves[featured.id] ?: Load.Loading) {
-                Load.Loading -> if (netOnline) item("feat_load") { SkeletonBlock(null, 230.dp, Modifier.padding(16.dp), RoundedCornerShape(24.dp)) }
+                Load.Loading -> if (netOnline) item("feat_load") { SkeletonBlock(null, 230.dp, Modifier.padding(16.dp), yuRound(24)) }
                 is Load.Failed -> item("feat_err") { YtProblem(l.message) { loadShelves(true) } }
                 is Load.Ready -> {
                     item("feat_label") { YtLabel(featured.title, featured.overline) }
@@ -583,7 +589,7 @@ private fun YtBrowse(
             feeds.drop(1).forEach { f ->
                 item("shelf_${f.id}") {
                     when (val l = shelves[f.id] ?: Load.Loading) {
-                        Load.Loading -> if (netOnline) Column { YtLabel(f.title, f.overline); Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(3) { SkeletonBlock(if (music) 140.dp else 220.dp, if (music) 140.dp else 124.dp, shape = RoundedCornerShape(18.dp)) } } }
+                        Load.Loading -> if (netOnline) Column { YtLabel(f.title, f.overline); Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) { repeat(3) { SkeletonBlock(if (music) 140.dp else 220.dp, if (music) 140.dp else 124.dp, shape = yuRound(18)) } } }
                         is Load.Failed -> Unit
                         is Load.Ready -> YtShelfRow(f.title, f.overline, if (music) Icons.Default.MusicNote else Icons.Default.SmartDisplay, l.value, music,
                             onSeeAll = { chip = f.id; openFeed(f) }) { onPlay(it, l.value) }
@@ -592,10 +598,11 @@ private fun YtBrowse(
             }
             item("note") {
                 Text(
-                    "Streams come straight from YouTube without an account. Your topics, searches and history stay on this device.",
+                    stringResource(R.string.streams_come_straight_from_youtube_without),
                     color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
                 )
             }
+        }
         }
             }
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(2f)) {
@@ -666,7 +673,7 @@ private fun YtAddTopicDialog(music: Boolean, onDismiss: () -> Unit, onAdd: (Stri
     var text by rememberSaveable { mutableStateOf("") }
     dev.asfakul.yumeiro.ui.components.TsukiDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add a topic") },
+        title = { Text(stringResource(R.string.add_a_topic)) },
         text = {
             Column {
                 Text(
@@ -683,8 +690,8 @@ private fun YtAddTopicDialog(music: Boolean, onDismiss: () -> Unit, onAdd: (Stri
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { YtDiscovery.cleanTopic(text)?.let(onAdd) }, enabled = YtDiscovery.cleanTopic(text) != null) { Text("Add") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { YtDiscovery.cleanTopic(text)?.let(onAdd) }, enabled = YtDiscovery.cleanTopic(text) != null) { Text(stringResource(R.string.add)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -694,19 +701,19 @@ private fun YtTopicsDialog(topics: List<String>, music: Boolean, onRemove: (Stri
     var adding by remember { mutableStateOf(false) }
     dev.asfakul.yumeiro.ui.components.TsukiDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Your topics") },
+        title = { Text(stringResource(R.string.your_topics)) },
         text = {
             Column {
-                Text("Topics shape your chips and shelves. Tap one to remove it.", color = TextSecondary, fontSize = 13.sp)
+                Text(stringResource(R.string.topics_shape_your_chips_and_shelves), color = TextSecondary, fontSize = 13.sp)
                 Spacer(Modifier.height(12.dp))
-                if (topics.isEmpty()) Text("No topics yet — the page uses what you play and today's mix.", color = TextTertiary, fontSize = 12.sp)
+                if (topics.isEmpty()) Text(stringResource(R.string.no_topics_yet_the_page_uses), color = TextTertiary, fontSize = 12.sp)
                 androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("youtube_topics_list")) {
                     topics.forEach { t -> YtChip(t, true, trailing = Icons.Default.Close) { onRemove(t) } }
                     YtChip("Add", false, leading = Icons.Default.Add) { adding = true }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
     )
     if (adding) YtAddTopicDialog(music, onDismiss = { adding = false }) { onAdd(it); adding = false }
 }
@@ -722,9 +729,9 @@ internal fun YtSearchBar(query: String, placeholder: String, music: Boolean, aut
     LaunchedEffect(autoFocus) { if (autoFocus) runCatching { focus.requestFocus() } }
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(50.dp)
-            .then(if (floating) Modifier.shadow(10.dp, RoundedCornerShape(25.dp), ambientColor = Color.Black.copy(alpha = 0.4f), spotColor = Color.Black.copy(alpha = 0.4f)) else Modifier)
-            .clip(RoundedCornerShape(25.dp))
-            .background(if (floating) pal.surfaceContainerHigh else GlassFill).border(1.dp, border, RoundedCornerShape(25.dp)).padding(horizontal = 16.dp),
+            .then(if (floating) Modifier.shadow(10.dp, yuRound(25), ambientColor = Color.Black.copy(alpha = 0.4f), spotColor = Color.Black.copy(alpha = 0.4f)) else Modifier)
+            .clip(yuRound(25))
+            .background(if (floating) pal.surfaceContainerHigh else GlassFill).border(1.dp, border, yuRound(25)).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(if (music) Icons.Default.MusicNote else Icons.Default.SmartDisplay, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
@@ -761,7 +768,7 @@ internal fun YtChip(
     ) {
         if (leading != null) { Icon(leading, null, tint = fg, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)) }
         Text(label, color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (trailing != null) { Spacer(Modifier.width(4.dp)); Icon(trailing, "Remove", tint = fg, modifier = Modifier.size(14.dp)) }
+        if (trailing != null) { Spacer(Modifier.width(4.dp)); Icon(trailing, stringResource(R.string.remove_2), tint = fg, modifier = Modifier.size(14.dp)) }
     }
 }
 
@@ -786,7 +793,7 @@ private fun YtShelfRow(
                 if (overline != null) Text(overline.uppercase(), color = TextTertiary, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp, maxLines = 1)
                 Text(title, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (onSeeAll != null) TextButton(onClick = onSeeAll) { Text("See all", color = SpotifyGreen, fontSize = 13.sp) }
+            if (onSeeAll != null) TextButton(onClick = onSeeAll) { Text(stringResource(R.string.see_all), color = SpotifyGreen, fontSize = 13.sp) }
         }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             itemsIndexed(items, key = { i, it -> "${i}_${it.id}" }) { _, item ->
@@ -823,7 +830,7 @@ internal fun YtVideoCard(item: YtItem, wide: Boolean, showChannel: Boolean = tru
             PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
             val badge = when { item.live -> "LIVE"; item.durationSec > 0 -> formatYtDuration(item.durationSec); else -> null }
             if (badge != null) Surface(
-                shape = RoundedCornerShape(6.dp), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.78f),
+                shape = yuRound(6), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.78f),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
             ) { Text(badge, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)) }
         }
@@ -852,7 +859,7 @@ internal fun YtVideoCard(item: YtItem, wide: Boolean, showChannel: Boolean = tru
 @Composable
 private fun SquareCard(item: YtItem, size: Dp, onClick: () -> Unit) {
     Column(Modifier.width(size).clickable(onClick = onClick)) {
-        Box(Modifier.size(size).clip(RoundedCornerShape(18.dp))) {
+        Box(Modifier.size(size).clip(yuRound(18))) {
             PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
             Box(Modifier.align(Alignment.BottomEnd).padding(8.dp).size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(20.dp))
@@ -867,7 +874,7 @@ private fun SquareCard(item: YtItem, size: Dp, onClick: () -> Unit) {
 @Composable
 private fun SongRow(item: YtItem, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 7.dp).testTag("youtube_song"), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(54.dp).clip(RoundedCornerShape(12.dp))) { PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote) }
+        Box(Modifier.size(54.dp).clip(yuRound(12))) { PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(item.title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -876,14 +883,14 @@ private fun SongRow(item: YtItem, onClick: () -> Unit) {
                 color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
-        Icon(Icons.Default.PlayArrow, "Play", tint = SpotifyGreen)
+        Icon(Icons.Default.PlayArrow, stringResource(R.string.play), tint = SpotifyGreen)
     }
 }
 
 @Composable
 internal fun SongRowSkeleton() {
     Row(Modifier.padding(horizontal = 16.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-        SkeletonBlock(54.dp, 54.dp, shape = RoundedCornerShape(12.dp))
+        SkeletonBlock(54.dp, 54.dp, shape = yuRound(12))
         Spacer(Modifier.width(12.dp))
         Column { SkeletonBlock(180.dp, 14.dp); Spacer(Modifier.height(6.dp)); SkeletonBlock(110.dp, 12.dp) }
     }
@@ -891,12 +898,12 @@ internal fun SongRowSkeleton() {
 
 @Composable
 internal fun YtProblem(message: String, onRetry: (() -> Unit)?) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.WifiOff, null, tint = TextSecondary)
             Spacer(Modifier.width(12.dp))
             Text(message, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            if (onRetry != null) TextButton(onClick = onRetry) { Text("Retry", color = SpotifyGreen) }
+            if (onRetry != null) TextButton(onClick = onRetry) { Text(stringResource(R.string.retry), color = SpotifyGreen) }
         }
     }
 }

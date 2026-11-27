@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -40,6 +42,7 @@ import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Full-screen cover shown while [Privacy.locked]; asks for the fingerprint / device PIN. */
 @Composable
@@ -57,10 +60,10 @@ fun AppLockGate(activity: Activity) {
     ) {
         Icon(Icons.Default.Lock, null, tint = SpotifyGreen, modifier = Modifier.size(56.dp))
         Spacer(Modifier.height(16.dp))
-        Text("Yumeiro is locked", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Text("Unlock with your fingerprint, face or screen lock", color = TextSecondary, fontSize = 13.sp)
+        Text(stringResource(R.string.yumeiro_is_locked), color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.unlock_with_your_fingerprint_face_or), color = TextSecondary, fontSize = 13.sp)
         Spacer(Modifier.height(24.dp))
-        Button(onClick = { Privacy.unlock(activity) }, shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Unlock") }
+        Button(onClick = { Privacy.unlock(activity) }, shape = yuRound(24),
+            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text(stringResource(R.string.unlock)) }
     }
 }

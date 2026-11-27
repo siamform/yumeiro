@@ -26,8 +26,11 @@ object BrowserFilters {
     private const val PREFS = "yu_browser_filters"
     private val _filterAds = MutableStateFlow(true)
     private val _resolveLinks = MutableStateFlow(true)
+    private val _stopRedirects = MutableStateFlow(true)
     val filterAds: StateFlow<Boolean> = _filterAds
     val resolveLinks: StateFlow<Boolean> = _resolveLinks
+    /** B12: a page moving to another site by itself (no tap) is stopped; the bar offers to open it. */
+    val stopRedirects: StateFlow<Boolean> = _stopRedirects
     @Volatile private var loaded = false
 
     /** Reads the saved switches. Call off the main thread (Bridges.start); safe to call again. */
@@ -35,6 +38,7 @@ object BrowserFilters {
         val p = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         _filterAds.value = p.getBoolean("filter_ads", true)
         _resolveLinks.value = p.getBoolean("resolve_links", true)
+        _stopRedirects.value = p.getBoolean("stop_redirects", true)
         loaded = true
     }
 
@@ -46,6 +50,11 @@ object BrowserFilters {
     fun setResolveLinks(context: Context, on: Boolean) {
         _resolveLinks.value = on
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("resolve_links", on).apply()
+    }
+
+    fun setStopRedirects(context: Context, on: Boolean) {
+        _stopRedirects.value = on
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("stop_redirects", on).apply()
     }
 
     val isLoaded: Boolean get() = loaded
@@ -151,6 +160,56 @@ object PopupPolicy {
         // On a shortener page every tap opens an ad window: only the walker's own page changes count.
         if (chainActive) return Decision.BLOCK
         return if (gesture && link) (if (tabs) Decision.NEW_TAB else Decision.OPEN_HERE) else Decision.BLOCK
+    }
+
+    /** B12: what a main-frame navigation the page (or the person) started turns into. */
+    sealed interface Nav {
+        /** Let the web view load it. */
+        data object Allow : Nav
+        /** An app link with nothing to open here (market:, tel:, an intent without a web fallback): stopped, never handed to another app. */
+        data object Block : Nav
+        /** A video / audio file or playlist: Yumeiro's player plays it. */
+        data class Play(val url: String, val label: String) : Nav
+        /** Load [url] in this page instead (an intent: link's web fallback). */
+        data class InApp(val url: String) : Nav
+        /** Stop redirects: the page tried to move to another site by itself; the person can still open [url]. */
+        data class Hold(val url: String) : Nav
+    }
+
+    /**
+     * B12: a main-frame navigation from [current] to [target]. [gesture] = the person tapped; [serverRedirect] = an
+     * HTTP redirect of a load already under way (sites that moved domain, http → https); [stop] = Settings → Stop
+     * redirects; [chainActive] = the short-link walker is driving the page (its own jumps always go). Pure.
+     */
+    fun navigation(current: String?, target: String?, gesture: Boolean, serverRedirect: Boolean, stop: Boolean, chainActive: Boolean): Nav {
+        val t = target?.trim().orEmpty()
+        val scheme = t.substringBefore(':', "").lowercase()
+        val held = { u: String -> stop && !chainActive && !gesture && !serverRedirect && !ChainDestination.sameSite(current, u) }
+        if (scheme == "intent") {
+            val fallback = intentFallback(t) ?: return Nav.Block
+            return if (held(fallback)) Nav.Hold(fallback) else Nav.InApp(fallback)
+        }
+        if (scheme != "http" && scheme != "https") return Nav.Block
+        (ChainDestination.of(t) as? ChainDestination.Kind.Media)?.let { return Nav.Play(it.url, it.label) }
+        return if (held(t)) Nav.Hold(t) else Nav.Allow
+    }
+
+    /**
+     * The web address an Android `intent:` link falls back to: its `S.browser_fallback_url`, else the same address
+     * with its http(s) scheme (`intent://host/path#Intent;scheme=https;…`). Null when it only names an app. Pure.
+     */
+    fun intentFallback(url: String): String? {
+        val frag = url.substringAfter("#Intent;", "")
+        if (frag.isEmpty()) return null
+        val extras = frag.split(';')
+        extras.firstOrNull { it.startsWith("S.browser_fallback_url=") }?.let { raw ->
+            val u = runCatching { java.net.URLDecoder.decode(raw.substringAfter('='), "UTF-8") }.getOrNull()
+            if (u != null && (u.startsWith("http://", true) || u.startsWith("https://", true))) return u
+        }
+        val scheme = extras.firstOrNull { it.startsWith("scheme=") }?.substringAfter('=')?.lowercase()
+        if (scheme != "http" && scheme != "https") return null
+        val rest = url.substringAfter("intent://", "").substringBefore("#Intent;")
+        return if (rest.isEmpty()) null else "$scheme://$rest"
     }
 
     /** The page itself moves to [target] in the main frame: true = stop it (an ad redirect). */

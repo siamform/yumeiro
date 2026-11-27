@@ -3,4 +3,6 @@
     <!-- PlayerView tag: last subtitle style applied (skips redundant restyling). -->
     <item name="subtitle_style_tag" type="id" />
     <item name="yu_foreign_quiet" type="id" />
+    <!-- Extension check-page WebView: content and file access already turned off. -->
+    <item name="yu_webview_hardened" type="id" />
 </resources>

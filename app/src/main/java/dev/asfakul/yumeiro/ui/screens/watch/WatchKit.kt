@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -86,6 +88,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Watch-page switches shared by Hues, YouTube and Stream (the moon-dial toggles):
@@ -243,9 +246,9 @@ fun WatchControlBar(
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(yuRound(22))
             .background(Brush.verticalGradient(listOf(p.accent.copy(alpha = 0.10f), dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.03f))))
-            .border(1.dp, Brush.horizontalGradient(listOf(p.accent.copy(alpha = 0.45f), dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.05f), p.accent2.copy(alpha = 0.35f))), RoundedCornerShape(22.dp))
+            .border(1.dp, Brush.horizontalGradient(listOf(p.accent.copy(alpha = 0.45f), dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.05f), p.accent2.copy(alpha = 0.35f))), yuRound(22))
             .padding(horizontal = 6.dp, vertical = 6.dp)
             .testTag("watch_control_bar"),
         verticalAlignment = Alignment.CenterVertically,
@@ -333,16 +336,16 @@ fun WatchServerBox(
         modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(yuRound(24))
             .background(Brush.linearGradient(listOf(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f), p.accent2.copy(alpha = 0.06f))))
-            .border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f), RoundedCornerShape(24.dp))
+            .border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f), yuRound(24))
             .testTag("watch_server_box"),
     ) {
         Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 10.dp)) {
             Box(Modifier.width(3.dp).height(44.dp).clip(CircleShape).background(brush))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("Now playing", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text(stringResource(R.string.now_playing), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(watching, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(3.dp))
                 Text(hint, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.55f), fontSize = 11.sp, lineHeight = 15.sp)
@@ -363,14 +366,14 @@ fun WatchServerBox(
 @Composable
 fun LoadMoreSources(more: Int, accent: Color, ink: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
-            .border(1.dp, ink.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+        modifier.fillMaxWidth().heightIn(min = 48.dp).clip(yuRound(14))
+            .border(1.dp, ink.copy(alpha = 0.12f), yuRound(14))
             .clickable(onClickLabel = "Load more sources") { onClick() }.padding(horizontal = 14.dp, vertical = 10.dp).testTag("sources_load_more"),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Default.ExpandMore, null, tint = accent, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text("Load more · ${minOf(more, SERVER_PAGE)} of $more", color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.load_more_of, minOf(more, SERVER_PAGE), more), color = accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -387,9 +390,9 @@ fun AudioFilterRow(options: List<AudioFilterOption>, selected: String?, onSelect
         Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Translate, null, tint = p.accent, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Audio language", color = ink.copy(alpha = 0.72f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+            Text(stringResource(R.string.audio_language), color = ink.copy(alpha = 0.72f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
             Spacer(Modifier.weight(1f))
-            if (active != null) Text("Remembered", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+            if (active != null) Text(stringResource(R.string.remembered), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
         }
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
@@ -440,7 +443,7 @@ private fun ServerGroup(row: WatchServerRow, single: Boolean, brush: Brush, init
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(yuRound(14))
                 .clickable(onClickLabel = if (open) "Hide ${row.label} sources" else "Show ${row.label} sources") { open = !open }
                 .semantics { stateDescription = if (open) "Expanded" else "Collapsed" }
                 .padding(horizontal = 6.dp, vertical = 6.dp)
@@ -471,8 +474,8 @@ private fun ServerGroup(row: WatchServerRow, single: Boolean, brush: Brush, init
                 val more = row.servers.size - shown
                 if (more > 0) {
                     Row(
-                        Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, ink.copy(alpha = 0.10f), RoundedCornerShape(14.dp))
+                        Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(yuRound(14))
+                            .border(1.dp, ink.copy(alpha = 0.10f), yuRound(14))
                             .clickable { pages++ }.padding(horizontal = 14.dp, vertical = 10.dp).testTag("watch_server_more"),
                         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -491,7 +494,7 @@ private fun ServerGroup(row: WatchServerRow, single: Boolean, brush: Brush, init
 private fun ServerTile(s: WatchServer, brush: Brush) {
     val p = LocalMtPalette.current
     val ink = dev.asfakul.yumeiro.ui.theme.PageInk
-    val shape = RoundedCornerShape(14.dp)
+    val shape = yuRound(14)
     Row(
         Modifier
             .fillMaxWidth()
@@ -544,11 +547,11 @@ fun WatchNumberGrid(
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).testTag("watch_number_grid")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Episodes", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text(stringResource(R.string.episodes), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Text(title, color = dev.asfakul.yumeiro.ui.theme.PageInk, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
             Row(
-                Modifier.widthIn(max = 150.dp).clip(RoundedCornerShape(10.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)).padding(horizontal = 10.dp, vertical = 7.dp),
+                Modifier.widthIn(max = 150.dp).clip(yuRound(10)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)).padding(horizontal = 10.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Default.Search, null, tint = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.5f), modifier = Modifier.size(15.dp))
@@ -594,15 +597,15 @@ fun WatchNumberGrid(
                     Box(
                         Modifier
                             .size(tile, 42.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(yuRound(14))
                             .then(if (isCurrent) Modifier.background(gridBrush) else Modifier.background(if (seen) dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.03f) else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)))
-                            .then(if (isHit && !isCurrent) Modifier.border(1.5.dp, p.accent, RoundedCornerShape(14.dp)) else Modifier)
+                            .then(if (isHit && !isCurrent) Modifier.border(1.5.dp, p.accent, yuRound(14)) else Modifier)
                             .clickable(enabled = !isCurrent) { onPick(i) }
                             .testTag("watch_grid_tile"),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (isCurrent) Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.PlayArrow, "Now playing", tint = p.onAccent, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.PlayArrow, stringResource(R.string.now_playing), tint = p.onAccent, modifier = Modifier.size(14.dp))
                             Text("${numberOf(i)}", color = p.onAccent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         } else {
                             Text(
@@ -628,7 +631,7 @@ fun WatchSearchField(
 ) {
     val p = LocalMtPalette.current
     Row(
-        modifier.clip(RoundedCornerShape(12.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)).padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier.clip(yuRound(12)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(leadingIcon, null, tint = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
@@ -703,7 +706,7 @@ fun BoxScope.WatchLightsOverlay() {
             ) {
                 Icon(Icons.Default.DarkMode, null, tint = LocalMtPalette.current.accent, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Dimmed for focus · tap to brighten", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                Text(stringResource(R.string.dimmed_for_focus_tap_to_brighten), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
             }
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.ExtensionLabels
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * F-21: the shared two-line extension label. Line 1: name (ellipsis) + language chip, which never
@@ -49,7 +50,7 @@ internal fun ExtensionLabelText(
                 Spacer(Modifier.width(6.dp))
                 Text(
                     it, color = lineColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false,
-                    modifier = Modifier.border(1.dp, lineColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp)).padding(horizontal = 5.dp, vertical = 1.dp).testTag("ext_lang_chip"),
+                    modifier = Modifier.border(1.dp, lineColor.copy(alpha = 0.5f), yuRound(6)).padding(horizontal = 5.dp, vertical = 1.dp).testTag("ext_lang_chip"),
                 )
             }
             trailing()

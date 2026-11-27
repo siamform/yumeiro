@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** The places that keep working without a connection; provided once by the app shell. */
 @Immutable
@@ -67,7 +70,7 @@ val LocalOfflineExits = staticCompositionLocalOf { OfflineExits() }
 fun OfflineNotice(what: String, modifier: Modifier = Modifier, tag: String = "offline_notice") {
     val p = LocalMtPalette.current
     val exits = LocalOfflineExits.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = yuRound(20)
     Column(
         modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).clip(shape)
             .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.85f else 1f))
@@ -80,8 +83,8 @@ fun OfflineNotice(what: String, modifier: Modifier = Modifier, tag: String = "of
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("You're offline", style = MaterialTheme.typography.titleSmall, color = p.textPrimary, fontWeight = FontWeight.Bold)
-                Text("$what needs the internet. These still work:", style = MaterialTheme.typography.bodySmall, color = p.textSecondary)
+                Text(stringResource(R.string.youre_offline), style = MaterialTheme.typography.titleSmall, color = p.textPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.needs_the_internet_these_still_work, what), style = MaterialTheme.typography.bodySmall, color = p.textSecondary)
             }
         }
         Spacer(Modifier.height(10.dp))

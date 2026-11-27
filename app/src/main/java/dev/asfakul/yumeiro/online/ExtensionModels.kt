@@ -71,14 +71,18 @@ data class RemoteExtension(
     val compatNote: String? = null,
 ) {
     /** Stable identity of an extension across repositories and app restarts. */
-    val key: String get() = keyOf(repoUrl, internalName)
+    /** B20-PERF-EXT: worked out once per entry (it runs two regexes and was read in loops over every extension). */
+    val key: String by lazy(LazyThreadSafetyMode.PUBLICATION) { keyOf(repoUrl, internalName) }
     val isNsfw: Boolean get() = tvTypes.any { it.equals("NSFW", ignoreCase = true) }
     val isDown: Boolean get() = status == 0
     val statusLabel: String get() = when (status) { 0 -> "Down"; 2 -> "Slow"; 3 -> "Beta"; else -> "Working" }
 
     companion object {
         fun keyOf(repoUrl: String, internalName: String): String =
-            normalizeRepoUrl(repoUrl).lowercase() + "#" + internalName
+            repoKeys.getOrPut(repoUrl) { normalizeRepoUrl(repoUrl).lowercase() } + "#" + internalName
+
+        /** A handful of repository URLs, each normalised once per process. */
+        private val repoKeys = java.util.concurrent.ConcurrentHashMap<String, String>()
     }
 }
 
@@ -104,7 +108,7 @@ data class InstalledExtension(
     /** Added from a local file or direct link (no repository to update from). */
     val manual: Boolean = false,
 ) {
-    val key: String get() = RemoteExtension.keyOf(repoUrl, internalName)
+    val key: String by lazy(LazyThreadSafetyMode.PUBLICATION) { RemoteExtension.keyOf(repoUrl, internalName) }
 
     fun toJson(): JSONObject = JSONObject()
         .put("internalName", internalName).put("name", name).put("version", version)

@@ -19,12 +19,19 @@ export interface HubItem {
   poster?: string;
   lang?: string;
   anime?: boolean;
+  /** Group O (B14, F8, F9): release or first-air day, TMDB's own score (with its vote count) and genre names. */
+  date?: string;
+  rating?: number;
+  votes?: number;
+  genres?: string[];
 }
 
 export interface HubTitle extends HubItem {
   overview?: string;
   backdrop?: string;
   genres: string[];
+  /** Group O (F5): where it streams in the asked region (TMDB / JustWatch data), names only. */
+  streaming?: string[];
   imdb?: string;
   tmdb: number;
   runtime?: number;
@@ -34,6 +41,9 @@ export interface HubTitle extends HubItem {
 
 /** Home shelves: key -> [TMDB path, query]. The app shows them in this order. */
 export const SHELVES: Record<string, { name: string; path: string; q?: Record<string, string> }> = {
+  // Group O (F6): "Hot right now" (today's trending films and series together) and all-time top films.
+  hot_today: { name: "Hot right now", path: "/trending/all/day" },
+  top_movies: { name: "Top rated movies", path: "/movie/top_rated" },
   trending_movies: { name: "Trending movies", path: "/trending/movie/week" },
   trending_tv: { name: "Trending series", path: "/trending/tv/week" },
   popular_movies: { name: "Popular movies", path: "/movie/popular" },
@@ -55,6 +65,15 @@ export const SHELVES: Record<string, { name: string; path: string; q?: Record<st
 };
 
 const IMG = "https://image.tmdb.org/t/p";
+
+/** TMDB genre ids (stable, from /genre/movie/list and /genre/tv/list). Names only, no call needed. */
+export const GENRES: Record<number, string> = {
+  28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime", 99: "Documentary", 18: "Drama",
+  10751: "Family", 14: "Fantasy", 36: "History", 27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance",
+  878: "Science Fiction", 10770: "TV Movie", 53: "Thriller", 10752: "War", 37: "Western",
+  10759: "Action & Adventure", 10762: "Kids", 10763: "News", 10764: "Reality", 10765: "Sci-Fi & Fantasy",
+  10766: "Soap", 10767: "Talk", 10768: "War & Politics",
+};
 const ADULT = /\b(xxx|porn\w*|erotic\w*|hentai|nude|nudity|18\+)\b/i;
 export const MAX_PAGE = 20;
 export const MAX_QUERY = 80;
@@ -88,6 +107,14 @@ export function item(r: Raw, fallback?: Kind): HubItem | null {
   if (p) out.poster = `${IMG}/w342${p}`;
   if (lang) out.lang = lang;
   if (genres.includes(16) && lang === "ja") out.anime = true;
+  const d = str(t === "movie" ? r.release_date : r.first_air_date);
+  if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) out.date = d;
+  const votes = num(r.vote_count) ?? 0;
+  const v = num(r.vote_average);
+  // A score from a handful of votes is noise: only real ones (10 votes or more) are passed on.
+  if (v && v > 0 && votes >= 10) { out.rating = Math.round(v * 10) / 10; out.votes = votes; }
+  const names = genres.map((g) => GENRES[Number(g)]).filter((g): g is string => !!g);
+  if (names.length) out.genres = names.slice(0, 4);
   return out;
 }
 
@@ -101,7 +128,13 @@ export function title(r: Raw, t: Kind): HubTitle | null {
   const b = str(r.backdrop_path); if (b) out.backdrop = `${IMG}/w780${b}`;
   const imdb = str(r.imdb_id) ?? str(ext.imdb_id); if (imdb && imdb.startsWith("tt")) out.imdb = imdb;
   const rt = num(r.runtime) ?? (Array.isArray(r.episode_run_time) ? num((r.episode_run_time as unknown[])[0]) : undefined); if (rt) out.runtime = rt;
-  const v = num(r.vote_average); if (v) out.rating = Math.round(v * 10) / 10;
+  // rating / votes come from item() (only real scores, 10 votes or more).
+  const wp = ((r["watch/providers"] ?? {}) as Raw).results as Raw | undefined;
+  const reg = typeof r._region === "string" ? r._region : "US";
+  const here = (wp?.[reg] ?? {}) as Raw;
+  const flat = Array.isArray(here.flatrate) ? (here.flatrate as Raw[]) : [];
+  const streaming = [...new Set(flat.map((x) => str(x.provider_name)).filter((x): x is string => !!x))].slice(0, 8);
+  if (streaming.length) out.streaming = streaming;
   if (t === "tv" && Array.isArray(r.seasons)) {
     out.seasons = (r.seasons as Raw[])
       .map((s) => ({ n: num(s.season_number) ?? -1, count: num(s.episode_count) ?? 0, name: str(s.name) }))
@@ -112,7 +145,7 @@ export function title(r: Raw, t: Kind): HubTitle | null {
 }
 
 /** The TMDB request for a hub call, or an error code (pure; unit-tested). */
-export function plan(path: string, params: URLSearchParams): { tmdb: string; kind?: Kind; ttl: number } | { error: string } {
+export function plan(path: string, params: URLSearchParams, today: string = new Date().toISOString().slice(0, 10)): { tmdb: string; kind?: Kind; ttl: number } | { error: string } {
   const page = Math.min(Math.max(Number(params.get("page") ?? "1") | 0, 1), MAX_PAGE);
   if (path === "/v1/hub/shelves") return { tmdb: "", ttl: 86_400 };
   if (path === "/v1/hub/catalog") {
@@ -131,18 +164,92 @@ export function plan(path: string, params: URLSearchParams): { tmdb: string; kin
     const t = params.get("type");
     const id = Number(params.get("id"));
     if ((t !== "movie" && t !== "tv") || !Number.isInteger(id) || id <= 0 || id > 1e9) return { error: "bad_title" };
-    return { tmdb: `/${t}/${id}?append_to_response=external_ids`, kind: t, ttl: 24 * 3600 };
+    return { tmdb: `/${t}/${id}?append_to_response=external_ids,watch/providers`, kind: t, ttl: 24 * 3600 };
   }
+  // Group O (F6 "If you like"): TMDB's recommendations for one title.
+  if (path === "/v1/hub/recommend") {
+    const t = params.get("type");
+    const id = Number(params.get("id"));
+    if ((t !== "movie" && t !== "tv") || !Number.isInteger(id) || id <= 0 || id > 1e9) return { error: "bad_title" };
+    return { tmdb: `/${t}/${id}/recommendations?${new URLSearchParams({ page: String(page) })}`, kind: t, ttl: 24 * 3600 };
+  }
+  // Group O (F5): the streaming services TMDB knows in a region, most used first.
+  if (path === "/v1/hub/providers") {
+    const region = iso2(params.get("region")) ?? "US";
+    return { tmdb: `/watch/providers/movie?${new URLSearchParams({ watch_region: region })}`, ttl: 24 * 3600 };
+  }
+  if (path === "/v1/hub/discover") return discover(params, page, today);
   return { error: "not_found" };
+}
+
+const iso2 = (v: string | null) => (v && /^[A-Z]{2}$/.test(v) ? v : undefined);
+const ids = (v: string | null, max: number) => (v ?? "").split(/[,|]/).map(Number).filter((n) => Number.isInteger(n) && n > 0 && n < 1e6).slice(0, max);
+
+/** Adds [days] to an ISO day (UTC), pure. */
+export function plusDays(day: string, days: number): string {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+export const UPCOMING_DAYS = 60;
+
+/**
+ * Group O (B14, F5, F6, F9): one whitelisted TMDB Discover call. Only known parameters pass, each checked, so
+ * the edge cache sees a small set of keys.
+ *  type movie|tv · sort popular|top|new|upcoming · genre ids (up to 3, all must match) · provider ids (up to 3,
+ *  any) with region · origin (country of origin) · lang (original language) · anime=1.
+ * "upcoming" uses an explicit forward window (today .. +60 days) instead of TMDB's rolling /upcoming lists,
+ * which are mostly already-released titles; for series it is the first air date.
+ */
+export function discover(params: URLSearchParams, page: number, today: string): { tmdb: string; kind: Kind; ttl: number } | { error: string } {
+  const t = params.get("type");
+  if (t !== "movie" && t !== "tv") return { error: "bad_type" };
+  const sort = params.get("sort") ?? "popular";
+  if (!["popular", "top", "new", "upcoming"].includes(sort)) return { error: "bad_sort" };
+  const date = t === "movie" ? "primary_release_date" : "first_air_date";
+  const q: Record<string, string> = { include_adult: "false", page: String(page) };
+  const genres = ids(params.get("genre"), 3);
+  const providers = ids(params.get("provider"), 3);
+  const region = iso2(params.get("region"));
+  const origin = iso2(params.get("origin"));
+  const lang = params.get("lang");
+  if (params.get("anime") === "1") { genres.push(16); q.with_original_language = "ja"; }
+  if (genres.length) q.with_genres = [...new Set(genres)].join(",");
+  if (providers.length) { q.with_watch_providers = providers.join("|"); q.watch_region = region ?? "US"; q.with_watch_monetization_types = "flatrate"; }
+  if (origin) q.with_origin_country = origin;
+  if (lang && /^[a-z]{2}$/.test(lang)) q.with_original_language = lang;
+  switch (sort) {
+    case "popular": q.sort_by = "popularity.desc"; break;
+    case "top": q.sort_by = "vote_average.desc"; q["vote_count.gte"] = t === "movie" ? "300" : "150"; break;
+    case "new": q.sort_by = `${date}.desc`; q[`${date}.lte`] = today; q["vote_count.gte"] = "5"; break;
+    case "upcoming": q.sort_by = "popularity.desc"; q[`${date}.gte`] = today; q[`${date}.lte`] = plusDays(today, UPCOMING_DAYS); break;
+  }
+  return { tmdb: `/discover/${t}?${new URLSearchParams(q)}`, kind: t, ttl: sort === "upcoming" || sort === "new" ? 6 * 3600 : 12 * 3600 };
 }
 
 export function shelves() {
   return { shelves: Object.entries(SHELVES).map(([key, s]) => ({ key, name: s.name })) };
 }
 
+/** Group O (F5): TMDB watch providers -> the 24 most used in [region] (pure; unit-tested). */
+export function providers(body: Raw, region: string): { id: number; name: string; logo?: string }[] {
+  const rows = Array.isArray(body.results) ? (body.results as Raw[]) : [];
+  const prio = (r: Raw) => num(((r.display_priorities ?? {}) as Raw)[region]) ?? num(r.display_priority) ?? 999;
+  return rows
+    .filter((r) => num(r.provider_id) && str(r.provider_name))
+    .sort((a, b) => prio(a) - prio(b))
+    .slice(0, 24)
+    .map((r) => {
+      const logo = str(r.logo_path);
+      return { id: num(r.provider_id)!, name: str(r.provider_name)!, ...(logo ? { logo: `${IMG}/w154${logo}` } : {}) };
+    });
+}
+
 /** Shapes a TMDB answer for the app (pure; unit-tested). */
-export function shape(path: string, body: Raw, kind?: Kind): unknown {
-  if (path === "/v1/hub/title") return title(body, kind!) ?? { error: "not_found" };
+export function shape(path: string, body: Raw, kind?: Kind, region?: string): unknown {
+  if (path === "/v1/hub/title") return title({ ...body, _region: region ?? "US" }, kind!) ?? { error: "not_found" };
+  if (path === "/v1/hub/providers") return { providers: providers(body, region ?? "US") };
   const rows = Array.isArray(body.results) ? (body.results as Raw[]) : [];
   const items = rows.map((r) => item(r, kind)).filter((x): x is HubItem => !!x);
   const page = num(body.page) ?? 1, pages = num(body.total_pages) ?? 1;

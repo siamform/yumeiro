@@ -77,6 +77,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.absoluteValue
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Which Home sections the user switched off in "Customize home". Remembered in its own prefs file
@@ -95,6 +96,7 @@ object HomeLayout {
         "episodes" to "New episodes",
         "spaces" to "Your spaces",
         "moods" to "Mood of the hour",
+        "discover" to "Discover",
         "new" to "New arrivals",
         "most" to "Most played",
         "yt" to "On YouTube for you",
@@ -258,7 +260,7 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
 @Composable
 private fun HeroSlideCard(s: HeroSlide, onClick: () -> Unit) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(24.dp)
+    val shape = yuRound(24)
     Box(
         Modifier.fillMaxWidth().height(184.dp).clip(shape)
             .background(p.surfaceContainerHigh)
@@ -274,7 +276,7 @@ private fun HeroSlideCard(s: HeroSlide, onClick: () -> Unit) {
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(p.surfaceContainerHigh.copy(alpha = 0.3f), p.surfaceContainerHigh.copy(alpha = 0.94f), p.surfaceContainerHigh))))
         KanjiMark(if (s.fresh) "新" else "続", Modifier.align(Alignment.TopEnd).padding(end = 12.dp, top = 4.dp), size = 72.sp, alpha = 0.07f)
         Row(Modifier.fillMaxSize().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(RoundedCornerShape(16.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+            Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(yuRound(16)).background(p.textPrimary.copy(alpha = 0.06f))) {
                 dev.asfakul.yumeiro.ui.screens.online.PosterImage(s.poster, s.headers, Modifier.fillMaxSize())
                 if (s.fresh) Hanko(modifier = Modifier.align(Alignment.TopStart).padding(6.dp))
             }
@@ -313,7 +315,7 @@ private fun HeroSlideCard(s: HeroSlide, onClick: () -> Unit) {
 @Composable
 internal fun EpisodesEmpty(hasSources: Boolean, onFind: () -> Unit, onAddSources: () -> Unit) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = yuRound(20)
     Row(
         Modifier.fillMaxWidth().clip(shape)
             .background(p.surfaceContainerHigh.copy(alpha = if (p.isDark) 0.6f else 1f))

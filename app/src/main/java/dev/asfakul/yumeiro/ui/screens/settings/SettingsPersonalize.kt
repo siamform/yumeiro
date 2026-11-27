@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -60,6 +62,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // region Navigation bar
 
@@ -78,11 +81,11 @@ fun NavigationBarSettingsCard() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Preview
         SettingsCard {
-            Text("Preview", color = TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.preview), color = TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(10.dp))
             NavPreview(items.map { it.label to it.selectedIcon })
             Spacer(Modifier.height(8.dp))
-            Text("${items.size} of ${NavPrefs.MAX_ITEMS} · each with a short label; up to seven fit a thumb",
+            Text(stringResource(R.string.of_each_with_a_short_label, items.size, NavPrefs.MAX_ITEMS),
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.testTag("nav_settings_count"))
         }
 
@@ -110,7 +113,7 @@ fun NavigationBarSettingsCard() {
 
         GroupLabel("Shortcuts")
         SettingsCard {
-            Text("Pin up to ${NavPrefs.MAX_SHORTCUTS} pages you open every day.", color = TextSecondary, fontSize = 13.sp)
+            Text(stringResource(R.string.pin_up_to_pages_you_open, NavPrefs.MAX_SHORTCUTS), color = TextSecondary, fontSize = 13.sp)
             Spacer(Modifier.height(12.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 NavPrefs.Shortcut.offered().forEach { s ->
@@ -161,8 +164,8 @@ private fun ruleMessage(size: Int, adding: Boolean) =
 private fun NavPreview(items: List<Pair<String, androidx.compose.ui.graphics.vector.ImageVector>>) {
     val p = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.navBar)
-            .border(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline(), RoundedCornerShape(22.dp))
+        Modifier.fillMaxWidth().clip(yuRound(22)).background(p.navBar)
+            .border(1.dp, dev.asfakul.yumeiro.ui.components.rememberMoonHairline(), yuRound(22))
             .padding(horizontal = 6.dp, vertical = 8.dp).testTag("nav_settings_preview"),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
@@ -241,8 +244,8 @@ private fun NetTab(title: String, value: String, icon: androidx.compose.ui.graph
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (selected) p.accent.copy(alpha = if (p.isDark) 0.18f else 0.14f) else p.surfaceContainerHigh.copy(alpha = 0.45f), label = "net_tab")
     Row(
-        modifier.clip(RoundedCornerShape(16.dp)).background(bg)
-            .border(1.dp, if (selected) p.accent.copy(alpha = 0.55f) else Color.Transparent, RoundedCornerShape(16.dp))
+        modifier.clip(yuRound(16)).background(bg)
+            .border(1.dp, if (selected) p.accent.copy(alpha = 0.55f) else Color.Transparent, yuRound(16))
             .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -260,13 +263,13 @@ private fun TierRow(t: AudioQuality.Tier, selected: Boolean, onClick: () -> Unit
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (selected) p.accent.copy(alpha = if (p.isDark) 0.12f else 0.10f) else Color.Transparent, label = "tier_bg")
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(RoundedCornerShape(14.dp)).background(bg)
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clip(yuRound(14)).background(bg)
             .clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp).testTag("audio_quality_${t.name.lowercase()}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Kanji seal for the tier (極 · 高 · 盤 ...) — the Japanese voice of the app, not decoration.
         Box(
-            Modifier.size(36.dp).clip(RoundedCornerShape(11.dp))
+            Modifier.size(36.dp).clip(yuRound(11))
                 .background(if (t.lossless || t == AudioQuality.Tier.ATMOS) BrandGold.copy(alpha = 0.16f) else p.surfaceContainerHigh.copy(alpha = 0.6f)),
             contentAlignment = Alignment.Center,
         ) { Text(t.kana, color = if (t.lossless || t == AudioQuality.Tier.ATMOS) BrandGold else TextSecondary, fontSize = if (t.kana.length > 1) 13.sp else 16.sp, fontWeight = FontWeight.Bold) }
@@ -285,7 +288,7 @@ private fun TierRow(t: AudioQuality.Tier, selected: Boolean, onClick: () -> Unit
                 .background(if (selected) p.accent else Color.Transparent)
                 .border(1.5.dp, if (selected) p.accent else TextTertiary.copy(alpha = 0.6f), CircleShape),
             contentAlignment = Alignment.Center,
-        ) { if (selected) Icon(Icons.Default.Check, "Selected", tint = p.onAccent, modifier = Modifier.size(14.dp)) }
+        ) { if (selected) Icon(Icons.Default.Check, stringResource(R.string.selected), tint = p.onAccent, modifier = Modifier.size(14.dp)) }
     }
 }
 
@@ -318,7 +321,7 @@ internal fun TorrServerCard() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Built-in torrent engine", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text(stringResource(R.string.built_in_torrent_engine), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     Text(
                         if (accepted) "Magnet and .torrent links play in Yumeiro. TorrServer below is only a fallback."
                         else "Play magnet and .torrent links in Yumeiro, no TorrServer needed.",
@@ -335,20 +338,20 @@ internal fun TorrServerCard() {
         }
         if (asking) androidx.compose.material3.AlertDialog(
             onDismissRequest = { asking = false },
-            title = { Text("Before you turn it on") },
+            title = { Text(stringResource(R.string.before_you_turn_it_on)) },
             text = { Text(dev.asfakul.yumeiro.stream.torrent.TorrentStreams.PRIVACY_NOTICE, modifier = Modifier.testTag("torrent_engine_notice")) },
             confirmButton = {
                 androidx.compose.material3.TextButton(
                     onClick = { dev.asfakul.yumeiro.stream.TorrentSettings.setEngineAccepted(context, true); asking = false },
                     modifier = Modifier.testTag("torrent_engine_accept"),
-                ) { Text("I understand, turn on", fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.i_understand_turn_on), fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { asking = false }) { Text("Not now") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { asking = false }) { Text(stringResource(R.string.not_now)) } },
         )
         Spacer(Modifier.height(10.dp))
     }
     SettingsCard {
-        Text("TorrServer address", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        Text(stringResource(R.string.torrserver_address), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         Text(
             "Magnet and .torrent links stream through a TorrServer you run on this phone or your network (default port 8090). " +
                 "Leave empty to open torrent links in another app.",
@@ -357,13 +360,13 @@ internal fun TorrServerCard() {
         Spacer(Modifier.height(10.dp))
         androidx.compose.material3.OutlinedTextField(
             value = text, onValueChange = { text = it; error = null }, singleLine = true,
-            placeholder = { Text("http://127.0.0.1:8090") }, isError = error != null,
+            placeholder = { Text(stringResource(R.string.http_127_0_0_1_8090)) }, isError = error != null,
             supportingText = error?.let { e -> { Text(e) } },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth().testTag("torrserver_field"),
         )
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
-            if (saved.isNotEmpty()) androidx.compose.material3.TextButton(onClick = { dev.asfakul.yumeiro.stream.TorrentSettings.setServer(context, ""); text = "" }) { Text("Clear") }
+            if (saved.isNotEmpty()) androidx.compose.material3.TextButton(onClick = { dev.asfakul.yumeiro.stream.TorrentSettings.setServer(context, ""); text = "" }) { Text(stringResource(R.string.clear)) }
             androidx.compose.material3.TextButton(
                 onClick = {
                     if (dev.asfakul.yumeiro.stream.TorrentSettings.setServer(context, text)) {
@@ -372,7 +375,7 @@ internal fun TorrServerCard() {
                     } else error = "Enter an address like 192.168.1.5:8090"
                 },
                 modifier = Modifier.testTag("torrserver_save"),
-            ) { Text("Save", fontWeight = FontWeight.Bold) }
+            ) { Text(stringResource(R.string.save), fontWeight = FontWeight.Bold) }
         }
     }
 }

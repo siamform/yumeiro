@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,10 +67,10 @@ fun OnlineSettingsCard(part: OnlinePart) {
     if (confirmAdult) TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
         onDismissRequest = { confirmAdult = false },
-        title = { Text("Show 18+ content?") },
-        text = { Text("Adult extensions and titles will appear in the market, home and search. Confirm you are 18 or older and that this content is legal where you live.") },
-        confirmButton = { TextButton(onClick = { OnlineSettings.setAdult(context, true); confirmAdult = false }, modifier = Modifier.testTag("adult_confirm")) { Text("I'm 18 or older") } },
-        dismissButton = { TextButton(onClick = { confirmAdult = false }) { Text("Cancel") } },
+        title = { Text(stringResource(R.string.show_18_content)) },
+        text = { Text(stringResource(R.string.adult_extensions_and_titles_will_appear)) },
+        confirmButton = { TextButton(onClick = { OnlineSettings.setAdult(context, true); confirmAdult = false }, modifier = Modifier.testTag("adult_confirm")) { Text(stringResource(R.string.im_18_or_older)) } },
+        dismissButton = { TextButton(onClick = { confirmAdult = false }) { Text(stringResource(R.string.cancel)) } },
     )
 
     edit?.let { which ->
@@ -97,9 +99,9 @@ fun OnlineSettingsCard(part: OnlinePart) {
                         else -> OnlineSettings.setSubtitleLang(context, text.trim().lowercase().take(5).ifBlank { "en" })
                     }
                     edit = null
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton(onClick = { edit = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { edit = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -123,7 +125,7 @@ fun OnlineSettingsCard(part: OnlinePart) {
             }
             OnlinePart.SUBTITLES -> {
                 ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
-                Text("Subtitle sites (all free, use any or all)", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.subtitle_sites_all_free_use_any), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 ValueRow("OpenSubtitles API key", when { osKey.isNotBlank() -> "Your key"; dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> "Not set" }) { edit = "os" }
                 ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
                 ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
@@ -139,6 +141,6 @@ private fun ValueRow(title: String, value: String, onClick: () -> Unit) {
             Text(title, color = TextPrimary, fontSize = 15.sp)
             Text(value, color = TextTertiary, fontSize = 12.sp)
         }
-        TextButton(onClick = onClick) { Text("Change") }
+        TextButton(onClick = onClick) { Text(stringResource(R.string.change)) }
     }
 }

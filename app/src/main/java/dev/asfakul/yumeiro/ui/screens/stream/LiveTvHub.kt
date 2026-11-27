@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,6 +56,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /*
  * Round 8 — Live TV home.
@@ -92,12 +95,12 @@ internal fun liveHue(name: String): Color {
 @Composable
 internal fun LiveChannelTile(ch: StreamRequest, onClick: () -> Unit, modifier: Modifier = Modifier, tag: String = "live_channel") {
     Column(
-        modifier.clip(RoundedCornerShape(16.dp)).clickable(onClickLabel = "Play ${ch.displayTitle}", onClick = onClick)
+        modifier.clip(yuRound(16)).clickable(onClickLabel = "Play ${ch.displayTitle}", onClick = onClick)
             .padding(bottom = 6.dp).testTag(tag).feedCard("live", ch.url),
     ) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(16f / 11f).clip(RoundedCornerShape(16.dp)).background(GlassFill)
-                .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp)),
+            Modifier.fillMaxWidth().aspectRatio(16f / 11f).clip(yuRound(16)).background(GlassFill)
+                .border(1.dp, Color.White.copy(alpha = 0.06f), yuRound(16)),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -108,12 +111,12 @@ internal fun LiveChannelTile(ch: StreamRequest, onClick: () -> Unit, modifier: M
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
             )
             Row(
-                Modifier.align(Alignment.TopStart).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 5.dp, vertical = 1.dp),
+                Modifier.align(Alignment.TopStart).padding(6.dp).clip(yuRound(6)).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 5.dp, vertical = 1.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.size(5.dp).clip(CircleShape).background(Color(0xFFFF4D5E)))
                 Spacer(Modifier.width(3.dp))
-                Text("LIVE", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, lineHeight = 10.sp)
+                Text(stringResource(R.string.live), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp, lineHeight = 10.sp)
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -132,12 +135,12 @@ internal fun LiveRecentRow(recent: List<StreamRequest>, onPlay: (StreamRequest) 
     Column(Modifier.fillMaxWidth().testTag("live_recent_row")) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Recently played", color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1)
-                Text("${recent.size.coerceAtMost(MAX_RECENT_ROW)} channels", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+                Text(stringResource(R.string.recently_played), color = TextPrimary, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1)
+                Text(stringResource(R.string.channels, recent.size.coerceAtMost(MAX_RECENT_ROW)), color = TextTertiary, fontSize = 11.sp, maxLines = 1)
             }
             Text(
-                "Clear", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button, onClickLabel = "Clear recently played", onClick = onClear)
+                stringResource(R.string.clear), color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.clip(yuRound(10)).clickable(role = Role.Button, onClickLabel = "Clear recently played", onClick = onClear)
                     .padding(horizontal = 8.dp, vertical = 6.dp).testTag("live_recent_clear"),
             )
         }
@@ -155,9 +158,9 @@ internal const val MAX_RECENT_ROW = 20
 @Composable
 internal fun LiveTileSkeleton(modifier: Modifier) {
     Column(modifier) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 11f).clip(RoundedCornerShape(16.dp)).background(GlassFill))
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 11f).clip(yuRound(16)).background(GlassFill))
         Spacer(Modifier.height(6.dp))
-        Box(Modifier.fillMaxWidth(0.7f).height(10.dp).clip(RoundedCornerShape(4.dp)).background(GlassFill))
+        Box(Modifier.fillMaxWidth(0.7f).height(10.dp).clip(yuRound(4)).background(GlassFill))
     }
 }
 
@@ -165,11 +168,11 @@ internal fun LiveTileSkeleton(modifier: Modifier) {
 internal fun LiveProblem(message: String, onRetry: () -> Unit) {
     val pal = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(16.dp)).background(GlassFill).padding(horizontal = 14.dp, vertical = 10.dp).testTag("live_problem"),
+        Modifier.fillMaxWidth().padding(top = 8.dp).clip(yuRound(16)).background(GlassFill).padding(horizontal = 14.dp, vertical = 10.dp).testTag("live_problem"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(message, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Text("Retry", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onRetry).padding(horizontal = 12.dp, vertical = 10.dp))
+        Text(stringResource(R.string.retry), color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onRetry).padding(horizontal = 12.dp, vertical = 10.dp))
     }
 }
 
@@ -181,14 +184,14 @@ internal fun LiveToolsGrid(tools: List<LiveTool>, columns: Int = 4) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 row.forEach { t ->
                     Column(
-                        Modifier.weight(1f).clip(RoundedCornerShape(16.dp))
+                        Modifier.weight(1f).clip(yuRound(16))
                             .clickable(role = Role.Button, onClickLabel = t.title, onClick = t.onClick)
                             .semantics(mergeDescendants = true) { contentDescription = "${t.title}, ${t.status}" }
                             .padding(vertical = 4.dp).testTag(t.tag),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Box(
-                            Modifier.size(50.dp).clip(RoundedCornerShape(17.dp)).background(Brush.linearGradient(listOf(t.hue, t.hue.copy(alpha = 0.72f)))),
+                            Modifier.size(50.dp).clip(yuRound(17)).background(Brush.linearGradient(listOf(t.hue, t.hue.copy(alpha = 0.72f)))),
                             contentAlignment = Alignment.Center,
                         ) { Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(22.dp)) }
                         Spacer(Modifier.height(6.dp))
@@ -209,11 +212,11 @@ internal object LiveCountryRecent {
     private const val MAX = 5
 
     fun read(ctx: android.content.Context): List<String> =
-        ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).getString(KEY, null)
+        ctx.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(ctx, PREFS), android.content.Context.MODE_PRIVATE).getString(KEY, null)
             ?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
 
     fun add(ctx: android.content.Context, key: String) {
         val next = (listOf(key) + read(ctx).filterNot { it.equals(key, ignoreCase = true) }).take(MAX)
-        ctx.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE).edit().putString(KEY, next.joinToString("\n")).apply()
+        ctx.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(ctx, PREFS), android.content.Context.MODE_PRIVATE).edit().putString(KEY, next.joinToString("\n")).apply()
     }
 }

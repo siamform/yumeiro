@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.profiles
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,23 +48,23 @@ internal fun SecurityQuestionsDialog(p: Profiles.Profile, onDismiss: () -> Unit)
     val ok = Profiles.validRecovery(questions.toList(), answers.toList())
     TsukiDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Security questions") },
+        title = { Text(stringResource(R.string.security_questions)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("If ${p.name}'s PIN is forgotten, these three answers remove it and keep everything else. Answers ignore capitals and extra spaces.", color = TextSecondary)
+                Text(stringResource(R.string.if_s_pin_is_forgotten_these, p.name), color = TextSecondary)
                 for (i in 0 until Profiles.RECOVERY_QUESTIONS) {
                     Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(questions[i], { questions[i] = it.take(80) }, label = { Text("Question ${i + 1}") }, modifier = Modifier.fillMaxWidth().testTag("recovery_q_$i"))
-                    OutlinedTextField(answers[i], { answers[i] = it.take(60) }, singleLine = true, label = { Text("Answer") }, modifier = Modifier.fillMaxWidth().testTag("recovery_a_$i"))
+                    OutlinedTextField(questions[i], { questions[i] = it.take(80) }, label = { Text(stringResource(R.string.question, i + 1)) }, modifier = Modifier.fillMaxWidth().testTag("recovery_q_$i"))
+                    OutlinedTextField(answers[i], { answers[i] = it.take(60) }, singleLine = true, label = { Text(stringResource(R.string.answer)) }, modifier = Modifier.fillMaxWidth().testTag("recovery_a_$i"))
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 if (Profiles.setRecovery(context, p.id, questions.toList(), answers.toList())) { AppMessages.success(context, "Security questions saved"); onDismiss() }
-            }, enabled = ok, modifier = Modifier.testTag("recovery_save")) { Text("Save", color = if (ok) SpotifyGreen else TextTertiary) }
+            }, enabled = ok, modifier = Modifier.testTag("recovery_save")) { Text(stringResource(R.string.save), color = if (ok) SpotifyGreen else TextTertiary) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -74,18 +76,18 @@ internal fun RecoveryAnswerDialog(p: Profiles.Profile, onDismiss: () -> Unit, on
     var error by remember { mutableStateOf<String?>(null) }
     TsukiDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Forgot the PIN?") },
+        title = { Text(stringResource(R.string.forgot_the_pin)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Text("Answer ${p.name}'s security questions to remove the PIN. Nothing else changes.", color = TextSecondary)
+                Text(stringResource(R.string.answer_s_security_questions_to_remove, p.name), color = TextSecondary)
                 p.recoveryQuestions.forEachIndexed { i, q ->
                     Spacer(Modifier.height(12.dp))
                     Text(q)
-                    OutlinedTextField(answers[i], { answers[i] = it.take(60); error = null }, singleLine = true, label = { Text("Answer") }, modifier = Modifier.fillMaxWidth().testTag("recovery_answer_$i"))
+                    OutlinedTextField(answers[i], { answers[i] = it.take(60); error = null }, singleLine = true, label = { Text(stringResource(R.string.answer)) }, modifier = Modifier.fillMaxWidth().testTag("recovery_answer_$i"))
                 }
                 error?.let { Spacer(Modifier.height(8.dp)); Text(it, color = androidx.compose.ui.graphics.Color(0xFFFF6B6B), modifier = Modifier.testTag("recovery_error")) }
                 Spacer(Modifier.height(8.dp))
-                TextButton(onClick = onOtherWay, modifier = Modifier.testTag("recovery_other")) { Text("I don't know the answers") }
+                TextButton(onClick = onOtherWay, modifier = Modifier.testTag("recovery_other")) { Text(stringResource(R.string.i_dont_know_the_answers)) }
             }
         },
         confirmButton = {
@@ -95,8 +97,8 @@ internal fun RecoveryAnswerDialog(p: Profiles.Profile, onDismiss: () -> Unit, on
                     Profiles.PinCheck.WRONG -> error = "The answers don't match"
                     Profiles.PinCheck.LOCKED_OUT -> error = "Too many tries. Wait ${Profiles.waitText(Profiles.lockoutLeft(context, p.id))}"
                 }
-            }, modifier = Modifier.testTag("recovery_ok")) { Text("Remove PIN") }
+            }, modifier = Modifier.testTag("recovery_ok")) { Text(stringResource(R.string.remove_pin)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

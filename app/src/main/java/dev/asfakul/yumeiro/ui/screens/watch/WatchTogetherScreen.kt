@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -55,6 +57,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.watch.WatchTogether
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Host or join a room on the same Wi-Fi. No account, no server. */
 @Composable
@@ -74,56 +77,56 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
         LazyColumn(state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("watch_together"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (status.role) {
                 WatchTogether.Role.HOST -> item("host") {
-                    Surface(shape = RoundedCornerShape(18.dp), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = yuRound(18), color = SpotifyGreen.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Text("You're hosting \"${status.roomName}\"", color = TextPrimary, fontWeight = FontWeight.Bold)
-                            Text("Room code", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+                            Text(stringResource(R.string.room_code), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
                             Text(status.code, color = TextPrimary, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-                            Text("Address ${status.address} · ${status.guests} watching", color = TextSecondary, fontSize = 13.sp)
+                            Text(stringResource(R.string.address_watching, status.address, status.guests), color = TextSecondary, fontSize = 13.sp)
                             Text(if (status.state.title.isBlank()) "Play something from Videos → Online. Everyone in the room follows your title, episode, pause and seek."
                                 else "Now: ${status.state.title}", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                             Spacer(Modifier.height(10.dp))
-                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = RoundedCornerShape(20.dp)) { Text("Close room") }
+                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = yuRound(20)) { Text(stringResource(R.string.close_room)) }
                         }
                     }
                 }
                 WatchTogether.Role.GUEST -> item("guest") {
-                    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
+                    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
                             Text(if (status.connected) "In \"${status.roomName}\"" else "Connecting to \"${status.roomName}\"…", color = TextPrimary, fontWeight = FontWeight.Bold)
                             Text(status.state.title.ifBlank { "Waiting for the host to play something" }, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                             status.message?.let { Text(it, color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)) }
-                            Text("You need the same source installed as the host. Each phone streams on its own.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                            Text(stringResource(R.string.you_need_the_same_source_installed), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                             Spacer(Modifier.height(10.dp))
-                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = RoundedCornerShape(20.dp)) { Text("Leave") }
+                            OutlinedButton(onClick = { WatchTogether.leave(context) }, shape = yuRound(20)) { Text(stringResource(R.string.leave)) }
                         }
                     }
                 }
                 WatchTogether.Role.NONE -> {
                     item("start") {
-                        Text("One phone hosts, others join with a 4-digit code. Works on home Wi-Fi or a phone hotspot; nothing goes through the internet except each phone's own stream.",
+                        Text(stringResource(R.string.one_phone_hosts_others_join_with),
                             color = TextSecondary, fontSize = 13.sp)
                         Spacer(Modifier.height(10.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { WatchTogether.host(context, android.os.Build.MODEL + " room") }, shape = RoundedCornerShape(20.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("wt_host")) { Text("Host a room") }
-                            OutlinedButton(onClick = { manual = true }, shape = RoundedCornerShape(20.dp)) { Text("Join by address") }
+                            Button(onClick = { WatchTogether.host(context, android.os.Build.MODEL + " room") }, shape = yuRound(20),
+                                colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("wt_host")) { Text(stringResource(R.string.host_a_room)) }
+                            OutlinedButton(onClick = { manual = true }, shape = yuRound(20)) { Text(stringResource(R.string.join_by_address)) }
                         }
                     }
                     item("nearby") { SectionTitle("Rooms nearby", if (found.isEmpty()) "Looking on this Wi-Fi…" else null) }
                     if (found.isEmpty()) item("nearby_empty") {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GlassFill).padding(16.dp).testTag("wt_nearby_empty"),
+                            Modifier.fillMaxWidth().clip(yuRound(18)).background(GlassFill).padding(16.dp).testTag("wt_nearby_empty"),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = SpotifyGreen)
                             Spacer(Modifier.width(12.dp))
-                            Text("No rooms yet. When someone on the same Wi-Fi taps Host a room, it shows up here.", color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+                            Text(stringResource(R.string.no_rooms_yet_when_someone_on), color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
                         }
                     }
                     items(found, key = { it.name + it.host }) { f ->
                         HubCard(f.name, "${f.host}:${f.port}") {
-                            TextButton(onClick = { joinTarget = "${f.host}:${f.port}" to f.name }) { Text("Join", color = SpotifyGreen) }
+                            TextButton(onClick = { joinTarget = "${f.host}:${f.port}" to f.name }) { Text(stringResource(R.string.join), color = SpotifyGreen) }
                         }
                     }
                 }
@@ -132,17 +135,17 @@ fun WatchTogetherScreen(onBack: () -> Unit) {
     }
     if (manual) {
         var addr by remember { mutableStateOf("") }
-        TsukiDialog(onDismissRequest = { manual = false }, title = { Text("Join by address") },
+        TsukiDialog(onDismissRequest = { manual = false }, title = { Text(stringResource(R.string.join_by_address)) },
             text = { OutlinedTextField(addr, { addr = it }, singleLine = true, label = { Text("192.168.1.20:41234") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)) },
-            confirmButton = { TextButton(enabled = addr.contains(':'), onClick = { manual = false; joinTarget = addr.trim() to addr.trim() }) { Text("Next") } },
-            dismissButton = { TextButton(onClick = { manual = false }) { Text("Cancel") } })
+            confirmButton = { TextButton(enabled = addr.contains(':'), onClick = { manual = false; joinTarget = addr.trim() to addr.trim() }) { Text(stringResource(R.string.next)) } },
+            dismissButton = { TextButton(onClick = { manual = false }) { Text(stringResource(R.string.cancel)) } })
     }
     joinTarget?.let { (address, name) ->
         var code by remember { mutableStateOf("") }
-        TsukiDialog(onDismissRequest = { joinTarget = null }, title = { Text("Join $name") },
-            text = { OutlinedTextField(code, { if (it.length <= 4) code = it.filter(Char::isDigit) }, singleLine = true, label = { Text("Room code") },
+        TsukiDialog(onDismissRequest = { joinTarget = null }, title = { Text(stringResource(R.string.join_2, name)) },
+            text = { OutlinedTextField(code, { if (it.length <= 4) code = it.filter(Char::isDigit) }, singleLine = true, label = { Text(stringResource(R.string.room_code)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword), modifier = Modifier.testTag("wt_code")) },
-            confirmButton = { TextButton(enabled = code.length == 4, onClick = { joinTarget = null; WatchTogether.join(context, address, code, name) }) { Text("Join") } },
-            dismissButton = { TextButton(onClick = { joinTarget = null }) { Text("Cancel") } })
+            confirmButton = { TextButton(enabled = code.length == 4, onClick = { joinTarget = null; WatchTogether.join(context, address, code, name) }) { Text(stringResource(R.string.join)) } },
+            dismissButton = { TextButton(onClick = { joinTarget = null }) { Text(stringResource(R.string.cancel)) } })
     }
 }

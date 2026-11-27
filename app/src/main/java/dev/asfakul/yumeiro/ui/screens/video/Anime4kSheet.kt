@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,7 +82,7 @@ fun Anime4kSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoFixHigh, null, tint = p.accent, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Picture and Anime4K", style = MaterialTheme.typography.titleLarge, color = p.textPrimary, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.picture_and_anime4k), style = MaterialTheme.typography.titleLarge, color = p.textPrimary, modifier = Modifier.weight(1f))
             }
             // A4K-3: where changes are saved, presets and picture controls (all work with Anime4K on or off).
             val picture = rememberPictureDraft(context, titleKey)
@@ -89,7 +91,7 @@ fun Anime4kSheet(
             PictureControls(picture, onPreview = onPreview)
             Spacer(Modifier.height(20.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Anime4K", style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.anime4k), style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Switch(checked = on, onCheckedChange = { VideoPrefs.setAnime4k(context, it); onChanged(it) }, modifier = Modifier.testTag("a4k_switch"))
             }
             Text(

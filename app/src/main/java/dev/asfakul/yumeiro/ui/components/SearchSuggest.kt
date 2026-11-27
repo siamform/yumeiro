@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import android.content.Context
 import androidx.compose.foundation.background
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import java.text.Normalizer
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
 private val RX_SEARCHSUGGEST_HOT_1 = Regex("\\p{M}+")
@@ -147,7 +150,7 @@ object SearchHistoryCodec {
 /** Recent searches per search box ("library", "hues", "youtube", "ytmusic"), kept on the device. */
 object RecentSearches {
     private const val PREFS = "search_recent"
-    private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(c: Context) = c.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(c, PREFS), Context.MODE_PRIVATE)
     fun load(c: Context, scope: String): List<String> = SearchHistoryCodec.decode(prefs(c).getString(scope, ""))
     fun add(c: Context, scope: String, q: String) {
         val t = SearchHistoryCodec.clean(q).takeIf { it.length >= 2 } ?: return
@@ -186,7 +189,7 @@ fun SuggestionList(
 ) {
     if (suggestions.isEmpty()) return
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = yuRound(22)
     Column(
         modifier
             .fillMaxWidth()
@@ -214,7 +217,7 @@ fun SuggestionList(
                 Box(
                     Modifier.minimumInteractiveComponentSize().size(36.dp).clip(CircleShape).clickable { onFill(s) }.testTag(tag + "_fill"),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Default.NorthWest, "Fill search box", tint = p.textTertiary, modifier = Modifier.size(16.dp)) }
+                ) { Icon(Icons.Default.NorthWest, stringResource(R.string.fill_search_box), tint = p.textTertiary, modifier = Modifier.size(16.dp)) }
             }
         }
     }

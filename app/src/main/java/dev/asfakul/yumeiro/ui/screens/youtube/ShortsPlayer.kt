@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
@@ -305,7 +307,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                 when {
                     err != null -> Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(err, color = Color.White)
-                        TextButton(onClick = { failed.remove(item.id); resolved.remove(item.id); resolve(page) }, modifier = Modifier.testTag("shorts_retry")) { Text("Retry") }
+                        TextButton(onClick = { failed.remove(item.id); resolved.remove(item.id); resolve(page) }, modifier = Modifier.testTag("shorts_retry")) { Text(stringResource(R.string.retry)) }
                     }
                     page == pager.settledPage && (resolved[item.id] == null || buffering) ->
                         CircularProgressIndicator(Modifier.align(Alignment.Center).size(40.dp), color = Color.White)
@@ -313,7 +315,7 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
                         Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.align(Alignment.Center).size(64.dp).testTag("shorts_paused"))
                 }
                 if (fast && page == pager.settledPage) {
-                    Text("2x", color = Color.White, modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp)
+                    Text(stringResource(R.string.t_2x), color = Color.White, modifier = Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp)
                         .background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 10.dp, vertical = 4.dp).testTag("shorts_fast"))
                 }
                 if (chrome) Column(
@@ -327,13 +329,13 @@ private fun ShortsPlayer(items: List<YtItem>, startIndex: Int, onClose: () -> Un
             }
         }
         if (chrome) Row(Modifier.fillMaxWidth().safeDrawingPadding().padding(4.dp).testTag("shorts_chrome"), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose, modifier = Modifier.testTag("shorts_close")) { Icon(Icons.Default.ArrowBack, "Close Shorts", tint = Color.White) }
+            IconButton(onClick = onClose, modifier = Modifier.testTag("shorts_close")) { Icon(Icons.Default.ArrowBack, stringResource(R.string.close_shorts), tint = Color.White) }
             TextButton(
                 onClick = { current?.let { lease?.player?.pause(); onFullPlayer(it) } },
                 modifier = Modifier.testTag("shorts_full_player").semantics { contentDescription = "Full player" },
             ) {
                 Icon(Icons.Default.OpenInFull, null, tint = Color.White)
-                Text("  Full player", color = Color.White)
+                Text(stringResource(R.string.full_player), color = Color.White)
             }
         }
     }

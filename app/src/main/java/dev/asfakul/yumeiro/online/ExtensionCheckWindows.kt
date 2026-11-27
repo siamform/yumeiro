@@ -245,6 +245,15 @@ object ExtensionCheckWindows {
         }
     }
 
+    /**
+     * B4: Yumeiro's own silent check could not pass [host] (an interactive widget). Same quiet card as an extension's
+     * window ([handOff]), at most once per site per [HAND_OFF_NOTE_MS], only while the app is on screen.
+     */
+    fun askToVerify(ctx: android.content.Context, host: String, url: String) {
+        if (!VerificationCenter.mayAsk(host) || VerificationCenter.isBlocked(host)) return
+        main.post { handOff(ctx, host, host, url) }
+    }
+
     /** Pure → unit-tested. */
     fun handOffText(extName: String, host: String) = "$extName needs a quick check on $host. Tap Verify when you're ready."
 
@@ -321,12 +330,32 @@ object ExtensionCheckWindows {
         var seen = 0
         fun walk(v: View, depth: Int): WebView? {
             if (seen++ > 400 || depth > 30) return null
-            if (v is WebView) return v
+            if (v is WebView) return v.also(::harden)
             if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), depth + 1)?.let { return it }
             return null
         }
         return walk(root, 0)
     }
+
+    /**
+     * The extension's own WebView (a site's check page): content:// and file access are turned off the first time
+     * Yumeiro finds it, so a link on that page cannot read the app's or the device's files. The page itself is
+     * left alone (no reload, no script change).
+     */
+    private fun harden(w: WebView) {
+        // Once per WebView, and after the current frame: the check window is polled every tick, and touching a
+        // WebView's settings while its renderer is still starting waits on Chromium (B20 low-RAM, run 45957252810).
+        if (w.getTag(HARDENED_TAG) != null) return
+        w.setTag(HARDENED_TAG, true)
+        main.post {
+            runCatching {
+                val s = w.settings
+                if (s.allowContentAccess) s.allowContentAccess = false
+                if (s.allowFileAccess) s.allowFileAccess = false
+            }
+        }
+    }
+    private val HARDENED_TAG = dev.asfakul.yumeiro.R.id.yu_webview_hardened
 
     private fun webHost(root: View): String? = firstWeb(root)?.let { w -> runCatching { w.url }.getOrNull() }?.let(VerificationPolicy::hostOf)
 }

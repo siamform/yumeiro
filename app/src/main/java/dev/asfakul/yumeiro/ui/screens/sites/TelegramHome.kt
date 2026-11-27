@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -95,6 +97,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * GROUP F: the Telegram page, on its own (it used to be a mode of the Websites screen).
@@ -172,17 +175,17 @@ fun TelegramHome(onBack: () -> Unit) {
     if (help) TsukiDialog(
         onDismissRequest = { help = false },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(SetupGuides.telegram, startExpanded = true) } },
-        confirmButton = { TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text("Got it") } },
+        confirmButton = { TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text(stringResource(R.string.got_it)) } },
     )
 
     if (importing) {
         var text by rememberSaveable { mutableStateOf("") }
         TsukiDialog(
             onDismissRequest = { importing = false },
-            title = { Text("Add channels from a list") },
+            title = { Text(stringResource(R.string.add_channels_from_a_list)) },
             text = {
                 Column {
-                    Text("Paste @names or t.me links, one per line. Channels you already saved stay as they are.", fontSize = 13.sp)
+                    Text(stringResource(R.string.paste_names_or_t_me_links), fontSize = 13.sp)
                     OutlinedTextField(text, { text = it }, minLines = 4, maxLines = 8, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("site_import_field"))
                 }
             },
@@ -191,9 +194,9 @@ fun TelegramHome(onBack: () -> Unit) {
                     val r = SavedSites.importText(context, text)
                     importing = false
                     AppMessages.info(context, TelegramHomeWords.imported(r.added, r.duplicates, r.bad, r.overLimit))
-                }, enabled = text.isNotBlank(), modifier = Modifier.testTag("site_import_confirm")) { Text("Add") }
+                }, enabled = text.isNotBlank(), modifier = Modifier.testTag("site_import_confirm")) { Text(stringResource(R.string.add)) }
             },
-            dismissButton = { TextButton(onClick = { importing = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { importing = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -202,10 +205,10 @@ fun TelegramHome(onBack: () -> Unit) {
         TsukiDialog(
             onDismissRequest = { renaming = null },
             icon = { Icon(Icons.Default.Edit, null) },
-            title = { Text("Rename channel") },
+            title = { Text(stringResource(R.string.rename_channel)) },
             text = { OutlinedTextField(name, { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("site_rename_field")) },
-            confirmButton = { TextButton(onClick = { SavedSites.rename(context, site.url, name); renaming = null }) { Text("Save") } },
-            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = { SavedSites.rename(context, site.url, name); renaming = null }) { Text(stringResource(R.string.save)) } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -234,7 +237,7 @@ fun TelegramHome(onBack: () -> Unit) {
             subtitle = if (sites.isNotEmpty()) "${sites.size} saved" else "Public channels, no login",
         ) {
             if (sites.isNotEmpty()) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, { searchOpen = !searchOpen; if (!searchOpen) query = "" }, "tg_home_search_toggle", "Search your channels")
-            IconButton(onClick = { adding = true }, modifier = Modifier.testTag("tg_add_open")) { Icon(Icons.Default.Add, "Add channel", tint = p.textPrimary) }
+            IconButton(onClick = { adding = true }, modifier = Modifier.testTag("tg_add_open")) { Icon(Icons.Default.Add, stringResource(R.string.add_channel), tint = p.textPrimary) }
             IconButton(
                 onClick = { onUser() },
                 modifier = Modifier.testTag("tg_user").semantics { stateDescription = if (signedIn) "Signed in" else "Not signed in" },
@@ -243,11 +246,11 @@ fun TelegramHome(onBack: () -> Unit) {
                 else Icon(Icons.Default.Person, if (accountEnabled) "Sign in to Telegram" else "Telegram account", tint = p.textSecondary)
             }
             Box {
-                IconButton(onClick = { menu = true }, modifier = Modifier.testTag("tg_more")) { Icon(Icons.Default.MoreVert, "More", tint = p.textSecondary) }
+                IconButton(onClick = { menu = true }, modifier = Modifier.testTag("tg_more")) { Icon(Icons.Default.MoreVert, stringResource(R.string.more), tint = p.textSecondary) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("Add channels from a list") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null) }, onClick = { menu = false; importing = true }, modifier = Modifier.testTag("site_import"))
-                    if (sites.isNotEmpty()) DropdownMenuItem(text = { Text("Share channel list") }, leadingIcon = { Icon(Icons.Default.FileUpload, null) }, onClick = { menu = false; exportList() }, modifier = Modifier.testTag("site_export"))
-                    DropdownMenuItem(text = { Text("How Telegram works") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, null) }, onClick = { menu = false; help = true }, modifier = Modifier.testTag("site_help"))
+                    DropdownMenuItem(text = { Text(stringResource(R.string.add_channels_from_a_list)) }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null) }, onClick = { menu = false; importing = true }, modifier = Modifier.testTag("site_import"))
+                    if (sites.isNotEmpty()) DropdownMenuItem(text = { Text(stringResource(R.string.share_channel_list)) }, leadingIcon = { Icon(Icons.Default.FileUpload, null) }, onClick = { menu = false; exportList() }, modifier = Modifier.testTag("site_export"))
+                    DropdownMenuItem(text = { Text(stringResource(R.string.how_telegram_works)) }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, null) }, onClick = { menu = false; help = true }, modifier = Modifier.testTag("site_help"))
                 }
             }
         }
@@ -261,9 +264,9 @@ fun TelegramHome(onBack: () -> Unit) {
                 LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
                 OutlinedTextField(
                     value = query, onValueChange = { query = it }, singleLine = true,
-                    placeholder = { Text("Search your channels") },
+                    placeholder = { Text(stringResource(R.string.search_your_channels)) },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = yuRound(16),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                     modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("tg_home_search"),
                 )
@@ -295,12 +298,12 @@ private fun TelegramEmpty(signInOffered: Boolean, onAdd: () -> Unit, onSignIn: (
     val p = LocalMtPalette.current
     Column(Modifier.fillMaxWidth().padding(vertical = 28.dp).testTag("tg_empty"), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            Modifier.size(64.dp).clip(RoundedCornerShape(20.dp))
+            Modifier.size(64.dp).clip(yuRound(20))
                 .background(Brush.linearGradient(listOf(p.accent.copy(alpha = 0.30f), p.accent2.copy(alpha = 0.18f)))),
             contentAlignment = Alignment.Center,
         ) { Icon(Icons.AutoMirrored.Filled.Send, null, tint = p.accentBright, modifier = Modifier.size(30.dp)) }
         Spacer(Modifier.height(12.dp))
-        Text("No channels yet", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text(stringResource(R.string.no_channels_yet), color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Text(
             TelegramHomeWords.empty(signInOffered),
             color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, start = 12.dp, end = 12.dp),
@@ -311,9 +314,9 @@ private fun TelegramEmpty(signInOffered: Boolean, onAdd: () -> Unit, onSignIn: (
             Button(
                 onClick = onAdd, colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
                 modifier = Modifier.heightIn(min = 48.dp).testTag("tg_empty_add"),
-            ) { Text("Add a channel", fontWeight = FontWeight.SemiBold) }
+            ) { Text(stringResource(R.string.add_a_channel), fontWeight = FontWeight.SemiBold) }
             if (signInOffered) OutlinedButton(onClick = onSignIn, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_empty_sign_in")) {
-                Text("Sign in", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.sign_in), color = p.textPrimary, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -335,8 +338,8 @@ internal fun TelegramUserSheet(
     var signingOut by remember { mutableStateOf(false) }
     if (confirmLogout) TsukiDialog(
         onDismissRequest = { confirmLogout = false },
-        title = { Text("Sign out of Telegram?") },
-        text = { Text("Yumeiro forgets this login and its downloaded Telegram files. Your account itself is not changed.") },
+        title = { Text(stringResource(R.string.sign_out_of_telegram)) },
+        text = { Text(stringResource(R.string.yumeiro_forgets_this_login_and_its)) },
         confirmButton = {
             TextButton(onClick = {
                 confirmLogout = false; signingOut = true
@@ -346,15 +349,15 @@ internal fun TelegramUserSheet(
                     if (ok) { AppMessages.info(context, "Signed out of Telegram"); onSignedOut() }
                     else AppMessages.error(context, "Couldn't sign out. Check the connection and try again.")
                 }
-            }, modifier = Modifier.testTag("tg_logout_confirm")) { Text("Sign out") }
+            }, modifier = Modifier.testTag("tg_logout_confirm")) { Text(stringResource(R.string.sign_out)) }
         },
-        dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text(stringResource(R.string.cancel)) } },
     )
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = p.surfaceContainerHigh, dragHandle = sheetDragHandle(), modifier = Modifier.testTag("tg_user_sheet")) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
             when {
                 unavailable != null -> {
-                    Text("Sign-in isn't available here", color = p.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("tg_account_unavailable"))
+                    Text(stringResource(R.string.sign_in_isnt_available_here), color = p.textPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.testTag("tg_account_unavailable"))
                     Text(unavailable, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                 }
                 signedIn -> {
@@ -363,7 +366,7 @@ internal fun TelegramUserSheet(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(me?.name ?: "Your Telegram account", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("Signed in", color = p.textSecondary, fontSize = 12.sp)
+                            Text(stringResource(R.string.signed_in), color = p.textSecondary, fontSize = 12.sp)
                         }
                     }
                     SettingLink(Icons.AutoMirrored.Filled.Chat, "Your chats", "Videos and audio from your chats, groups and the private channels you joined", "tg_user_chats") { onChats() }
@@ -376,7 +379,7 @@ internal fun TelegramUserSheet(
                     }
                 }
                 else -> {
-                    Text("Your Telegram account", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.your_telegram_account), color = p.textPrimary, fontWeight = FontWeight.SemiBold)
                     Text(TelegramHomeWords.SIGN_IN_LINE, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
                     SettingLink(Icons.AutoMirrored.Filled.Login, "Sign in", "Telegram sends the code; Yumeiro never sees your password", "tg_user_sign_in") { onSignIn() }
                 }

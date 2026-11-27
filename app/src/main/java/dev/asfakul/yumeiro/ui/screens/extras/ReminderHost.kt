@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.extras
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -67,6 +69,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private const val GATE_REMINDER = "reminder"
 private const val GATE_NOTIF = "notif_prompt"
@@ -80,22 +83,38 @@ fun ReminderHost(blocked: Boolean) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var showing by remember { mutableStateOf<Reminders.Kind?>(null) }
+    // B5: measure the time Yumeiro is really on screen in this visit (never a card at launch).
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            val t = android.os.SystemClock.elapsedRealtime()
+            when (e) {
+                Lifecycle.Event.ON_RESUME -> Reminders.Visit.resumed(t)
+                Lifecycle.Event.ON_PAUSE -> Reminders.Visit.paused(t)
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(obs)
+        onDispose { lifecycle.removeObserver(obs) }
+    }
 
     LaunchedEffect(blocked) {
         if (blocked || Build.FINGERPRINT == "robolectric") return@LaunchedEffect
-        delay(20_000)
         while (true) {
+            delay(60_000)
             if (showing == null && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                val kind = Reminders.due(context)
+                val kind = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    Reminders.due(context, sessionMs = Reminders.Visit.onScreen(android.os.SystemClock.elapsedRealtime()))
+                }
                 if (kind != null && PopupGate.claim(GATE_REMINDER)) {
-                    Reminders.markShown(context, kind)
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Reminders.markShown(context, kind) }
                     showing = kind
                 }
             }
-            delay(60_000)
         }
     }
     val close = { showing = null; PopupGate.release(GATE_REMINDER) }
+    // B5: "Maybe later", Back or a tap outside is saved, and that kind waits longer next time.
+    val dismiss: (Reminders.Kind) -> Unit = { k -> Reminders.recordDismiss(context, k); close() }
     // A video/update/PiP taking over closes the card instead of drawing on top of it.
     LaunchedEffect(blocked) { if (blocked && showing != null) close() }
 
@@ -106,7 +125,8 @@ fun ReminderHost(blocked: Boolean) {
     var guideShown by remember { mutableStateOf(false) }
     LaunchedEffect(blocked) {
         if (blocked || Build.FINGERPRINT == "robolectric") return@LaunchedEffect
-        delay(8_000)
+        // B5: not at launch either; only after two minutes on screen in this visit.
+        while (Reminders.Visit.onScreen(android.os.SystemClock.elapsedRealtime()) < 2L * 60 * 1000) delay(15_000)
         if (showing == null && runCatching { dev.asfakul.yumeiro.notify.ReliabilityGuide.shouldPrompt(context) }.getOrDefault(false) &&
             PopupGate.claim(GATE_REMINDER)) {
             dev.asfakul.yumeiro.notify.ReliabilityGuide.markPrompted(context)
@@ -118,22 +138,22 @@ fun ReminderHost(blocked: Boolean) {
     }
 
     when (showing) {
-        Reminders.Kind.FOLLOW -> FollowCard(onClose = close)
+        Reminders.Kind.FOLLOW -> FollowCard(onClose = close, onDismiss = { dismiss(Reminders.Kind.FOLLOW) })
         Reminders.Kind.STAR -> ReminderCard(
             icon = Icons.Default.Star, tag = "reminder_star",
             title = "Enjoying Yumeiro?",
             body = SupportMessage.STAR,
             action = "Star on GitHub",
             onAction = { if (Links.open(context, Reminders.GITHUB_URL)) Reminders.recordStar(context); close() },
-            onClose = close,
+            onClose = { dismiss(Reminders.Kind.STAR) },
         )
         Reminders.Kind.SUPPORT -> ReminderCard(
             icon = Icons.Default.Favorite, tag = "reminder_support",
             title = "Help keep Yumeiro alive",
             body = SupportMessage.SHORT,
             action = "Buy me a coffee",
-            onAction = { close(); AppPages.open(AppPages.Page.SUPPORT) },
-            onClose = close,
+            onAction = { Reminders.recordSupportOpened(context); close(); AppPages.open(AppPages.Page.SUPPORT) },
+            onClose = { dismiss(Reminders.Kind.SUPPORT) },
         )
         null -> Unit
     }
@@ -158,7 +178,7 @@ private fun CardShell(tag: String, onClose: () -> Unit, inline: Boolean = false,
 internal fun ReminderSurface(tag: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val palette = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
     val glow = dev.asfakul.yumeiro.ui.theme.LocalAmbientColor.current?.value ?: palette.accent
-    val shape = RoundedCornerShape(28.dp)
+    val shape = yuRound(28)
     val base = palette.surfaceContainer
     val wash = remember(base, glow, palette.isDark) {
         Brush.verticalGradient(
@@ -219,46 +239,46 @@ internal fun ReminderCard(icon: ImageVector, tag: String, title: String, body: S
             Text(body, color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(18.dp))
             Button(
-                onClick = onAction, shape = RoundedCornerShape(16.dp),
+                onClick = onAction, shape = yuRound(16),
                 modifier = Modifier.fillMaxWidth().height(50.dp).testTag("${tag}_action"),
                 colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
             ) { Text(action, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
-            TextButton(onClick = onClose, modifier = Modifier.testTag("${tag}_later")) { Text("Maybe later", color = TextSecondary) }
+            TextButton(onClick = onClose, modifier = Modifier.testTag("${tag}_later")) { Text(stringResource(R.string.maybe_later), color = TextSecondary) }
         }
     }
 }
 
 @Composable
-internal fun FollowCard(inline: Boolean = false, onClose: () -> Unit) {
+internal fun FollowCard(inline: Boolean = false, onClose: () -> Unit, onDismiss: () -> Unit = onClose) {
     val context = LocalContext.current
     val total = Reminders.FOLLOW_COUNTDOWN_S
     var left by remember { mutableIntStateOf(total) }
     LaunchedEffect(Unit) { while (left > 0) { delay(1_000); left-- }; onClose() }
-    CardShell("reminder_follow", onClose, inline) {
+    CardShell("reminder_follow", onDismiss, inline) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(60.dp)) {
                 IconBadge(Icons.Default.People, 52.dp)
                 CircularProgressIndicator(progress = { left / total.toFloat() }, color = if (dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.isDark) BrandGold else dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, trackColor = androidx.compose.ui.graphics.Color.Transparent, strokeWidth = 3.dp, modifier = Modifier.size(60.dp))
             }
             Spacer(Modifier.height(12.dp))
-            Text("Join the Yumeiro community", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+            Text(stringResource(R.string.join_the_yumeiro_community), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 19.sp)
             Spacer(Modifier.height(6.dp))
-            Text("Get Yumeiro news first on Telegram, ask for help and share ideas.", color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.get_yumeiro_news_first_on_telegram), color = TextSecondary, fontSize = 14.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Reminders.Social.entries.forEach { s ->
                     Button(
                         onClick = { if (Links.open(context, s.url)) Reminders.recordFollow(context, s); onClose() },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = yuRound(16),
                         colors = ButtonDefaults.buttonColors(containerColor = brandColor(s), contentColor = androidx.compose.ui.graphics.Color.White),
                         modifier = Modifier.fillMaxWidth().height(48.dp).testTag("follow_${s.name.lowercase()}"),
                     ) { Text(s.label, fontWeight = FontWeight.SemiBold, fontSize = 15.sp) }
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Closes in ${left}s", color = TextTertiary, fontSize = 12.sp)
+                Text(stringResource(R.string.closes_in_s, left), color = TextTertiary, fontSize = 12.sp)
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onClose, modifier = Modifier.testTag("reminder_follow_later")) { Text("Later", color = TextSecondary) }
+                TextButton(onClick = onDismiss, modifier = Modifier.testTag("reminder_follow_later")) { Text(stringResource(R.string.later), color = TextSecondary) }
             }
         }
     }

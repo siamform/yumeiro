@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +50,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** OL-8: how long the website helper banner stays before it hides by itself. */
 internal const val PAGE_HINT_AUTO_HIDE_MS = 3_000L
@@ -66,7 +69,7 @@ internal fun PageFinderHint(text: String, onHide: () -> Unit, modifier: Modifier
             hide.value()
         }
     }
-    Surface(color = GlassFill, shape = RoundedCornerShape(12.dp), modifier = modifier.fillMaxWidth().padding(8.dp).clickable { hide.value() }.testTag("page_finder_hint")) {
+    Surface(color = GlassFill, shape = yuRound(12), modifier = modifier.fillMaxWidth().padding(8.dp).clickable { hide.value() }.testTag("page_finder_hint")) {
         Text(
             text + "\n\nStart playback on the page; detected streams appear below. Tap to hide.",
             color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(10.dp),
@@ -100,7 +103,7 @@ internal fun DetectedStreamsPanel(
     if (shown == StreamPanel.CLOSED) {
         Box(modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.CenterEnd) {
             Row(
-                Modifier.background(GlassFill, RoundedCornerShape(18.dp)).clickable { onState(StreamPanel.OPEN) }
+                Modifier.background(GlassFill, yuRound(18)).clickable { onState(StreamPanel.OPEN) }
                     .padding(horizontal = 14.dp, vertical = 8.dp).testTag("page_finder_streams_pill"),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
@@ -120,17 +123,17 @@ internal fun DetectedStreamsPanel(
                     )
                     // OL-3: which video these streams belong to.
                     if (found.isNotEmpty() && !nowTitle.isNullOrBlank()) {
-                        Text("Now playing: $nowTitle", color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("page_finder_now_title"))
+                        Text(stringResource(R.string.now_playing_2, nowTitle), color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("page_finder_now_title"))
                     }
                 }
                 if (controls) {
-                    IconButton(onClick = onRescan, modifier = Modifier.testTag("page_finder_streams_reload")) { Icon(Icons.Default.Refresh, "Rescan streams", tint = TextSecondary) }
+                    IconButton(onClick = onRescan, modifier = Modifier.testTag("page_finder_streams_reload")) { Icon(Icons.Default.Refresh, stringResource(R.string.rescan_streams), tint = TextSecondary) }
                     if (shown == StreamPanel.OPEN) {
-                        IconButton(onClick = { onState(StreamPanel.COLLAPSED) }, modifier = Modifier.testTag("page_finder_streams_collapse")) { Icon(Icons.Default.KeyboardArrowDown, "Minimize streams", tint = TextSecondary) }
+                        IconButton(onClick = { onState(StreamPanel.COLLAPSED) }, modifier = Modifier.testTag("page_finder_streams_collapse")) { Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.minimize_streams), tint = TextSecondary) }
                     } else {
-                        IconButton(onClick = { onState(StreamPanel.OPEN) }, modifier = Modifier.testTag("page_finder_streams_expand")) { Icon(Icons.Default.KeyboardArrowUp, "Show streams", tint = TextSecondary) }
+                        IconButton(onClick = { onState(StreamPanel.OPEN) }, modifier = Modifier.testTag("page_finder_streams_expand")) { Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.show_streams), tint = TextSecondary) }
                     }
-                    IconButton(onClick = { onState(StreamPanel.CLOSED) }, modifier = Modifier.testTag("page_finder_streams_close")) { Icon(Icons.Default.Close, "Close streams", tint = TextSecondary) }
+                    IconButton(onClick = { onState(StreamPanel.CLOSED) }, modifier = Modifier.testTag("page_finder_streams_close")) { Icon(Icons.Default.Close, stringResource(R.string.close_streams), tint = TextSecondary) }
                 }
             }
             if (shown == StreamPanel.OPEN) {
@@ -146,7 +149,7 @@ internal fun DetectedStreamsPanel(
 @Composable
 private fun DetectedStreamRow(c: CapturedStream, onPlay: (CapturedStream) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(GlassFill, RoundedCornerShape(12.dp)).clickable { onPlay(c) }.padding(10.dp).testTag("page_finder_stream"),
+        Modifier.fillMaxWidth().background(GlassFill, yuRound(12)).clickable { onPlay(c) }.padding(10.dp).testTag("page_finder_stream"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -154,8 +157,8 @@ private fun DetectedStreamRow(c: CapturedStream, onPlay: (CapturedStream) -> Uni
             Text(c.url, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.size(34.dp).background(SpotifyGreen, RoundedCornerShape(17.dp)), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.PlayArrow, "Play", tint = OnAccent, modifier = Modifier.size(20.dp))
+        Box(Modifier.size(34.dp).background(SpotifyGreen, yuRound(17)), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.PlayArrow, stringResource(R.string.play), tint = OnAccent, modifier = Modifier.size(20.dp))
         }
     }
 }

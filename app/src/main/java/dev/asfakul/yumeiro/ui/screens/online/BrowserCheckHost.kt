@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
 import android.webkit.WebView
@@ -51,6 +53,7 @@ import dev.asfakul.yumeiro.online.web.BrowserCheck
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Shows a site's "verify you're human" page when it can't pass on its own. The user completes the
@@ -94,16 +97,16 @@ fun BrowserCheckHost() {
                     )
                 }
                 if (p.manual) androidx.compose.material3.TextButton(onClick = { BrowserCheck.finish() }, modifier = Modifier.testTag("browser_check_done")) {
-                    Text("Done", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.done), color = SpotifyGreen, fontWeight = FontWeight.Bold)
                 }
-                IconButton(onClick = { BrowserCheck.cancel() }, modifier = Modifier.testTag("browser_check_cancel")) { Icon(Icons.Default.Close, "Cancel", tint = TextPrimary) }
+                IconButton(onClick = { BrowserCheck.cancel() }, modifier = Modifier.testTag("browser_check_cancel")) { Icon(Icons.Default.Close, stringResource(R.string.cancel), tint = TextPrimary) }
             }
             if (p.manual && p.purpose == BrowserCheck.Purpose.LOGIN) SignupGuide(p.host)
             if (progress in 1..99) {
                 LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth().height(2.dp))
             } else Spacer(Modifier.height(2.dp))
             if (rendererGone) {
-                Text("The page stopped responding. Close this and try again.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
+                Text(stringResource(R.string.the_page_stopped_responding_close_this), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
                 return@Column
             }
             androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
@@ -208,8 +211,8 @@ fun BrowserCheckHost() {
                 ) {
                     androidx.compose.material3.CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.height(12.dp))
-                    Text("Opening ${p.host}…", color = TextSecondary, fontSize = 13.sp)
-                    Text("Ads and pop-ups are blocked for you.", color = TextSecondary.copy(alpha = 0.7f), fontSize = 11.sp)
+                    Text(stringResource(R.string.opening, p.host), color = TextSecondary, fontSize = 13.sp)
+                    Text(stringResource(R.string.ads_and_pop_ups_are_blocked), color = TextSecondary.copy(alpha = 0.7f), fontSize = 11.sp)
                 }
                 if (blocked > 0) AdShieldBar(
                     count = blocked, canOpen = lastBlocked != null,
@@ -266,7 +269,7 @@ private const val POPUP_PROBE_TIMEOUT_MS = 5_000L
 internal fun AdShieldBar(count: Int, canOpen: Boolean, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier.fillMaxWidth().padding(12.dp)
-            .background(androidx.compose.ui.graphics.Color(0xF0141414), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .background(androidx.compose.ui.graphics.Color(0xF0141414), dev.asfakul.yumeiro.ui.theme.yuRound(14))
             .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp).testTag("ad_shield_bar"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -274,7 +277,7 @@ internal fun AdShieldBar(count: Int, canOpen: Boolean, onOpen: () -> Unit, modif
         Spacer(Modifier.width(8.dp))
         Text(dev.asfakul.yumeiro.online.web.AdShieldText.blocked(count), color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp, modifier = Modifier.weight(1f))
         if (canOpen) androidx.compose.material3.TextButton(onClick = onOpen, modifier = Modifier.testTag("ad_shield_open")) {
-            Text("Open anyway", color = SpotifyGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.open_anyway), color = SpotifyGreen, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
         } else Spacer(Modifier.height(40.dp))
     }
 }

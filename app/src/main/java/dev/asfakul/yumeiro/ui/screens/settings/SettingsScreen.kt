@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
 import dev.asfakul.yumeiro.ui.theme.legibleOnTheme
@@ -108,6 +110,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.update.ui.UpdateSettingsCard
 import dev.asfakul.yumeiro.youtube.YtAccount
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Settings home: a search box, a quick health strip and five groups of categories. Each category
@@ -262,7 +265,7 @@ private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
                 if (searchOpen || query.isNotEmpty()) { searchOpen = false; query = "" } else searchOpen = true
             }, "settings_search_open", "Search settings")
             IconButton(onClick = { onOpen(Category.GUIDE) }, modifier = Modifier.testTag("open_user_guide")) {
-                Icon(Icons.AutoMirrored.Filled.MenuBook, "User guide", tint = BrandGold)
+                Icon(Icons.AutoMirrored.Filled.MenuBook, stringResource(R.string.user_guide), tint = BrandGold)
             }
         }
         dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it }, "Search settings", "settings_search")
@@ -275,7 +278,7 @@ private fun SettingsHome(onBack: () -> Unit, onOpen: (Category) -> Unit) {
 
             if (query.isNotBlank()) {
                 item("results") {
-                    if (results.isEmpty()) Text("No settings match “$query”. Try a shorter word.", color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(8.dp).testTag("settings_no_results"))
+                    if (results.isEmpty()) Text(stringResource(R.string.no_settings_match_try_a_shorter, query), color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(8.dp).testTag("settings_no_results"))
                     else GlassGroup(Modifier.testTag("settings_results")) { CategoryList(results, statuses, onOpen) }
                 }
                 return@LazyColumn
@@ -317,7 +320,7 @@ private fun SettingsHero() {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(dev.asfakul.yumeiro.ui.components.kanaOverline("設定", "Settings"), style = dev.asfakul.yumeiro.ui.theme.OverlineStyle, maxLines = 1)
-                Text("Make Yumeiro yours", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.make_yumeiro_yours), color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -343,9 +346,9 @@ private fun HealthStrip(statuses: Map<Category, Status>, onOpen: (Category) -> U
             val warn = s?.ok == false
             val warnColor = dev.asfakul.yumeiro.ui.theme.WarnTone
             Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(18.dp))
+                Modifier.weight(1f).clip(yuRound(18))
                     .background(Brush.verticalGradient(listOf(look.tint.copy(alpha = if (warn) 0.10f else 0.16f), GlassFill)))
-                    .border(1.dp, if (warn) warnColor.copy(alpha = 0.55f) else BrandGold.copy(alpha = 0.22f), RoundedCornerShape(18.dp))
+                    .border(1.dp, if (warn) warnColor.copy(alpha = 0.55f) else BrandGold.copy(alpha = 0.22f), yuRound(18))
                     .clickable { onOpen(c) }.padding(12.dp).testTag("settings_health_${c.name.lowercase()}"),
             ) {
                 Icon(look.icon, null, tint = if (warn) warnColor else look.tint.legibleOnTheme(), modifier = Modifier.size(20.dp))
@@ -409,7 +412,7 @@ private fun CategoryPage(
                         GroupLabel("Sound")
                         SettingsCard {
                         SettingsActionRow("Equalizer & sound effects", "5 bands, presets, bass boost and 3D virtualizer", "setting_equalizer_selector") { onNavigateToEqualizer() }
-                        Text("Songs already play back-to-back with no gap, and Yumeiro keeps playing with the screen off.",
+                        Text(stringResource(R.string.songs_already_play_back_to_back),
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
                         }
                     }
@@ -429,7 +432,7 @@ private fun CategoryPage(
                 Category.LIBRARY -> item("c") {
                     SettingsCard {
                         SettingsActionRow("Rescan this device", "Look for new music and videos right now", "setting_manual_rescan") { onRescanClick() }
-                        Text("Yumeiro reads Android's media index every time it opens, so new files usually appear on their own.",
+                        Text(stringResource(R.string.yumeiro_reads_androids_media_index_every),
                             color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
                     }
                 }
@@ -484,7 +487,7 @@ fun SettingsToggleRow(
     enabled: Boolean = true,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp))
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(yuRound(12))
             .clickable(enabled = enabled) { onCheckedChange(!checked) }.padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

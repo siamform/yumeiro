@@ -163,6 +163,51 @@ object BrowserCheck {
 
     fun forget(host: String) { cleared.remove(host) }
 
+    private val challengedAt = ConcurrentHashMap<String, Long>()
+
+    /** B4: [host] answered with a check page now (an extension request met it). */
+    fun noteChallenge(host: String, now: Long = System.currentTimeMillis(), url: String? = null) {
+        if (challengedAt.size > 256) challengedAt.clear()
+        val h = VerificationPolicy.normalize(host)
+        challengedAt[h] = now
+        rootOf(url)?.let { if (siteRoot.size > 256) siteRoot.clear(); siteRoot[h] = it }
+    }
+
+    private val siteRoot = ConcurrentHashMap<String, String>()
+
+    /**
+     * B4: the address to open for [host]'s check: the scheme and port its check page came from (a site on
+     * http or another port opened as https://host/ before, so its check page never loaded).
+     */
+    fun checkPageFor(host: String): String = siteRoot[VerificationPolicy.normalize(host)] ?: "https://${VerificationPolicy.normalize(host)}/"
+
+    /** "scheme://host[:port]/" of [url], or null. Pure. */
+    internal fun rootOf(url: String?): String? = runCatching {
+        val u = java.net.URI(url ?: return null)
+        val scheme = u.scheme?.lowercase()?.takeIf { it == "http" || it == "https" } ?: return null
+        val host = u.host?.takeIf { it.isNotBlank() } ?: return null
+        val port = if (u.port == -1 || (scheme == "https" && u.port == 443) || (scheme == "http" && u.port == 80)) "" else ":${u.port}"
+        "$scheme://$host$port/"
+    }.getOrNull()
+
+    /**
+     * B4: did [mainUrl]'s site answer with a check page at or after [since]? An extension that met the check page
+     * parses it as "no titles" without an error, and that empty answer was saved (search: 1 h on the phone), so the
+     * site stayed empty after the user passed its check. Answers made under a check are not saved.
+     */
+    fun challengedSince(mainUrl: String?, since: Long): Boolean {
+        if (challengedAt.isEmpty()) return false
+        return challengedAt.entries.any { (h, at) -> at >= since && SitePass.matches(mainUrl, h) }
+    }
+
+    private val blockedAt = ConcurrentHashMap<String, Long>()
+
+    /** B7: did [mainUrl]'s site refuse a request with a firewall block at or after [since]? */
+    fun blockedSince(mainUrl: String?, since: Long): Boolean {
+        if (blockedAt.isEmpty()) return false
+        return blockedAt.entries.any { (h, at) -> at >= since && SitePass.matches(mainUrl, h) }
+    }
+
     internal fun rememberForTest(host: String, c: Clearance) { cleared[host] = c }
 
     /** What a refused response is. */
@@ -318,6 +363,9 @@ object BrowserCheck {
             // silent pass can't clear now just fails this source and playback moves to the next.
             declined[host] = System.currentTimeMillis()
             if (centerOn()) VerificationCenter.report(host, VerificationCenter.Outcome.FAILED)
+            // B4: the silent pass could not clear it (the site wants a tap). One quiet card with Verify, which opens
+            // the check page; the extensions of the site reload by themselves once it is passed.
+            if (interactive && centerOn()) appContext?.let { ctx -> runCatching { dev.asfakul.yumeiro.online.ExtensionCheckWindows.askToVerify(ctx, host, page) } }
             null
         }
     }
@@ -437,6 +485,8 @@ object BrowserCheck {
 
     /** One calm message per host (every 5 min) instead of an endless "verify you're human" page. */
     private fun noteBlocked(host: String, url: String = "https://$host/") {
+        if (blockedAt.size > 256) blockedAt.clear()
+        blockedAt[VerificationPolicy.normalize(host)] = System.currentTimeMillis()
         if (centerOn()) {
             // ADR-059: one note per block period for the site, whichever path (ours or an extension's) met it.
             val before = VerificationCenter.site(host)
@@ -601,7 +651,7 @@ object BrowserCheck {
                     Log.i(TAG, "$host asked to slow down (rate limit) — no note")
                     return response
                 }
-                Verdict.CHALLENGE -> Unit
+                Verdict.CHALLENGE -> noteChallenge(host, url = request.url.toString())
             }
             if (onMainThread()) return response
             if (clearanceFor(host) != null) forget(host)

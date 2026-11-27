@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -95,12 +97,12 @@ internal fun MarketInfoSheet(
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 repoPage(ext.repoUrl)?.let { page ->
-                    OutlinedButton(onClick = { runCatching { uri.openUri(page) } }, modifier = Modifier.heightIn(min = 48.dp).testTag("market_info_repo")) { Text("Repository page", color = p.textPrimary) }
+                    OutlinedButton(onClick = { runCatching { uri.openUri(page) } }, modifier = Modifier.heightIn(min = 48.dp).testTag("market_info_repo")) { Text(stringResource(R.string.repository_page), color = p.textPrimary) }
                 }
                 Spacer(Modifier.weight(1f))
                 when {
-                    hasUpdate -> Button(onClick = { onInstall(); onDismiss() }, colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent), modifier = Modifier.heightIn(min = 48.dp)) { Text("Update") }
-                    installedVersion != null -> OutlinedButton(onClick = { onManage(); onDismiss() }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Manage", color = p.textPrimary) }
+                    hasUpdate -> Button(onClick = { onInstall(); onDismiss() }, colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent), modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.update)) }
+                    installedVersion != null -> OutlinedButton(onClick = { onManage(); onDismiss() }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.manage), color = p.textPrimary) }
                     else -> Button(
                         onClick = { onInstall(); onDismiss() }, enabled = !ext.isDown && ext.apiVersion <= OnlineRuntime.API_VERSION,
                         colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),

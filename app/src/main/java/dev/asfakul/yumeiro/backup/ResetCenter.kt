@@ -30,7 +30,6 @@ object ResetCenter {
 
     fun labelOf(id: String) = Scope.entries.firstOrNull { it.id == id }?.label?.lowercase() ?: id
 
-    private val historyFiles = listOf("online_history.json", dev.asfakul.yumeiro.player.LastPlayed.QUEUE_FILE) // G6-QP: Continue queue
     private val sourceDirs = listOf("extensions", "tachiyomi", "js", "stremio", "streams", "servers")
 
     /** Clears caches now; returns the bytes freed. */
@@ -76,9 +75,10 @@ object ResetCenter {
         val prefNames = Backup.prefsDir(context).listFiles()?.filter { it.extension == "xml" }?.map { it.nameWithoutExtension }
             ?.filter { Backup.prefIncluded(it) }.orEmpty()
         if ("history" in ids) {
-            historyFiles.forEach { File(files, it).delete() }
-            File(files, "profiles").listFiles()?.forEach { dir -> historyFiles.forEach { File(dir, it).delete() } } // PR-1
+            // B9: with the .tmp / .bad copies (a leftover .tmp was read back at the next start), every profile.
+            HistoryWipe.deleteFiles(context)
             prefNames.forEach { name -> removeWhere(context, name) { k -> PrefSections.isHistory(name, k) } }
+            HistoryWipe.dropSearchCaches(context, live = false)
         }
         if ("extensions" in ids) {
             sourceDirs.forEach { d -> File(files, d).walkBottomUp().forEach { it.setWritable(true); it.delete() } }

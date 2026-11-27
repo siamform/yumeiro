@@ -40,6 +40,7 @@ import dev.asfakul.yumeiro.ui.theme.ChipSelectedColor
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnChipSelectedColor
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Filter pill: 36dp capsule; selected = signature gold with dark onAccent ink (readable contrast), idle = glass. */
 @Composable
@@ -51,7 +52,7 @@ fun FilterPill(
     testTag: String = "",
     icon: ImageVector? = null,
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = yuRound(18)
     Row(
         modifier = modifier
             .height(36.dp)

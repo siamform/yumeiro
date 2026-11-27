@@ -243,6 +243,7 @@ object Profiles {
     fun remove(context: Context, id: String): Boolean {
         if (id == DEFAULT || find(context, id) == null) return false
         runCatching { dev.asfakul.yumeiro.online.download.PrivateDownloads.removeProfile(context, id) }
+        runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.removeProfile(context, id) } // B19: its downloads and their files
         File(root(context), id).deleteRecursively()
         SCOPED_PREFS.forEach { name -> runCatching { context.applicationContext.deleteSharedPreferences("$name@p$id") } }
         runCatching { ProfileScope.dropProfile(context, id) } // F-19-EXT: its own extensions / repositories go with it
@@ -334,7 +335,7 @@ object Profiles {
         if (others.isEmpty()) return false
         val at = name.lastIndexOf("@p")
         if (at > 0) return name.substring(at + 2) in others
-        return DEFAULT in others && (name == "yt_history" || name == "private_vault")
+        return DEFAULT in others && name in PRIVATE_PREFS
     }
 
     // endregion
@@ -352,8 +353,16 @@ object Profiles {
         return if (id == DEFAULT) name else "$name@p$id"
     }
 
+    /** B19: the default profile's own files that stay out of a backup made from another profile while it is locked. */
+    private val PRIVATE_PREFS = setOf("yt_history", "private_vault", "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen")
+
     /** Preference files that are kept per profile (removed with the profile). */
-    val SCOPED_PREFS = listOf("yt_history", "online_settings", "private_vault", "pinned_extensions", "pinned_playlists", "upcoming")
+    val SCOPED_PREFS = listOf(
+        "yt_history", "online_settings", "private_vault", "pinned_extensions", "pinned_playlists", "upcoming",
+        // B19 (GH-47): searches, saved and visited websites, site sign-in marks, Play Link / Live TV recents and
+        // episode marks are the profile's own too (they were shared by every profile).
+        "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen",
+    )
 
     internal fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")
 

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -95,6 +97,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Route slug for the temporary (unsaved) list opened from a URL, an M3U file or another app. */
 const val OPENED_PLAYLIST_SLUG = "opened"
@@ -241,14 +244,14 @@ fun PlaylistDetailScreen(
             ) {
                 if (playlist != null && !playlist.isLocal && state != LoadState.NotFound) {
                     IconButton(onClick = { refresh() }, enabled = !refreshing, modifier = Modifier.testTag("detail_refresh")) {
-                        Icon(Icons.Default.Refresh, "Refresh", tint = TextSecondary)
+                        Icon(Icons.Default.Refresh, stringResource(R.string.refresh), tint = TextSecondary)
                     }
                 }
                 if (state != LoadState.NotFound) Box {
-                    IconButton(onClick = { menu = true }, modifier = Modifier.testTag("detail_menu")) { Icon(Icons.Default.MoreVert, "Playlist options", tint = TextSecondary) }
+                    IconButton(onClick = { menu = true }, modifier = Modifier.testTag("detail_menu")) { Icon(Icons.Default.MoreVert, stringResource(R.string.playlist_options), tint = TextSecondary) }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = DarkSurface) {
                         if (isOpened && channels.isNotEmpty()) DropdownMenuItem(
-                            text = { Text("Save as playlist") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null) },
+                            text = { Text(stringResource(R.string.save_as_playlist)) }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, null) },
                             modifier = Modifier.testTag("channels_save"),
                             onClick = {
                                 menu = false
@@ -259,23 +262,23 @@ fun PlaylistDetailScreen(
                                 }
                             },
                         )
-                        if (playlist != null) DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; editing = true })
+                        if (playlist != null) DropdownMenuItem(text = { Text(stringResource(R.string.edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; editing = true })
                         if (channels.isNotEmpty() || playlist != null) DropdownMenuItem(
-                            text = { Text("Export as .m3u") }, leadingIcon = { Icon(Icons.Default.FileDownload, null) },
+                            text = { Text(stringResource(R.string.export_as_m3u)) }, leadingIcon = { Icon(Icons.Default.FileDownload, null) },
                             onClick = { menu = false; runCatching { exportLauncher.launch(fileNameFor(title)) }.onFailure { fail("No app available to save files") } },
                         )
                         if (playlist != null && playlist.enabled) DropdownMenuItem(
-                            text = { Text("Disable") }, leadingIcon = { Icon(Icons.Default.VisibilityOff, null) },
+                            text = { Text(stringResource(R.string.disable)) }, leadingIcon = { Icon(Icons.Default.VisibilityOff, null) },
                             onClick = { menu = false; launchSafe { PlaylistStore.setEnabled(app, playlist.id, false); StreamRepository.setPlaylist(null, emptyList()); onBack() } },
                         )
                         if (isOpened) DropdownMenuItem(
-                            text = { Text("Close list") }, leadingIcon = { Icon(Icons.Default.Close, null) },
+                            text = { Text(stringResource(R.string.close_list)) }, leadingIcon = { Icon(Icons.Default.Close, null) },
                             onClick = { menu = false; StreamRepository.setPlaylist(null, emptyList()); onBack() },
                         )
                         if (playlist != null) {
                             HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { menu = false; deleting = true }, modifier = Modifier.testTag("detail_delete"),
                             )
@@ -294,7 +297,7 @@ fun PlaylistDetailScreen(
                     testTag = "playlist_not_found",
                 )
                 LoadState.Loading -> Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("playlist_loading"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SkeletonBlock(null, 52.dp, shape = RoundedCornerShape(16.dp))
+                    SkeletonBlock(null, 52.dp, shape = yuRound(16))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(4) { SkeletonBlock(64.dp, 30.dp, shape = RoundedCornerShape(50)) } }
                     repeat(7) { SkeletonRow() }
                 }
@@ -392,7 +395,7 @@ fun PlaylistDetailScreen(
                 onClick = { scope.launch { listState.animateScrollToItem(0) } },
                 containerColor = SpotifyGreen, contentColor = OnAccent,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 28.dp).testTag("scroll_top"),
-            ) { Icon(Icons.Default.KeyboardArrowUp, "Back to top") }
+            ) { Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.back_to_top)) }
         }
     }
 
@@ -440,7 +443,7 @@ private fun PlaylistInfoCard(
     onUpdate: () -> Unit,
     onEnable: () -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("playlist_info")) {
+    Surface(shape = yuRound(20), color = GlassFill, modifier = Modifier.fillMaxWidth().testTag("playlist_info")) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             playlist.description?.let { Text(it, color = TextSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis) }
             val origin = when {
@@ -450,12 +453,12 @@ private fun PlaylistInfoCard(
                 else -> "Added from a link"
             }
             Text(origin, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            playlist.lastError?.let { Text("Last update failed: $it", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            playlist.lastError?.let { Text(stringResource(R.string.last_update_failed, it), color = MaterialTheme.colorScheme.error, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             if (!playlist.enabled) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("This playlist is disabled.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.this_playlist_is_disabled), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     Text(
-                        "Enable", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                        stringResource(R.string.enable), color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                         modifier = Modifier.clip(RoundedCornerShape(50)).background(SpotifyGreen).clickable(onClick = onEnable)
                             .padding(horizontal = 14.dp, vertical = 6.dp).testTag("detail_enable"),
                     )
@@ -464,7 +467,7 @@ private fun PlaylistInfoCard(
             if (!playlist.isLocal) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Auto-update", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(stringResource(R.string.auto_update), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Text(
                             if (playlist.autoUpdate) (if (playlist.isMarket) "Installs new versions automatically" else "Refreshes when older than 2 hours")
                             else "Only when you tap Refresh / Update",
@@ -480,10 +483,10 @@ private fun PlaylistInfoCard(
             }
             if (updateAvailable) {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 12.dp, vertical = 8.dp),
+                    Modifier.fillMaxWidth().clip(yuRound(14)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("A newer version is available", color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.a_newer_version_is_available), color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
                     Text(
                         if (refreshing) "Updating…" else "Update", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp,

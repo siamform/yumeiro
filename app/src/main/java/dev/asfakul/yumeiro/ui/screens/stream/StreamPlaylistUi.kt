@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -85,6 +87,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_STREAMPLAYLISTUI_1 = Regex("^https?://\\S+", RegexOption.IGNORE_CASE)
@@ -124,13 +127,13 @@ internal fun PlaylistCard(
 ) {
     var menu by remember { mutableStateOf(false) }
     Surface(
-        shape = RoundedCornerShape(20.dp), color = GlassFill,
+        shape = yuRound(20), color = GlassFill,
         modifier = Modifier.fillMaxWidth().testTag("playlist_${playlist.id}")
             .alpha(if (playlist.enabled) 1f else 0.55f)
             .clickable(enabled = playlist.enabled && !busy, onClick = onOpen),
     ) {
         Row(Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(yuRound(12)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 if (busy) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                 else Icon(
                     when { playlist.isLocal -> Icons.Default.Folder; playlist.isDefault -> Icons.Default.LiveTv; else -> Icons.Default.Public },
@@ -144,8 +147,8 @@ internal fun PlaylistCard(
                     if (playlist.isDefault) {
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "Default", color = OnAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(SpotifyGreen).padding(horizontal = 5.dp, vertical = 1.dp),
+                            stringResource(R.string.label_default), color = OnAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clip(yuRound(6)).background(SpotifyGreen).padding(horizontal = 5.dp, vertical = 1.dp),
                         )
                     }
                 }
@@ -161,7 +164,7 @@ internal fun PlaylistCard(
                 )
                 Text(parts.joinToString(" · "), color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 playlist.lastError?.takeIf { playlist.enabled }?.let {
-                    Text("Last update failed: $it", color = MaterialTheme.colorScheme.error, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(stringResource(R.string.last_update_failed, it), color = MaterialTheme.colorScheme.error, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             Switch(
@@ -171,13 +174,13 @@ internal fun PlaylistCard(
             )
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlist_menu_${playlist.id}")) {
-                    Icon(Icons.Default.MoreVert, "Playlist options", tint = TextSecondary)
+                    Icon(Icons.Default.MoreVert, stringResource(R.string.playlist_options), tint = TextSecondary)
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = DarkSurface) {
-                    if (playlist.enabled) DropdownMenuItem(text = { Text("Open") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null) }, onClick = { menu = false; onOpen() })
-                    if (!playlist.isLocal) DropdownMenuItem(text = { Text("Refresh now") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onRefresh() })
-                    DropdownMenuItem(text = { Text("Edit") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onEdit() }, modifier = Modifier.testTag("playlist_edit"))
-                    DropdownMenuItem(text = { Text("Export as .m3u") }, leadingIcon = { Icon(Icons.Default.FileDownload, null) }, onClick = { menu = false; onExport() })
+                    if (playlist.enabled) DropdownMenuItem(text = { Text(stringResource(R.string.widget_open)) }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null) }, onClick = { menu = false; onOpen() })
+                    if (!playlist.isLocal) DropdownMenuItem(text = { Text(stringResource(R.string.refresh_now)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onRefresh() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.edit)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onEdit() }, modifier = Modifier.testTag("playlist_edit"))
+                    DropdownMenuItem(text = { Text(stringResource(R.string.export_as_m3u)) }, leadingIcon = { Icon(Icons.Default.FileDownload, null) }, onClick = { menu = false; onExport() })
                     DropdownMenuItem(
                         text = { Text(if (playlist.enabled) "Disable" else "Enable") },
                         leadingIcon = { Icon(if (playlist.enabled) Icons.Default.VisibilityOff else Icons.Default.Visibility, null) },
@@ -185,7 +188,7 @@ internal fun PlaylistCard(
                     )
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                        text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
                         onClick = { menu = false; onDelete() }, modifier = Modifier.testTag("playlist_delete"),
                     )
@@ -215,15 +218,15 @@ internal fun PlaylistsHeader(
             Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text("Playlists", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(stringResource(R.string.playlists), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Text(if (lastSync > 0) "Synced ${relativeTime(lastSync)}" else "Defaults update daily", color = TextTertiary, fontSize = 11.sp)
             }
             if (searchOpen != null) dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen, onToggleSearch, "playlists_search_open", "Search playlists")
             Box {
-                IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlists_more")) { Icon(Icons.Default.MoreVert, "More playlist actions", tint = TextSecondary) }
+                IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playlists_more")) { Icon(Icons.Default.MoreVert, stringResource(R.string.more_playlist_actions), tint = TextSecondary) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = DarkSurface) {
-                    DropdownMenuItem(text = { Text("Playlist market") }, leadingIcon = { Icon(Icons.Default.Storefront, null) }, onClick = { menu = false; onMarket() }, modifier = Modifier.testTag("playlists_market"))
-                    DropdownMenuItem(text = { Text("Restore default playlist") }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onRestore() }, modifier = Modifier.testTag("playlists_restore"))
+                    DropdownMenuItem(text = { Text(stringResource(R.string.playlist_market)) }, leadingIcon = { Icon(Icons.Default.Storefront, null) }, onClick = { menu = false; onMarket() }, modifier = Modifier.testTag("playlists_market"))
+                    DropdownMenuItem(text = { Text(stringResource(R.string.restore_default_playlist)) }, leadingIcon = { Icon(Icons.Default.Refresh, null) }, onClick = { menu = false; onRestore() }, modifier = Modifier.testTag("playlists_restore"))
                 }
             }
         }
@@ -282,19 +285,19 @@ internal fun PlaylistEditDialog(
         title = { Text(title, color = TextPrimary) },
         text = {
             Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth().testTag("playlist_name_field"))
+                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth().testTag("playlist_name_field"))
                 if (remote) {
                     OutlinedTextField(
-                        url, { url = it; analysis = null; error = null }, label = { Text("Playlist URL (.m3u)") }, singleLine = true,
-                        placeholder = { Text("https://raw.githubusercontent.com/…/playlist.m3u") },
+                        url, { url = it; analysis = null; error = null }, label = { Text(stringResource(R.string.playlist_url_m3u)) }, singleLine = true,
+                        placeholder = { Text(stringResource(R.string.https_raw_githubusercontent_com_playlist_m3u)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), colors = colors,
                         modifier = Modifier.fillMaxWidth().testTag("playlist_url_field"),
                     )
                     TextButton(onClick = { run { analysis = PlaylistStore.analyze(appContext, url) } }, enabled = !busy && isHttpUrl(url)) {
-                        Text("Analyse link", color = SpotifyGreen)
+                        Text(stringResource(R.string.analyse_link), color = SpotifyGreen)
                     }
                     analysis?.let { AnalysisSummary(it) }
-                    if (playlist?.isDefault == true) Text("Default playlist: changing the URL stops it following the 2-hour sync.", color = TextTertiary, fontSize = 11.sp)
+                    if (playlist?.isDefault == true) Text(stringResource(R.string.default_playlist_changing_the_url_stops), color = TextTertiary, fontSize = 11.sp)
                 }
                 if (busy) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
@@ -309,13 +312,13 @@ internal fun PlaylistEditDialog(
                 enabled = !busy, modifier = Modifier.testTag("playlist_save"),
             ) { Text(if (playlist == null) (if (remote) "Add" else "Create") else "Save", color = SpotifyGreen) }
         },
-        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text("Cancel", color = TextSecondary) } },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel), color = TextSecondary) } },
     )
 }
 
 @Composable
 private fun AnalysisSummary(a: PlaylistAnalysis) {
-    Surface(shape = RoundedCornerShape(14.dp), color = GlassFill) {
+    Surface(shape = yuRound(14), color = GlassFill) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             fun kb(b: Int) = if (b > 1_048_576) "%.1f MB".format(b / 1_048_576f) else "${b / 1024} KB"
             Line("Result", if (a.isHls) "Single HLS stream (not a channel list)" else "${a.channels} streams in ${a.groups.size}${if (a.groups.size >= 12) "+" else ""} groups")
@@ -350,12 +353,12 @@ internal fun AddToPlaylistDialog(
     TsukiDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
-        title = { Text("Save to playlist", color = TextPrimary) },
+        title = { Text(stringResource(R.string.save_to_playlist), color = TextPrimary) },
         text = {
             Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(item.displayTitle, color = TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 localPlaylists.forEach { p ->
-                    Surface(shape = RoundedCornerShape(14.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable { onPick(p) }.testTag("pick_${p.id}")) {
+                    Surface(shape = yuRound(14), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable { onPick(p) }.testTag("pick_${p.id}")) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Folder, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
@@ -365,17 +368,17 @@ internal fun AddToPlaylistDialog(
                     }
                 }
                 OutlinedTextField(
-                    newName, { newName = it }, label = { Text("New playlist name") }, singleLine = true,
+                    newName, { newName = it }, label = { Text(stringResource(R.string.new_playlist_name)) }, singleLine = true,
                     colors = streamFieldColors(), modifier = Modifier.fillMaxWidth().testTag("new_playlist_name"),
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = { onCreate(newName.trim().ifBlank { "My playlist" }) }, modifier = Modifier.testTag("create_and_add")) {
-                Text("Create & add", color = SpotifyGreen)
+                Text(stringResource(R.string.create_add), color = SpotifyGreen)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = TextSecondary) } },
     )
 }
 
@@ -391,14 +394,14 @@ internal fun ChannelEditDialog(item: StreamRequest, onDismiss: () -> Unit, onSav
     TsukiDialog(
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
-        title = { Text("Edit stream", color = TextPrimary) },
+        title = { Text(stringResource(R.string.edit_stream), color = TextPrimary) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(url, { url = it; error = null }, label = { Text("Stream URL") }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(group, { group = it }, label = { Text("Group") }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(logo, { logo = it }, label = { Text("Logo URL") }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
-                Text("Headers and DRM are kept as they are.", color = TextTertiary, fontSize = 11.sp)
+                OutlinedTextField(title, { title = it }, label = { Text(stringResource(R.string.title)) }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(url, { url = it; error = null }, label = { Text(stringResource(R.string.stream_url)) }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(group, { group = it }, label = { Text(stringResource(R.string.group)) }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(logo, { logo = it }, label = { Text(stringResource(R.string.logo_url)) }, singleLine = true, colors = colors, modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.headers_and_drm_are_kept_as), color = TextTertiary, fontSize = 11.sp)
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
             }
         },
@@ -406,9 +409,9 @@ internal fun ChannelEditDialog(item: StreamRequest, onDismiss: () -> Unit, onSav
             TextButton(onClick = {
                 if (!RX_STREAMPLAYLISTUI_2.matches(url.trim())) { error = "Enter a valid stream URL"; return@TextButton }
                 onSave(item.copy(title = title.trim(), url = url.trim(), group = group.trim().ifBlank { null }, logoUrl = logo.trim().ifBlank { null }))
-            }) { Text("Save", color = SpotifyGreen) }
+            }) { Text(stringResource(R.string.save), color = SpotifyGreen) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = TextSecondary) } },
     )
 }
 
@@ -418,7 +421,7 @@ internal fun ConfirmDeleteDialog(playlist: StreamPlaylist, onDismiss: () -> Unit
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
         onDismissRequest = onDismiss,
         containerColor = DarkSurface,
-        title = { Text("Delete ${playlist.name}?", color = TextPrimary) },
+        title = { Text(stringResource(R.string.delete_2, playlist.name), color = TextPrimary) },
         text = {
             Text(
                 if (playlist.isDefault) "This default playlist will be removed. You can bring it back with Restore default playlist."
@@ -426,8 +429,8 @@ internal fun ConfirmDeleteDialog(playlist: StreamPlaylist, onDismiss: () -> Unit
                 color = TextSecondary,
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm, modifier = Modifier.testTag("confirm_delete")) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = TextSecondary) } },
+        confirmButton = { TextButton(onClick = onConfirm, modifier = Modifier.testTag("confirm_delete")) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = TextSecondary) } },
     )
 }
 
@@ -435,16 +438,16 @@ internal fun ConfirmDeleteDialog(playlist: StreamPlaylist, onDismiss: () -> Unit
 @Composable
 internal fun MarketEntryCard(installed: Int, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(20.dp), color = SpotifyGreen.copy(alpha = 0.12f),
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick).testTag("market_entry"),
+        shape = yuRound(20), color = SpotifyGreen.copy(alpha = 0.12f),
+        modifier = Modifier.fillMaxWidth().clip(yuRound(20)).clickable(onClick = onClick).testTag("market_entry"),
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(40.dp).clip(yuRound(12)).background(SpotifyGreen), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Storefront, null, tint = OnAccent, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Playlist market", color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.playlist_market), color = TextPrimary, fontWeight = FontWeight.Bold)
                 Text(
                     if (installed > 0) "$installed installed · find more IPTV playlists from GitHub" else "Install IPTV playlists collected from GitHub",
                     color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -458,17 +461,17 @@ internal fun MarketEntryCard(installed: Int, onClick: () -> Unit) {
 /** The temporary list opened from a link or file (not saved yet). */
 @Composable
 internal fun OpenedListCard(name: String?, count: Int, onOpen: () -> Unit, onClose: () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("opened_list")) {
+    Surface(shape = yuRound(20), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("opened_list")) {
         Row(Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(yuRound(12)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.AutoMirrored.Filled.PlaylistPlay, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(name ?: "Opened list", color = TextPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("$count streams · opened, not saved", color = TextTertiary, fontSize = 12.sp)
+                Text(stringResource(R.string.streams_opened_not_saved, count), color = TextTertiary, fontSize = 12.sp)
             }
-            IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Close list", tint = TextSecondary) }
+            IconButton(onClick = onClose) { Icon(Icons.Default.Close, stringResource(R.string.close_list), tint = TextSecondary) }
         }
     }
 }

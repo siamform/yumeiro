@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.compose.foundation.layout.Column
@@ -107,10 +109,10 @@ fun UniversalAddHost() {
     }
     TsukiDialog(
         onDismissRequest = { UniversalAddInbox.pending.value = null },
-        title = { Text("Add to Yumeiro?") },
+        title = { Text(stringResource(R.string.add_to_yumeiro)) },
         text = {
             Column {
-                Text("Yumeiro will check what this is (extension, repository, add-on or server) and add it with the right engine.", color = TextSecondary, fontSize = 13.sp)
+                Text(stringResource(R.string.yumeiro_will_check_what_this_is), color = TextSecondary, fontSize = 13.sp)
                 Text(what.take(200), fontSize = 12.sp, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         },
@@ -118,8 +120,8 @@ fun UniversalAddHost() {
             TextButton(onClick = {
                 UniversalAddInbox.pending.value = null
                 scope.launch { runUniversalAdd(context, current) { out -> AppMessages.show(context, out.message) }?.let { AppMessages.error(context, it) } }
-            }, modifier = Modifier.testTag("universal_add_confirm")) { Text("Add") }
+            }, modifier = Modifier.testTag("universal_add_confirm")) { Text(stringResource(R.string.add)) }
         },
-        dismissButton = { TextButton(onClick = { UniversalAddInbox.pending.value = null }) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = { UniversalAddInbox.pending.value = null }) { Text(stringResource(R.string.cancel)) } },
     )
 }

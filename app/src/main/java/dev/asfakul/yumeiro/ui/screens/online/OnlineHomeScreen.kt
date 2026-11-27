@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LiveTv
@@ -90,6 +92,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private sealed interface ProviderHome {
     data object Loading : ProviderHome
@@ -214,9 +217,22 @@ fun OnlineHomeScreen(
         providers.filter { it.name in keep }
     }
     androidx.compose.runtime.SideEffect { yumixMixNow = mixProviders.map { it.name } }
-    var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    // B18: Yumix opens on the extension picked last time (saved per profile), on its own page with its own title.
+    var selected by rememberSaveable {
+        mutableStateOf(dev.asfakul.yumeiro.online.YumixDefaults.openOn(
+            dev.asfakul.yumeiro.online.YumixDefaults.picked.value, providers.map { it.name }, engine.ready, defaultNames))
+    }
+    // B18: set when the saved extension is gone (disabled or uninstalled); the page shows All but keeps the pick,
+    // and goes back to it if the extension returns (Zangetsu-style "re-apply when valid again").
+    val openedOn = rememberSaveable { mutableStateOf(selected) }.value
+    var autoCleared by remember { mutableStateOf<String?>(null) }
     // GROUP G2: the top bar hides its magnifier while one extension is picked (the page has its own search box).
-    LaunchedEffect(selected) { YumixPick.selected.value = selected }
+    LaunchedEffect(selected) {
+        YumixPick.selected.value = selected
+        if (selected == null && autoCleared != null) return@LaunchedEffect
+        autoCleared = null
+        dev.asfakul.yumeiro.online.YumixDefaults.setPicked(context, selected)
+    }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { YumixPick.selected.value = null } }
     var showFilter by rememberSaveable { mutableStateOf(false) }
     // One seed per visit: "More to explore" is shuffled, but stays put while you scroll.
@@ -343,7 +359,11 @@ fun OnlineHomeScreen(
         }
         inflight.keys.filter { it !in providerNames }.forEach { inflight.remove(it)?.cancel() }
         waitingLive.keys.retainAll(providerNames)
-        if (selected != null && providers.none { it.name == selected }) selected = null
+        if (engine.ready) {
+            val sel = selected
+            if (sel != null && sel !in providerNames) { autoCleared = sel; selected = null }
+            else if (sel == null && autoCleared != null && autoCleared in providerNames) selected = autoCleared
+        }
         loadAll(false)
     }
     // H-5: new defaults load the extensions that were not part of the mix before.
@@ -355,6 +375,20 @@ fun OnlineHomeScreen(
         pgate.bump(pick, dev.asfakul.yumeiro.online.PriorityGate.PICKED)
         val api = providers.firstOrNull { it.name == pick } ?: return@LaunchedEffect
         if ((homes[pick] !is ProviderHome.Ready || waitingLive.containsKey(pick)) && inflight[pick]?.isActive != true) runCatching { loadOne(api, false) }
+    }
+
+    // B4 (Group M): a site's check was passed (Yumeiro's check page, silently, or in an extension's window). Its
+    // extensions that failed or came back empty reload now; before, they stayed on "Couldn't load" after the pass.
+    val passProviders by androidx.compose.runtime.rememberUpdatedState(providers)
+    LaunchedEffect(Unit) {
+        dev.asfakul.yumeiro.online.web.VerificationCenter.passed.collect { host ->
+            val again = passProviders.filter { api ->
+                dev.asfakul.yumeiro.online.web.SitePass.matches(runCatching { api.mainUrl }.getOrNull(), host) &&
+                    homes[api.name].let { it !is ProviderHome.Ready || it.rows.isEmpty() }
+            }
+            if (again.isNotEmpty()) android.util.Log.i("YuYumix", "check passed on $host: reloading ${again.map { it.name }}")
+            again.forEach { api -> launch { runCatching { loadOne(api, force = true) } } }
+        }
     }
 
     LaunchedEffect(Unit) { OnlineHistory.ensureLoaded(context) }
@@ -370,17 +404,13 @@ fun OnlineHomeScreen(
     val openItem: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenTitle(it) }
     val openInfo: (OnlineItem) -> Unit = { OnlineRepository.previews[it.key] = it; onOpenInfo(it) }
 
-    // Round 13: the extension bar slides away while scrolling down and comes back on a small
-    // scroll up (like YouTube's bottom navigation), so the feed gets the whole screen.
-    val barHide = remember { dev.asfakul.yumeiro.ui.components.HideOnScroll() }
-    Column(modifier.fillMaxSize().nestedScroll(barHide).testTag("online_home")) {
+    // Round 13 made the extension bar slide away while scrolling down; B2/B3 (Beta chapter): it now
+    // moves with the scroll in the draw/placement phase (HideOnScrollColumn) instead of an
+    // expand/shrink layout animation of the whole page, and the category bar below follows it.
+    val barHide = dev.asfakul.yumeiro.ui.components.rememberHideOnScrollState()
+    dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(modifier.fillMaxSize().testTag("online_home"), state = barHide, enabled = !showFilter, header = {
         // Search lives in the top bar (one magnifier per tab); this slim strip only says what feeds the
         // page and keeps the market / extension manager one tap away.
-        androidx.compose.animation.AnimatedVisibility(
-            visible = barHide.visible || showFilter,
-            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
-        ) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 2.dp).testTag("online_extension_bar"), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 dev.asfakul.yumeiro.ui.components.Kana.overline("拡張", if (providers.isEmpty()) (if (engine.installed.isEmpty()) "No extensions yet" else "All extensions off") else "${providers.size} source${if (providers.size == 1) "" else "s"} on", dev.asfakul.yumeiro.ui.components.kanaEnabled()).orEmpty(),
@@ -389,12 +419,12 @@ fun OnlineHomeScreen(
             )
             Row(Modifier.tourTarget("yumix_sources")) {
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("online_market")) {
-                Icon(Icons.Default.Storefront, "Extension market", tint = TextPrimary)
+                Icon(Icons.Default.Storefront, stringResource(R.string.extension_market), tint = TextPrimary)
             }
             IconButton(onClick = onOpenExtensions, modifier = Modifier.testTag("online_extensions")) {
                 val errors = engine.installed.count { engine.info(it.key).error != null }
                 BadgedBox(badge = { if (errors > 0) Badge { Text("$errors") } }) {
-                    Icon(Icons.Default.Extension, "Extensions", tint = TextPrimary)
+                    Icon(Icons.Default.Extension, stringResource(R.string.extensions), tint = TextPrimary)
                 }
             }
             // Round 10: one filter button replaces the row of round extension shortcuts. It opens a
@@ -406,7 +436,7 @@ fun OnlineHomeScreen(
             }
             }
         }
-        }
+        }) {
         // R15 Phase 5: favourite extensions come first in "Show videos from" (only those that are on).
         // PIN-1 (2.1.0, owner's master list): the extra row of pinned chips on the feed is gone; pins
         // order the filter sheet and the feed, the sheet is the one place to pick an extension.
@@ -431,6 +461,8 @@ fun OnlineHomeScreen(
             defaults = defaultNames,
             onSaveDefaults = { picked ->
                 dev.asfakul.yumeiro.online.YumixDefaults.set(context, picked)
+                // B18: a changed default takes effect now: one default opens on its own page, several open the mix.
+                selected = picked.singleOrNull()
                 android.util.Log.i("YuYumix", "default extensions: ${if (picked.isEmpty()) "every extension" else picked.sorted().joinToString()}")
                 dev.asfakul.yumeiro.ui.components.AppMessages.success(context, if (picked.isEmpty()) "Yumix will mix every extension" else "Yumix will open with ${picked.size} extension${if (picked.size == 1) "" else "s"}")
             },
@@ -491,7 +523,9 @@ fun OnlineHomeScreen(
                 }
                 // Round 8: "All" ⇄ extension page used to be a bare if/else (one-frame cut). It now
                 // slides in the direction of the tapped channel and Back returns to "All".
-                androidx.activity.compose.BackHandler(enabled = selected != null) { selected = null }
+                // B18: Back undoes this visit's change only. Yumix that opened on the saved extension leaves on Back
+                // (it used to drop the pick, so the default never stayed).
+                androidx.activity.compose.BackHandler(enabled = selected != openedOn && (openedOn == null || openedOn in providerNames)) { selected = openedOn }
                 dev.asfakul.yumeiro.ui.components.TabSwap(selected, { n -> if (n == null) -1 else channelNames.indexOf(n) }, Modifier.fillMaxSize(), label = "yumix_channel") { sel ->
                 val listState = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("online_home:" + (sel ?: ""))
                 if (sel == null) {
@@ -597,24 +631,40 @@ fun OnlineHomeScreen(
                     // content crashed with ConcurrentModificationException when prefetch ran the
                     // content in another snapshot while a page was being appended (run 43664241241).
                     val exploreSnap = exploreItems.toList()
+                    // Group O: Discover needs the catalog part (its cards open as catalog titles).
+                    val hubPublished = providers.any { it.name == dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME }
+                    val discoverOn = hubPublished && dev.asfakul.yumeiro.sources.hub.YumeiroHub.catalogOn() && dev.asfakul.yumeiro.sources.hub.HubDiscover.available()
+                    val discoverSeeds = remember(continueItems) { continueItems.map { it.toItem() } }
+                    Discover.grid?.let { g -> if (discoverOn) DiscoverGrid(g, onOpen = openInfo, onClose = { Discover.grid = null }) }
                     val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
+                    // B2: the category bar stays at the top and slides away on scroll down, back on scroll up
+                    // (it used to be the list's first row, gone for good once scrolled past).
+                    dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = cat, header = {
+                        if (cats.isNotEmpty()) CategoryBar(cats, cat, onPick = { cat = it })
+                    }) {
                     LazyColumn(Modifier.fillMaxSize().testTag("online_home_list"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
                         val st = dev.asfakul.yumeiro.ui.components.StagedList(this, staged.intValue, late)
-                        if (cats.isNotEmpty()) st.item("categories") {
-                            CategoryBar(cats, cat, onPick = { cat = it })
-                        }
                         if (catItems != null) {
                             st.items(categoryGridRows(catItems), key = { r -> "cat_" + cat + "_" + r.first().key }) { r -> CategoryGridRow(r, openInfo) }
                         } else {
                         if (banner.first.isNotEmpty() || resume != null) st.item("hero") {
                             HeroCarousel(banner.first, onPlay = openItem, onInfo = openInfo, resume = resume, onResume = { onOpenTitle(it.toItem()) }, newKeys = banner.second)
                         } else if (loadingNames.isNotEmpty()) st.item("hero_skel") {
-                            dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), RoundedCornerShape(24.dp))
+                            dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, HERO_HEIGHT, Modifier.padding(horizontal = 20.dp), yuRound(24))
                         }
                         if (continueItems.isNotEmpty()) st.item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
+                        }
+                        // Group O (F5, F6, F9): Discover (section bar, then that section's shelves, one list item each).
+                        if (discoverOn) {
+                            st.item("discover_bar") { DiscoverBar(Discover.section, onPick = { Discover.section = it }) }
+                            Discover.shelves(Discover.section).forEach { sh ->
+                                st.item("discover_${Discover.section.name}_${sh.key}", contentType = "discover") {
+                                    DiscoverShelf(sh, discoverSeeds, onOpen = openInfo, onGrid = { Discover.grid = it })
+                                }
+                            }
                         }
                         val saved = bookmarks.filter { b -> providers.any { it.name == b.api } }.distinctBy { it.api + "|" + it.url }
                         // F-09: My List holds listed titles; Favorites get their own shelf (a Favorite can be in both).
@@ -662,7 +712,7 @@ fun OnlineHomeScreen(
                             }
                             if (exploreBusy || exploreLimit < exploreSnap.size) st.item("explore_more") { PosterGridSkeleton(1) }
                             else if (!exploreMore) st.item("explore_end") {
-                                Text("You've reached the end. Pull down to refresh.", color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
+                                Text(stringResource(R.string.youve_reached_the_end_pull_down), color = TextTertiary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(24.dp))
                             }
                         }
                         if (loadingNames.isNotEmpty()) st.item("feed_loading") {
@@ -687,6 +737,7 @@ fun OnlineHomeScreen(
                             SearchOnlyCard(YumixFeed.searchOnlyLabel(searchOnly.map { it.name }), onOpenSearch)
                         }
                         }
+                    }
                     }
                 } else {
                     val name: String = sel
@@ -753,7 +804,7 @@ fun OnlineHomeScreen(
 
 @Composable
 private fun ProviderProblem(name: String, message: String, onRetry: (() -> Unit)?) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_error")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_error")) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.CloudOff, null, tint = WarnColor, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
@@ -761,34 +812,34 @@ private fun ProviderProblem(name: String, message: String, onRetry: (() -> Unit)
                 Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 Text(message, color = TextSecondary, fontSize = 12.sp)
             }
-            if (onRetry != null) TextButton(onClick = onRetry) { Text("Retry", color = SpotifyGreen) }
+            if (onRetry != null) TextButton(onClick = onRetry) { Text(stringResource(R.string.retry), color = SpotifyGreen) }
         }
     }
 }
 
 @Composable
 private fun ProviderSetup(message: String, onSetUp: () -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_setup")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_setup")) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Settings, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(12.dp))
             Text(message, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            TextButton(onClick = onSetUp) { Text("Set up", color = SpotifyGreen) }
+            TextButton(onClick = onSetUp) { Text(stringResource(R.string.set_up), color = SpotifyGreen) }
         }
     }
 }
 
 @Composable
 private fun SearchOnlyCard(name: String, onSearch: () -> Unit) {
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Icon(Icons.Default.Search, null, tint = SpotifyGreen) }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text("Search-only source — find titles with search", color = TextSecondary, fontSize = 12.sp)
+                Text(stringResource(R.string.search_only_source_find_titles_with), color = TextSecondary, fontSize = 12.sp)
             }
-            TextButton(onClick = onSearch) { Text("Search", color = SpotifyGreen) }
+            TextButton(onClick = onSearch) { Text(stringResource(R.string.search), color = SpotifyGreen) }
         }
     }
 }
@@ -855,7 +906,7 @@ fun VideoSourceSwitch(
 @Composable
 internal fun UpcomingEntryCard(onClick: () -> Unit) {
     androidx.compose.foundation.layout.Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(16.dp))
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(yuRound(16))
             .background(dev.asfakul.yumeiro.ui.theme.GlassFill).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp)
             .testTag("online_upcoming_entry"),
         verticalAlignment = Alignment.CenterVertically,
@@ -863,8 +914,8 @@ internal fun UpcomingEntryCard(onClick: () -> Unit) {
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.DateRange, null, tint = dev.asfakul.yumeiro.ui.theme.SpotifyGreen)
         androidx.compose.foundation.layout.Spacer(Modifier.width(12.dp))
         androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-            Text("Upcoming", color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 15.sp)
-            Text("Movies, series and anime in the next two weeks", color = dev.asfakul.yumeiro.ui.theme.TextSecondary, fontSize = 12.sp, maxLines = 1)
+            Text(stringResource(R.string.upcoming), color = dev.asfakul.yumeiro.ui.theme.TextPrimary, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, fontSize = 15.sp)
+            Text(stringResource(R.string.movies_series_and_anime_in_the), color = dev.asfakul.yumeiro.ui.theme.TextSecondary, fontSize = 12.sp, maxLines = 1)
         }
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = dev.asfakul.yumeiro.ui.theme.TextTertiary)
     }

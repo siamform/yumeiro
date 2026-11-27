@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Intent
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
@@ -82,7 +84,7 @@ internal fun CrashReportsCard() {
     }
     SettingsCard {
         if (reports.isEmpty()) {
-            Text("No crashes recorded. If Yumeiro ever closes by itself or freezes, the report is saved here.",
+            Text(stringResource(R.string.no_crashes_recorded_if_yumeiro_ever),
                 color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(vertical = 10.dp).testTag("crash_empty"))
         } else {
             reports.forEachIndexed { i, r ->
@@ -95,7 +97,7 @@ internal fun CrashReportsCard() {
             // Download/Yumeiro/Crash reports stay. Now it asks first and says what it removes.
             SettingsActionRow("Delete all", "Remove them from Yumeiro; copies in Download stay", "crash_clear", danger = true) { confirmClear = true }
         }
-        Text("Reports stay on this phone until you share them. A copy of each one is also saved as a file in Download/Yumeiro/Crash reports, ready to attach. They hold the app version, phone model, Android version and the error, and leave out links with keys, tokens and e-mail addresses.",
+        Text(stringResource(R.string.reports_stay_on_this_phone_until),
             color = TextTertiary, fontSize = 11.5.sp, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
     }
     if (confirmClear) {
@@ -104,14 +106,14 @@ internal fun CrashReportsCard() {
             tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
             onDismissRequest = { confirmClear = false },
             title = { Text(if (n == 1) "Delete this crash report?" else "Delete all $n crash reports?") },
-            text = { Text("They are removed from Yumeiro. Copies already saved in Download/Yumeiro/Crash reports stay; delete those in your Files app. This can't be undone.") },
+            text = { Text(stringResource(R.string.they_are_removed_from_yumeiro_copies)) },
             confirmButton = {
                 dev.asfakul.yumeiro.ui.components.DialogConfirmButton("Delete", modifier = Modifier.testTag("crash_clear_confirm"), onClick = {
                     confirmClear = false
                     scope.launch { withContext(Dispatchers.IO) { CrashLog.clear(context) }; version++ }
                 })
             },
-            dismissButton = { TextButton(onClick = { confirmClear = false }, modifier = Modifier.testTag("crash_clear_cancel")) { Text("Keep") } },
+            dismissButton = { TextButton(onClick = { confirmClear = false }, modifier = Modifier.testTag("crash_clear_cancel")) { Text(stringResource(R.string.keep)) } },
         )
     }
     open?.let { r ->
@@ -128,8 +130,8 @@ internal fun CrashReportsCard() {
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { share(listOf(r.file), "Yumeiro crash report"); open = null }, modifier = Modifier.testTag("crash_share")) { Text("Share") } },
-            dismissButton = { TextButton(onClick = { open = null }, modifier = Modifier.testTag("crash_close")) { Text("Close") } },
+            confirmButton = { TextButton(onClick = { share(listOf(r.file), "Yumeiro crash report"); open = null }, modifier = Modifier.testTag("crash_share")) { Text(stringResource(R.string.share)) } },
+            dismissButton = { TextButton(onClick = { open = null }, modifier = Modifier.testTag("crash_close")) { Text(stringResource(R.string.close)) } },
         )
     }
 }

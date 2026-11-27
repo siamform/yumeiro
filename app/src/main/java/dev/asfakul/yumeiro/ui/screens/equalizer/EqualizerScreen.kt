@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.equalizer
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import androidx.activity.compose.BackHandler
@@ -81,6 +83,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreenBright
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +120,7 @@ fun EqualizerScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.RestartAlt,
-                        contentDescription = "Reset to flat",
+                        contentDescription = stringResource(R.string.reset_to_flat),
                         tint = TextSecondary
                     )
                 }
@@ -138,7 +141,7 @@ fun EqualizerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("equalizer_master_card"),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = yuRound(16),
                     colors = CardDefaults.cardColors(containerColor = GlassFill),
                     border = androidx.compose.foundation.BorderStroke(
                         1.dp,
@@ -172,7 +175,7 @@ fun EqualizerScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "Equalizer",
+                                    text = stringResource(R.string.equalizer),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
@@ -199,7 +202,7 @@ fun EqualizerScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = yuRound(16),
                     colors = CardDefaults.cardColors(containerColor = GlassFill),
                     border = null
                 ) {
@@ -210,7 +213,7 @@ fun EqualizerScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "音響 · RESPONSE",
+                                text = stringResource(R.string.response),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = SpotifyGreen,
                                 fontWeight = FontWeight.Bold,
@@ -232,7 +235,7 @@ fun EqualizerScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(120.dp)
-                                .clip(RoundedCornerShape(20.dp))
+                                .clip(yuRound(20))
                                 .background(DarkBackground)
                         )
                     }
@@ -243,7 +246,7 @@ fun EqualizerScreen(
             item {
                 Column {
                     Text(
-                        text = "Presets",
+                        text = stringResource(R.string.presets),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -259,7 +262,7 @@ fun EqualizerScreen(
                             val isSelected = state.currentPreset == preset
                             Surface(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
+                                    .clip(yuRound(20))
                                     .clickable { onPresetSelect(preset) }
                                     .testTag("preset_chip_$preset"),
                                 color = if (isSelected) SpotifyGreen else DarkSurfaceVariant,
@@ -284,7 +287,7 @@ fun EqualizerScreen(
             // Frequency Band Sliders
             item {
                 Text(
-                    text = "Bands",
+                    text = stringResource(R.string.bands),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -313,7 +316,7 @@ fun EqualizerScreen(
             // Sound Enhancements: Bass Boost & Virtualizer
             item {
                 Text(
-                    text = "Enhancements",
+                    text = stringResource(R.string.enhancements),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
@@ -462,7 +465,7 @@ fun BandSliderCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = yuRound(20),
         colors = CardDefaults.cardColors(containerColor = GlassFill),
         border = null
     ) {
@@ -474,7 +477,7 @@ fun BandSliderCard(
         ) {
             // Frequency label badge
             Surface(
-                shape = RoundedCornerShape(8.dp),
+                shape = yuRound(8),
                 color = if (isEnabled) SpotifyGreen.copy(alpha = 0.15f) else DarkSurfaceVariant,
                 modifier = Modifier.width(62.dp)
             ) {
@@ -535,7 +538,7 @@ fun EffectSliderCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = yuRound(14),
         colors = CardDefaults.cardColors(containerColor = GlassFill),
         border = null
     ) {
@@ -549,7 +552,7 @@ fun EffectSliderCard(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(yuRound(12))
                             .background(
                                 if (isEnabled && value > 0) SpotifyGreen.copy(alpha = 0.2f) else DarkSurfaceVariant
                             ),

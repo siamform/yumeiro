@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,6 +72,7 @@ import dev.asfakul.yumeiro.ui.screens.online.PosterImage
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
 private val RX_STREAMWATCHPANEL_HOT_1 = Regex("""[\[(].*?[\])]""")
@@ -406,7 +409,7 @@ fun StreamWatchPanel(currentUrl: String, title: String, modifier: Modifier = Mod
             } else if (playlistAll.isEmpty() && queue == null) {
                 item(key = "empty") {
                     Text(
-                        "Open an M3U playlist in Videos → Live TV to switch channels from here.",
+                        stringResource(R.string.open_an_m3u_playlist_in_videos),
                         color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(16.dp),
                     )
                 }
@@ -449,7 +452,7 @@ private fun ChannelRow(number: Int, ch: StreamRequest, playing: Boolean, striped
             modifier = Modifier.width(48.dp).padding(start = 10.dp),
         )
         Box(
-            Modifier.padding(vertical = 7.dp).size(width = 56.dp, height = 36.dp).clip(RoundedCornerShape(8.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)),
+            Modifier.padding(vertical = 7.dp).size(width = 56.dp, height = 36.dp).clip(yuRound(8)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f)),
             contentAlignment = Alignment.Center,
         ) {
             if (ch.logoUrl != null) PosterImage(ch.logoUrl, emptyMap(), Modifier.fillMaxSize().padding(4.dp), Icons.Default.LiveTv)
@@ -461,7 +464,7 @@ private fun ChannelRow(number: Int, ch: StreamRequest, playing: Boolean, striped
             val sub = listOfNotNull(if (playing) "Now playing" else null, ch.group).joinToString(" · ")
             if (sub.isNotBlank()) Text(sub, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (playing) Icon(Icons.Default.PlayArrow, "Now playing", tint = p.accent, modifier = Modifier.padding(end = 14.dp).size(20.dp))
+        if (playing) Icon(Icons.Default.PlayArrow, stringResource(R.string.now_playing), tint = p.accent, modifier = Modifier.padding(end = 14.dp).size(20.dp))
         else Spacer(Modifier.width(14.dp))
     }
 }

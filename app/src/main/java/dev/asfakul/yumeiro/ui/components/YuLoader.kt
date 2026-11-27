@@ -92,12 +92,12 @@ fun YuLoader(
                 drawArc(tint, 0f, YuLoaderSpec.SWEEP, false, topLeft, arcSize, style = Stroke(w, cap = StrokeCap.Round))
             }
         }
-        // The drawable's mark fills the middle half of its canvas, so drawn at the loader's size
-        // it sits inside the ring with room to breathe.
-        Image(
-            painterResource(R.drawable.ic_launch_moon),
-            contentDescription = null,
-            modifier = Modifier.requiredSize(size * 1.25f).graphicsLayer { val b = breath.value; scaleX = b; scaleY = b },
-        )
+        // The splash mark (F4: drawn from its geometry, YuMark) fills the middle half of its canvas, so
+        // drawn at 1.25x the loader's size it sits inside the ring; its play triangle "presses" with
+        // the breath and a faint glow follows it.
+        YuMark(Modifier.requiredSize(size * 1.25f), glowColor = tint) {
+            val b = breath.value
+            YuMarkFrame(moon = 1f, play = 1f, glow = if (YuLoaderSpec.animates(reduced)) (1f - b) * 4f else 0f, playScale = 0.92f + (b - 0.94f) / 0.06f * 0.08f)
+        }
     }
 }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +33,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** ADR-014: Extensions → "Pop-ups from extensions" (Show / Quiet / Block promotional) and held messages. */
 @Composable
@@ -41,9 +44,9 @@ internal fun ExtensionPopupsCard() {
     val heldIds = held.map { it.id }
     // ADR-014: this list replaces the quiet card while it is on screen (the card covered Dismiss).
     androidx.compose.runtime.LaunchedEffect(heldIds) { if (heldIds.isNotEmpty()) ExtensionPopups.onListShown() }
-    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(top = 14.dp).testTag("extensions_popups")) {
+    Surface(shape = yuRound(18), color = GlassFill, modifier = Modifier.fillMaxWidth().padding(top = 14.dp).testTag("extensions_popups")) {
         Column(Modifier.padding(14.dp)) {
-            Text("Pop-ups from extensions", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.pop_ups_from_extensions), color = TextPrimary, fontWeight = FontWeight.SemiBold)
             Text(
                 when (mode) {
                     ExtensionPopups.Mode.SHOW -> "Every window an extension opens is shown."
@@ -63,8 +66,8 @@ internal fun ExtensionPopupsCard() {
                         Text(ExtensionPopups.cardText(h.extName, h.functional), color = TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (h.title.isNotBlank()) Text(h.title, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    TextButton(onClick = { ExtensionPopups.reveal(h.id) }, modifier = Modifier.testTag("extensions_popup_show")) { Text("Show", color = SpotifyGreen) }
-                    TextButton(onClick = { ExtensionPopups.discard(h.id) }, modifier = Modifier.testTag("extensions_popup_discard")) { Text("Dismiss", color = TextSecondary) }
+                    TextButton(onClick = { ExtensionPopups.reveal(h.id) }, modifier = Modifier.testTag("extensions_popup_show")) { Text(stringResource(R.string.show), color = SpotifyGreen) }
+                    TextButton(onClick = { ExtensionPopups.discard(h.id) }, modifier = Modifier.testTag("extensions_popup_discard")) { Text(stringResource(R.string.dismiss), color = TextSecondary) }
                 }
             }
         }

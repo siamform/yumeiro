@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +49,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One playlist (row) of a Hue with its own paging cursor. */
 internal data class HueRowFeed(val row: OnlineRow, val items: List<OnlineItem>, val page: Int, val hasNext: Boolean, val loading: Boolean = false, val fails: Int = 0) {
@@ -226,7 +229,7 @@ internal fun HuePage(
                     "${feed.size} match${if (feed.size == 1) "" else "es"} in ${fullFeed.size} loaded" + if (pagingBusy) " · looking further…" else "",
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.weight(1f).testTag("hue_section_search_count"),
                 )
-                androidx.compose.material3.TextButton(onClick = { OnlineSearchPending.query = query.trim(); onSearch() }, modifier = Modifier.testTag("hue_search_everywhere")) { Text("Search all sources", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 12.sp) }
+                androidx.compose.material3.TextButton(onClick = { OnlineSearchPending.query = query.trim(); onSearch() }, modifier = Modifier.testTag("hue_search_everywhere")) { Text(stringResource(R.string.search_all_sources), color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 12.sp) }
             }
         }
         when {
@@ -244,7 +247,11 @@ internal fun HuePage(
                 val fix = errorFix
                 val second: Pair<String, () -> Unit>? = when (fix?.kind) {
                     dev.asfakul.yumeiro.online.EmptyHome.Kind.BROWSER_CHECK -> "Open site" to {
-                        scope.launch { dev.asfakul.yumeiro.online.web.BrowserCheck.solve(fix.site); onRetry() }; Unit
+                        // B4: this ran only the silent check, which cannot pass a site that wants a tap (that is why
+                        // the home failed), so nothing opened and Retry met the same check. It opens the site's check
+                        // page now; once passed, the extension reloads by itself (VerificationCenter.passed) and here.
+                        val site = fix.site.let { if (it.startsWith("http")) it.trimEnd('/') + "/" else "https://$it/" }
+                        dev.asfakul.yumeiro.online.web.BrowserCheck.openSite(site) { ok -> if (ok) onRetry() }
                     }
                     dev.asfakul.yumeiro.online.EmptyHome.Kind.MOVED -> if (api != null && fix.movedTo != null) ("Use new address" to {
                         dev.asfakul.yumeiro.online.ProviderOverrides.setMainUrl(api, fix.movedTo); onRetry()
@@ -279,7 +286,7 @@ internal fun HuePage(
                         androidx.compose.material3.OutlinedButton(
                             onClick = { home = false },
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp).heightIn(min = 48.dp).testTag("hue_browse_all"),
-                        ) { Text("Browse everything on $name", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent) }
+                        ) { Text(stringResource(R.string.browse_everything_on, name), color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent) }
                     }
                     return@LazyColumn
                 }
@@ -296,7 +303,7 @@ internal fun HuePage(
                 if (pagingBusy) item("more") { PosterGridSkeleton() }
                 else if (!canLoadMore) item("end") {
                     Text(
-                        "You're all caught up on $name", color = TextTertiary, fontSize = 12.sp,
+                        stringResource(R.string.youre_all_caught_up_on, name), color = TextTertiary, fontSize = 12.sp,
                         modifier = Modifier.fillMaxWidth().padding(24.dp).testTag("hue_feed_end"),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
@@ -311,7 +318,7 @@ internal fun HuePage(
 internal fun FeedCardSkeleton() {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("feed_card_skeleton")) {
         Box(Modifier.fillMaxWidth().height(0.dp).padding(0.dp))
-        SkeletonBlock(width = null, height = 196.dp, shape = RoundedCornerShape(22.dp))
+        SkeletonBlock(width = null, height = 196.dp, shape = yuRound(22))
         Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             SkeletonBlock(width = 36.dp, height = 36.dp, shape = CircleShape)
             Spacer(Modifier.width(10.dp))
@@ -326,7 +333,7 @@ internal fun FeedCardSkeleton() {
 @Composable
 private fun HueNotice(message: String, action: String? = null, onAction: (() -> Unit)? = null, action2: String? = null, onAction2: (() -> Unit)? = null) {
     androidx.compose.material3.Surface(
-        shape = RoundedCornerShape(18.dp), color = dev.asfakul.yumeiro.ui.theme.GlassFill,
+        shape = yuRound(18), color = dev.asfakul.yumeiro.ui.theme.GlassFill,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_provider_error"),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {

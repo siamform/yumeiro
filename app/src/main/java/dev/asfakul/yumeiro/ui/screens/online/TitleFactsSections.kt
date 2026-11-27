@@ -47,6 +47,7 @@ import dev.asfakul.yumeiro.online.meta.TitleFacts
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * META-1 (owner list 13): the About rows (release date, IMDb votes, country, language, director, writers, companies,
@@ -64,7 +65,7 @@ internal fun LazyListScope.titleFactsItems(
     val aboutRows = TitleFacts.rows(facts, d.kind)
     if (aboutRows.isNotEmpty()) item(key = "about") {
         Column(
-            Modifier.padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 12.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            Modifier.padding(horizontal = 16.dp).padding(top = 4.dp, bottom = 12.dp).fillMaxWidth().clip(yuRound(16))
                 .background(TextPrimary.copy(alpha = 0.05f)).padding(horizontal = 14.dp, vertical = 10.dp).testTag("${tagPrefix}_about"),
         ) {
             aboutRows.forEach { (label, value) ->
@@ -107,7 +108,7 @@ internal fun LazyListScope.titleFactsItems(
                     val yt = TitleFacts.youTubeId(t.url)
                     Column(Modifier.width(220.dp)) {
                         Box(
-                            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(TextPrimary.copy(alpha = 0.08f))
+                            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(12)).background(TextPrimary.copy(alpha = 0.08f))
                                 .clickable(onClickLabel = "Play ${t.name}") {
                                     // Trailers play in Yumeiro's own player (YouTube links go through the login-free extractor).
                                     dev.asfakul.yumeiro.stream.IncomingMedia.open(context, dev.asfakul.yumeiro.stream.StreamRequest(url = t.url, title = "${d.name} · ${t.name}"))

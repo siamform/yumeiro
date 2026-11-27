@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object DataCache {
     private const val TAG = "YuCache"
-    private const val DIR = "data_cache"
+    internal const val DIR = "data_cache"
     @Volatile private var root: File? = null
     /**
      * In-memory copies, least recently used first. G12 X12-1: bounded by total size as well as by

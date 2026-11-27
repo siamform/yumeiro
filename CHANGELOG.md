@@ -5,6 +5,28 @@ All notable changes to Yumeiro.
 Older entries name files under `docs/`. Those notes moved to a private repository on 2026-11-25; licence texts
 are now in [`licenses/`](licenses/).
 
+## Beta 2.4.0 (in testing on `beta-main`, not a Stable release)
+
+Yumeiro Beta installs next to the stable app with its own data (yumeiro.click/beta). Every item was checked with the
+real app on Android emulators (phone API 36, phone API 33 low-RAM, Android TV API 34 and API 24); checks on real
+phones and TVs are listed as open. The full list is on [yumeiro.click/changelog](https://yumeiro.click/changelog).
+
+### New
+- BlackSource: search anime by genre, tags and demographic from AniList, then find the copies in your own
+  extensions (F14; emulator. Going live needs the Yumeiro Cloud update).
+- Yumeiro Vault: keep a title from any website with the links on its page as a small file you own (F1; emulator).
+- Languages: English, Bangla and Arabic (right-to-left), or follow the phone; Bangla and Arabic are previews (F2;
+  emulator).
+- Subtitles in any encoding, and Play a pasted link (video, magnet or info hash) from Search online (F3; emulator).
+
+### Fixed
+- 60+ extensions: Home no longer rebuilds itself and restarts its rows for every extension that loads, so the app
+  stays responsive and video keeps playing while extensions install, load and search; large heap for many
+  extensions, and Android 7.x keeps unloaded extension classes to avoid a runtime crash (B20-PERF-EXT; emulator with
+  10, 30 and 60 real extensions on all four images).
+- Each profile has its own search history, downloads and saved websites (B19, GitHub issue #47; emulator).
+- Extension check pages: content and file access are turned off in an extension's own check WebView (security).
+
 ## v2.3.0: novels, rotation, profile pictures, a new splash and calmer loading
 
 Follows 2.2.0. Update straight from 2.2.0, 2.1.0 or 2.0.0; profiles, history, downloads and settings carry over.

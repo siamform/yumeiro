@@ -57,17 +57,35 @@ object Entrance {
         return d
     }
 
-    @Synchronized fun resetForTest() { seen.clear(); burstAt = Long.MIN_VALUE; burstCount = 0 }
+    @Synchronized fun resetForTest() { seen.clear(); burstAt = Long.MIN_VALUE; burstCount = 0; quietUntil = 0L }
+
+    /**
+     * B3 (Beta chapter): while a page slides in (push, pop, tab jump) its cards must not run their own
+     * fade/rise on top of the page motion: that was one graphics layer and one animation per card in
+     * the frames that already draw two pages. Navigation calls [quiet]; cards first shown inside the
+     * window simply appear with their page (and count as seen).
+     */
+    @Volatile var quietUntil = 0L
+        private set
+    fun quiet(ms: Long = QUIET_MS, now: Long = android.os.SystemClock.uptimeMillis()) { quietUntil = maxOf(quietUntil, now + ms) }
+    fun isQuiet(now: Long): Boolean = now < quietUntil
+    const val QUIET_MS = 520L
+
+    /** Cached once per process (it was a system-service call per card). */
+    @Volatile private var lowRamCached: Boolean? = null
+    fun lowRam(context: android.content.Context): Boolean = lowRamCached ?: runCatching {
+        (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
+    }.getOrDefault(false).also { lowRamCached = it }
 
     fun enabled(reduced: Boolean, lowRam: Boolean): Boolean = !reduced && !lowRam
+    fun enabled(reduced: Boolean, lowRam: Boolean, now: Long): Boolean = enabled(reduced, lowRam) && !isQuiet(now)
 }
 
 /** See [Entrance]. [key] must be stable for the card (its item key). */
 fun Modifier.yuEntrance(key: Any): Modifier = composed {
     val reduced = reducedMotion()
     val context = LocalContext.current
-    val lowRam = remember { runCatching { (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice }.getOrDefault(false) }
-    val play = remember(key) { Entrance.enabled(reduced, lowRam) && Entrance.firstTime(key) }
+    val play = remember(key) { Entrance.firstTime(key) && Entrance.enabled(reduced, Entrance.lowRam(context), android.os.SystemClock.uptimeMillis()) }
     if (!play) return@composed Modifier
     val delayMs = remember(key) { Entrance.nextDelay(android.os.SystemClock.uptimeMillis()) }
     val t = remember(key) { Animatable(0f) }

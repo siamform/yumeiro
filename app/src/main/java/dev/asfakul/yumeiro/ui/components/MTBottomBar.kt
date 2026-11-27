@@ -55,17 +55,19 @@ import androidx.compose.ui.graphics.graphicsLayer
 import dev.asfakul.yumeiro.ui.navigation.bottomNavItems
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.Yume
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // ---- Floating bottom dock metrics -----------------------------------------------------------
 val DockHorizontalPadding = 14.dp
 val DockBottomPadding = 12.dp
 val DockMaxWidth = 480.dp
 /*
- * Round 10: the bottom nav pill was 62 dp and read as cramped; it is now 68 dp (Material 3's
- * flexible bar is 64 dp, the iOS floating tab capsule 62 pt). The music mini player keeps its
- * original 68 dp. Pages measure the dock, so content padding follows automatically.
+ * Round 10 made the nav pill 68 dp. F11 (Beta chapter, owner: "too tall"): SkyStream's floating
+ * pill is 64 dp icon-only; Yumeiro keeps labels and is now 60 dp, with the icon and label sharing
+ * one capsule (B6). The music mini player keeps its 68 dp and the junction corners when docked
+ * above. Pages measure the dock, so content padding follows automatically.
  */
-val DockNavHeight = 68.dp
+val DockNavHeight = 60.dp
 val DockMiniHeight = 68.dp
 val DockGap = 2.dp
 /** Space between the floating mini-player pill and the nav pill. */
@@ -149,7 +151,7 @@ fun MTBottomBar(
                 val capW = NavCapsule.width(tabW)
                 Box(
                     Modifier
-                        .padding(top = NavCapsule.Top)
+                        .align(Alignment.CenterStart)
                         .size(capW, NavCapsule.Height)
                         .graphicsLayer {
                             translationX = (capsule.value * tabW.toPx()) + (tabW - capW).toPx() / 2f
@@ -174,41 +176,40 @@ fun MTBottomBar(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(yuRound(16))
                             .clickable(
                                 interactionSource = tabSource,
                                 indication = androidx.compose.material3.ripple(bounded = true, color = activeTint),
                                 role = Role.Tab,
                                 onClickLabel = item.label,
                             ) { if (!isSelected) { haptics.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.SegmentTick); onNavigateToRoute(item.route) } }
-                            .padding(top = NavCapsule.Top)
-                            .then(if (tabFocused) Modifier.border(2.dp, activeTint, RoundedCornerShape(16.dp)) else Modifier)
+                            .then(if (tabFocused) Modifier.border(2.dp, activeTint, yuRound(16)) else Modifier)
                             .semantics { selected = isSelected; contentDescription = item.label }
                             .testTag(item.testTag)
                             .tourTarget(item.testTag),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Top,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        // Up to seven tabs: the pill narrows with the tab (56 dp at most) so it never touches its neighbour.
-                        Box(Modifier.padding(horizontal = 3.dp).widthIn(max = 56.dp).fillMaxWidth().height(NavCapsule.Height), contentAlignment = Alignment.Center) {
-                            // Marker for tests / TalkBack trees; the visible capsule is drawn once for the bar.
+                        // B6: icon and label sit together inside the one capsule; this box only
+                        // marks the selected tab's slot for tests / TalkBack trees.
+                        Box(Modifier.size(NavCapsule.IconBox), contentAlignment = Alignment.Center) {
                             Box(Modifier.matchParentSize().testTag(if (isSelected) "nav_active_pill" else "nav_pill_off"))
                             androidx.compose.animation.Crossfade(isSelected, animationSpec = androidx.compose.animation.core.tween(if (reduced) 0 else 160), label = "navGlyph") { sel ->
                                 Icon(
                                     imageVector = if (sel) item.selectedIcon else item.unselectedIcon,
                                     contentDescription = null,
                                     tint = tint,
-                                    modifier = Modifier.size(24.dp).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
+                                    modifier = Modifier.size(NavCapsule.Icon).testTag(if (sel) "nav_icon_filled" else "nav_icon_outline"),
                                 )
                             }
                         }
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(NavCapsule.Gap))
                         Text(
                             item.label,
                             color = tint,
                             style = MaterialTheme.typography.labelSmall,
-                            fontSize = 11.sp,
-                            lineHeight = 13.sp,
+                            fontSize = NavCapsule.LabelSize,
+                            lineHeight = NavCapsule.LabelLine,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -222,14 +223,20 @@ fun MTBottomBar(
 }
 
 /**
- * B1 capsule geometry and motion. The capsule sits behind the icon of the selected tab: tabs lay
- * out from [Top] (icon box [Height], 3 dp gap, 13 dp label → centred in the 68 dp bar).
+ * Capsule geometry and motion. B6 (Beta chapter): the one capsule encloses the selected tab's icon
+ * AND its label (it used to sit behind the icon only, with the label floating under it). Tabs are
+ * centred in the [DockNavHeight] bar: icon box [IconBox], [Gap], one label line [LabelLine] = 36 dp
+ * of content inside a [Height] capsule (6 dp air above and below).
  */
 object NavCapsule {
-    val Top = 11.dp
-    val Height = 30.dp
-    private val Max = 56.dp
-    fun width(tab: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.Dp = minOf(Max, tab - 6.dp).coerceAtLeast(0.dp)
+    val Height = 48.dp
+    val Icon = 22.dp
+    val IconBox = 24.dp
+    val Gap = 1.dp
+    val LabelSize = 10.5.sp
+    val LabelLine = 12.sp
+    private val Max = 68.dp
+    fun width(tab: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.Dp = minOf(Max, tab - 4.dp).coerceAtLeast(0.dp)
     /** Critically damped-ish spring: one small overshoot, settles in ~300 ms. */
     fun spec(): androidx.compose.animation.core.AnimationSpec<Float> =
         androidx.compose.animation.core.spring(dampingRatio = 0.78f, stiffness = 520f)

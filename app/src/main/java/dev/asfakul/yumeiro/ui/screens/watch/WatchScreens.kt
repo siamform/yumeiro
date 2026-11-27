@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.watch
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.filled.Download
 
@@ -96,6 +98,7 @@ import dev.asfakul.yumeiro.youtube.YtItem
 import dev.asfakul.yumeiro.youtube.YtWatch
 import dev.asfakul.yumeiro.youtube.formatYtDuration
 import dev.asfakul.yumeiro.youtube.formatYtViews
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // region shared watch-page building blocks
 
@@ -131,7 +134,7 @@ fun WatchScaffold(
                 dev.asfakul.yumeiro.ui.screens.online.SoftBackdrop(backdrop, backdropHeaders, Modifier.fillMaxSize(), landscape = true)
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
             } else {
-                Box(Modifier.fillMaxSize().shimmer(RoundedCornerShape(0.dp)))
+                Box(Modifier.fillMaxSize().shimmer(yuRound(0)))
             }
             screen()
         }
@@ -169,18 +172,18 @@ fun PlayerBrandBar(
         androidx.compose.foundation.Image(
             painter = androidx.compose.ui.res.painterResource(dev.asfakul.yumeiro.R.drawable.ic_app_logo),
             contentDescription = null,
-            modifier = Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)),
+            modifier = Modifier.size(24.dp).clip(yuRound(7)),
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            "Yumeiro",
+            stringResource(R.string.app_name),
             style = androidx.compose.ui.text.TextStyle(brush = brush, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp),
             maxLines = 1,
             modifier = Modifier.testTag("player_brand_name"),
         )
         Spacer(Modifier.weight(1f))
         IconButton(onClick = onClose, modifier = Modifier.testTag("watch_close")) {
-            Icon(Icons.Default.Close, "Close player", tint = TextPrimary)
+            Icon(Icons.Default.Close, stringResource(R.string.close_player), tint = TextPrimary)
         }
     }
 }
@@ -199,7 +202,7 @@ fun BoxScope.WatchScreenStatus(text: String, onCancel: (() -> Unit)? = null, tag
         if (onCancel != null) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "Cancel", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
+                stringResource(R.string.cancel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
                 modifier = Modifier.clip(CircleShape).clickable(onClick = onCancel).padding(horizontal = 12.dp, vertical = 4.dp)
                     .testTag("watch_cancel"),
             )
@@ -216,11 +219,11 @@ fun BoxScope.WatchScreenError(message: String, onRetry: () -> Unit, onClose: () 
         Text(message, color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(4.dp))
         val tip = remember(message) { dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor(message).firstOrNull() }
-        if (tip != null) Text("Tip: $tip", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("error_tip"))
+        if (tip != null) Text(stringResource(R.string.tip, tip), color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("error_tip"))
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onClose) { Text("Close", color = Color.White) }
-            Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Try again") }
+            OutlinedButton(onClick = onClose) { Text(stringResource(R.string.close), color = Color.White) }
+            Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text(stringResource(R.string.try_again)) }
         }
     }
 }
@@ -292,11 +295,11 @@ fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
         }
         WatchKind.PAGE -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_page"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                SkeletonBlock(width = 104.dp, height = 152.dp, shape = RoundedCornerShape(12.dp))
+                SkeletonBlock(width = 104.dp, height = 152.dp, shape = yuRound(12))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SkeletonBlock(width = 170.dp, height = 18.dp)
                     SkeletonBlock(width = 120.dp, height = 12.dp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(3) { SkeletonBlock(width = 48.dp, height = 20.dp, shape = RoundedCornerShape(6.dp)) } }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(3) { SkeletonBlock(width = 48.dp, height = 20.dp, shape = yuRound(6)) } }
                     Spacer(Modifier.height(6.dp))
                     SkeletonBlock(width = 132.dp, height = 40.dp, shape = CircleShape)
                 }
@@ -307,7 +310,7 @@ fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
         }
         WatchKind.MOVIE -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_movie"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(3) { SkeletonBlock(width = 56.dp, height = 22.dp, shape = RoundedCornerShape(6.dp)) }
+                repeat(3) { SkeletonBlock(width = 56.dp, height = 22.dp, shape = yuRound(6)) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SkeletonBlock(width = 132.dp, height = 40.dp, shape = CircleShape)
@@ -329,7 +332,7 @@ fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
             Spacer(Modifier.height(6.dp))
             SkeletonBlock(width = 120.dp, height = 14.dp)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                repeat(4) { SkeletonBlock(width = 96.dp, height = 144.dp, shape = RoundedCornerShape(12.dp)) }
+                repeat(4) { SkeletonBlock(width = 96.dp, height = 144.dp, shape = yuRound(12)) }
             }
         }
         WatchKind.SERIES -> Column(modifier.fillMaxWidth().padding(16.dp).testTag("watch_skeleton_series"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -342,7 +345,7 @@ fun WatchDetailsSkeleton(kind: WatchKind, modifier: Modifier = Modifier) {
             SkeletonBlock(width = 230.dp, height = 12.dp)
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(4) { SkeletonBlock(width = 78.dp, height = 32.dp, shape = RoundedCornerShape(10.dp)) }
+                repeat(4) { SkeletonBlock(width = 78.dp, height = 32.dp, shape = yuRound(10)) }
             }
             Spacer(Modifier.height(2.dp))
             repeat(5) { WatchRowSkeleton() }
@@ -371,7 +374,7 @@ fun WatchDetailsSkeleton(rows: Int = 5, modifier: Modifier = Modifier) {
 @Composable
 fun WatchRowSkeleton() {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        SkeletonBlock(width = 148.dp, height = 84.dp, shape = RoundedCornerShape(12.dp))
+        SkeletonBlock(width = 148.dp, height = 84.dp, shape = yuRound(12))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SkeletonBlock(width = null, height = 14.dp)
@@ -425,8 +428,8 @@ fun WatchDescription(text: String, header: String? = null) {
     if (text.isBlank() && header.isNullOrBlank()) return
     var open by rememberSaveable(text) { mutableStateOf(false) }
     Surface(
-        shape = RoundedCornerShape(18.dp), color = GlassFill,
-        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp))
+        shape = yuRound(18), color = GlassFill,
+        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(yuRound(18))
             .clickable { open = !open }.animateContentSize().testTag("watch_description"),
     ) {
         Column(Modifier.padding(14.dp)) {
@@ -534,7 +537,7 @@ fun YouTubeWatchPanel(onPlay: (YtItem) -> Unit, modifier: Modifier = Modifier, o
         if (state.loading) {
             items(6, key = { "yt_sk_$it" }) { Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) { WatchRowSkeleton() } }
         } else if (state.related.isEmpty()) {
-            item(key = "norelated") { Text("Nothing related found for this video.", color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp)) }
+            item(key = "norelated") { Text(stringResource(R.string.nothing_related_found_for_this_video), color = TextTertiary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp)) }
         } else {
             items(state.related, key = { "rel_" + it.id }) { r -> RelatedRow(r) { onPlay(r) } }
         }
@@ -547,11 +550,11 @@ private fun RelatedRow(item: YtItem, onClick: () -> Unit) {
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp).testTag("yt_watch_related"),
         verticalAlignment = Alignment.Top,
     ) {
-        Box(Modifier.width(156.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f), RoundedCornerShape(12.dp))) {
+        Box(Modifier.width(156.dp).aspectRatio(16f / 9f).clip(yuRound(12)).border(1.dp, dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f), yuRound(12))) {
             PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
             val badge = when { item.live -> "LIVE"; item.durationSec > 0 -> formatYtDuration(item.durationSec); else -> null }
             if (badge != null) Surface(
-                shape = RoundedCornerShape(6.dp), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.75f),
+                shape = yuRound(6), color = if (item.live) Color(0xFFE53950) else Color.Black.copy(alpha = 0.75f),
                 modifier = Modifier.align(Alignment.BottomEnd).padding(5.dp),
             ) { Text(badge, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)) }
         }
@@ -609,7 +612,7 @@ fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null,
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 repeat(3) { SkeletonBlock(width = 64.dp, height = 22.dp) }
                 Spacer(Modifier.width(4.dp))
-                Text("Reading video details…", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+                Text(stringResource(R.string.reading_video_details), color = TextTertiary, fontSize = 11.sp, maxLines = 1)
             }
             return@Column
         }
@@ -621,7 +624,7 @@ fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null,
         )
         if (chips.isNotEmpty()) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             chips.forEach { (icon, label) ->
-                Surface(shape = RoundedCornerShape(8.dp), color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)) {
+                Surface(shape = yuRound(8), color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.07f)) {
                     Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(4.dp))
@@ -642,7 +645,7 @@ fun PlaybackFactsRow(modifier: Modifier = Modifier, sourceAudio: String? = null,
             }
         } else if (f.sizeEstimated) {
             Spacer(Modifier.height(4.dp))
-            Text("Size estimated from the stream's bitrate.", color = TextTertiary, fontSize = 10.sp)
+            Text(stringResource(R.string.size_estimated_from_the_streams_bitrate), color = TextTertiary, fontSize = 10.sp)
         }
     }
 }

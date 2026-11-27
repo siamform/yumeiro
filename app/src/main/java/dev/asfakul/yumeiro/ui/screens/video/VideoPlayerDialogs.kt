@@ -7,6 +7,8 @@
 
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.runtime.remember
 import dev.asfakul.yumeiro.ui.theme.OnAccent
@@ -93,6 +95,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 data class AudioTrackInfo(
     val groupIndex: Int,
@@ -136,7 +139,7 @@ fun PlaybackSpeedDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Playback speed",
+                    text = stringResource(R.string.playback_speed),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -146,7 +149,7 @@ fun PlaybackSpeedDialog(
         text = {
             Column {
                 Text(
-                    text = "Adjust video and audio speed seamlessly with pitch preservation. Quick 2x: touch and hold the video, or long-press the speed button.",
+                    text = stringResource(R.string.adjust_video_and_audio_speed_seamlessly),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
@@ -161,7 +164,7 @@ fun PlaybackSpeedDialog(
                             rowSpeeds.forEach { speed ->
                                 val isSelected = currentSpeed == speed
                                 Surface(
-                                    shape = RoundedCornerShape(20.dp),
+                                    shape = yuRound(20),
                                     color = if (isSelected) SpotifyGreen else DarkSurfaceContainerHigh,
                                     modifier = Modifier
                                         .weight(1f)
@@ -194,7 +197,7 @@ fun PlaybackSpeedDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)
             ) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         },
         containerColor = DarkSurface,
@@ -230,7 +233,7 @@ fun AspectRatioDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Aspect ratio",
+                    text = stringResource(R.string.aspect_ratio),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -243,7 +246,7 @@ fun AspectRatioDialog(
                 modes.forEach { (mode, title, desc) ->
                     val isSelected = currentResizeMode == mode
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        shape = yuRound(12),
                         color = if (isSelected) SpotifyGreen.copy(alpha = 0.15f) else DarkSurfaceContainer,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -296,7 +299,7 @@ fun AspectRatioDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)
             ) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         },
         containerColor = DarkSurface,
@@ -321,7 +324,7 @@ fun AudioTrackDialog(
         icon = { Icon(Icons.Default.Audiotrack, null) },
         title = {
             Column {
-                Text("Audio", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.audio), style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
                 Text(
                     if (audioTracks.size > 1) "${audioTracks.size} tracks · tap one to switch" else "Language and sound of this video",
                     color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Normal,
@@ -329,22 +332,23 @@ fun AudioTrackDialog(
             }
         },
         text = {
-          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          // F15: scrolls, so the compressor controls fit a landscape phone too.
+          Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (audioTracks.isEmpty()) {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(DarkSurfaceContainer).padding(14.dp),
+                    Modifier.fillMaxWidth().clip(yuRound(14)).background(DarkSurfaceContainer).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Default.Audiotrack, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "This video has one audio track, so there's nothing to switch. For another language, pick a Dub source in Sources.",
+                        stringResource(R.string.this_video_has_one_audio_track),
                         style = MaterialTheme.typography.bodyMedium, color = TextSecondary,
                     )
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     trackGroupItems("audio_track", audioTracks.map { it.language }, audioTracks.indexOfFirst { it.isSelected }, audioToggled, audioPages) { index ->
@@ -364,13 +368,13 @@ fun AudioTrackDialog(
                         val title = track.label?.takeIf { it.isNotBlank() } ?: langName ?: "Track ${index + 1}"
                         val pick = { if (track.supported) { onSelectTrack(track.groupIndex, track.trackIndex); onDismiss() } }
                         Surface(
-                            shape = RoundedCornerShape(14.dp),
+                            shape = yuRound(14),
                             color = if (isSelected) SpotifyGreen.copy(alpha = 0.14f) else DarkSurfaceContainer,
                             border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.55f)) else null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 56.dp)
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(yuRound(14))
                                 .clickable(enabled = track.supported, onClickLabel = "Play $title") { pick() }
                                 .testTag("audio_track_item_$index")
                         ) {
@@ -396,7 +400,7 @@ fun AudioTrackDialog(
                                         style = MaterialTheme.typography.bodySmall, color = TextSecondary, fontSize = 11.sp
                                     )
                                 }
-                                if (isSelected) Text("Playing", color = SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                if (isSelected) Text(stringResource(R.string.playing), color = SpotifyGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -404,10 +408,12 @@ fun AudioTrackDialog(
             }
             // H-1: the dynamic range compressor, changed live while the video plays.
             dev.asfakul.yumeiro.ui.screens.video.DrcPresetRow()
+            // F15: its controls too, live while the video plays.
+            dev.asfakul.yumeiro.ui.screens.video.DrcCustomSliders()
           }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.testTag("audio_track_done")) { Text("Done", fontWeight = FontWeight.Bold) }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("audio_track_done")) { Text(stringResource(R.string.done), fontWeight = FontWeight.Bold) }
         },
     )
 }
@@ -443,7 +449,7 @@ fun SubtitleOptionsDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Subtitles & Captions",
+                    text = stringResource(R.string.subtitles_captions),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -458,7 +464,7 @@ fun SubtitleOptionsDialog(
                 // Section 1: External Subtitle File
                 item {
                     Text(
-                        text = "EXTERNAL SUBTITLE FILE",
+                        text = stringResource(R.string.external_subtitle_file),
                         style = MaterialTheme.typography.labelSmall,
                         color = SpotifyGreen,
                         fontWeight = FontWeight.Bold
@@ -467,7 +473,7 @@ fun SubtitleOptionsDialog(
                     Button(
                         onClick = onPickExternalFile,
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = yuRound(10),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("pick_external_subtitle_btn")
@@ -479,7 +485,7 @@ fun SubtitleOptionsDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Load from file (.srt, .vtt, .ass)",
+                            text = stringResource(R.string.load_from_file_srt_vtt_ass),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
@@ -487,7 +493,7 @@ fun SubtitleOptionsDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = onSearchOnline,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = yuRound(10),
                         border = BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = SpotifyGreen),
                         modifier = Modifier
@@ -496,13 +502,13 @@ fun SubtitleOptionsDialog(
                     ) {
                         Icon(imageVector = Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Search subtitles online", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(text = stringResource(R.string.search_subtitles_online), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
 
                     if (externalSubtitleName != null) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = yuRound(8),
                             color = DarkSurfaceContainerHigh,
                             modifier = Modifier.fillMaxWidth()
                         ) {
@@ -518,7 +524,7 @@ fun SubtitleOptionsDialog(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Loaded: $externalSubtitleName",
+                                    text = stringResource(R.string.loaded, externalSubtitleName),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = TextPrimary,
                                     maxLines = 1,
@@ -531,7 +537,7 @@ fun SubtitleOptionsDialog(
 
                 if (moreFromSource.isNotEmpty()) item {
                     Text(
-                        text = "MORE FROM THIS SOURCE",
+                        text = stringResource(R.string.more_from_this_source),
                         style = MaterialTheme.typography.labelSmall,
                         color = SpotifyGreen,
                         fontWeight = FontWeight.Bold
@@ -539,7 +545,7 @@ fun SubtitleOptionsDialog(
                     Spacer(modifier = Modifier.height(6.dp))
                     moreFromSource.forEach { (label, load) ->
                         Surface(
-                            shape = RoundedCornerShape(10.dp), color = DarkSurfaceContainer,
+                            shape = yuRound(10), color = DarkSurfaceContainer,
                             modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp).clickable { load(); onDismiss() }.testTag("source_subtitle_item"),
                         ) {
                             Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -554,14 +560,14 @@ fun SubtitleOptionsDialog(
                 if (onOpenStyle != null) item {
                     OutlinedButton(
                         onClick = onOpenStyle,
-                        shape = RoundedCornerShape(10.dp),
+                        shape = yuRound(10),
                         border = BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = SpotifyGreen),
                         modifier = Modifier.fillMaxWidth().testTag("subtitle_style_btn"),
                     ) {
                         Icon(imageVector = Icons.Default.Subtitles, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Subtitle style: size, colour, position", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(text = stringResource(R.string.subtitle_style_size_colour_position), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
 
@@ -570,7 +576,7 @@ fun SubtitleOptionsDialog(
                     HorizontalDivider(color = DarkOutline)
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "SUBTITLE TRACKS",
+                        text = stringResource(R.string.subtitle_tracks),
                         style = MaterialTheme.typography.labelSmall,
                         color = SpotifyGreen,
                         fontWeight = FontWeight.Bold
@@ -579,7 +585,7 @@ fun SubtitleOptionsDialog(
 
                     // Disable subtitles option
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = yuRound(10),
                         color = if (isSubtitlesDisabled) SpotifyGreen.copy(alpha = 0.15f) else DarkSurfaceContainer,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -600,7 +606,7 @@ fun SubtitleOptionsDialog(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Subtitles off",
+                                text = stringResource(R.string.subtitles_off),
                                 color = if (isSubtitlesDisabled) SpotifyGreen else TextPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -614,7 +620,7 @@ fun SubtitleOptionsDialog(
                     val label = track.label?.takeIf { it.isNotBlank() } ?: TrackGroups.languageName(track.language) ?: "Subtitle track ${index + 1}"
 
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = yuRound(10),
                         color = if (isSelected) SpotifyGreen.copy(alpha = 0.15f) else DarkSurfaceContainer,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -653,7 +659,7 @@ fun SubtitleOptionsDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "SUBTITLE SYNC DELAY",
+                            text = stringResource(R.string.subtitle_sync_delay),
                             style = MaterialTheme.typography.labelSmall,
                             color = SpotifyGreen,
                             fontWeight = FontWeight.Bold
@@ -675,38 +681,38 @@ fun SubtitleOptionsDialog(
                     ) {
                         OutlinedButton(
                             onClick = { onAdjustDelay(subtitleDelayMs - 1000L) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = yuRound(8),
                             modifier = Modifier.testTag("subtitle_delay_sub_1s")
                         ) {
-                            Text("-1.0s", fontSize = 11.sp, color = TextPrimary)
+                            Text(stringResource(R.string.t_1_0s), fontSize = 11.sp, color = TextPrimary)
                         }
                         OutlinedButton(
                             onClick = { onAdjustDelay(subtitleDelayMs - 250L) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = yuRound(8),
                             modifier = Modifier.testTag("subtitle_delay_sub_250ms")
                         ) {
-                            Text("-250ms", fontSize = 11.sp, color = TextPrimary)
+                            Text(stringResource(R.string.t_250ms), fontSize = 11.sp, color = TextPrimary)
                         }
                         OutlinedButton(
                             onClick = { onAdjustDelay(0L) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = yuRound(8),
                             modifier = Modifier.testTag("subtitle_delay_reset")
                         ) {
-                            Text("Reset", fontSize = 11.sp, color = SpotifyGreen)
+                            Text(stringResource(R.string.reset), fontSize = 11.sp, color = SpotifyGreen)
                         }
                         OutlinedButton(
                             onClick = { onAdjustDelay(subtitleDelayMs + 250L) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = yuRound(8),
                             modifier = Modifier.testTag("subtitle_delay_add_250ms")
                         ) {
-                            Text("+250ms", fontSize = 11.sp, color = TextPrimary)
+                            Text(stringResource(R.string.t_250ms_2), fontSize = 11.sp, color = TextPrimary)
                         }
                         OutlinedButton(
                             onClick = { onAdjustDelay(subtitleDelayMs + 1000L) },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = yuRound(8),
                             modifier = Modifier.testTag("subtitle_delay_add_1s")
                         ) {
-                            Text("+1.0s", fontSize = 11.sp, color = TextPrimary)
+                            Text(stringResource(R.string.t_1_0s_2), fontSize = 11.sp, color = TextPrimary)
                         }
                     }
 
@@ -734,7 +740,7 @@ fun SubtitleOptionsDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)
             ) {
-                Text("Done")
+                Text(stringResource(R.string.done))
             }
         },
         containerColor = DarkSurface,
@@ -768,7 +774,7 @@ fun VideoInfoDialog(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Video details",
+                    text = stringResource(R.string.video_details),
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
                     fontWeight = FontWeight.Bold
@@ -822,7 +828,7 @@ fun VideoInfoDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)
             ) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         },
         containerColor = DarkSurface,
@@ -1006,12 +1012,12 @@ fun PlaybackErrorOverlay(
                             .then(if (retryInRow || actionInRow) Modifier else Modifier.focusRequester(primaryFocus))
                             .testTag("error_close_btn")
                     ) {
-                        Text("Close", color = TextPrimary, maxLines = 1)
+                        Text(stringResource(R.string.close), color = TextPrimary, maxLines = 1)
                     }
                     if (actionInRow && showRetry) androidx.compose.material3.IconButton(
                         onClick = onRetry,
                         modifier = Modifier.testTag("error_retry_btn"),
-                    ) { Icon(Icons.Default.Replay, contentDescription = "Retry", tint = TextPrimary) }
+                    ) { Icon(Icons.Default.Replay, contentDescription = stringResource(R.string.retry), tint = TextPrimary) }
                     if (retryInRow) Button(
                         onClick = onRetry,
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
@@ -1022,7 +1028,7 @@ fun PlaybackErrorOverlay(
                     ) {
                         Icon(imageVector = Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Retry", fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(stringResource(R.string.retry), fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                     if (actionInRow) Button(
                         onClick = onAction!!,
@@ -1044,7 +1050,7 @@ fun PlaybackErrorOverlay(
                         onClick = onNextVideo,
                         modifier = Modifier.fillMaxWidth().testTag("error_next_video_btn")
                     ) {
-                        Text("Skip to next video", color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.skip_to_next_video), color = TextPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -1055,7 +1061,7 @@ fun PlaybackErrorOverlay(
 @Composable
 private fun StreamHealthSection(h: dev.asfakul.yumeiro.player.PlaybackHealth, dnsSource: ((String) -> String?)?) {
     Spacer(modifier = Modifier.height(4.dp))
-    Text("Stream health", style = MaterialTheme.typography.titleSmall, color = SpotifyGreen, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.stream_health), style = MaterialTheme.typography.titleSmall, color = SpotifyGreen, fontWeight = FontWeight.Bold)
     if (h.height > 0) InfoRow(label = "Playing", value = "${h.width} × ${h.height}" + if (h.videoBitrate > 0) " · ${h.videoBitrate / 1000} kbps" else "")
     InfoRow(label = "Bandwidth", value = if (h.bandwidthBps > 0) "%.1f Mbps (estimated)".format(h.bandwidthBps / 1_000_000.0) else "Measuring…")
     InfoRow(label = "Buffer", value = "%.1f s ahead".format(h.bufferedMs / 1000.0))
@@ -1094,7 +1100,7 @@ fun QualityDialog(
 ) {
     TsukiDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Quality", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.quality), style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold) },
         text = {
             LazyColumn {
                 if (autoLabel != null) item {
@@ -1110,7 +1116,7 @@ fun QualityDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)) { Text("Close") }
+            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)) { Text(stringResource(R.string.close)) }
         },
         containerColor = DarkSurface,
         tonalElevation = 6.dp,
@@ -1127,7 +1133,7 @@ private fun QualityRow(label: String, sub: String?, isSelected: Boolean, enabled
             Text(label, color = when { isSelected -> SpotifyGreen; enabled -> TextPrimary; else -> TextSecondary }, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)
             if (sub != null) Text(sub, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         }
-        if (isSelected) Icon(Icons.Default.Check, contentDescription = "Selected", tint = SpotifyGreen, modifier = Modifier.size(20.dp))
+        if (isSelected) Icon(Icons.Default.Check, contentDescription = stringResource(R.string.selected), tint = SpotifyGreen, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -1177,21 +1183,21 @@ internal fun codecLabel(mime: String?): String {
 private fun AspectZoomRow(scale: Float, onZoom: (Int) -> Unit) {
     val atMin = scale <= dev.asfakul.yumeiro.player.VideoZoom.MIN + 0.001f
     val atMax = scale >= dev.asfakul.yumeiro.player.VideoZoom.MAX - 0.001f
-    Surface(shape = RoundedCornerShape(12.dp), color = DarkSurfaceContainer, modifier = Modifier.fillMaxWidth().testTag("aspect_zoom_row")) {
+    Surface(shape = yuRound(12), color = DarkSurfaceContainer, modifier = Modifier.fillMaxWidth().testTag("aspect_zoom_row")) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Picture size", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(stringResource(R.string.picture_size), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Text(dev.asfakul.yumeiro.player.VideoZoom.label(scale), style = MaterialTheme.typography.bodySmall, color = TextSecondary,
                     fontSize = 11.sp, modifier = Modifier.testTag("aspect_zoom_value"))
             }
             IconButton(onClick = { onZoom(-1) }, enabled = !atMin, modifier = Modifier.testTag("aspect_zoom_out")) {
-                Icon(Icons.Default.Remove, contentDescription = "Smaller picture", tint = if (atMin) TextSecondary else TextPrimary)
+                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.smaller_picture), tint = if (atMin) TextSecondary else TextPrimary)
             }
             IconButton(onClick = { onZoom(1) }, enabled = !atMax, modifier = Modifier.testTag("aspect_zoom_in")) {
-                Icon(Icons.Default.Add, contentDescription = "Bigger picture", tint = if (atMax) TextSecondary else TextPrimary)
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.bigger_picture), tint = if (atMax) TextSecondary else TextPrimary)
             }
             TextButton(onClick = { onZoom(0) }, enabled = !atMin, modifier = Modifier.testTag("aspect_zoom_reset"),
-                colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)) { Text("Reset") }
+                colors = ButtonDefaults.textButtonColors(contentColor = SpotifyGreen)) { Text(stringResource(R.string.reset)) }
         }
     }
 }

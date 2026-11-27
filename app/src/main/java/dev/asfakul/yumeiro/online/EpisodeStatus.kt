@@ -57,14 +57,14 @@ sealed interface EpisodeStatus {
         private fun key(api: String, url: String, version: String) = "$api|$url|$version"
 
         fun get(context: Context, api: String, url: String, version: String): Int? = runCatching {
-            val p = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+            val p = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context.applicationContext, FILE), Context.MODE_PRIVATE)
             p.getString(key(api, url, version), null)?.substringBefore(',')?.toIntOrNull()
         }.getOrNull()
 
         /** Call off the main thread after the episode list was shown. */
         fun put(context: Context, api: String, url: String, version: String, count: Int) {
             runCatching {
-                val p = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+                val p = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context.applicationContext, FILE), Context.MODE_PRIVATE)
                 val k = key(api, url, version)
                 val prev = p.getString(k, null)?.substringBefore(',')?.toIntOrNull()
                 val next = nextSeen(prev, count)

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -65,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (never during composition, scrolling or per call): see docs/STABILITY-R15.md.
 private val RX_YUMIXFILTER_1 = Regex("[\\s._-]+")
@@ -135,7 +138,7 @@ internal fun SourceFilterSheet(
                     onClick = { editingDefaults = true; searching = false; query = "" },
                     modifier = Modifier.size(48.dp).testTag("${t.tag}-defaults"),
                 ) {
-                    Icon(Icons.Default.Tune, "Default extensions", tint = if (defaults.isNotEmpty()) p.accent else p.textSecondary)
+                    Icon(Icons.Default.Tune, stringResource(R.string.default_extensions), tint = if (defaults.isNotEmpty()) p.accent else p.textSecondary)
                 }
                 if (names.size >= SEARCH_FROM && !editingDefaults) IconButton(
                     onClick = { if (searching) { searching = false; query = "" } else searching = true },
@@ -144,7 +147,7 @@ internal fun SourceFilterSheet(
                     Icon(if (searching) Icons.Default.Close else Icons.Default.Search, if (searching) "Close search" else t.searchHint, tint = if (searching) p.accent else p.textSecondary)
                 }
                 if (selected != null) TextButton(onClick = { onPick(null) }, modifier = Modifier.testTag("${t.tag}_clear")) {
-                    Text("Clear", color = p.accent, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.clear), color = p.accent, fontWeight = FontWeight.SemiBold)
                 }
             }
             if (editingDefaults && defaults != null && onSaveDefaults != null) {
@@ -187,7 +190,7 @@ internal fun SourceFilterSheet(
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("${t.tag}_empty")) {
                         Text(if (query.isBlank()) "Nothing from this source" else "${t.noneCalled} \"${query.trim()}\"", color = p.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         Text(if (query.isBlank()) "Pick another source, or show all ${names.size}." else "Check the spelling, or clear the search to see all ${names.size}.", color = p.textSecondary, fontSize = 12.sp)
-                        TextButton(onClick = { query = ""; source = null }, modifier = Modifier.testTag("${t.tag}_search_clear")) { Text("Clear search", color = p.accent, fontWeight = FontWeight.SemiBold) }
+                        TextButton(onClick = { query = ""; source = null }, modifier = Modifier.testTag("${t.tag}_search_clear")) { Text(stringResource(R.string.clear_search), color = p.accent, fontWeight = FontWeight.SemiBold) }
                     }
                 }
                 // YF-2: with up to [pinMax] pins the favourites get their own heading (and how many are left),
@@ -231,8 +234,8 @@ private fun SourceChip(label: String, count: Int, sel: Boolean, tag: String, onC
     val bg by animateColorAsState(if (sel) p.accent.copy(alpha = 0.18f) else p.textPrimary.copy(alpha = 0.06f), label = "src_bg")
     Box(Modifier.heightIn(min = 48.dp).selectable(selected = sel, role = Role.RadioButton, onClick = onClick).testTag(tag), contentAlignment = Alignment.Center) {
         Row(
-            Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(10.dp)).background(bg)
-                .border(1.dp, if (sel) p.accent.copy(alpha = 0.6f) else Color.Transparent, RoundedCornerShape(10.dp)).padding(horizontal = 12.dp),
+            Modifier.heightIn(min = 32.dp).clip(yuRound(10)).background(bg)
+                .border(1.dp, if (sel) p.accent.copy(alpha = 0.6f) else Color.Transparent, yuRound(10)).padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (sel) { Icon(Icons.Default.Check, null, tint = p.accent, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)) }
@@ -344,7 +347,7 @@ private fun DefaultsEditor(
     androidx.activity.compose.BackHandler { onCancel() }
     Column(Modifier.fillMaxWidth().testTag("${tag}_defaults")) {
         Text(
-            "Yumix opens with these. Pick at least one; you can still pick any extension from this list later.",
+            stringResource(R.string.yumix_opens_with_these_pick_at),
             color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
         )
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
@@ -364,7 +367,7 @@ private fun DefaultsEditor(
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { onSave(emptySet()) }, modifier = Modifier.heightIn(min = 48.dp).testTag("${tag}_defaults_all")) {
-                Text("Use every extension", color = p.textSecondary)
+                Text(stringResource(R.string.use_every_extension), color = p.textSecondary)
             }
             Spacer(Modifier.weight(1f))
             androidx.compose.material3.Button(
@@ -384,7 +387,7 @@ private fun FilterRow(
     val p = LocalMtPalette.current
     val bg by animateColorAsState(if (sel) p.accent.copy(alpha = 0.14f) else Color.Transparent, label = "filter_bg")
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).background(bg, RoundedCornerShape(16.dp))
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).background(bg, yuRound(16))
             .selectable(selected = sel, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .testTag(if (name == null) "${tagPrefix}_all" else "${tagPrefix}_$name"),
@@ -400,7 +403,7 @@ private fun FilterRow(
             Text(sub, color = if (failed) WarnColor else p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         when {
-            sel -> Icon(Icons.Default.Check, "Selected", tint = p.accent, modifier = Modifier.size(22.dp))
+            sel -> Icon(Icons.Default.Check, stringResource(R.string.selected), tint = p.accent, modifier = Modifier.size(22.dp))
             loading -> CircularProgressIndicator(Modifier.size(16.dp), color = p.textTertiary, strokeWidth = 2.dp)
         }
         // R15 Phase 5: pin a favourite. A 48 dp toggle of its own, so it never selects the row.
@@ -430,9 +433,9 @@ internal fun ActiveFilterBar(name: String, onChange: () -> Unit, onClear: () -> 
         ) {
             Icon(Icons.Default.FilterList, null, tint = p.accent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Showing: $name", color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            Text(stringResource(R.string.showing, name), color = p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
             IconButton(onClick = onClear, modifier = Modifier.size(36.dp).testTag("online_filter_active_clear")) {
-                Icon(Icons.Default.Close, "Show all extensions", tint = p.textSecondary, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.show_all_extensions), tint = p.textSecondary, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -468,7 +471,7 @@ private fun CategoryChip(label: String, sel: Boolean, tag: String, onClick: () -
         Modifier.heightIn(min = 48.dp).selectable(selected = sel, role = Role.Tab, onClick = onClick).testTag(tag),
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(10.dp)).background(bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.heightIn(min = 32.dp).clip(yuRound(10)).background(bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
             Text(label, color = if (sel) p.background else p.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
     }

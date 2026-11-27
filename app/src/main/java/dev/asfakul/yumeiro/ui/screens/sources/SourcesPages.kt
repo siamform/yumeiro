@@ -58,6 +58,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * GROUP D: the Source page is a flow of pages instead of a pill tab row with a second tab row inside.
@@ -139,7 +140,7 @@ internal fun SourcePageRow(
     val focused by src.collectIsFocusedAsState()
     Surface(
         onClick = onOpen,
-        shape = RoundedCornerShape(18.dp),
+        shape = yuRound(18),
         color = GlassFill,
         border = if (focused) BorderStroke(2.dp, SpotifyGreen) else null,
         interactionSource = src,
@@ -147,7 +148,7 @@ internal fun SourcePageRow(
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                Surface(shape = RoundedCornerShape(12.dp), color = SpotifyGreen.copy(alpha = 0.14f), modifier = Modifier.size(40.dp)) {}
+                Surface(shape = yuRound(12), color = SpotifyGreen.copy(alpha = 0.14f), modifier = Modifier.size(40.dp)) {}
                 Icon(icon, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(14.dp))
@@ -158,7 +159,7 @@ internal fun SourcePageRow(
                     Text(status, color = TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (attention != null) {
                         Spacer(Modifier.width(8.dp))
-                        Surface(shape = RoundedCornerShape(8.dp), color = dev.asfakul.yumeiro.ui.theme.WarnTone.copy(alpha = 0.16f)) {
+                        Surface(shape = yuRound(8), color = dev.asfakul.yumeiro.ui.theme.WarnTone.copy(alpha = 0.16f)) {
                             Text(attention, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                         }
@@ -175,7 +176,7 @@ internal fun SourcePageRow(
 internal fun SubPageLink(tag: String, title: String, hint: String, onOpen: () -> Unit) {
     val src = remember { MutableInteractionSource() }
     val focused by src.collectIsFocusedAsState()
-    Surface(onClick = onOpen, shape = RoundedCornerShape(16.dp), color = GlassFill, border = if (focused) BorderStroke(2.dp, SpotifyGreen) else null,
+    Surface(onClick = onOpen, shape = yuRound(16), color = GlassFill, border = if (focused) BorderStroke(2.dp, SpotifyGreen) else null,
         interactionSource = src, modifier = Modifier.fillMaxWidth().testTag(tag)) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

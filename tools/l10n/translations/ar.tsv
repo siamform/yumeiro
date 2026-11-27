@@ -1,0 +1,866 @@
+app_name	Yumeiro
+widget_name	متابعة المشاهدة
+widget_description	ارجع إلى آخر ما كنت تشاهده
+widget_overline	متابعة المشاهدة
+widget_empty_title	لا يوجد ما تتابعه بعد
+widget_empty_body	افتح Yumeiro وابدأ مشاهدة شيء ما
+widget_resume	استئناف
+widget_open	فتح
+version	الإصدار %1$s
+processor_installed_build	المعالج %1$s · النسخة المثبتة: %2$s
+check_for_updates	البحث عن تحديثات
+check_automatically	البحث تلقائيًا
+look_for_new_versions_each_time	ابحث عن إصدارات جديدة في كل مرة يُفتح فيها التطبيق
+release_history	سجل الإصدارات
+view_all_versions_and_what_changed	اعرض كل الإصدارات وما تغيّر في كل منها
+label_new	جديد
+whats_new	ما الجديد
+remind_me_later	ذكّرني لاحقًا
+download	تنزيل
+yumeiro_v	Yumeiro v%1$s
+of	%1$s من %2$s
+download_in_background	التنزيل في الخلفية
+cancel_download	إلغاء التنزيل
+youll_get_a_notification_when_its	سيصلك إشعار عندما يصبح جاهزًا للتثبيت.
+yumeiro_v_has_been_downloaded_and	تم تنزيل Yumeiro v%1$s والتحقق منه.
+android_will_ask_you_to_allow	سيطلب منك Android السماح لـ Yumeiro بتثبيت التحديثات. يلزم ذلك مرة واحدة فقط.
+later	لاحقًا
+update_didnt_finish	لم يكتمل التحديث
+close	إغلاق
+retry	إعادة المحاولة
+bug_fixes_and_improvements	إصلاح أخطاء وتحسينات.
+downloaded	تم التنزيل
+equalizer	المعادل الصوتي
+response	音響 · الاستجابة
+presets	الإعدادات المسبقة
+bands	النطاقات
+enhancements	التحسينات
+reset_to_flat	إعادة إلى المستوي
+repository_page	صفحة المستودع
+update	تحديث
+manage	إدارة
+see_all	عرض الكل
+search_all_sources	البحث في كل المصادر
+browse_everything_on	تصفّح كل شيء على %1$s
+youre_all_caught_up_on	لقد شاهدت كل شيء على %1$s
+done	تم
+the_page_stopped_responding_close_this	توقفت الصفحة عن الاستجابة. أغلقها وحاول مرة أخرى.
+opening	جارٍ فتح %1$s…
+ads_and_pop_ups_are_blocked	يتم حظر الإعلانات والنوافذ المنبثقة لك.
+open_anyway	فتح على أي حال
+cancel	إلغاء
+this_calendar_has_no_genres_country	لا توجد تصنيفات في هذا التقويم. جداول الدول موجودة فيه (المسلسلات › الدولة).
+the_calendar_is_worldwide_schedules_by	تقويم %1$s عالمي. الجداول حسب الدولة متاحة للمسلسلات والأفلام فقط.
+nothing_loaded_yet	لم يُحمَّل شيء بعد.
+couldnt_load_the_calendar_check_your	تعذّر تحميل التقويم. تحقق من اتصالك.
+try_again	حاول مرة أخرى
+nothing_listed_for_the_next_two	لا يوجد شيء خلال الأسبوعين القادمين.
+offline_showing_the_last_saved_calendar	غير متصل — يُعرض آخر تقويم محفوظ.
+most_awaited	الأكثر ترقبًا
+play	تشغيل
+on	مفعّل
+turn_on	تفعيل
+coming_up	قريبًا
+pick_what_you_watch	اختر ما تشاهده
+online_videos_come_from_extensions_made	تأتي مقاطع الفيديو عبر الإنترنت من إضافات يصنعها المجتمع. اختر بعضها — هذه هي الأكثر شيوعًا والأحدث تحديثًا في السوق.
+browse_market	تصفّح السوق
+add_manually	إضافة يدويًا
+suggestions_arent_available_right_now_open	الاقتراحات غير متاحة الآن. افتح السوق أو أضف رابط مستودع.
+yumeiro_doesnt_host_own_or_check	لا يستضيف Yumeiro ما تعرضه الإضافات ولا يملكه ولا يتحقق منه. استخدم فقط المصادر المسموح لك بمشاهدتها في بلدك.
+updated	تم التحديث %1$s
+yumix_source	مصدر Yumix
+clear	مسح
+clear_search	مسح البحث
+yumix_opens_with_these_pick_at	يفتح Yumix بهذه. اختر واحدة على الأقل؛ يمكنك لاحقًا اختيار أي إضافة من هذه القائمة.
+use_every_extension	استخدام كل الإضافات
+showing	المعروض: %1$s
+default_extensions	الإضافات الافتراضية
+selected	محدد
+show_all_extensions	عرض كل الإضافات
+titles	%1$s عنوان
+view	عرض
+yumix_mix	مزيج Yumix
+change_extension	تغيير الإضافة
+if_you_like	إذا أعجبك 
+nothing_similar_listed_yet_pick_another	لا يوجد شيء مشابه بعد. اختر عنوانًا آخر.
+yumeiro_cloud_didnt_answer	لم يستجب Yumeiro Cloud.
+nothing_listed_here_yet	لا يوجد شيء هنا بعد.
+data_tmdb_this_product_uses_the	البيانات: TMDB. يستخدم هذا المنتج واجهة TMDB البرمجية لكنه غير معتمد أو مصدّق من TMDB.
+back	رجوع
+security_checks	فحوصات الأمان
+sites_that_asked_to_confirm_youre	مواقع طلبت التأكد من أنك إنسان. يطلب كل منها ذلك مرة واحدة؛ يعيد Yumeiro استخدام التصريح، ويبقى أي فحص تغلقه مغلقًا لفترة.
+check_now	افحص الآن
+forget	نسيان
+found_automatically_from_cloudstreams_community	عُثر عليها تلقائيًا من قائمة مجتمع CloudStream ومن GitHub. المستودعات المختارة يفحصها السوق ويحتفظ بنسخة منها.
+update_all	تحديث الكل (%1$s)
+extensions_are_third_party_code_found	الإضافات شيفرة من أطراف أخرى يُعثر عليها تلقائيًا. لا يستضيف Yumeiro محتواها ولا يتحقق منه، ولا يتجاوز أبدًا DRM أو تسجيلات الدخول. ثبّت فقط ما تثق به وما يُسمح لك بمشاهدته.
+in_repos	في %1$s مستودع
+installed	مثبّتة
+add_repository	إضافة مستودع
+curated	مختارة
+add_anything_auto_detect	أضف أي شيء (اكتشاف تلقائي)
+install_from_file_cs3_or_apk	التثبيت من ملف (.cs3 أو .apk)
+install_from_link	التثبيت من رابط
+update_all_2	تحديث الكل
+more_sources	مصادر أخرى
+aniyomi_mihon_manga_stremio_add_ons	Aniyomi ومانغا Mihon وإضافات Stremio ومصادر JavaScript والخوادم المنزلية
+sources_installed	%1$s مصدر: %2$s مثبّت
+official_built_in	رسمي · مدمج
+your_repositories	مستودعاتك
+extra_cloudstream_repositories_shown_in_the	مستودعات CloudStream إضافية تظهر في السوق
+add	إضافة
+no_repositories_added_the_market_already	لم تُضف أي مستودعات. السوق يضم بالفعل المستودعات المفحوصة.
+extensions_run_code_from_their_authors	تشغّل الإضافات شيفرة من مؤلفيها. ثبّت فقط ما تثق به، واستخدمها فقط لما يُسمح لك بمشاهدته. لا تُشغَّل المصادر المحمية (DRM) ومصادر التورنت.
+remove	إزالة %1$s؟
+its_sources_disappear_from_online_you	ستختفي مصادرها من قسم الإنترنت. يمكنك تثبيتها مجددًا من السوق.
+remove_2	إزالة
+their_sources_disappear_from_online_you	ستختفي مصادرها من قسم الإنترنت. يمكنك تثبيتها مجددًا من السوق.
+remove_repository	إزالة المستودع؟
+wont_appear_in_the_market_anymore	لن يظهر %1$s في السوق بعد الآن. ستبقى الإضافات التي ثبّتّها منه.
+safety_check	فحص الأمان · %1$s
+static_check_of_the_installed_file	فحص ثابت للملف المثبّت: قُرئت %1$s فئة و%2$s دالة؛ لم يُشغَّل أي شيء.
+ok	حسنًا
+settings	الإعدادات
+remove_clone	إزالة النسخة · %1$s
+update_to_v	التحديث إلى v%1$s
+check_for_update	البحث عن تحديث
+sign_out_of_site	تسجيل الخروج من الموقع
+safety_check_2	فحص الأمان
+sign_in_to_site	تسجيل الدخول إلى الموقع
+couldnt_start	تعذّر البدء: %1$s
+turn_off	إيقاف
+market	السوق
+remove_repository_2	إزالة المستودع
+more	المزيد
+couldnt_load_more_retry	تعذّر تحميل المزيد · أعد المحاولة
+thats_everything	هذا كل شيء
+clear_history	مسح السجل
+still_finding_sources	لا يزال البحث عن المصادر جاريًا…
+tip	نصيحة: %1$s
+search_opensubtitles_subdl_and_subsource_add	ابحث في OpenSubtitles وSubDL وSubSource: أضف مفتاح API مجانيًا لأي منها في الإعدادات ← الترجمات والمقدمات.
+searching	جارٍ البحث في %1$s (%2$s)…
+nothing_found_in_this_language	لم يُعثر على شيء بهذه اللغة.
+watched	تمت المشاهدة
+playing	قيد التشغيل
+now_playing	يُشغَّل الآن
+audio	الصوت
+imdb	IMDb
+downloaded_2	تم تنزيله
+download_for_offline	تنزيل للمشاهدة دون اتصال
+quality_auto_delete_change_in_settings	الجودة: %1$s · الحذف التلقائي: %2$s · غيّر ذلك في الإعدادات ← التنزيلات
+version_2	الإصدار
+nothing_to_download_here	لا يوجد ما يمكن تنزيله هنا.
+next_youll_see_where_its_saved	بعد ذلك سترى مكان الحفظ وتختار الاحتفاظ به دائمًا أو دون اتصال (يُحذف تلقائيًا). تُنزَّل حلقة واحدة لكل إضافة في كل مرة حتى لا تحظرك المواقع.
+from	من
+to	إلى
+to_2	إلى
+nothing_in_this_format	لا يوجد شيء بهذه الصيغة.
+retry_download	إعادة التنزيل
+download_episode	تنزيل الحلقة
+safety_check_3	فحص الأمان: %1$s
+yumeiro_reads_the_extensions_code_without	يقرأ Yumeiro شيفرة الإضافة دون تشغيلها. هذا يكشف المخاطر الواضحة لا كلها — ثبّت فقط إضافات من أشخاص تثق بهم.
+installing_anyway_gives_this_code_the	التثبيت رغم ذلك يمنح هذه الشيفرة المخاطر المذكورة أعلاه. اضغط مرة أخرى للتأكيد.
+pop_ups_from_extensions	نوافذ منبثقة من الإضافات
+show	إظهار
+dismiss	تجاهل
+title_series_or_anime	عنوان أو مسلسل أو أنمي
+recent_searches	عمليات البحث الأخيرة
+youve_reached_the_end_pull_down	وصلت إلى النهاية. اسحب للأسفل للتحديث.
+set_up	إعداد
+search_only_source_find_titles_with	مصدر للبحث فقط — اعثر على العناوين بالبحث
+search	بحث
+upcoming	القادم
+movies_series_and_anime_in_the	أفلام ومسلسلات وأنمي خلال الأسبوعين القادمين
+extension_market	سوق الإضافات
+extensions	الإضافات
+couldnt_load_more_try_again	تعذّر تحميل المزيد. حاول مرة أخرى
+no_results	لا توجد نتائج
+no_repositories_yet_tap_to_add	لا توجد مستودعات بعد. اضغط + لإضافة قائمة إضافات LNReader.
+add_lnreaders_list	إضافة قائمة LNReader
+v	%1$s · v%2$s
+install	تثبيت
+chapters	الفصول
+this_source_listed_no_chapters	لا توجد فصول في هذا المصدر.
+a	A−
+a_2	A+
+previous	السابق
+next	التالي
+youve_reached_the_last_chapter_this	وصلت إلى آخر فصل في هذا المصدر.
+novel_sources	مصادر الروايات
+text_size	حجم النص
+checks_run_on_your_phone_and	تُجرى الفحوصات على هاتفك وشبكتك. إذا كان موقع ما محظورًا في منطقتك، فقد يفشل هنا مصدر يعمل لدى غيرك.
+see_the_public_status_of_every	اعرض الحالة العامة لكل مستودع في السوق
+share_report	مشاركة التقرير
+paste_link	لصق رابط
+trust	وثوق
+trust_2	هل تثق بـ %1$s؟
+extensions_are_code_from_other_people	الإضافات شيفرة كتبها آخرون. ثق فقط بالإضافات من مستودعات تعرفها. يتذكر Yumeiro مفتاح التوقيع هذا ويرفض التحديثات الموقعة بمفتاح آخر.
+signing_key_sha_256	مفتاح التوقيع (SHA-256)
+dlna	DLNA
+dlna_servers_nearby	خوادم DLNA القريبة
+nothing_answered_make_sure_youre_on	لم يستجب أحد. تأكد من أنك على شبكة Wi-Fi نفسها وأن DLNA مفعّل على الخادم.
+add_2	إضافة %1$s
+name_optional	الاسم (اختياري)
+user_name	اسم المستخدم
+password	كلمة المرور
+refresh	تحديث
+uninstall	إلغاء التثبيت
+no_repositories_yet	لا توجد مستودعات بعد.
+installed_sources_from_it_stay_until	تبقى المصادر المثبتة منه حتى تلغي تثبيتها.
+remove_3	إزالة %1$s
+uninstall_2	إلغاء تثبيت %1$s
+listed_automatically_from_github_and_public	مُدرجة تلقائيًا من GitHub والفهارس العامة. لا يتحقق Yumeiro مما في المستودع؛ أضف ما تثق به.
+loading_the_market	جارٍ تحميل السوق…
+nothing_matches	لا يوجد تطابق.
+show_more	عرض المزيد (%1$s)
+add_to_yumeiro	إضافة إلى Yumeiro؟
+yumeiro_will_check_what_this_is	سيتحقق Yumeiro من نوع هذا (إضافة أو مستودع أو ملحق أو خادم) ويضيفه بالمحرك المناسب.
+text	誰が見る？
+whos_watching	من يشاهد؟
+manage_profiles	إدارة الملفات الشخصية
+forgot_the_pin	نسيت الرمز؟
+forgot	نسيت؟
+screen_lock	قفل الشاشة
+delete	حذف
+add_profile	إضافة ملف شخصي
+each_profile_has_its_own_history	لكل ملف شخصي سجله الخاص ومتابعة المشاهدة وقائمتي والمفضلة وسجل YouTube ومفتاح محتوى البالغين والتنزيلات الخاصة. الإضافات والإعدادات ومكتبة الهاتف مشتركة.
+remove_picture	إزالة الصورة
+unlock_with_the_phones_lock	الفتح بقفل الهاتف
+delete_2	حذف %1$s؟
+its_history_lists_favorites_private_downloads	سيُحذف من هذا الهاتف سجله وقوائمه ومفضلته وتنزيلاته الخاصة والإضافات التي أضافها هو فقط. لا يمكن التراجع عن ذلك.
+name	الاسم
+save	حفظ
+security_questions	أسئلة الأمان
+if_s_pin_is_forgotten_these	إذا نُسي رمز %1$s، فإن هذه الإجابات الثلاث تزيله وتُبقي كل شيء آخر. لا تهتم الإجابات بالأحرف الكبيرة أو المسافات الزائدة.
+question	السؤال %1$s
+answer	الإجابة
+answer_s_security_questions_to_remove	أجب عن أسئلة الأمان الخاصة بـ %1$s لإزالة الرمز. لن يتغير شيء آخر.
+i_dont_know_the_answers	لا أعرف الإجابات
+remove_pin	إزالة الرمز
+picture_and_anime4k	الصورة وAnime4K
+anime4k	Anime4K
+this_title_only	هذا العنوان فقط
+your_device_is_hot_so_sharpening	جهازك ساخن، لذا أُوقف التحديد وAnime4K مؤقتًا حتى يبرد. تبقى إعدادات الألوان مطبّقة.
+hdr_videos_are_always_shown_as	تُعرض مقاطع HDR دائمًا كما أُعدّت؛ هذه الإعدادات للفيديو العادي (SDR).
+reset_all	إعادة ضبط الكل
+reset_all_picture_settings	إعادة ضبط كل إعدادات الصورة؟
+every_preset_picture_control_filter_setting	ستعود كل الإعدادات المسبقة وعناصر التحكم بالصورة والمرشحات والإعدادات الخاصة بكل عنوان إلى الوضع الافتراضي.
+reset	إعادة ضبط
+video_filter	مرشح الفيديو
+up_next	التالي
+play_now	شغّل الآن
+controls_locked_tap_to_unlock	عناصر التحكم مقفلة · اضغط للفتح
+live	مباشر
+close_player	إغلاق المشغل
+audio_tracks	المسارات الصوتية
+subtitles	الترجمات
+speed	السرعة
+aspect_ratio	نسبة العرض إلى الارتفاع
+picture_in_picture	صورة داخل صورة
+video_details	تفاصيل الفيديو
+lock_controls	قفل عناصر التحكم
+unlock_controls	فتح عناصر التحكم
+playback_speed	سرعة التشغيل
+adjust_video_and_audio_speed_seamlessly	اضبط سرعة الفيديو والصوت بسلاسة مع الحفاظ على طبقة الصوت. ‏2x سريعًا: المس الفيديو مطولًا، أو اضغط مطولًا على زر السرعة.
+this_video_has_one_audio_track	يحتوي هذا الفيديو على مسار صوتي واحد، فلا يوجد ما يُبدَّل. للغة أخرى، اختر مصدرًا مدبلجًا في المصادر.
+subtitles_captions	الترجمات والتعليقات
+external_subtitle_file	ملف ترجمة خارجي
+load_from_file_srt_vtt_ass	التحميل من ملف (.srt, .vtt, .ass)
+search_subtitles_online	البحث عن ترجمات عبر الإنترنت
+loaded	تم التحميل: %1$s
+more_from_this_source	المزيد من هذا المصدر
+subtitle_style_size_colour_position	نمط الترجمة: الحجم واللون والموضع
+subtitle_tracks	مسارات الترجمة
+subtitles_off	الترجمة متوقفة
+subtitle_sync_delay	تأخير مزامنة الترجمة
+t_1_0s	-1.0s
+t_250ms	-250ms
+t_250ms_2	+250ms
+t_1_0s_2	+1.0s
+skip_to_next_video	الانتقال إلى الفيديو التالي
+stream_health	حالة البث
+quality	الجودة
+picture_size	حجم الصورة
+smaller_picture	صورة أصغر
+bigger_picture	صورة أكبر
+subtitle_style	نمط الترجمة
+use_android_caption_settings	استخدام إعدادات التعليقات في Android
+follows_settings_accessibility_captions	يتبع الإعدادات ← تسهيل الاستخدام ← التعليقات
+bold_text	نص عريض
+keep_the_files_own_colours	الاحتفاظ بألوان الملف نفسه
+colours_and_positions_written_inside_srt	الألوان والمواضع المكتوبة داخل ملفات SRT أو VTT أو TTML. تحتفظ ملفات ASS/SSA دائمًا بمظهرها
+reset_to_default	إعادة إلى الافتراضي
+subtitles_look_like_this	ستبدو الترجمة هكذا
+hidden_folder_s	%1$s مجلد مخفي
+back_to_folders	العودة إلى المجلدات
+sort_videos	ترتيب الفيديوهات
+rescan_offline_videos	إعادة فحص الفيديوهات دون اتصال
+online_subtitles	ترجمات عبر الإنترنت
+movie_or_episode_name	اسم الفيلم أو الحلقة
+no_subtitles_found_try_a_shorter	لم يُعثر على ترجمات. جرّب عنوانًا أقصر أو لغة أخرى.
+exact_match	تطابق تام · 
+dynamic_range_compressor	ضاغط النطاق الديناميكي
+loud_protect_your_hearing	مرتفع: احمِ سمعك
+resumed_at	استُؤنف عند %1$s
+start_over	البدء من جديد
+dismiss_resume_notice	تجاهل إشعار الاستئناف
+play_with	التشغيل باستخدام
+watch_in_yumeiro_or_open_this	شاهد في Yumeiro أو افتح هذا الفيديو في تطبيق مشغل آخر.
+another_app	تطبيق آخر
+t_2x	2x
+reset_zoom	إعادة ضبط التكبير · %1$s
+reset_rotation	إعادة ضبط التدوير · %1$s
+text_2	夢色
+music_video_streams	موسيقى · فيديو · بث
+by_asfakul_siam	من Asfakul Siam
+download_2	تنزيل %1$s
+not_enough_free_space_for_this	لا توجد مساحة كافية لهذا التنزيل.
+offline_copy	نسخة دون اتصال
+permanent	دائم
+where_it_goes_and_tips	مكان الحفظ ونصائح
+dont_ask_again	لا تسأل مجددًا
+download_settings	إعدادات التنزيل
+nothing_here_yet_in_downloads_tap	لا يوجد شيء هنا بعد. في التنزيلات، اضغط على أيقونة العين في تنزيل مكتمل لنقله إلى هنا. سيختفي من قائمة التنزيلات والمعرض وكل التطبيقات الأخرى.
+private_downloads_are_not_in_backups	التنزيلات الخاصة ليست ضمن النسخ الاحتياطية. حذف هذا الملف الشخصي يحذفها.
+offline_settings	إعدادات عدم الاتصال
+auto_delete_quality_at_once	الحذف التلقائي: %1$s · الجودة: %2$s · %3$s في آنٍ واحد
+change	تغيير
+how_downloads_work	كيف تعمل التنزيلات
+no_downloads_yet	لا توجد تنزيلات بعد
+save_episodes_movies_youtube_videos_and	احفظ الحلقات والأفلام وفيديوهات YouTube والموسيقى لتشاهدها أو تستمع إليها دون إنترنت.
+find_something_to_save	ابحث عن شيء لحفظه
+these_files_will_be_removed_from	%1$s: ستُحذف هذه الملفات من هذا الهاتف. تبقى النسخ الأخرى من المسلسل.
+private_locked	خاص (مقفل)
+hide_tips	إخفاء النصائح
+pause	إيقاف مؤقت
+delete_folder	حذف المجلد
+download_3	تنزيل %1$s؟
+quality_for_this_download	جودة هذا التنزيل
+where_it_goes	مكان الحفظ
+keep_as	الاحتفاظ كـ
+tips	نصائح
+dont_ask_again_turn_it_back	لا تسأل مجددًا (أعد تفعيله في الإعدادات ← التنزيلات)
+read_from	القراءة من
+manga_sources_installed	%1$s مصدر مانغا مثبّت
+no_source_matches	لا يوجد مصدر مطابق
+continue_reading	متابعة القراءة
+chapters_2	%1$s فصل
+end_of_your_saved_chapters	نهاية الفصول المحفوظة
+connect_to_the_internet_or_save	اتصل بالإنترنت أو احفظ الفصل التالي لمتابعة القراءة.
+end_of_chapter	نهاية الفصل
+next_2	التالي: %1$s
+read_next_chapter	قراءة الفصل التالي
+translate_pages	ترجمة الصفحات
+translate_speech_bubbles	ترجمة فقاعات الكلام
+read_on_this_phone_only_the	تُقرأ على هذا الهاتف. تُنزَّل حزمة اللغة فقط، مرة واحدة لكل لغة.
+download_language_packs_on_wi_fi	تنزيل حزم اللغات عبر Wi-Fi فقط
+long_press_a_translation_to_hide	اضغط مطولًا على ترجمة لإخفائها.
+language_packs_on_this_phone	حزم اللغات على هذا الهاتف
+checking	جارٍ الفحص…
+none_yet_english_is_built_in	لا شيء بعد. الإنجليزية مدمجة؛ وتُنزَّل الأخرى عند أول استخدام.
+page_failed_tap_to_retry	فشلت الصفحة %1$s · اضغط لإعادة المحاولة
+manage_sources	إدارة المصادر
+sort	ترتيب
+saved_on_this_device_tap_to	محفوظ على هذا الجهاز، اضغط للإزالة
+save_for_offline_reading	حفظ للقراءة دون اتصال
+previous_chapter	الفصل السابق
+next_chapter	الفصل التالي
+full_player	  المشغل الكامل
+close_shorts	إغلاق Shorts
+thats_the_whole_list_search_or	هذه القائمة كاملة. ابحث أو اختر شريحة أخرى للمزيد.
+streams_come_straight_from_youtube_without	يأتي البث مباشرة من YouTube دون حساب. مواضيعك وعمليات بحثك وسجلك تبقى على هذا الجهاز.
+for_you	おすすめ · لك
+topics	المواضيع
+add_a_topic	إضافة موضوع
+your_topics	مواضيعك
+topics_shape_your_chips_and_shelves	تشكّل المواضيع شرائحك ورفوفك. اضغط على أحدها لإزالته.
+no_topics_yet_the_page_uses	لا مواضيع بعد — تستخدم الصفحة ما تشغّله ومزيج اليوم.
+shuffle_todays_mix	خلط مزيج اليوم
+use_simple_discovery_instead	استخدام الاكتشاف البسيط بدلًا من ذلك
+shuffle	خلط
+save_to_vault	حفظ في الخزنة
+title	العنوان
+no_video_sources_were_found_on	لم يُعثر على مصادر فيديو في هذه الصفحة بعد. شغّل الفيديو ثم حاول مجددًا، أو احفظ الصفحة نفسها.
+rename	إعادة تسمية
+delete_3	حذف «%1$s»؟
+the_title_and_its_saved_links	سيُحذف العنوان وروابطه المحفوظة من الخزنة ومن Download › Yumeiro › Vault.
+share_file	مشاركة الملف
+import_vault_files	استيراد ملفات الخزنة
+share_the_vault_file	مشاركة ملف الخزنة
+more_for	المزيد لـ %1$s
+play_a_song_or_a_video	شغّل أغنية أو فيديو وسيظهر نشاطك هنا.
+with_activity	%1$s يوم بنشاط
+statistics_stay_on_this_device_are	تبقى الإحصاءات على هذا الجهاز، ولا تُحتسب أثناء التصفح المتخفي، وتُضمَّن في نسخة المكتبة الاحتياطية.
+clear_statistics	مسح الإحصاءات
+clear_statistics_2	مسح الإحصاءات؟
+the_activity_map_streaks_and_totals	تبدأ خريطة النشاط والسلاسل والمجاميع من الصفر. يبقى سجلك وعدد مرات التشغيل.
+less	أقل
+more_0_15_min_1_h	أكثر (0، 15 دقيقة، ساعة، 3 ساعات، أكثر)
+your_activity	نشاطك
+streak_this_week	السلسلة %1$s · هذا الأسبوع %2$s
+room_code	رمز الغرفة
+address_watching	العنوان %1$s · %2$s يشاهدون
+close_room	إغلاق الغرفة
+you_need_the_same_source_installed	يجب أن يكون لديك المصدر نفسه المثبت لدى المضيف. كل هاتف يبث بنفسه.
+leave	مغادرة
+one_phone_hosts_others_join_with	يستضيف هاتف واحد وينضم الآخرون برمز من 4 أرقام. يعمل على Wi-Fi المنزل أو نقطة اتصال الهاتف؛ لا يمر شيء عبر الإنترنت سوى بث كل هاتف.
+host_a_room	استضافة غرفة
+join_by_address	الانضمام بالعنوان
+no_rooms_yet_when_someone_on	لا توجد غرف بعد. عندما يضغط شخص على Wi-Fi نفسها «استضافة غرفة» ستظهر هنا.
+join	انضمام
+join_2	الانضمام إلى %1$s
+open_an_m3u_playlist_in_videos	افتح قائمة تشغيل M3U في الفيديوهات ← التلفزيون المباشر لتبديل القنوات من هنا.
+nothing_related_found_for_this_video	لم يُعثر على شيء ذي صلة بهذا الفيديو.
+reading_video_details	جارٍ قراءة تفاصيل الفيديو…
+size_estimated_from_the_streams_bitrate	الحجم مُقدَّر من معدل بت البث.
+load_more_of	تحميل المزيد · %1$s من %2$s
+audio_language	لغة الصوت
+remembered	محفوظ
+episodes	الحلقات
+dimmed_for_focus_tap_to_brighten	معتّم للتركيز · اضغط للإضاءة
+maybe_later	ربما لاحقًا
+join_the_yumeiro_community	انضم إلى مجتمع Yumeiro
+get_yumeiro_news_first_on_telegram	احصل على أخبار Yumeiro أولًا على Telegram، واطلب المساعدة وشارك أفكارك.
+closes_in_s	يُغلق خلال %1$s ث
+yume_guide	Yume · دليل
+clear_all_notifications	مسح كل الإشعارات؟
+they_are_removed_from_this_page	ستُزال من هذه الصفحة. تبقى إعداداتك كما هي.
+until_then_news_only_shows_up	%1$s حتى ذلك الحين، تظهر الأخبار هنا فقط.
+mark_all_as_read	تعليم الكل كمقروء
+clear_all	مسح الكل
+keep_notifications_on_time	اجعل الإشعارات تصل في وقتها
+open_settings	فتح الإعدادات
+fix	إصلاح
+tap_a_detail_to_copy_it	اضغط على أي معلومة لنسخها. أي مبلغ يساعد، وكذلك الكلمة الطيبة.
+other_ways_to_help	طرق أخرى للمساعدة
+a_star_on_github_or_a	نجمة على GitHub أو متابعة لا تكلّف شيئًا وتساعد كثيرًا.
+star_on_github	ضع نجمة على GitHub
+yumeiro_click	yumeiro.click
+copy	نسخ %1$s
+buy_a_coffee	اشترِ لي قهوة
+start_using_yumeiro	ابدأ استخدام Yumeiro
+yumeiro	夢色 YUMEIRO
+new_to_yumeiro	جديد على Yumeiro؟
+explore_and_discover_what_you_can	استكشف واكتشف ما يمكنك فعله هنا.
+already_familiar_with_yumeiro	هل تعرف Yumeiro بالفعل؟
+you_can_skip_and_start_using	يمكنك التخطي والبدء باستخدام التطبيق.
+explore_yumeiro	استكشف Yumeiro
+skip_for_now	تخطَّ الآن
+set_up_the_essentials_instead	إعداد الأساسيات بدلًا من ذلك
+set_up_the_essentials	إعداد الأساسيات
+of_ready_tap_any_step_to	%1$s من %2$s جاهزة. اضغط على أي خطوة لتنفيذها الآن.
+yumeiro_is_locked	Yumeiro مقفل
+unlock_with_your_fingerprint_face_or	افتح ببصمة الإصبع أو الوجه أو قفل الشاشة
+unlock	فتح
+play_album	تشغيل الألبوم
+play_all	تشغيل الكل
+play_folder	تشغيل المجلد
+sort_options	خيارات الترتيب
+shuffle_all	تشغيل الكل عشوائيًا
+your_mix	混 · مزيجك
+device_youtube_music	الجهاز + YouTube Music
+nothing_to_mix_yet	لا يوجد ما يُمزج بعد
+play_your_mix	شغّل مزيجك
+got_it	فهمت
+rename_website	إعادة تسمية الموقع
+sign_in_isnt_available_here	تسجيل الدخول غير متاح هنا
+search_your_sites_or_type_an	ابحث في مواقعك أو اكتب عنوانًا
+recently_visited	تمت زيارتها مؤخرًا
+how_it_works	كيف يعمل
+move_up	نقل للأعلى
+move_down	نقل للأسفل
+duplicate	تكرار
+vault	الخزنة
+website_settings	إعدادات الموقع
+save_2	حفظ %1$s
+remove_from_recent	إزالة %1$s من الأخيرة
+downloading_telegram_support_once_about_mb	جارٍ تنزيل دعم Telegram (مرة واحدة، نحو %1$s ميغابايت)
+this_sign_in_step_isnt_supported	خطوة تسجيل الدخول هذه (%1$s) غير مدعومة في Yumeiro بعد. سجّل الدخول مرة في تطبيق Telegram ثم حاول مجددًا.
+signing_out	جارٍ تسجيل الخروج…
+telegram_closed	أُغلق Telegram.
+open_again	الفتح مجددًا
+phone_number	رقم الهاتف
+with_the_country_code_for_example	مع رمز الدولة، مثل +880 1712 345678. يرسل Telegram رمزًا إلى تطبيق Telegram أو عبر SMS.
+yumeiro_signs_in_with_telegrams_official	يسجّل Yumeiro الدخول بمكتبة Telegram الرسمية. لا تُرسل رسائلك إلى أي مكان آخر؛ ويُحفظ تسجيل الدخول مشفّرًا لهذا الملف الشخصي فقط.
+code_sent_to	أُرسل الرمز %1$s إلى %2$s
+change_number	تغيير الرقم
+send_again	الإرسال مجددًا
+two_step_verification_password	كلمة مرور التحقق بخطوتين
+hint	تلميح: %1$s
+forgot_it_reset_it_in_the	نسيتها؟ أعد تعيينها في تطبيق Telegram (الإعدادات › الخصوصية والأمان › التحقق بخطوتين).
+this_number_has_no_telegram_account	لا يوجد حساب Telegram لهذا الرقم بعد. أنشئ حسابًا:
+first_name	الاسم الأول
+last_name_optional	اسم العائلة (اختياري)
+sign_out_of_telegram	تسجيل الخروج من Telegram؟
+yumeiro_forgets_this_login_and_its	سينسى Yumeiro تسجيل الدخول هذا وملفات Telegram التي نزّلها. لن يتغير حسابك نفسه.
+sign_out	تسجيل الخروج
+older	أقدم
+open_my_telegram_org	فتح my.telegram.org
+api_id	API ID
+api_hash	API hash
+save_and_sign_in	حفظ وتسجيل الدخول
+use_yumeiros_keys_again	استخدام مفاتيح Yumeiro مجددًا
+search_this_channel	البحث في هذه القناة
+open_in_telegram	فتح في Telegram
+open_my_telegram_account	فتح حسابي على Telegram
+older_posts	منشورات أقدم
+subscribers	%1$s مشترك
+new_2	جديد
+manage_ads	إدارة الإعلانات
+ads_and_pop_ups_are_blocked_2	تُحظر الإعلانات والنوافذ المنبثقة في كل المواقع عبر المفتاح في الإعدادات. الأجزاء التي أخفيتها بنفسك مدرجة هنا.
+nothing_hidden_yet_in_a_page	لم يُخفَ شيء بعد. في أي صفحة، افتح القائمة واختر «إخفاء عنصر».
+show_all	إظهار الكل
+duplicate_website	تكرار الموقع
+save_again_under_another_address_like	احفظ %1$s مجددًا بعنوان آخر، مثل نطاق بديل أو قسم من الموقع.
+address	العنوان
+save_copy	حفظ نسخة
+close_all	إغلاق الكل
+new_tab	علامة تبويب جديدة
+show_this_part_again	إظهار هذا الجزء مجددًا
+close_2	إغلاق %1$s
+add_channels_from_a_list	إضافة قنوات من قائمة
+paste_names_or_t_me_links	الصق @الأسماء أو روابط t.me، واحدًا في كل سطر. تبقى القنوات المحفوظة كما هي.
+rename_channel	إعادة تسمية القناة
+share_channel_list	مشاركة قائمة القنوات
+how_telegram_works	كيف يعمل Telegram
+search_your_channels	البحث في قنواتك
+no_channels_yet	لا توجد قنوات بعد
+add_a_channel	إضافة قناة
+sign_in	تسجيل الدخول
+signed_in	تم تسجيل الدخول
+your_telegram_account	حسابك على Telegram
+add_channel	إضافة قناة
+your_account	حسابك
+your_login_stays_on_this_phone	يبقى تسجيل دخولك على هذا الهاتف.
+close_search	إغلاق البحث
+the_source_could_not_be_reached	تعذّر الوصول إلى المصدر في آخر فحص؛ تُعرض آخر نسخة سليمة.
+view_on_github	العرض على GitHub
+now_playing_2	يُشغَّل الآن: %1$s
+rescan_streams	إعادة فحص البث
+minimize_streams	تصغير البث
+show_streams	إظهار البث
+close_streams	إغلاق البث
+network_stream	بث عبر الشبكة
+hls_dash_mp4_m3u_youtube_drive	HLS · DASH · MP4 · M3U · YouTube · Drive · TeraBox · Torrent
+stream_or_playlist_url	رابط البث أو قائمة التشغيل
+https_example_com_live_index_m3u8	https://example.com/live/index.m3u8
+detected	تم الاكتشاف: %1$s
+headers_drm	الترويسات وDRM
+user_agent_referer_origin_cookie	User-Agent, Referer, Origin, Cookie
+user_agent	User-Agent
+custom_user_agent	وكيل مستخدم مخصص
+referer	Referer
+origin	Origin
+cookie	Cookie
+extra_headers_key_value_per_line	ترويسات إضافية (Key: Value في كل سطر)
+drm	DRM
+license_server_url	رابط خادم الترخيص
+clearkey_kid_key_hex	ClearKey kid:key (hex)
+headers_are_sent_with_every_manifest	تُرسل الترويسات مع كل طلب بيان ومقطع ومفتاح — استخدمها عندما لا يقبل المضيف إلا مشغله على الويب.
+open_in	فتح في %1$s
+m3u_file	ملف M3U
+open_as_channel_list	فتح كقائمة قنوات
+playlists	قوائم التشغيل
+play_a_link	تشغيل رابط
+recent_streams	البث الأخير
+you_can_also_share_links_to	يمكنك أيضًا مشاركة الروابط مع Yumeiro من أي تطبيق.
+edit	تعديل
+paste	لصق
+back_to_live_tv	العودة إلى التلفزيون المباشر
+save_to_playlist	حفظ في قائمة تشغيل
+edit_stream	تعديل البث
+recently_played	شُغّلت مؤخرًا
+channels	%1$s قناة
+reload	إعادة التحميل
+open_in_chrome	فتح في Chrome
+close_tab	إغلاق علامة التبويب
+forward	للأمام
+stop_hiding_parts	إيقاف إخفاء الأجزاء
+page_menu	قائمة الصفحة
+tools	الأدوات
+links_files_and_playlists	الروابط والملفات وقوائم التشغيل
+search_every_channel	البحث في كل القنوات
+country	الدولة
+countries_in_your_playlists	%1$s دولة في قوائم تشغيلك
+your_playlists_have_channels_from_countries	تحتوي قوائم تشغيلك على قنوات من %1$s دولة. تحقق من التهجئة.
+save_as_playlist	حفظ كقائمة تشغيل
+export_as_m3u	تصدير كـ .m3u
+disable	تعطيل
+close_list	إغلاق القائمة
+last_update_failed	فشل آخر تحديث: %1$s
+this_playlist_is_disabled	قائمة التشغيل هذه معطلة.
+enable	تفعيل
+auto_update	تحديث تلقائي
+a_newer_version_is_available	يتوفر إصدار أحدث
+playlist_options	خيارات قائمة التشغيل
+back_to_top	العودة إلى الأعلى
+stop	إيقاف
+browser	المتصفح
+finding_the_video_on	جارٍ البحث عن الفيديو على %1$s
+show_the_page	إظهار الصفحة
+open_with_your_telegram_account	فتح @%1$s بحسابك على Telegram؟
+not_now	ليس الآن
+minimize	تصغير
+label_default	افتراضي
+refresh_now	تحديث الآن
+playlist_market	سوق قوائم التشغيل
+restore_default_playlist	استعادة قائمة التشغيل الافتراضية
+playlist_url_m3u	رابط قائمة التشغيل (.m3u)
+https_raw_githubusercontent_com_playlist_m3u	https://raw.githubusercontent.com/…/playlist.m3u
+analyse_link	تحليل الرابط
+default_playlist_changing_the_url_stops	قائمة التشغيل الافتراضية: تغيير الرابط يوقف مزامنتها كل ساعتين.
+new_playlist_name	اسم قائمة التشغيل الجديدة
+create_add	إنشاء وإضافة
+stream_url	رابط البث
+group	المجموعة
+logo_url	رابط الشعار
+headers_and_drm_are_kept_as	تبقى الترويسات وDRM كما هي.
+streams_opened_not_saved	%1$s بث · مفتوح، غير محفوظ
+more_playlist_actions	إجراءات أخرى لقائمة التشغيل
+follow_a_series_with_reminders_on	تابع مسلسلًا مع تفعيل التذكيرات وستظهر حلقاته الجديدة هنا أولًا.
+youre_all_caught_up	夢色 · لقد شاهدت كل شيء.
+customize_home	تخصيص الصفحة الرئيسية
+turn_sections_on_or_off_continue	فعّل الأقسام أو أوقفها. يبقى «متابعة المشاهدة» دائمًا في الأعلى.
+finish_setting_up	إكمال الإعداد
+of_ready_sources_dns_alerts	%1$s من %2$s جاهزة · المصادر، DNS، التنبيهات
+tour	جولة
+songs_videos_picks_from_your_extensions	أغانٍ · فيديوهات · اختيارات من إضافاتك
+hide	إخفاء
+copy_support_id	نسخ معرّف الدعم · %1$s
+dns_for_streams	DNS للبث
+used_for_playlists_stream_links_and	يُستخدم لقوائم التشغيل وروابط البث والتشغيل داخل التطبيق. الافتراضي هو DNS النظام.
+vpn_settings	إعدادات VPN
+connection	الاتصال
+test	اختبار
+download_with	التنزيل باستخدام
+auto_delete_watched_downloads	حذف التنزيلات المشاهدة تلقائيًا
+offline_copies_are_removed_this_long	تُحذف النسخ دون اتصال بعد هذه المدة من اكتمالها. تبقى النسخ الدائمة (المثبتة) دائمًا.
+episode_quality	جودة الحلقة
+highest_quality_to_save_lower_saves	أعلى جودة للحفظ. الأقل يوفر المساحة والبيانات.
+downloads_at_once	التنزيلات في آنٍ واحد
+never_more_than_one_per_extension	لا يزيد أبدًا عن واحد لكل إضافة، حتى لا تحظرك المواقع.
+where_files_go	مكان حفظ الملفات
+clean_up_now	التنظيف الآن
+chapters_go_to_anilist_and_myanimelist	تُرسل الفصول إلى AniList وMyAnimeList. يُطابَق العنوان باسمه وسنته؛ وإذا لم يوجد تطابق قريب بما يكفي لا يُرسل شيء، فلا يتغير الإدخال الخطأ أبدًا.
+sync_now	المزامنة الآن
+decoder_renderer_and_classic_anime4k_changes	تُطبَّق تغييرات المفكك والعارض وAnime4K الكلاسيكي على الفيديو التالي الذي تفتحه. يمكن أيضًا تبديل إعدادات V2 مباشرة في المشغل (المزيد ← Anime4K).
+top_bar	الشريط العلوي
+reorder_the_buttons_or_hide_the	أعد ترتيب الأزرار أو أخفِ ما لا تستخدمه أبدًا. تبقى الأولى على الشريط والبقية تحت «المزيد»
+buttons_on_the_bar	الأزرار على الشريط
+middle_and_bottom	الوسط والأسفل
+play_and_pause_always_stay	يبقى التشغيل والإيقاف المؤقت دائمًا
+fields_to_show	الحقول المعروضة
+all	الكل
+fewer_buttons_on_the_bar	أزرار أقل على الشريط
+more_buttons_on_the_bar	أزرار أكثر على الشريط
+move_up_2	نقل %1$s للأعلى
+move_down_2	نقل %1$s للأسفل
+backdrop	الخلفية
+the_picture_behind_every_page_each	夢色 — الصورة خلف كل صفحة. لكل سمة مشهدها الخاص.
+intensity	الشدة
+no_settings_match_try_a_shorter	لا توجد إعدادات تطابق «%1$s». جرّب كلمة أقصر.
+make_yumeiro_yours	اجعل Yumeiro على ذوقك
+songs_already_play_back_to_back	تُشغَّل الأغاني متتالية دون فاصل، ويواصل Yumeiro التشغيل والشاشة مطفأة.
+yumeiro_reads_androids_media_index_every	يقرأ Yumeiro فهرس وسائط Android في كل مرة يُفتح فيها، لذا تظهر الملفات الجديدة عادةً من تلقاء نفسها.
+user_guide	دليل المستخدم
+downloading_your_extensions_again_of	جارٍ تنزيل إضافاتك مجددًا: %1$s من %2$s
+restore_latest_backup	استعادة أحدث نسخة احتياطية · %1$s
+choose_a_backup_file	اختر ملف نسخة احتياطية
+find_my_backups	العثور على نسخي الاحتياطية
+you_see_whats_inside_and_pick	ترى ما بداخلها وتختار ما تستعيده قبل أن يتغير أي شيء. تُنسخ بياناتك الحالية احتياطيًا أولًا.
+back_up_now	النسخ الاحتياطي الآن
+choose_folder	اختيار مجلد
+use_download_yumeiro_backups_again	استخدام Download › Yumeiro › Backups مجددًا
+allow_storage_access_so_backups_survive	اسمح بالوصول إلى التخزين حتى تبقى النسخ الاحتياطية بعد إلغاء التثبيت
+no_backups_found_yet_after_reinstalling	لم يُعثر على نسخ احتياطية بعد. بعد إعادة التثبيت، اضغط «العثور على نسخي الاحتياطية» وافتح مجلد Yumeiro › Backups.
+open_a_file	فتح ملف
+delete_this_backup	حذف هذه النسخة الاحتياطية؟
+is_removed_from_the_phone_this	سيُحذف %1$s من الهاتف. لا يمكن التراجع عن ذلك.
+a_backup_is_saved_first_so	%1$s. تُحفظ نسخة احتياطية أولًا لتتمكن من التراجع، ثم يُعاد تشغيل Yumeiro.
+back_up_and_reset	النسخ الاحتياطي وإعادة الضبط
+erase_everything	مسح كل شيء؟
+every_setting_list_source_and_extension	ستُحذف كل الإعدادات والقوائم والمصادر والإضافات ويُغلق Yumeiro. تُحفظ نسخة احتياطية أولًا في Download › Yumeiro › Backups لتتمكن من استعادتها لاحقًا.
+back_up_and_erase	النسخ الاحتياطي والمسح
+restore_this_backup	استعادة هذه النسخة الاحتياطية؟
+whats_on_this_phone_now_is	يُحفظ ما على هذا الهاتف الآن كنسخة احتياطية أولًا. يُعاد تشغيل Yumeiro للإنهاء.
+restore	استعادة
+delete_backup	حذف النسخة الاحتياطية
+lock_again	القفل مجددًا
+every_tracker_is_free_kitsu_simkl	كل المتتبعات مجانية. يحتاج Kitsu وSimkl وLast.fm إلى تسجيل الدخول فقط؛ ويحتاج AniList وMyAnimeList وTrakt إلى مفتاح مجاني تنشئه مرة واحدة. ليس لدى Yumeiro خادم، فيذهب تسجيل دخولك مباشرة إلى المتتبع. في كل بطاقة تعليمات خطوة بخطوة.
+tokens_and_keys_are_encrypted_with	تُشفَّر الرموز والمفاتيح عبر Android Keystore ولا تغادر الجهاز إلا للتواصل مع المتتبع. لا تُضمَّن في النسخ الاحتياطية.
+client_id	Client ID
+sign_in_to_kitsu	تسجيل الدخول إلى Kitsu
+e_mail	البريد الإلكتروني
+your_password_goes_to_kitsu_once	تُرسل كلمة مرورك إلى Kitsu مرة واحدة؛ ويُحتفظ بالرمز فقط.
+trakt_api_app	تطبيق Trakt API
+create_a_free_app_at_trakt	أنشئ تطبيقًا مجانيًا على trakt.tv/oauth/applications/new بعنوان إعادة التوجيه هذا، ثم الصق Client ID. تطبيقات Trakt الجديدة ليس لها client secret؛ املأه فقط إذا أظهره Trakt.
+client_secret_optional	Client secret (اختياري)
+your_own_simkl_app	تطبيق Simkl الخاص بك
+optional_leave_empty_to_use_yumeiros	اختياري. اتركه فارغًا لاستخدام تطبيق Yumeiro المدمج. لاستخدام تطبيقك، أنشئه على simkl.com/settings/developer والصق Client ID.
+approve_on_simkl	الموافقة على Simkl
+open_on_any_device_and_enter	افتح %1$s على أي جهاز وأدخل
+open_simkl	فتح Simkl
+approve_on_last_fm	الموافقة على Last.fm
+open_last_fm	فتح Last.fm
+approve_on_trakt	الموافقة على Trakt
+open_trakt	فتح Trakt
+change_key	تغيير المفتاح
+how_yumeiro_works	كيف يعمل Yumeiro
+illustrated_guide_to_every_section_gesture	دليل مصوّر لكل قسم وإيماءة وحل
+the_app_at_a_glance	التطبيق في لمحة
+four_tabs_in_the_floating_dock	أربع علامات تبويب في الشريط العائم بالأسفل. الشريط فوقه هو مشغل الموسيقى.
+drag_sideways_to_seek_double_tap	← اسحب جانبيًا للتنقل →   ·   انقر مرتين على أحد الجانبين: ±10 ث
+label_continue	متابعة
+spaces	المساحات
+yumix_random_keeps_loading_as_you	Yumix عشوائي  ·  يواصل التحميل أثناء التمرير ↓
+accent_colour	اللون المميز
+size_colour_outline_or_box_and	الحجم واللون والحد أو الصندوق والارتفاع عن الأسفل. متاح أيضًا في قائمة الترجمة بالمشغل
+back_button_while_a_video_plays	زر الرجوع أثناء تشغيل فيديو
+you_can_also_swipe_down_on	يمكنك أيضًا السحب للأسفل على الفيديو لتصغيره
+version_build	الإصدار %1$s (البنية %2$s)
+unofficial_build_not_signed_by_the	نسخة غير رسمية — غير موقعة من مطور Yumeiro. نزّل التطبيق الحقيقي من github.com/siamform/yumeiro
+developer	المطور
+designer_full_stack_developer	مصمم ومطور متكامل
+made_with_love_in_bangladesh	صُنع بحب في بنغلاديش
+step_by_step_tap_to_open	خطوة بخطوة · اضغط للفتح
+copy_2	نسخ
+replace_with_a_pasted_cookie	الاستبدال بملف تعريف ارتباط ملصوق
+sign_in_with_google	تسجيل الدخول باستخدام Google
+paste_cookie_advanced	لصق ملف تعريف الارتباط (متقدم)
+use_this_if_google_says_the	استخدم هذا إذا قالت Google إن المتصفح أو التطبيق قد لا يكون آمنًا.
+sign_out_of_youtube	تسجيل الخروج من YouTube؟
+the_saved_sign_in_is_deleted	سيُحذف تسجيل الدخول المحفوظ من هذا الهاتف ويعود YouTube إلى التشغيل دون حساب.
+the_sign_in_page_stopped_responding	توقفت صفحة تسجيل الدخول عن الاستجابة. ارجع وحاول مجددًا.
+a_youtube_cookie_works_like_a	ملف تعريف ارتباط YouTube يعمل ككلمة مرور. الصقه هنا فقط، ولا تضعه أبدًا في المحادثات أو تقارير الأخطاء. يتحقق Yumeiro منه مع youtube.com ويخزنه مشفرًا على هذا الهاتف.
+cookie_header_cookies_txt_json_or	ترويسة Cookie أو cookies.txt أو JSON أو رمز ArchiveTune
+check_and_save	التحقق والحفظ
+couldnt_check_with_youtube	تعذّر التحقق مع YouTube
+the_cookie_looks_signed_in_but	يبدو أن ملف تعريف الارتباط مسجّل الدخول، لكن تعذّر الوصول إلى youtube.com للتأكد. هل تحفظه على أي حال؟ إذا انتهت صلاحيته، سيواصل YouTube حظر الفيديوهات ويمكنك لصق واحد جديد.
+save_anyway	الحفظ على أي حال
+no_crashes_recorded_if_yumeiro_ever	لم تُسجَّل أي أعطال. إذا أُغلق Yumeiro من تلقاء نفسه أو تجمّد، يُحفظ التقرير هنا.
+reports_stay_on_this_phone_until	تبقى التقارير على هذا الهاتف حتى تشاركها. تُحفظ نسخة من كل تقرير أيضًا كملف في Download/Yumeiro/Crash reports جاهزة للإرفاق. تحتوي على إصدار التطبيق وطراز الهاتف وإصدار Android والخطأ، وتستبعد الروابط التي تحوي مفاتيح أو رموزًا أو عناوين بريد إلكتروني.
+they_are_removed_from_yumeiro_copies	ستُحذف من Yumeiro. تبقى النسخ المحفوظة في Download/Yumeiro/Crash reports؛ احذفها من تطبيق الملفات. لا يمكن التراجع عن ذلك.
+keep	احتفاظ
+share	مشاركة
+proxy	الوكيل
+port	المنفذ
+username_optional	اسم المستخدم (اختياري)
+password_optional	كلمة المرور (اختياري)
+web_pages_cant_use_a_socks5	لا يمكن لصفحات الويب استخدام وكيل SOCKS5 بتسجيل دخول (قيد في Android WebView)؛ ويمكن لكل ما عداها ذلك.
+show_18_content	إظهار محتوى +18؟
+adult_extensions_and_titles_will_appear	ستظهر إضافات وعناوين البالغين في السوق والصفحة الرئيسية والبحث. أكّد أن عمرك 18 عامًا أو أكثر وأن هذا المحتوى قانوني في بلدك.
+im_18_or_older	عمري 18 عامًا أو أكثر
+subtitle_sites_all_free_use_any	مواقع الترجمة (كلها مجانية، استخدم أيًّا منها أو كلها)
+background_checks_are_off_under_background	الفحوصات في الخلفية متوقفة ضمن «الخلفية والبطارية»، فلا يوجد ما يُشغَّل عند الإيقاظ.
+choose_a_push_app	اختر تطبيق إشعارات
+recommended_supports_scheduled_wake_ups	موصى به · يدعم الإيقاظ المجدول
+install_ntfy_first	ثبّت ntfy أولًا
+reliable_alerts_need_a_free_unifiedpush	تحتاج التنبيهات الموثوقة إلى تطبيق UnifiedPush مجاني. ntfy مفتوح المصدر ولا يحتاج إلى حساب ومجاني الاستخدام. ثبّته وافتحه مرة، ثم عد وفعّل هذا.
+f_droid	F-Droid
+google_play	Google Play
+preview	معاينة
+of_each_with_a_short_label	%1$s من %2$s · لكل منها تسمية قصيرة؛ يتسع الإبهام لسبعة كحد أقصى
+pin_up_to_pages_you_open	ثبّت حتى %1$s صفحات تفتحها كل يوم.
+built_in_torrent_engine	محرك تورنت مدمج
+before_you_turn_it_on	قبل أن تفعّله
+i_understand_turn_on	فهمت، فعّله
+torrserver_address	عنوان TorrServer
+http_127_0_0_1_8090	http://127.0.0.1:8090
+no_lyrics_found	لم يُعثر على كلمات
+embed_lyrics_in_the_files_tags	ضمّن الكلمات في وسوم الملف، أو ضع ملف .lrc بالاسم نفسه بجانب الأغنية، أو استورد واحدًا.
+label_import	استيراد
+lossless	بلا فقدان
+song_info	معلومات الأغنية
+dismiss_error	تجاهل الخطأ
+sleep_timer	مؤقت النوم
+new_playlist	قائمة تشغيل جديدة
+name_your_playlist	سمِّ قائمة تشغيلك:
+e_g_focus_chill	مثال: تركيز، استرخاء
+create	إنشاء
+rename_playlist	إعادة تسمية قائمة التشغيل
+delete_playlist	حذف قائمة التشغيل؟
+are_you_sure_you_want_to	هل تريد بالتأكيد حذف «%1$s»؟ لن تتأثر الملفات الصوتية على تخزين جهازك.
+songs	%1$s أغنية
+back_to_library	العودة إلى المكتبة
+delete_playlist_2	حذف قائمة التشغيل
+remove_from_playlist	إزالة من قائمة التشغيل
+tip_open_any_anime_or_movie	نصيحة: افتح أي أنمي أو فيلم واضغط «تنزيل»، أو اضغط «تنزيل» أسفل فيديو YouTube. اختر «دائم» للاحتفاظ به، أو «دون اتصال» ليحذفه مؤقت الحذف التلقائي.
+remove_from_my_list	إزالة من قائمتي
+create_your_first_playlist	أنشئ أول قائمة تشغيل لك
+add_songs_from_any_list_with	أضف أغاني من أي قائمة عبر القائمة ⋮
+plays	%1$s تشغيل
+nothing_on_your_shelf_yet	لا شيء على رفك بعد
+install_a_manga_source_open_a	ثبّت مصدر مانغا وافتح عنوانًا واضغط «حفظ». يُحفظ تقدم القراءة على هذا الهاتف.
+add_manga_sources	إضافة مصادر مانغا
+yumeiro_2	  Yumeiro
+filters	المرشحات
+offline_vault	خزنة دون اتصال
+on_device_media	الوسائط على الجهاز
+resume_at	الاستئناف عند %1$s (%2$s%%)
+left_off_at	توقفت عند %1$s (%2$s%%)
+hide_folder	إخفاء المجلد
+hidden_video_folders	مجلدات الفيديو المخفية
+no_folders_are_currently_hidden_you	لا توجد مجلدات مخفية حاليًا. يمكنك إخفاء مجلدات الفيديو غير المرغوبة من قائمة النقاط الثلاث الخاصة بها.
+videos_in_these_folders_are_hidden	الفيديوهات في هذه المجلدات مخفية من مكتبتك وعمليات البحث:
+unhide	إظهار
+unhide_all	إظهار الكل
+music_access_is_off	الوصول إلى الموسيقى متوقف
+allow_access_to_music_and_audio	اسمح بالوصول إلى الموسيقى والصوت ليتمكن Yumeiro من عرض الأغاني على هذا الهاتف وتشغيلها.
+allow_access	السماح بالوصول
+enter_a_name_for_your_new	أدخل اسمًا لقائمة التشغيل الجديدة:
+e_g_road_trip	مثال: رحلة
+new_playlist_2	قائمة تشغيل جديدة…
+create_add_2	إنشاء وإضافة
+selected_2	%1$s محدد
+rescan_media	إعادة فحص الوسائط
+song_options	خيارات الأغنية
+video_options	خيارات الفيديو
+options	الخيارات
+resume_video	استئناف الفيديو
+cancel_selection	إلغاء التحديد
+play_selected	تشغيل المحدد
+queue_selected	إضافة المحدد إلى قائمة الانتظار
+add_to_playlist	إضافة إلى قائمة تشغيل
+favorite_selected	إضافة المحدد إلى المفضلة
+help	مساعدة: %1$s
+yumeiro_3	YUMEIRO
+youre_offline_showing_saved_content	أنت غير متصل · يُعرض المحتوى المحفوظ
+fill_search_box	تعبئة مربع البحث
+youre_offline	أنت غير متصل
+needs_the_internet_these_still_work	يحتاج %1$s إلى الإنترنت. هذه لا تزال تعمل:
+try_this	جرّب هذا
+search_songs_videos_artists	ابحث عن أغانٍ وفيديوهات وفنانين
+offline	دون اتصال
+l10n_language	اللغة
+l10n_device_language	لغة الجهاز
+l10n_preview	%1$s · معاينة، بعض النصوص لا تزال بالإنجليزية
+search_link_play	تشغيل هذا الرابط
+search_link_hint	يفتحه في المشغّل بدلًا من البحث في مصادرك
+search_link_opening	جارٍ فتح الرابط…
+search_link_playlist	هذا الرابط قائمة تشغيل. افتحه من التلفزيون المباشر › تشغيل رابط.
+search_link_browser	تحتاج هذه الصفحة إلى المتصفح. افتحها من التلفزيون المباشر › تشغيل رابط.
+search_link_failed	تعذّر تشغيل هذا الرابط. %1$s
+bs_title	بلاك سورس
+bs_subtitle	الأنواع والوسوم والفئة المستهدفة · AniList ومصادرك
+bs_open	بلاك سورس
+bs_optin_title	تفعيل بلاك سورس؟
+bs_optin_text	يرسل بلاك سورس الكلمات والأنواع والوسوم والفئة المستهدفة التي تختارها إلى Yumeiro Cloud، الذي يسأل AniList (لا يُرسل أو يُحفظ أي شيء آخر عنك). ثم يبحث عن كل عنوان في مصادرك. يستغرق ذلك وقتًا أطول من البحث العادي، غالبًا من 10 إلى 40 ثانية، ويستهلك بيانات أكثر.
+bs_optin_accept	تفعيل
+bs_optin_decline	ليس الآن
+bs_turn_off	إيقاف
+bs_words_hint	كلمات (اختياري)
+bs_genres	الأنواع (حتى 4)
+bs_demographic	الفئة المستهدفة
+bs_tags_hint	وسوم مفصولة بفواصل (مثل Time Travel, Elf)
+bs_search	ابحث باستخدام بلاك سورس
+bs_idle	اختر نوعًا أو وسمًا أو فئة أو كلمة واحدة على الأقل.
+bs_loading	جارٍ سؤال AniList…
+bs_error	تعذّر على بلاك سورس الوصول إلى Yumeiro Cloud. تحقّق من اتصالك وحاول مرة أخرى.
+bs_error_busy	AniList مشغول الآن. حاول مرة أخرى بعد دقيقة.
+bs_none	لا توجد عناوين تطابق هذه المرشحات.
+bs_checking	جارٍ التحقق من مصادرك… %1$d من %2$d
+bs_found	%1$d عنوانًا من AniList؛ التطابقات من مصادرك مدرجة تحت كل عنوان
+bs_no_sources	%1$d عنوانًا من AniList. ثبّت إضافة أو فعّلها للعثور عليها في مصادرك.
+bs_episodes	%1$d حلقة
+bs_search_sources	ابحث في مصادرك
+bs_own_genres	عُثر عليها حسب أنواع مصادرك

@@ -38,7 +38,8 @@ class Own15GateLogoTest {
 
     @Test fun theAppAsksTheSessionBeforeShowingTheLogo() {
         val app = File("src/main/java/dev/asfakul/yumeiro/ui/screens/MTPlayerApp.kt").readText()
-        assertTrue(app.contains("mutableStateOf(dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.showLogo())"))
+        // B1 (Beta): also once per process (SplashGate).
+        assertTrue(app.contains("mutableStateOf(dev.asfakul.yumeiro.ui.screens.splash.SplashGate.shouldShow(dev.asfakul.yumeiro.ui.screens.profiles.ProfileSession.showLogo()))"))
         val ui = File("src/main/java/dev/asfakul/yumeiro/ui/screens/profiles/ProfileUi.kt").readText()
         assertTrue("open never throws to the gate", ui.contains("CrashLog.nonFatal(\"ProfileSession.open\", t)"))
     }

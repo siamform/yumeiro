@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -35,7 +36,13 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 @Stable
 internal class ExtensionFeed {
-    val homes = mutableStateMapOf<String, List<OnlineRow>>()
+    /**
+     * B20-PERF-EXT: rows are held in [Rows] (equal only to itself). With plain lists, every put compared the
+     * whole map deeply, every row and title of every extension, on the main thread (device run 45943500959:
+     * a 414 ms stall in SnapshotStateMap.put while 30 extensions loaded).
+     */
+    val homes = mutableStateMapOf<String, Rows>()
+    class Rows(val list: List<OnlineRow>)
     var providers by mutableStateOf<List<MainAPI>>(emptyList())
     var loading by mutableStateOf(false)
     val names: List<String> get() = providers.map { it.name }
@@ -43,14 +50,32 @@ internal class ExtensionFeed {
     val order = mutableStateListOf<String>()
     internal var loadedFor: List<String>? = null
     internal var gen = 0
+    /**
+     * B20-PERF-EXT: extensions whose rows were already asked for. Each extension that finished loading used to
+     * restart the rows of all of them (a new generation and a new 3-slot gate each time, the old loads still
+     * running), so 60 extensions meant about 1,800 row loads and up to 180 at once. Now only the new ones load,
+     * all through one gate.
+     */
+    internal val requested = HashSet<String>()
+    internal val gate = Semaphore(3)
+    internal var active = 0
+    fun rows(name: String): List<OnlineRow>? = homes[name]?.list
     fun put(name: String, rows: List<OnlineRow>) {
-        homes[name] = rows
+        homes[name] = Rows(rows)
         if (rows.isNotEmpty() && name !in order) order += name
     }
-    /** Extension name → its rows, in the order they arrived, only those that loaded something. */
-    val ready: List<Pair<String, List<OnlineRow>>> get() {
-        val live = providers.mapTo(HashSet()) { it.name }
-        return order.filter { it in live }.mapNotNull { n -> homes[n]?.takeIf { it.isNotEmpty() }?.let { n to it } }
+    /** Names of [providers], set with them (an extension's `name` runs its own code). */
+    var liveNames by mutableStateOf<Set<String>>(emptySet())
+    /**
+     * Extension name → its rows, in the order they arrived, only those that loaded something.
+     * B20-PERF-EXT: worked out only when the rows, their order or the extensions change, and the same list is
+     * handed out until then. It was rebuilt on every read while Home composed, and Home's `remember(channels)`
+     * then compared the new list with the old one row by row (device run 45947352301, TV, 60 extensions: a
+     * 761 ms main-thread stall in this getter while a video played).
+     */
+    val ready: List<Pair<String, List<OnlineRow>>> by derivedStateOf {
+        val live = liveNames
+        order.filter { it in live }.mapNotNull { n -> rows(n)?.takeIf { it.isNotEmpty() }?.let { n to it } }
     }
 }
 
@@ -82,45 +107,56 @@ internal fun rememberExtensionFeed(): ExtensionFeed {
     }
     val feed = HomeMemory.feed
     LaunchedEffect(providers) {
-        feed.providers = providers
         val names = providers.map { it.name }
-        feed.homes.keys.retainAll(names.toSet())
-        feed.order.retainAll(names.toSet())
+        val live = names.toSet()
+        feed.providers = providers
+        feed.liveNames = live
+        feed.homes.keys.retainAll(live)
+        feed.order.retainAll(live)
+        feed.requested.retainAll(live)
         if (providers.isEmpty()) return@LaunchedEffect
-        // Back on Home with the same extensions: the rows on screen stay, nothing reloads.
-        if (feed.loadedFor == names && !feed.loading) return@LaunchedEffect
         feed.loadedFor = names
-        val g = ++feed.gen
+        // Back on Home with the same extensions: the rows on screen stay, nothing reloads. B20-PERF-EXT: when
+        // more extensions finish loading, only those load their rows; the ones already asked are left alone.
+        val fresh = providers.filter { it.name !in feed.requested }
+        if (fresh.isEmpty()) return@LaunchedEffect
+        feed.requested += fresh.map { it.name }
+        val g = feed.gen
+        val gate = feed.gate
+        feed.active += fresh.size
         feed.loading = true
         // Loads in the process scope: leaving Home no longer cancels them half-way.
         dev.asfakul.yumeiro.ui.feed.FeedScope.main.launch {
-            val gate = Semaphore(3)
             supervisorScope {
                 // E4 / SPEED-1: fastest extensions first; saved pages skip the gate entirely.
                 val ordered = if (dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.E4_SPEED_ORDER))
-                    dev.asfakul.yumeiro.online.ExtensionSpeed.order(providers, { it.name }, null) else providers
+                    dev.asfakul.yumeiro.online.ExtensionSpeed.order(fresh, { it.name }, null) else fresh
                 ordered.map { api ->
                     launch {
-                        // FE-1: an old saved page shows at once too, then is refreshed live behind it.
-                        val cached = runCatching { OnlineRepository.feedHome(api) }.getOrNull()
-                        // FE-2c: Home is on screen, so its first fetch is VISIBLE; the stale refresh below stays background.
-                        val rows = cached ?: gate.withPermit { withTimeoutOrNull(30_000) { runCatching {
-                            kotlinx.coroutines.withContext(dev.asfakul.yumeiro.online.PriorityGate.Lane(dev.asfakul.yumeiro.online.PriorityGate.VISIBLE)) { OnlineRepository.home(api) }
-                        }.getOrNull() } }
-                        if (g == feed.gen) {
-                            // A failed refresh never wipes rows that are already shown.
-                            val fresh = rows.orEmpty().filter { it.items.isNotEmpty() }
-                            if (fresh.isNotEmpty() || feed.homes[api.name].isNullOrEmpty()) feed.put(api.name, fresh)
-                        }
-                        if (cached != null && OnlineRepository.takeStaleHome(api.name)) {
-                            val live = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() } }
-                                ?.filter { it.items.isNotEmpty() }
-                            if (g == feed.gen && !live.isNullOrEmpty()) feed.put(api.name, live)
+                        try {
+                            // FE-1: an old saved page shows at once too, then is refreshed live behind it.
+                            val cached = runCatching { OnlineRepository.feedHome(api) }.getOrNull()
+                            // FE-2c: Home is on screen, so its first fetch is VISIBLE; the stale refresh below stays background.
+                            val rows = cached ?: gate.withPermit { withTimeoutOrNull(30_000) { runCatching {
+                                kotlinx.coroutines.withContext(dev.asfakul.yumeiro.online.PriorityGate.Lane(dev.asfakul.yumeiro.online.PriorityGate.VISIBLE)) { OnlineRepository.home(api) }
+                            }.getOrNull() } }
+                            if (g == feed.gen && api.name in feed.requested) {
+                                // A failed refresh never wipes rows that are already shown.
+                                val got = rows.orEmpty().filter { it.items.isNotEmpty() }
+                                if (got.isNotEmpty() || feed.rows(api.name).isNullOrEmpty()) feed.put(api.name, got)
+                            }
+                            if (cached != null && OnlineRepository.takeStaleHome(api.name)) {
+                                val liveRows = gate.withPermit { withTimeoutOrNull(30_000) { runCatching { OnlineRepository.home(api, force = true) }.getOrNull() } }
+                                    ?.filter { it.items.isNotEmpty() }
+                                if (g == feed.gen && api.name in feed.requested && !liveRows.isNullOrEmpty()) feed.put(api.name, liveRows)
+                            }
+                        } finally {
+                            feed.active--
+                            if (feed.active <= 0) { feed.active = 0; feed.loading = false }
                         }
                     }
                 }.joinAll()
             }
-            if (g == feed.gen) feed.loading = false
         }
     }
     return feed

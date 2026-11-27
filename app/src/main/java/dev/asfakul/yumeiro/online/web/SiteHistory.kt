@@ -35,7 +35,7 @@ object SiteHistory {
     fun init(context: Context) {
         if (loaded) return
         loaded = true
-        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val p = context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE)
         _on.value = p.getBoolean(KEY_ON, true)
         _visits.value = p.getString(KEY, null)?.let { runCatching { json.decodeFromString<List<Visit>>(it) }.getOrNull() }.orEmpty()
     }
@@ -71,7 +71,7 @@ object SiteHistory {
     fun setOn(context: Context, on: Boolean) {
         init(context)
         _on.value = on
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ON, on).apply()
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().putBoolean(KEY_ON, on).apply()
         if (!on) clear(context)
     }
 
@@ -89,7 +89,7 @@ object SiteHistory {
     }
 
     private fun persist(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, json.encodeToString(_visits.value)).apply()
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().putString(KEY, json.encodeToString(_visits.value)).apply()
     }
 
     internal fun resetForTest() { loaded = false; _visits.value = emptyList(); _on.value = true }

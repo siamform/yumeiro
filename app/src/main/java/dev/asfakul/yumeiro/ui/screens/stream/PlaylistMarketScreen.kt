@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.content.Intent
 import android.net.Uri
@@ -84,6 +86,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private const val FILTER_INSTALLED = "__installed__"
 private const val FILTER_UPDATES = "__updates__"
@@ -199,7 +202,7 @@ fun PlaylistMarketScreen(
             val refreshing = ready?.refreshing == true || state is PlaylistMarket.State.Loading
             IconButton(onClick = { reload() }, enabled = !refreshing, modifier = Modifier.testTag("market_reload")) {
                 if (refreshing) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                else Icon(Icons.Default.Refresh, "Check for updates", tint = TextSecondary)
+                else Icon(Icons.Default.Refresh, stringResource(R.string.check_for_updates), tint = TextSecondary)
             }
         }
         if (ready != null) dev.asfakul.yumeiro.ui.components.HeaderSearchField(open = searching || query.isNotEmpty(), query = query, onQuery = { query = it }, placeholder = "Search playlists, countries, repos", tag = "market_search")
@@ -208,7 +211,7 @@ fun PlaylistMarketScreen(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("market_loading"),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                SkeletonBlock(null, 52.dp, shape = RoundedCornerShape(16.dp))
+                SkeletonBlock(null, 52.dp, shape = yuRound(16))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { repeat(4) { SkeletonBlock(72.dp, 30.dp, shape = RoundedCornerShape(50)) } }
                 repeat(6) { SkeletonRow(trailing = true) }
             }
@@ -226,12 +229,12 @@ fun PlaylistMarketScreen(
                 ) {
                     s.warning?.let { w ->
                         item(key = "warning") {
-                            Text(w, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(GlassFill).padding(10.dp).testTag("market_warning"))
+                            Text(w, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clip(yuRound(12)).background(GlassFill).padding(10.dp).testTag("market_warning"))
                         }
                     }
                     if (updates.isNotEmpty()) item(key = "updates") {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 14.dp, vertical = 10.dp),
+                            Modifier.fillMaxWidth().clip(yuRound(18)).background(SpotifyGreen.copy(alpha = 0.14f)).padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Default.SystemUpdate, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp))
@@ -284,12 +287,12 @@ fun PlaylistMarketScreen(
                     e.repo?.let { DetailLine("Repository", it + (e.stars?.let { s -> " · ★ $s" } ?: "")) }
                     if (e.updated > 0) DetailLine("Changed", relativeTime(e.updated))
                     if (e.topGroups.isNotEmpty()) DetailLine("Groups", e.topGroups.joinToString(", "))
-                    if (!e.ok) Text("The source could not be reached on the last check; the last good copy is offered.", color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp)
+                    if (!e.ok) Text(stringResource(R.string.the_source_could_not_be_reached), color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp)
                     e.repo?.let { r ->
                         TextButton(onClick = {
                             runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$r")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                                 .onFailure { AppMessages.error(context, "No browser available") }
-                        }) { Text("View on GitHub", color = SpotifyGreen) }
+                        }) { Text(stringResource(R.string.view_on_github), color = SpotifyGreen) }
                     }
                 }
             },
@@ -299,7 +302,7 @@ fun PlaylistMarketScreen(
                     if (installed != null) onOpenPlaylist(installed.id) else install(e)
                 }, modifier = Modifier.testTag("market_details_action")) { Text(if (installed != null) "Open" else "Install", color = SpotifyGreen, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = { details = null }) { Text("Close", color = TextSecondary) } },
+            dismissButton = { TextButton(onClick = { details = null }) { Text(stringResource(R.string.close), color = TextSecondary) } },
         )
     }
 }
@@ -335,9 +338,9 @@ private fun MarketCard(
     onOpen: () -> Unit,
     onUpdate: () -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("market_${entry.id}")) {
+    Surface(shape = yuRound(20), color = GlassFill, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).testTag("market_${entry.id}")) {
         Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(44.dp).clip(yuRound(12)).background(SpotifyGreen.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                 Text(entry.country ?: entry.name.take(2).uppercase(), color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
             }
             Spacer(Modifier.width(12.dp))
@@ -376,7 +379,7 @@ private fun MarketCard(
                 ) {
                     Icon(Icons.Default.Download, null, tint = OnAccent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Install", color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(stringResource(R.string.install), color = OnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }

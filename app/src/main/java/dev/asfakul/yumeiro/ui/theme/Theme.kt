@@ -35,6 +35,15 @@ val MTPlayerShapes = Shapes(
     extraLarge = RoundedCornerShape(28.dp),
 )
 
+/** F12: the same scale with compact corners (8 / 9 / 14 / 19 / 22 dp), see [UiScale]. */
+val MTPlayerCompactShapes = Shapes(
+    extraSmall = RoundedCornerShape(UiScale.corner(10f, true).dp),
+    small = RoundedCornerShape(UiScale.corner(12f, true).dp),
+    medium = RoundedCornerShape(UiScale.corner(18f, true).dp),
+    large = RoundedCornerShape(UiScale.corner(24f, true).dp),
+    extraLarge = RoundedCornerShape(UiScale.corner(28f, true).dp),
+)
+
 private fun MtPalette.toColorScheme(): ColorScheme {
     val base = if (isDark) darkColorScheme() else lightColorScheme()
     return base.copy(
@@ -117,7 +126,7 @@ fun MTPlayerTheme(palette: MtPalette = rememberMtPalette(), content: @Composable
         MaterialTheme(
             colorScheme = palette.toColorScheme(),
             typography = Typography,
-            shapes = MTPlayerShapes,
+            shapes = if (UiScale.compact) MTPlayerCompactShapes else MTPlayerShapes,
         ) {
             val pressTint = (if (palette.isDark) Color.White else Color.Black).copy(alpha = 0.07f)
             // D-pad / keyboard focus ring in the accent colour; the TV layout also lifts the focused item.

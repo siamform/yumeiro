@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +63,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * F-02 (ADR-042): a saved public Telegram channel. Lists the channel's video posts from Telegram's
@@ -210,12 +213,12 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
         }
         if (searchOpen) androidx.compose.material3.OutlinedTextField(
             value = input, onValueChange = { input = it }, singleLine = true,
-            placeholder = { Text("Search this channel") },
+            placeholder = { Text(stringResource(R.string.search_this_channel)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { search(input) }),
             trailingIcon = {
                 androidx.compose.material3.IconButton(onClick = { search(input) }, modifier = Modifier.testTag("tg_search_go")) {
-                    androidx.compose.material3.Icon(Icons.Default.Search, "Search")
+                    androidx.compose.material3.Icon(Icons.Default.Search, stringResource(R.string.search))
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("tg_search"),
@@ -229,7 +232,7 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
             header?.takeIf { query.isEmpty() }?.let { h -> item(key = "header") { TelegramChannelHeader(h) } }
             appOnly?.let { post ->
                 item(key = "app_only") {
-                    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)).padding(12.dp).testTag("tg_app_only")) {
+                    Column(Modifier.fillMaxWidth().clip(yuRound(12)).background(p.accent.copy(alpha = 0.10f)).padding(12.dp).testTag("tg_app_only")) {
                         Text(appOnlyText, color = p.textPrimary, fontSize = 13.sp, modifier = Modifier.testTag("tg_app_only_text"))
                         Row {
                             if (onSignIn != null) {
@@ -239,9 +242,9 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                                     modifier = Modifier.heightIn(min = 48.dp).testTag("tg_sign_in_play"),
                                 ) { Text(if (signedIn) "Open my account" else "Sign in to play") }
                             } else {
-                                TextButton(onClick = { openInTelegram(post) }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_open_app")) { Text("Open in Telegram") }
+                                TextButton(onClick = { openInTelegram(post) }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_open_app")) { Text(stringResource(R.string.open_in_telegram)) }
                             }
-                            TextButton(onClick = { appOnly = null }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_app_only_close")) { Text("Close") }
+                            TextButton(onClick = { appOnly = null }, modifier = Modifier.heightIn(min = 48.dp).testTag("tg_app_only_close")) { Text(stringResource(R.string.close)) }
                         }
                     }
                 }
@@ -260,14 +263,14 @@ fun TelegramChannelScreen(channel: String, name: String, onBack: () -> Unit, onP
                     Text(error!!, color = p.textSecondary, fontSize = 14.sp, modifier = Modifier.testTag("tg_error"))
                     TextButton(onClick = { load(before) }, modifier = Modifier.testTag("tg_retry")) { Text(if (before != null) "Older posts" else "Try again") }
                     // TG-PAGE-1: no public preview → the way in is the user's own account (members only).
-                    if (onSignIn != null && before == null) TextButton(onClick = onSignIn, modifier = Modifier.testTag("tg_error_account")) { Text("Open my Telegram account") }
+                    if (onSignIn != null && before == null) TextButton(onClick = onSignIn, modifier = Modifier.testTag("tg_error_account")) { Text(stringResource(R.string.open_my_telegram_account)) }
                 }
             }
             if (loading) item(key = "loading") {
                 // SKELETON-2: post-shaped placeholders (a page of them first, one while older posts load).
                 dev.asfakul.yumeiro.ui.components.SkeletonList(rows = if (posts.isEmpty()) 5 else 1, modifier = Modifier.padding(vertical = 8.dp).testTag("tg_loading"))
             } else if (before != null && posts.isNotEmpty()) item(key = "older") {
-                TextButton(onClick = { autoOlder = true; autoPages = 0; load(before) }, modifier = Modifier.fillMaxWidth().testTag("tg_older")) { Text("Older posts") }
+                TextButton(onClick = { autoOlder = true; autoPages = 0; load(before) }, modifier = Modifier.fillMaxWidth().testTag("tg_older")) { Text(stringResource(R.string.older_posts)) }
             }
         }
     }
@@ -294,7 +297,7 @@ private fun TelegramChannelHeader(page: TelegramPublic.Page) {
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            page.subscribers?.let { Text("$it subscribers", color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.testTag("tg_subscribers")) }
+            page.subscribers?.let { Text(stringResource(R.string.subscribers, it), color = p.textSecondary, fontSize = 13.sp, modifier = Modifier.testTag("tg_subscribers")) }
             page.description?.let { Text(it, color = p.textTertiary, fontSize = 12.sp, maxLines = 3, overflow = TextOverflow.Ellipsis) }
         }
     }
@@ -305,23 +308,23 @@ private fun TelegramPostRow(post: TelegramPublic.VideoPost, isNew: Boolean, sign
     val p = LocalMtPalette.current
     val label = post.text.lineSequence().firstOrNull()?.ifBlank { null } ?: "Video ${post.id}"
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceContainerHigh)
+        Modifier.fillMaxWidth().clip(yuRound(16)).background(p.surfaceContainerHigh)
             .clickable(onClickLabel = if (post.playable || signedIn) "Play" else "Sign in to play", role = Role.Button, onClick = onClick)
             .padding(10.dp).testTag("tg_post_${post.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(128.dp).height(72.dp).clip(RoundedCornerShape(10.dp)).background(p.accent.copy(alpha = 0.14f))) {
+        Box(Modifier.width(128.dp).height(72.dp).clip(yuRound(10)).background(p.accent.copy(alpha = 0.14f))) {
             post.thumbUrl?.let { AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-            post.duration?.let {
+            (post.duration ?: post.size)?.let {
                 Text(it, color = androidx.compose.ui.graphics.Color.White, fontSize = 11.sp,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(RoundedCornerShape(4.dp))
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp).clip(yuRound(4))
                         .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f)).padding(horizontal = 4.dp, vertical = 1.dp))
             }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             if (isNew) {
-                Text("New", color = p.accent, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.testTag("tg_new_${post.id}"))
+                Text(stringResource(R.string.new_2), color = p.accent, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.testTag("tg_new_${post.id}"))
             }
             Text(label, color = p.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(

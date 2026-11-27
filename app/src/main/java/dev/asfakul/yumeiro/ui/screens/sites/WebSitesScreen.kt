@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sites
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -35,6 +37,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.ui.focus.focusRequester
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -85,6 +88,7 @@ import dev.asfakul.yumeiro.ui.screens.settings.GuideCard
 import dev.asfakul.yumeiro.ui.screens.settings.SetupGuides
 import dev.asfakul.yumeiro.ui.screens.stream.PageStreamFinderDialog
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Websites: sites the user saved to watch through Yumeiro's player. A site opens in the page
@@ -147,6 +151,12 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
 
     // F-02 (ADR-052): the signed-in account opens in place, like a channel.
     var account by rememberSaveable { mutableStateOf(false) }
+    // F1: the Vault opens in place from the Websites header.
+    var vault by rememberSaveable { mutableStateOf(false) }
+    if (vault && !telegramPage) {
+        dev.asfakul.yumeiro.ui.screens.vault.VaultScreen(onBack = { vault = false })
+        return
+    }
     val accountEnabled = remember(telegramPage) { telegramPage && dev.asfakul.yumeiro.online.telegram.td.TgAccounts.enabled(context) }
     val accountUnavailable = remember(telegramPage) { if (telegramPage) dev.asfakul.yumeiro.online.telegram.td.TgAccounts.unavailableReason(context) else null }
     // Read off the main thread (SharedPreferences + profile id); refreshed each time the page comes back from the account.
@@ -219,7 +229,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
     if (help) TsukiDialog(
         onDismissRequest = { help = false },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(if (telegramPage) SetupGuides.telegram else SetupGuides.websites, startExpanded = true) } },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text("Got it") } },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text(stringResource(R.string.got_it)) } },
     )
 
     if (importing) {
@@ -244,9 +254,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                         if (r.bad > 0) append(if (telegramPage) ", ${r.bad} not channel links" else ", ${r.bad} not web addresses")
                         if (r.overLimit > 0) append(", ${r.overLimit} over the 200 limit")
                     })
-                }, enabled = text.isNotBlank(), modifier = Modifier.testTag("site_import_confirm")) { Text("Add") }
+                }, enabled = text.isNotBlank(), modifier = Modifier.testTag("site_import_confirm")) { Text(stringResource(R.string.add)) }
             },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { importing = false }) { Text("Cancel") } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { importing = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -269,10 +279,10 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
         TsukiDialog(
             onDismissRequest = { renaming = null },
             icon = { Icon(Icons.Default.Edit, null) },
-            title = { Text("Rename website") },
+            title = { Text(stringResource(R.string.rename_website)) },
             text = { OutlinedTextField(name, { name = it }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("site_rename_field")) },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { SavedSites.rename(context, site.url, name); renaming = null }) { Text("Save") } },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { SavedSites.rename(context, site.url, name); renaming = null }) { Text(stringResource(R.string.save)) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { renaming = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -286,15 +296,16 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 IconButton(onClick = { adding = !adding }, modifier = Modifier.testTag("site_add_open")) { Icon(Icons.Default.Add, if (adding) "Close add website" else "Add website", tint = if (adding) p.accent else p.textPrimary) }
             }
             if (!telegramPage) {
-                IconButton(onClick = { settings = true }, modifier = Modifier.testTag("site_settings")) { Icon(Icons.Default.Settings, "Website settings", tint = p.textSecondary) }
+                IconButton(onClick = { vault = true }, modifier = Modifier.testTag("site_vault")) { Icon(Icons.Default.Inventory2, stringResource(R.string.vault), tint = p.textSecondary) }
+                IconButton(onClick = { settings = true }, modifier = Modifier.testTag("site_settings")) { Icon(Icons.Default.Settings, stringResource(R.string.website_settings), tint = p.textSecondary) }
             }
             // GROUP E1: no Share button on the website page (the Telegram page is TelegramHome; it returns above).
             IconButton(onClick = { help = true }, modifier = Modifier.testTag("site_help")) { Icon(Icons.AutoMirrored.Filled.HelpOutline, if (telegramPage) "How Telegram works" else "How websites work", tint = p.textSecondary) }
         }
         val addCard: @Composable () -> Unit = {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
-                        .border(1.dp, p.textPrimary.copy(alpha = 0.06f), RoundedCornerShape(22.dp)).padding(14.dp),
+                    Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh)
+                        .border(1.dp, p.textPrimary.copy(alpha = 0.06f), yuRound(22)).padding(14.dp),
                 ) {
                     Text(when (only) { SavedSites.Kind.TELEGRAM -> "Add a public Telegram channel"; SavedSites.Kind.WEBSITE -> "Add a website"; null -> "Add a website or Telegram channel" }, color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Spacer(Modifier.height(8.dp))
@@ -305,13 +316,13 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                             leadingIcon = { Icon(Icons.Default.Public, null, tint = p.textSecondary) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(onDone = { add() }),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = yuRound(16),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                             modifier = Modifier.weight(1f).testTag("site_add_field"),
                         )
                         Spacer(Modifier.width(10.dp))
                         Box(
-                            Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(p.accent)
+                            Modifier.size(52.dp).clip(yuRound(16)).background(p.accent)
                                 .combinedClickable(onClickLabel = if (telegramPage) "Add channel" else "Add website", onClick = { add() }).testTag("site_add"),
                             contentAlignment = Alignment.Center,
                         ) { Icon(Icons.Default.Add, if (telegramPage) "Add channel" else "Add website", tint = p.onAccent) }
@@ -328,7 +339,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             tab?.takeIf { tabs && !it.visible }?.let { t ->
                 item("website_tab_card") {
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                        Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh)
                             .clickable { WebsiteTab.resume() }.heightIn(min = 56.dp).padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("website_tab_card"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -338,7 +349,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                             Text(if (allTabs.size > 1) "${allTabs.size} open tabs · ${t.name}" else "Open tab · ${t.name}", color = p.textPrimary, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(t.keep.title.ifBlank { t.keep.address }, color = p.textSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        androidx.compose.material3.TextButton(onClick = { WebsiteTab.resume() }, modifier = Modifier.testTag("website_tab_resume")) { Text("Resume") }
+                        androidx.compose.material3.TextButton(onClick = { WebsiteTab.resume() }, modifier = Modifier.testTag("website_tab_resume")) { Text(stringResource(R.string.widget_resume)) }
                         IconButton(onClick = { if (allTabs.size > 1) WebsiteTab.closeAll() else WebsiteTab.close() }, modifier = Modifier.testTag("website_tab_close")) { Icon(Icons.Default.Close, if (allTabs.size > 1) "Close all tabs" else "Close tab", tint = p.textSecondary) }
                     }
                 }
@@ -348,7 +359,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             if (telegramPage) item("add") { addCard() }
             if (accountEnabled) item("tg_account_card") {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh)
+                    Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh)
                         .clickable(onClickLabel = if (signedIn) "Open your chats" else "Sign in to Telegram") { account = true }
                         .heightIn(min = 56.dp).padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 12.dp).testTag("tg_account_card"),
                     verticalAlignment = Alignment.CenterVertically,
@@ -374,9 +385,9 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 }
             } else if (telegramPage && accountUnavailable != null) item("tg_account_unavailable") {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.surfaceContainerHigh).padding(16.dp).testTag("tg_account_unavailable"),
+                    Modifier.fillMaxWidth().clip(yuRound(22)).background(p.surfaceContainerHigh).padding(16.dp).testTag("tg_account_unavailable"),
                 ) {
-                    Text("Sign-in isn't available here", color = p.textPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.sign_in_isnt_available_here), color = p.textPrimary, fontWeight = FontWeight.SemiBold)
                     Text(accountUnavailable, color = p.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                 }
             }
@@ -388,18 +399,18 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = query, onValueChange = { query = it }, singleLine = true,
-                        placeholder = { Text("Search your sites or type an address") },
+                        placeholder = { Text(stringResource(R.string.search_your_sites_or_type_an)) },
                         leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
                         keyboardActions = KeyboardActions(onGo = { SiteGo.target(query)?.let { (url, name) -> openUnsaved(url, name) } }),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = yuRound(16),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                         modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("site_search"),
                     )
                     SiteGo.target(query)?.let { (url, name) ->
                         val web = SiteGo.isSearch(url)
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.surfaceContainerHigh)
+                            Modifier.fillMaxWidth().clip(yuRound(16)).background(p.surfaceContainerHigh)
                                 .combinedClickable(onClickLabel = if (web) "Search the web" else "Open", onClick = { openUnsaved(url, name) })
                                 .padding(horizontal = 14.dp, vertical = 12.dp).testTag(if (web) "site_web_search" else "site_go"),
                             verticalAlignment = Alignment.CenterVertically,
@@ -416,7 +427,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
                     value = query, onValueChange = { query = it }, singleLine = true,
                     placeholder = { Text(if (telegramPage) "Search your channels" else "Search your websites") },
                     leadingIcon = { Icon(Icons.Default.Search, null, tint = p.textSecondary) },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = yuRound(16),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent, cursorColor = p.accent),
                     modifier = Modifier.fillMaxWidth().testTag("site_search"),
                 )
@@ -427,7 +438,7 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             if (sites.isEmpty()) item("empty") {
                 Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
-                        Modifier.size(64.dp).clip(RoundedCornerShape(20.dp))
+                        Modifier.size(64.dp).clip(yuRound(20))
                             .background(Brush.linearGradient(listOf(p.accent.copy(alpha = 0.30f), p.accent2.copy(alpha = 0.18f)))),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Default.Language, null, tint = p.accentBright, modifier = Modifier.size(30.dp)) }
@@ -458,8 +469,8 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             if (recent.isNotEmpty()) {
                 item("recent_head") {
                     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Recently visited", color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                        androidx.compose.material3.TextButton(onClick = { dev.asfakul.yumeiro.online.web.SiteHistory.clear(context) }, modifier = Modifier.testTag("recent_clear")) { Text("Clear") }
+                        Text(stringResource(R.string.recently_visited), color = p.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.TextButton(onClick = { dev.asfakul.yumeiro.online.web.SiteHistory.clear(context) }, modifier = Modifier.testTag("recent_clear")) { Text(stringResource(R.string.clear)) }
                     }
                 }
                 items(recent, key = { "recent_" + it.url }) { v ->
@@ -472,13 +483,13 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
             // saved sites stay the focus of the page.
             if (telegramPage) item("help_hint") {
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).combinedClickable(onClickLabel = "How it works", onClick = { help = true })
+                    Modifier.fillMaxWidth().clip(yuRound(14)).combinedClickable(onClickLabel = "How it works", onClick = { help = true })
                         .padding(vertical = 10.dp).testTag("site_help_hint"),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.AutoMirrored.Filled.HelpOutline, null, tint = p.textTertiary, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("How it works", color = p.textTertiary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.how_it_works), color = p.textTertiary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -494,7 +505,7 @@ internal fun SiteRow(
     val p = LocalMtPalette.current
     var menu by remember { mutableStateOf(false) }
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh)
+        modifier.fillMaxWidth().clip(yuRound(18)).background(p.surfaceContainerHigh)
             .combinedClickable(onClickLabel = "Open ${site.name}", onLongClick = { menu = true }, onClick = onOpen)
             .padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp).testTag("site_row"),
         verticalAlignment = Alignment.CenterVertically,
@@ -508,11 +519,11 @@ internal fun SiteRow(
                 dev.asfakul.yumeiro.online.telegram.TelegramAvatars.get(context, channel)?.let { value = it }
             }
             TelegramAvatar(photo, site.name, size = 44.dp, modifier = Modifier.testTag("site_avatar"))
-        } else Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        } else Box(Modifier.size(44.dp).clip(yuRound(14)).background(p.accent.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
             Text(site.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp)
             AsyncImage(
                 model = site.iconUrl ?: "https://www.google.com/s2/favicons?domain=${site.host}&sz=64", contentDescription = null,
-                modifier = Modifier.size(26.dp).clip(RoundedCornerShape(6.dp)),
+                modifier = Modifier.size(26.dp).clip(yuRound(6)),
             )
         }
         Spacer(Modifier.width(12.dp))
@@ -521,16 +532,16 @@ internal fun SiteRow(
             Text(if (site.pinned) "Pinned · ${site.host}" else site.host, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box {
-            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("site_menu")) { Icon(Icons.Default.MoreVert, "More for ${site.name}", tint = p.textSecondary) }
+            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("site_menu")) { Icon(Icons.Default.MoreVert, stringResource(R.string.more_for, site.name), tint = p.textSecondary) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 DropdownMenuItem(text = { Text(if (site.pinned) "Unpin" else "Pin to top") }, leadingIcon = { Icon(Icons.Default.PushPin, null) }, onClick = { menu = false; onPin() }, modifier = Modifier.testTag("site_pin"))
                 if (onMove != null) {
-                    DropdownMenuItem(text = { Text("Move up") }, leadingIcon = { Icon(Icons.Default.ArrowUpward, null) }, onClick = { menu = false; onMove(true) }, modifier = Modifier.testTag("site_move_up"))
-                    DropdownMenuItem(text = { Text("Move down") }, leadingIcon = { Icon(Icons.Default.ArrowDownward, null) }, onClick = { menu = false; onMove(false) }, modifier = Modifier.testTag("site_move_down"))
+                    DropdownMenuItem(text = { Text(stringResource(R.string.move_up)) }, leadingIcon = { Icon(Icons.Default.ArrowUpward, null) }, onClick = { menu = false; onMove(true) }, modifier = Modifier.testTag("site_move_up"))
+                    DropdownMenuItem(text = { Text(stringResource(R.string.move_down)) }, leadingIcon = { Icon(Icons.Default.ArrowDownward, null) }, onClick = { menu = false; onMove(false) }, modifier = Modifier.testTag("site_move_down"))
                 }
-                DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onRename() })
-                if (onDuplicate != null) DropdownMenuItem(text = { Text("Duplicate") }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) }, onClick = { menu = false; onDuplicate() }, modifier = Modifier.testTag("site_duplicate"))
-                DropdownMenuItem(text = { Text("Remove") }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onRemove() }, modifier = Modifier.testTag("site_remove"))
+                DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Default.Edit, null) }, onClick = { menu = false; onRename() })
+                if (onDuplicate != null) DropdownMenuItem(text = { Text(stringResource(R.string.duplicate)) }, leadingIcon = { Icon(Icons.Default.ContentCopy, null) }, onClick = { menu = false; onDuplicate() }, modifier = Modifier.testTag("site_duplicate"))
+                DropdownMenuItem(text = { Text(stringResource(R.string.remove_2)) }, leadingIcon = { Icon(Icons.Default.Delete, null) }, onClick = { menu = false; onRemove() }, modifier = Modifier.testTag("site_remove"))
             }
         }
     }
@@ -558,22 +569,22 @@ private fun RecentRow(v: dev.asfakul.yumeiro.online.web.SiteHistory.Visit, onOpe
     val p = LocalMtPalette.current
     val host = remember(v.url) { SavedSites.hostOf(v.url) ?: v.url }
     Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.surfaceContainerHigh.copy(alpha = 0.6f))
+        modifier.fillMaxWidth().clip(yuRound(18)).background(p.surfaceContainerHigh.copy(alpha = 0.6f))
             .combinedClickable(onClickLabel = "Open ${v.name}", onLongClick = onForget, onClick = onOpen)
             .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp).testTag("recent_row"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(36.dp).clip(yuRound(12)).background(p.accent.copy(alpha = 0.10f)), contentAlignment = Alignment.Center) {
             Text(v.name.take(1).uppercase(), color = p.accentBright, fontWeight = FontWeight.Bold)
-            AsyncImage(model = v.iconUrl ?: "https://www.google.com/s2/favicons?domain=$host&sz=64", contentDescription = null, modifier = Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)))
+            AsyncImage(model = v.iconUrl ?: "https://www.google.com/s2/favicons?domain=$host&sz=64", contentDescription = null, modifier = Modifier.size(22.dp).clip(yuRound(5)))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(v.name, color = p.textPrimary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(host, color = p.textTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        IconButton(onClick = onSave, modifier = Modifier.testTag("recent_save")) { Icon(Icons.Default.Add, "Save ${v.name}", tint = p.accent) }
-        IconButton(onClick = onForget, modifier = Modifier.testTag("recent_forget")) { Icon(Icons.Default.Close, "Remove ${v.name} from recent", tint = p.textSecondary) }
+        IconButton(onClick = onSave, modifier = Modifier.testTag("recent_save")) { Icon(Icons.Default.Add, stringResource(R.string.save_2, v.name), tint = p.accent) }
+        IconButton(onClick = onForget, modifier = Modifier.testTag("recent_forget")) { Icon(Icons.Default.Close, stringResource(R.string.remove_from_recent, v.name), tint = p.textSecondary) }
     }
 }
 

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.screens.watch.WatchLightsOverlay
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -96,6 +98,7 @@ import dev.asfakul.yumeiro.ui.screens.watch.WatchScreenStatus
 import androidx.compose.foundation.layout.heightIn
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private enum class Panel { EPISODES, SOURCES, SUBTITLES }
 
@@ -186,10 +189,10 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
                         if (p == Panel.EPISODES && state.episodes.size <= 1) return@forEach
                         val sel = panel == p
                         Text(label, color = if (sel) Color.White else Color.White.copy(alpha = 0.55f), fontWeight = FontWeight.Bold, fontSize = 16.sp,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { panel = p }.padding(horizontal = 8.dp, vertical = 8.dp))
+                            modifier = Modifier.clip(yuRound(10)).clickable { panel = p }.padding(horizontal = 8.dp, vertical = 8.dp))
                     }
                     Spacer(Modifier.weight(1f))
-                    IconButton(onClick = { panel = null }) { Icon(Icons.Default.Close, "Close", tint = Color.White) }
+                    IconButton(onClick = { panel = null }) { Icon(Icons.Default.Close, stringResource(R.string.close), tint = Color.White) }
                 }
                 when (panel) {
                     Panel.EPISODES -> EpisodesPanel(state) { i -> panel = null; OnlineSession.playEpisode(context, i) }
@@ -271,11 +274,11 @@ private fun EpisodesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
             val current = i == state.index
             val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(state.api, e.data) }
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else ink.copy(alpha = 0.06f))
+                Modifier.fillMaxWidth().clip(yuRound(12)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else ink.copy(alpha = 0.06f))
                     .clickable { onPick(i) }.padding(10.dp).testTag("online_player_episode"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(ink.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(36.dp).clip(yuRound(10)).background(ink.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
                     if (current) Icon(Icons.Default.PlayArrow, null, tint = SpotifyGreen)
                     else Text("${e.episode ?: i + 1}", color = ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
@@ -287,7 +290,7 @@ private fun EpisodesPanel(state: OnlineSession.State, onPick: (Int) -> Unit) {
                         LinearProgressIndicator(progress = { p.fraction }, color = SpotifyGreen, trackColor = ink.copy(alpha = 0.15f), modifier = Modifier.fillMaxWidth().height(3.dp))
                     }
                 }
-                if (p?.finished == true) Icon(Icons.Default.CheckCircle, "Watched", tint = SpotifyGreen.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
+                if (p?.finished == true) Icon(Icons.Default.CheckCircle, stringResource(R.string.watched), tint = SpotifyGreen.copy(alpha = 0.8f), modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -301,7 +304,7 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
         Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Still finding sources…", color = ink.copy(alpha = 0.6f), fontSize = 12.sp)
+            Text(stringResource(R.string.still_finding_sources), color = ink.copy(alpha = 0.6f), fontSize = 12.sp)
         }
     }
     // Round 9: same per-language Sub / Dub groups and audio chips as the watch page.
@@ -331,7 +334,7 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
         val isFolded = kind != null && groups.size > 1 && ((gk == defaultOpen) == (gk in folded))
         if (kind != null) item(key = "hdr_$gk") {
             Row(
-                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(yuRound(12))
                     .clickable(onClickLabel = if (isFolded) "Show ${g.label} sources" else "Hide ${g.label} sources") { if (gk in folded) folded.remove(gk) else folded.add(gk) }
                     .padding(horizontal = 8.dp, vertical = 6.dp).testTag("online_player_source_group"),
                 verticalAlignment = Alignment.CenterVertically,
@@ -348,18 +351,18 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
             val current = i == state.linkIndex
             val failed = l.url in state.failed
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else ink.copy(alpha = 0.06f))
+                Modifier.fillMaxWidth().clip(yuRound(12)).background(if (current) SpotifyGreen.copy(alpha = 0.22f) else ink.copy(alpha = 0.06f))
                     .clickable { onPick(i) }.padding(12.dp).testTag("online_player_source"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(l.name.ifBlank { l.source }, color = ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val facts = remember(l) { dev.asfakul.yumeiro.online.SourceFacts.of(l, state.version) }
-                    Text(listOf(facts.line, l.source.takeIf { it != l.name }.orEmpty(), if (failed) "didn't work" else "").filter { it.isNotBlank() }.joinToString(" · "),
+                    Text(listOf(facts.line, l.source.takeIf { it != l.name }.orEmpty(), l.via?.let { "from $it" }.orEmpty(), if (failed) "didn't work" else "").filter { it.isNotBlank() }.joinToString(" · "),
                         color = when { failed -> errInk; facts.low -> dev.asfakul.yumeiro.ui.theme.WarnTone; else -> ink.copy(alpha = 0.55f) }, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.testTag("online_player_source_detail"))
                 }
-                if (current) Icon(Icons.Default.CheckCircle, "Playing", tint = SpotifyGreen, modifier = Modifier.size(18.dp))
+                if (current) Icon(Icons.Default.CheckCircle, stringResource(R.string.playing), tint = SpotifyGreen, modifier = Modifier.size(18.dp))
             }
         }
         }
@@ -374,7 +377,7 @@ private fun SourcesPanel(state: OnlineSession.State, selectAudio: (String) -> Bo
 @Composable
 internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlayer: Boolean, onRetry: (() -> Unit)? = null) {
     val context = LocalContext.current
-    Surface(shape = RoundedCornerShape(22.dp), color = PanelColor, modifier = Modifier.padding(24.dp).widthIn(max = 420.dp).fillMaxWidth().testTag("online_resolving")) {
+    Surface(shape = yuRound(22), color = PanelColor, modifier = Modifier.padding(24.dp).widthIn(max = 420.dp).fillMaxWidth().testTag("online_resolving")) {
         Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(state.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(4.dp))
@@ -394,7 +397,7 @@ internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlay
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedButton(onClick = onClose) { Text(if (inPlayer) "Back" else "Close", color = Color.White) }
-                    Button(onClick = { onRetry?.invoke() ?: OnlineSession.retry(context) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Try again") }
+                    Button(onClick = { onRetry?.invoke() ?: OnlineSession.retry(context) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text(stringResource(R.string.try_again)) }
                 }
             } else {
                 dev.asfakul.yumeiro.ui.components.YuLoader(size = 52.dp, color = SpotifyGreen)
@@ -405,7 +408,7 @@ internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlay
                 )
                 if (!inPlayer) {
                     Spacer(Modifier.height(12.dp))
-                    OutlinedButton(onClick = onClose, modifier = Modifier.testTag("online_resolve_cancel")) { Text("Cancel", color = Color.White) }
+                    OutlinedButton(onClick = onClose, modifier = Modifier.testTag("online_resolve_cancel")) { Text(stringResource(R.string.cancel), color = Color.White) }
                 }
             }
         }
@@ -482,11 +485,11 @@ private fun BoxScope.CompactResolve(state: OnlineSession.State, onClose: () -> U
                 modifier = Modifier.testTag("online_resolve_error"),
             )
             val tip = remember(state.message) { dev.asfakul.yumeiro.ui.components.ErrorHelp.forExtension(state.message ?: "").firstOrNull() }
-            if (tip != null) Text("Tip: $tip", color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (tip != null) Text(stringResource(R.string.tip, tip), color = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onClose) { Text("Close", color = Color.White) }
-                Button(onClick = { OnlineSession.retry(context) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text("Try again") }
+                OutlinedButton(onClick = onClose) { Text(stringResource(R.string.close), color = Color.White) }
+                Button(onClick = { OnlineSession.retry(context) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent)) { Text(stringResource(R.string.try_again)) }
             }
         } else {
             dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp, color = SpotifyGreen)
@@ -504,7 +507,7 @@ private fun BoxScope.CompactResolve(state: OnlineSession.State, onClose: () -> U
             )
             Text(state.title, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(6.dp))
-            Text("Cancel", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
+            Text(stringResource(R.string.cancel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp,
                 modifier = Modifier.clip(CircleShape).clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 4.dp).testTag("online_resolve_cancel"))
         }
     }
@@ -568,7 +571,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
             )
             if (chips.isNotEmpty()) FlowRow(Modifier.padding(start = 16.dp, end = 16.dp, top = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 chips.forEach { c ->
-                    Surface(shape = RoundedCornerShape(8.dp), color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.08f)) {
+                    Surface(shape = yuRound(8), color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.08f)) {
                         Text(c, color = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.85f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                     }
                 }
@@ -629,7 +632,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                                 val name = l.name.ifBlank { l.source }.ifBlank { "Source ${i + 1}" }.let { if (it.length > 40) it.take(39) + "…" else it }
                                 // Round 12: quality, release, format, size and audio under every source.
                                 val facts = dev.asfakul.yumeiro.online.SourceFacts.of(l, v)
-                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server", detail = facts.line, low = facts.low) { OnlineSession.switchSource(context, i, pos()) }
+                                dev.asfakul.yumeiro.ui.screens.watch.WatchServer(name, i == state.linkIndex, "online_server", detail = listOfNotNull(facts.line.ifBlank { null }, l.via?.let { "from $it" }).joinToString(" · "), low = facts.low) { OnlineSession.switchSource(context, i, pos()) }
                             },
                             filterKey = if (groups.size > 1) g.key else null,
                         )
@@ -684,21 +687,21 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 val current = i == state.index
                 val p = remember(historyVersion, e.data) { OnlineHistory.progressOf(state.api, e.data) }
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp).clip(RoundedCornerShape(14.dp))
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp).clip(yuRound(14))
                         .background(if (current) SpotifyGreen.copy(alpha = 0.18f) else Color.Transparent)
                         .clickable(enabled = !current) { OnlineSession.playEpisode(context, i) }
                         .padding(horizontal = 4.dp, vertical = 6.dp).testTag("online_watch_episode"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (hasThumbs) {
-                        Box(Modifier.width(128.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f))) {
+                        Box(Modifier.width(128.dp).aspectRatio(16f / 9f).clip(yuRound(10)).background(dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.06f))) {
                             EpisodeThumb(d, e, stills, Modifier.fillMaxSize())
-                            if (current) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PlayArrow, "Now playing", tint = Color.White) }
+                            if (current) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PlayArrow, stringResource(R.string.now_playing), tint = Color.White) }
                             if (p != null && p.fraction > 0.01f) LinearProgressIndicator(progress = { p.fraction }, color = SpotifyGreen, trackColor = Color.Black.copy(alpha = 0.4f), modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp))
                         }
                     } else {
-                        Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(if (current) SpotifyGreen else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
-                            if (current) Icon(Icons.Default.PlayArrow, "Now playing", tint = OnAccent)
+                        Box(Modifier.size(44.dp).clip(yuRound(12)).background(if (current) SpotifyGreen else dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                            if (current) Icon(Icons.Default.PlayArrow, stringResource(R.string.now_playing), tint = OnAccent)
                             else Text("${e.episode ?: i + 1}", color = dev.asfakul.yumeiro.ui.theme.PageInk, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
@@ -713,7 +716,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                             LinearProgressIndicator(progress = { p.fraction }, color = SpotifyGreen, trackColor = dev.asfakul.yumeiro.ui.theme.PageInk.copy(alpha = 0.15f), modifier = Modifier.fillMaxWidth().height(3.dp))
                         }
                     }
-                    if (p?.finished == true) Icon(Icons.Default.CheckCircle, "Watched", tint = SpotifyGreen.copy(alpha = 0.8f), modifier = Modifier.padding(start = 6.dp).size(18.dp))
+                    if (p?.finished == true) Icon(Icons.Default.CheckCircle, stringResource(R.string.watched), tint = SpotifyGreen.copy(alpha = 0.8f), modifier = Modifier.padding(start = 6.dp).size(18.dp))
                 }
             }
         }
@@ -790,8 +793,8 @@ internal fun BoxScope.SkipButton(player: dev.asfakul.yumeiro.ui.screens.video.Pl
     AnimatedVisibility(visible = ask, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomEnd)) {
         val seg = current ?: return@AnimatedVisibility
         Surface(
-            shape = RoundedCornerShape(12.dp), color = Color.White,
-            modifier = Modifier.navigationBarsPadding().padding(end = 20.dp, bottom = 120.dp).clip(RoundedCornerShape(12.dp))
+            shape = yuRound(12), color = Color.White,
+            modifier = Modifier.navigationBarsPadding().padding(end = 20.dp, bottom = 120.dp).clip(yuRound(12))
                 .focusRequester(skipFocus)
                 .clickable(onClickLabel = seg.kind.label) { player.seekTo(seg.endMs) }.testTag(if (seg.kind == dev.asfakul.yumeiro.online.anime.AniSkip.Kind.OUTRO || seg.kind == dev.asfakul.yumeiro.online.anime.AniSkip.Kind.MIXED_OUTRO) "online_skip_outro" else "online_skip"),
         ) {
@@ -839,16 +842,16 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
             )
         }
         if (!anyKey) item {
-            Text("Search OpenSubtitles, SubDL and SubSource: add any of their free API keys in Settings → Subtitles & intros.", color = ink.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+            Text(stringResource(R.string.search_opensubtitles_subdl_and_subsource_add), color = ink.copy(alpha = 0.8f), fontSize = 13.sp, modifier = Modifier.padding(4.dp))
         }
         val sites = outcome?.providers?.joinToString(", ") ?: hub.configured().joinToString(", ")
-        if (busy) item { Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp)); Text("Searching $sites (${lang.uppercase()})…", color = ink.copy(alpha = 0.6f), fontSize = 12.sp) } }
+        if (busy) item { Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.searching, sites, lang.uppercase()), color = ink.copy(alpha = 0.6f), fontSize = 12.sp) } }
         outcome?.errors?.forEach { (site, e) -> item(key = "err_$site") { Text("$site: $e", color = ErrorColor, fontSize = 12.sp, modifier = Modifier.padding(6.dp)) } }
         val hits = outcome?.hits.orEmpty()
-        if (outcome != null && hits.isEmpty() && !busy) item { Text("Nothing found in this language.", color = ink.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(6.dp)) }
+        if (outcome != null && hits.isEmpty() && !busy) item { Text(stringResource(R.string.nothing_found_in_this_language), color = ink.copy(alpha = 0.6f), fontSize = 12.sp, modifier = Modifier.padding(6.dp)) }
         itemsIndexed(hits, key = { _, r -> r.key }) { _, r ->
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(ink.copy(alpha = 0.06f)).clickable(enabled = fetching == null) {
+                Modifier.fillMaxWidth().clip(yuRound(12)).background(ink.copy(alpha = 0.06f)).clickable(enabled = fetching == null) {
                     fetching = r.key
                     scope.launch {
                         val link = runCatching {

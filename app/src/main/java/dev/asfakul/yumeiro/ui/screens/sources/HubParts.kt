@@ -1,5 +1,7 @@
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +51,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * SRC-HUB-1 (owner list 3): every source tab is split into three parts instead of one long list that mixed
@@ -78,14 +81,14 @@ internal fun HubPartRow(
     parts: List<HubPart> = HubPart.entries, reposLabel: String = "Repositories", onSelect: (HubPart) -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(22.dp)).background(GlassFill).padding(4.dp)
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(yuRound(22)).background(GlassFill).padding(4.dp)
             .testTag("hub_parts"),
     ) {
         parts.forEach { part ->
             val sel = part == selected
             val label = HubParts.label(part, counts[part], reposLabel)
             Box(
-                Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (sel) SpotifyGreen else Color.Transparent)
+                Modifier.weight(1f).height(36.dp).clip(yuRound(18)).background(if (sel) SpotifyGreen else Color.Transparent)
                     .clickable(role = Role.Tab) { onSelect(part) }
                     .semantics { this.selected = sel; contentDescription = label }
                     .testTag("hub_part_${part.tag}"),
@@ -111,7 +114,7 @@ internal fun AddLinkField(title: String, placeholder: String, hint: String?, tag
         busy = true
         scope.launch { if (onAdd(url)) text = ""; busy = false }
     }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GlassFill).padding(14.dp).testTag(tag), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().clip(yuRound(18)).background(GlassFill).padding(14.dp).testTag(tag), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         hint?.let { Text(it, color = TextTertiary, fontSize = 12.sp) }
         OutlinedTextField(
@@ -119,7 +122,7 @@ internal fun AddLinkField(title: String, placeholder: String, hint: String?, tag
             leadingIcon = { Icon(Icons.Default.Link, null) },
             trailingIcon = {
                 IconButton(onClick = { clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { text = it } }, modifier = Modifier.testTag("${tag}_paste")) {
-                    Icon(Icons.Default.ContentPaste, "Paste link")
+                    Icon(Icons.Default.ContentPaste, stringResource(R.string.paste_link))
                 }
             },
             placeholder = { Text(placeholder, maxLines = 1) },
@@ -129,7 +132,7 @@ internal fun AddLinkField(title: String, placeholder: String, hint: String?, tag
         )
         Button(
             onClick = { submit() }, enabled = !busy && text.isNotBlank(),
-            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = yuRound(20),
             modifier = Modifier.fillMaxWidth().testTag("${tag}_add"),
         ) { Text(if (busy) "Adding…" else "Add") }
     }
@@ -138,11 +141,11 @@ internal fun AddLinkField(title: String, placeholder: String, hint: String?, tag
 /** An empty part with the one action that fills it. */
 @Composable
 internal fun HubEmpty(text: String, action: Pair<String, () -> Unit>) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(GlassFill).padding(16.dp).testTag("hub_empty"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().clip(yuRound(18)).background(GlassFill).padding(16.dp).testTag("hub_empty"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(text, color = TextSecondary, fontSize = 14.sp)
         Button(
             onClick = action.second,
-            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), shape = yuRound(20),
             modifier = Modifier.testTag("hub_empty_action"),
         ) { Text(action.first) }
     }

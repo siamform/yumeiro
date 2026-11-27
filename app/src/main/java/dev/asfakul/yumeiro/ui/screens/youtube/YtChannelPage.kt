@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -64,6 +66,7 @@ import dev.asfakul.yumeiro.youtube.YtItem
 import dev.asfakul.yumeiro.youtube.formatYtSubscribers
 import kotlinx.coroutines.launch
 import org.schabi.newpipe.extractor.Page
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private data class TabPage(val items: List<YtItem> = emptyList(), val next: Page? = null, val loading: Boolean = false, val error: String? = null, val done: Boolean = false)
 
@@ -113,13 +116,13 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
             Column {
                 Box(Modifier.fillMaxWidth()) {
                     Box(
-                        Modifier.fillMaxWidth().aspectRatio(16f / 5f).padding(horizontal = 12.dp).clip(RoundedCornerShape(18.dp))
+                        Modifier.fillMaxWidth().aspectRatio(16f / 5f).padding(horizontal = 12.dp).clip(yuRound(18))
                             .background(Brush.linearGradient(listOf(pal.accent.copy(alpha = 0.55f), pal.accent2.copy(alpha = 0.35f)))),
                     ) { if (c?.banner != null) PosterImage(c.banner, emptyMap(), Modifier.fillMaxSize()) }
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier.padding(start = 18.dp, top = 6.dp).size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)).testTag("youtube_channel_back"),
-                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
+                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = Color.White) }
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(64.dp).clip(CircleShape).background(pal.surfaceContainerHigh), contentAlignment = Alignment.Center) {
@@ -147,7 +150,7 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
         if (err != null) item("ch_err") { YtProblem(err, null) }
         else {
             if (page.items.isEmpty() && page.loading) itemsIndexed(List(4) { it }, key = { i, _ -> "csk$i" }) { _, _ ->
-                SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), RoundedCornerShape(20.dp))
+                SkeletonBlock(null, 220.dp, Modifier.padding(16.dp), yuRound(20))
             }
             if (tab == "shorts") {
                 val rows = page.items.chunked(2)
@@ -170,7 +173,7 @@ internal fun YtChannelPage(url: String, fallbackName: String, onBack: () -> Unit
 /** 9:16 Shorts tile: thumbnail with the title over a bottom scrim. */
 @Composable
 internal fun YtShortCard(item: YtItem, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(modifier.aspectRatio(9f / 16f).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).testTag("youtube_short")) {
+    Box(modifier.aspectRatio(9f / 16f).clip(yuRound(16)).clickable(onClick = onClick).testTag("youtube_short")) {
         PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.SmartDisplay)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.78f))))
         Text(

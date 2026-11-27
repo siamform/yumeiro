@@ -153,7 +153,7 @@ object YtDownloads {
         if (!DownloadSettings.saveYouTubeToPhone.value) return null
         val audio = item.kind == OnlineDownloads.Kind.YT_AUDIO
         val name = out.name.substringBeforeLast('-') + "." + out.extension
-        return publish(context, out, name, mimeOf(item.container ?: out.extension, audio), music = audio)?.also { uri ->
+        return publish(context, out, name, mimeOf(item.container ?: out.extension, audio), music = audio, profile = item.profile)?.also { uri ->
             // The phone's copy is the one that plays; drop the app copy so space isn't used twice.
             OnlineDownloads.resolved(item.id) { it.copy(publicUri = uri.toString()) }
             out.delete()
@@ -181,13 +181,21 @@ object YtDownloads {
     private fun afterLinkDownload(context: Context, item: OnlineDownloads.Item, out: File): Uri? {
         if (!DownloadSettings.saveYouTubeToPhone.value) return null
         val name = out.name.substringBeforeLast('-') + "." + out.extension
-        return publish(context, out, name, linkMime(out.extension), music = false)?.also { uri ->
+        return publish(context, out, name, linkMime(out.extension), music = false, profile = item.profile)?.also { uri ->
             OnlineDownloads.resolved(item.id) { it.copy(publicUri = uri.toString(), keep = true) }
             out.delete()
         }
     }
 
-    fun publish(context: Context, file: File, displayName: String, mime: String, music: Boolean): Uri? {
+    /** B19: another profile's phone copies go to their own folder (`Movies/Yumeiro/<profile name>`), not mixed with the main profile's. */
+    internal fun profileFolder(context: Context, profile: String): String {
+        if (profile == dev.asfakul.yumeiro.profiles.Profiles.DEFAULT) return ""
+        val name = dev.asfakul.yumeiro.profiles.Profiles.find(context, profile)?.name.orEmpty()
+        val clean = DownloadNaming.clean(name.ifBlank { "Profile $profile" }, 40).ifBlank { "Profile $profile" }
+        return "/$clean"
+    }
+
+    fun publish(context: Context, file: File, displayName: String, mime: String, music: Boolean, profile: String = dev.asfakul.yumeiro.profiles.Profiles.DEFAULT): Uri? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
         val resolver = context.contentResolver
         val collection = if (music) MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
@@ -195,7 +203,7 @@ object YtDownloads {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, (if (music) "Music" else "Movies") + "/Yumeiro")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, (if (music) "Music" else "Movies") + "/Yumeiro" + profileFolder(context, profile))
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val uri = resolver.insert(collection, values) ?: return null

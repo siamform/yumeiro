@@ -10,6 +10,7 @@ import android.util.Log
 import dev.asfakul.yumeiro.data.model.VideoItem
 import dev.asfakul.yumeiro.stream.IncomingMedia
 import dev.asfakul.yumeiro.online.web.HeadlessCapture
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,6 +19,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -67,6 +70,11 @@ object OnlineSession {
         val captured: Boolean = false,
         /** Round 13: how many sources the lists show ([PAGE] at a time, "Load more" adds a page). */
         val visible: Int = PAGE,
+        /** B17: other extensions that have this title and gave links (their links carry [OnlineLink.via]). */
+        val others: List<String> = emptyList(),
+        /** B17: every link so far failed while sources were still arriving; the next one that arrives plays (at [awaitPos]). */
+        val awaiting: Boolean = false,
+        val awaitPos: Long = 0L,
     ) {
         /** Sources the lists show right now (the playing one always included). */
         val shownLinks: Int get() = maxOf(visible, linkIndex + 1).coerceAtMost(links.size)
@@ -250,6 +258,7 @@ object OnlineSession {
         val data = start.data ?: return
         job = scope.launch(gather) {
             AudioLanguages.init(context)
+            OtherSources.init(context)
             val provider = ExtensionManager.provider(start.api)
             if (provider == null) {
                 _state.update { it?.copy(phase = Phase.FAILED, message = "The extension “${start.api}” isn't installed or is turned off.") }
@@ -257,10 +266,24 @@ object OnlineSession {
             }
             dev.asfakul.yumeiro.player.StartTimeline.mark("provider")
             var started = false
+            val begun = System.currentTimeMillis()
             var firstAt = 0L
+            var firstOwnAt = 0L
+            var ownDone = false
+            var ownError: String? = null
             val links = LinkedHashMap<String, OnlineLink>()
             val subs = LinkedHashMap<String, OnlineSubtitle>()
+            val matched = LinkedHashSet<String>()
             var skipped = 0
+            // B17: other extensions join at once (PARALLEL), or once the own one is slow, empty or refused (WHEN_NEEDED).
+            val mode = OtherSources.mode.value
+            val need = CompletableDeferred<Boolean>()
+            if (mode == OtherSources.Mode.PARALLEL || start.refreshed) need.complete(true)
+            val others = if (mode == OtherSources.Mode.OFF) emptyList() else OtherSources.candidates(
+                start.api, OtherSources.seriesOf(start.detail.type) ?: (start.episode != null).takeIf { it },
+                AdultContent.isAdult(start.detail.api, start.detail.type),
+                ExtensionManager.providers(), { it is dev.asfakul.yumeiro.sources.lookup.StreamLookupProvider },
+            )
             // Extensions can emit dozens of links/subtitles in a burst. They are gathered silently
             // here and handed to the UI in staggered batches, never one recomposition per link.
             var lastPublish = 0L
@@ -269,22 +292,36 @@ object OnlineSession {
                 val t = System.currentTimeMillis()
                 if (!done && t - lastPublish < PUBLISH_GAP_MS) { pendingPublish = true; return }
                 lastPublish = t; pendingPublish = false
-                val sorted = OnlineRepository.sortLinks(links.values.toList(), AudioLanguages.preferred.value ?: defaultAudioKey(), _state.value?.version.orEmpty(), dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height)
+                val audio = AudioLanguages.preferred.value ?: defaultAudioKey()
+                val v = _state.value?.version.orEmpty()
+                val h = dev.asfakul.yumeiro.player.VideoPrefs.quality.value.height
+                // B17: the title's own extension stays first (Hikari learned that a same-named video from elsewhere must never jump ahead).
+                val (own, other) = links.values.partition { it.via == null }
+                val sorted = OnlineRepository.sortLinks(own, audio, v, h) + OnlineRepository.sortLinks(other, audio, v, h)
                 val subList = subs.values.toList()
                 _state.update { cur ->
                     if (cur == null || cur.data != data) return@update cur
                     // Keep the link in use at the same position when the list re-sorts.
                     val keep = cur.link?.url
                     val idx = keep?.let { u -> sorted.indexOfFirst { it.url == u } }?.takeIf { it >= 0 } ?: cur.linkIndex
-                    cur.copy(links = sorted, subtitles = subList, linkIndex = idx, linksDone = done, skipped = skipped,
+                    cur.copy(links = sorted, subtitles = subList, linkIndex = idx, linksDone = done, skipped = skipped, others = matched.toList(),
                         message = if (done && sorted.isEmpty()) error ?: "No playable sources were found." else cur.message)
                 }
+                resumeAwaiting(context, data, done)
             }
             suspend fun startIfReady(force: Boolean) {
                 if (started || links.isEmpty()) return
-                // Starts on the first link that has a picture (an audio-only link waits for the burst).
-                val playable = links.values.any { !it.audioOnly }
-                if (!force && (!playable || System.currentTimeMillis() - firstAt < GATHER_MS)) return
+                val now = System.currentTimeMillis()
+                val ownPlayable = links.values.any { it.via == null && !it.audioOnly }
+                val anyPlayable = links.values.any { !it.audioOnly }
+                val ready = force || when {
+                    // Starts on the first link that has a picture (an audio-only link waits for the burst).
+                    ownPlayable -> now - firstOwnAt >= GATHER_MS
+                    // B17: the fastest working source wins once the own extension is slow or has nothing.
+                    anyPlayable -> ownDone || now - begun >= OtherSources.OWN_HOLD_MS
+                    else -> false
+                }
+                if (!ready) return
                 started = true
                 lastPublish = 0L
                 publish(false)
@@ -293,33 +330,69 @@ object OnlineSession {
                 }
             }
             // Round 2 (heat): 300 ms instead of 150 ms, slower again when the phone is warm.
-            val ticker = launch { while (true) { delay(dev.asfakul.yumeiro.player.HeatGuard.interval(300)); startIfReady(false); if (pendingPublish && started) publish(false) } }
+            val ticker = launch {
+                while (true) {
+                    delay(dev.asfakul.yumeiro.player.HeatGuard.interval(300))
+                    if (!need.isCompleted && System.currentTimeMillis() - begun >= OtherSources.OWN_HOLD_MS && links.values.none { it.via == null && !it.audioOnly }) need.complete(true)
+                    startIfReady(false); if (pendingPublish && started) publish(false)
+                }
+            }
+            // F-05-N (ADR-057): stream-only add-ons (Nuvio scrapers) join with their own links when on.
+            val ownFlow = StreamAddons.withAddons(context, start.detail, start.episode, OnlineRepository.links(provider, data))
+                .map { OtherSources.Hit.Event("", it) as OtherSources.Hit }
+            val sweep = OtherSources.sweep(start.detail, start.version, start.episode, others, need)
             val ok = withTimeoutOrNull(FIRST_LINK_TIMEOUT_MS + 60_000L) {
-                // F-05-N (ADR-057): stream-only add-ons (Nuvio scrapers) join with their own links when on.
-                StreamAddons.withAddons(context, start.detail, start.episode, OnlineRepository.links(provider, data)).transformWhile { ev ->
+                merge(ownFlow, sweep).transformWhile { ev ->
                     emit(ev)
                     // Round 2 (heat): once a video plays and enough backups are in, stop asking the
-                    // extension for more mirrors (each one is more network, parsing and battery).
+                    // extensions for more mirrors (each one is more network, parsing and battery).
                     !GatherCap.enough(started, links.values.count { !it.audioOnly }, subs.size, System.currentTimeMillis() - firstAt)
-                }.collect { ev ->
-                    when (ev) {
+                }.collect { hit ->
+                    val via = hit.api.ifEmpty { null }
+                    if (hit is OtherSources.Hit.Matched) { matched += hit.api; return@collect }
+                    when (val ev = (hit as OtherSources.Hit.Event).event) {
                         is LinkEvent.Link -> {
-                            if (links.isEmpty()) { firstAt = System.currentTimeMillis(); dev.asfakul.yumeiro.player.StartTimeline.mark("first link", ev.link.name) }
-                            links.putIfAbsent(ev.link.url, ev.link)
+                            val now = System.currentTimeMillis()
+                            if (links.isEmpty()) { firstAt = now; dev.asfakul.yumeiro.player.StartTimeline.mark("first link", ev.link.name) }
+                            if (via == null && firstOwnAt == 0L) firstOwnAt = now
+                            links.putIfAbsent(ev.link.url, if (via == null) ev.link else ev.link.copy(via = via))
                             if (started) publish(false) else startIfReady(false)
                         }
                         is LinkEvent.Subtitle -> { subs.putIfAbsent(ev.subtitle.url, ev.subtitle); if (started) publish(false) }
                         is LinkEvent.Skipped -> skipped++
-                        is LinkEvent.Done -> { publish(true, ev.error); startIfReady(true) }
+                        is LinkEvent.Done -> if (via == null && !ownDone) {
+                            ownDone = true; ownError = ev.error
+                            // WHEN_NEEDED: an own extension that gave a picture skips the sweep; one that gave nothing starts it.
+                            need.complete(links.values.none { it.via == null && !it.audioOnly })
+                            startIfReady(false)
+                        }
                     }
                 }
                 true
             }
             ticker.cancel()
-            if (ok == true && _state.value?.let { it.data == data && !it.linksDone } == true) publish(true)
+            need.complete(false)
+            if (ok == true && _state.value?.let { it.data == data && !it.linksDone } == true) publish(true, ownError)
             if (ok == null) publish(true, "The source took too long to answer.")
             startIfReady(true)
             if (!started) _state.update { it?.copy(phase = Phase.FAILED, message = it.message ?: "No playable sources were found.") }
+        }
+    }
+
+    /**
+     * B17: failover found every link so far dead while other extensions were still answering. The first new
+     * link that hasn't failed plays; when the search ends with none, the usual last steps run.
+     */
+    private fun resumeAwaiting(context: Context, data: String, done: Boolean) {
+        val cur = _state.value ?: return
+        if (!cur.awaiting || cur.data != data) return
+        val i = cur.links.indexOfFirst { it.url !in cur.failed }
+        if (i < 0 && !done) return
+        _state.update { it?.copy(awaiting = false, phase = Phase.PLAYING) }
+        scope.launch {
+            if (_state.value?.data != data) return@launch
+            if (i >= 0) { Log.w(TAG, "failover (late source) → ${cur.links[i].name}"); playCurrent(context, i, cur.awaitPos) }
+            else if (!failover(context, cur.awaitPos)) _state.update { it?.copy(phase = Phase.FAILED, message = it.message ?: "Every source failed to play.") }
         }
     }
 
@@ -339,8 +412,9 @@ object OnlineSession {
         val resume = resumeMs ?: OnlineHistory.progressOf(s.api, data)?.takeIf { !it.finished }?.positionMs ?: 0L
         _state.update { cur -> (cur ?: s).copy(phase = Phase.PLAYING, linkIndex = linkIndex, videoId = id, message = null, visible = maxOf(s.visible, linkIndex + 1)) }
         dev.asfakul.yumeiro.player.StartTimeline.mark("player start", link.qualityLabel)
-        Log.i(TAG, "play ${s.title} via ${link.name} (${link.qualityLabel}, ${link.formatLabel}) ${link.url.take(120)}")
-        val provider = ExtensionManager.provider(s.api)
+        Log.i(TAG, "play ${s.title} via ${link.name}${link.via?.let { " from $it" }.orEmpty()} (${link.qualityLabel}, ${link.formatLabel}) ${link.url.take(120)}")
+        // B17: a link from another extension uses that extension's interceptors and site address.
+        val provider = ExtensionManager.provider(link.via ?: s.api)
         OnlinePlayback.registerInterceptors(provider, link)
         val request = OnlinePlayback.request(s.title, link, s.subtitles, s.detail.posterUrl)
         // ANIME-3: a source that links a YouTube watch page (Yumeiro Anime's official channels) plays
@@ -434,6 +508,12 @@ object OnlineSession {
             val go = { val cur = _state.value; val i = cur?.links?.indexOfFirst { it.url == nextUrl } ?: -1; if (cur?.data == s.data && i >= 0) playCurrent(app, i, positionMs) }
             if (wait == 0L) go()
             else failoverJob = scope.launch { delay(wait); go() }
+            return true
+        }
+        // B17: other extensions are still answering; the next link that arrives plays (see resumeAwaiting).
+        if (!s.linksDone) {
+            Log.w(TAG, "failover: no link left yet, waiting for the sources still answering")
+            _state.update { cur -> (cur ?: s).copy(failed = failed, awaiting = true, awaitPos = positionMs, phase = Phase.RESOLVING, message = "Trying other sources…") }
             return true
         }
         // Every link refused. Signed links expire / bind to the extraction session, so extract

@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.newMovieSearchResponse
 import com.lagradost.cloudstream3.newSearchResponseList
 import dev.asfakul.yumeiro.sources.lookup.StreamLookupProvider
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -36,10 +37,16 @@ class AllSearchTest {
     private fun fx(n: String) = requireNotNull(javaClass.classLoader!!.getResource("fixtures/a0/$n")).readText()
     private val tag = System.nanoTime().toString()
 
-    private class Site(override var name: String, private val wait: Long, private val fail: Boolean = false, private val hits: Int = 2) : MainAPI() {
+    private class Site(
+        override var name: String, private val wait: Long, private val fail: Boolean = false, private val hits: Int = 2,
+        private val after: kotlinx.coroutines.CompletableDeferred<Unit>? = null,
+    ) : MainAPI() {
         override var mainUrl = "https://example.invalid"
         override suspend fun search(query: String, page: Int): SearchResponseList {
             delay(wait)
+            // FLAKE-ALLSEARCH-1: the slowest site answers only once the fastest one's answer arrived, so the order
+            // check never depends on a loaded runner's timing (run 45864527860 failed it on 180 ms of delay alone).
+            after?.let { kotlinx.coroutines.withTimeoutOrNull(20_000) { it.await() } }
             if (fail) throw java.io.IOException("connection reset")
             return newSearchResponseList((1..hits).map { newMovieSearchResponse("$query $it", "https://example.invalid/$name/$it") }, false)
         }
@@ -57,10 +64,12 @@ class AllSearchTest {
         val fetch: suspend (String) -> String? = { u -> if ("catalog/movie" in u) fx("cinemeta_search_movie_inception.json") else """{"metas":[]}""" }
         val nuvio = StreamLookupProvider("Nuvio $tag", "nuvio", noCloud, fetch)
         val stremio = StreamLookupProvider("Stremio streams $tag", "stremio", noCloud, fetch)
-        val sites = (1..10).map { Site("Site$it $tag", wait = 20L * it) } +
+        val firstIn = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val sites = (1..10).map { Site("Site$it $tag", wait = 20L * it, after = if (it == 10) firstIn else null) } +
             Site("Broken $tag", 5, fail = true) + Site("Empty $tag", 5, hits = 0)
         val apis = listOf(nuvio, stremio) + sites
-        val updates = OnlineRepository.search("Inception", apis).toList()
+        val updates = OnlineRepository.search("Inception", apis)
+            .onEach { if (it.api == "Site1 $tag") firstIn.complete(Unit) }.toList()
         assertEquals("one answer per source", apis.size, updates.size)
         assertEquals(apis.map { it.name }.toSet(), updates.map { it.api }.toSet())
         val byName = updates.associateBy { it.api }

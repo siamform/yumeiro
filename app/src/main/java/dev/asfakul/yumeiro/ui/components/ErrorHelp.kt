@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Turns any error text into short, practical "Try this" suggestions. Messages that already carry
@@ -164,7 +167,7 @@ fun ErrorSuggestions(tips: List<String>, modifier: Modifier = Modifier, onDark: 
     val accent = LocalMtPalette.current.accent
     val text = if (onDark) Color.White.copy(alpha = 0.85f) else LocalMtPalette.current.textPrimary
     Column(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+        modifier.fillMaxWidth().clip(yuRound(14))
             .background((if (onDark) Color.White else Color.Black).copy(alpha = 0.06f))
             .padding(12.dp).testTag("error_suggestions"),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -172,7 +175,7 @@ fun ErrorSuggestions(tips: List<String>, modifier: Modifier = Modifier, onDark: 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Outlined.Lightbulb, null, tint = accent, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("TRY THIS", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+            Text(stringResource(R.string.try_this), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
         }
         tips.forEach { tip ->
             Row(verticalAlignment = Alignment.Top) {

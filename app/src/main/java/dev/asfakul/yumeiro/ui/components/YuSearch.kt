@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -66,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.OverlineStyle
 import dev.asfakul.yumeiro.ui.theme.SectionTitleStyle
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Header magnifier: toggles a [HeaderSearchField] instead of pinning a wide box to the page. */
 @Composable
@@ -112,7 +115,7 @@ fun HeaderSearchField(
         val focus = remember { FocusRequester() }
         val focusManager = LocalFocusManager.current
         LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-        val shape = RoundedCornerShape(22.dp)
+        val shape = yuRound(22)
         Row(
             Modifier.fillMaxWidth().padding(horizontal = horizontalPadding, vertical = 4.dp).height(44.dp).clip(shape)
                 .background(p.textPrimary.copy(alpha = if (p.isDark) 0.07f else 0.05f))
@@ -134,7 +137,7 @@ fun HeaderSearchField(
                 )
             }
             if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.Close, "Clear search", tint = p.textSecondary, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Close, stringResource(R.string.clear_search), tint = p.textSecondary, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -145,7 +148,7 @@ fun HeaderSearchField(
 fun YuSearchField(query: String, onQuery: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier) {
     val p = LocalMtPalette.current
     val focusManager = LocalFocusManager.current
-    val shape = RoundedCornerShape(22.dp)
+    val shape = yuRound(22)
     Row(
         modifier.fillMaxWidth().height(44.dp).clip(shape)
             .background(p.textPrimary.copy(alpha = if (p.isDark) 0.07f else 0.05f))
@@ -167,7 +170,7 @@ fun YuSearchField(query: String, onQuery: (String) -> Unit, placeholder: String,
             )
         }
         if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Default.Close, "Clear search", tint = p.textSecondary, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Close, stringResource(R.string.clear_search), tint = p.textSecondary, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -189,15 +192,15 @@ fun FilterSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(kanaOverline("絞込", "Refine"), style = OverlineStyle)
-                    Text("Filters", style = SectionTitleStyle, color = p.textPrimary)
+                    Text(stringResource(R.string.filters), style = SectionTitleStyle, color = p.textPrimary)
                 }
-                if (onReset != null) TextButton(onClick = onReset, modifier = Modifier.testTag(tag + "_reset")) { Text("Reset", color = p.accent, fontWeight = FontWeight.Bold) }
+                if (onReset != null) TextButton(onClick = onReset, modifier = Modifier.testTag(tag + "_reset")) { Text(stringResource(R.string.reset), color = p.accent, fontWeight = FontWeight.Bold) }
             }
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) { content() }
             Button(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent),
-                shape = RoundedCornerShape(24.dp),
+                shape = yuRound(24),
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp).height(48.dp).testTag(tag + "_done"),
             ) { Text(if (resultCount != null) "Show $resultCount result${if (resultCount == 1) "" else "s"}" else "Done", fontWeight = FontWeight.Bold) }
         }

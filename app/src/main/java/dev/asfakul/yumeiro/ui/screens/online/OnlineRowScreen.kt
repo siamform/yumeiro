@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -160,8 +162,8 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
                     Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
                         when {
                             loading -> PosterRowSkeleton(count = gridColumns())
-                            error != null -> TextButton(onClick = { error = null; request++ }) { Text("Couldn't load more · Retry", color = SpotifyGreen) }
-                            !hasNext -> Text("That's everything", color = TextTertiary, fontSize = 12.sp)
+                            error != null -> TextButton(onClick = { error = null; request++ }) { Text(stringResource(R.string.couldnt_load_more_retry), color = SpotifyGreen) }
+                            !hasNext -> Text(stringResource(R.string.thats_everything), color = TextTertiary, fontSize = 12.sp)
                         }
                     }
                 }
@@ -190,8 +192,8 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
         onDismissRequest = { confirmClear = false },
         title = { Text(if (showAdult) "Clear 18+ history?" else "Clear watch history?") },
         text = { Text(if (showAdult) "Removes every 18+ title and its resume position from this device." else "Removes every title and resume position from this device. This can't be undone.") },
-        confirmButton = { TextButton(onClick = { if (showAdult) OnlineHistory.clearAdult(context) else OnlineHistory.clear(context); confirmClear = false; showAdult = false }, modifier = Modifier.testTag("online_history_clear_confirm")) { Text("Clear", color = ErrorColor) } },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { if (showAdult) OnlineHistory.clearAdult(context) else OnlineHistory.clear(context); confirmClear = false; showAdult = false }, modifier = Modifier.testTag("online_history_clear_confirm")) { Text(stringResource(R.string.clear), color = ErrorColor) } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
     Column(Modifier.fillMaxSize().testTag("online_history_screen")) {
         SubPageHeader(title = if (showAdult) "18+ history" else "Continue watching", subtitle = "${entries.size} title${if (entries.size == 1) "" else "s"}", onBack = { if (showAdult) showAdult = false else onBack() }) {
@@ -199,7 +201,7 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
                 Text(if (showAdult) "All" else "18+ ($adultCount)", color = TextSecondary, fontSize = 12.sp)
             }
             if (entries.isNotEmpty()) IconButton(onClick = { confirmClear = true }, modifier = Modifier.testTag("online_history_clear")) {
-                Icon(Icons.Default.DeleteSweep, "Clear history", tint = TextPrimary)
+                Icon(Icons.Default.DeleteSweep, stringResource(R.string.clear_history), tint = TextPrimary)
             }
         }
         if (entries.isEmpty()) StateMessage(Icons.Default.History, "Nothing yet", "Titles you watch online show up here so you can pick up where you left off.", tint = TextSecondary, testTag = "online_history_empty")
@@ -211,7 +213,7 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
                 Column {
                     PosterCard(e.toItem(), onClick = { onOpenTitle(e.toItem()) }, modifier = Modifier.fillMaxWidth(), progress = e.fraction, showSource = true)
                     e.episodeLabel?.let { Text(it, color = TextTertiary, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 2.dp)) }
-                    TextButton(onClick = { OnlineHistory.remove(context, e.api, e.url) }, modifier = Modifier.height(30.dp), contentPadding = PaddingValues(0.dp)) { Text("Remove", color = TextSecondary, fontSize = 11.sp) }
+                    TextButton(onClick = { OnlineHistory.remove(context, e.api, e.url) }, modifier = Modifier.height(30.dp), contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.remove_2), color = TextSecondary, fontSize = 11.sp) }
                 }
             }
         }

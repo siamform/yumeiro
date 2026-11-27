@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -45,6 +47,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Settings → Notifications → On-time alerts: optional UnifiedPush (ntfy) wake-ups, so the
@@ -115,7 +118,7 @@ fun PushAlertsCard() {
                 }
             }
             if (!background) Text(
-                "Background checks are off under Background & battery, so wake-ups have nothing to run.",
+                stringResource(R.string.background_checks_are_off_under_background),
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp),
             )
         }
@@ -124,43 +127,43 @@ fun PushAlertsCard() {
     if (pick) TsukiDialog(
         onDismissRequest = { pick = false },
         icon = { Icon(Icons.Default.NotificationsActive, null) },
-        title = { Text("Choose a push app") },
+        title = { Text(stringResource(R.string.choose_a_push_app)) },
         text = {
             Column {
                 distributors.forEach { pkg ->
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { pick = false; PushWake.enable(context, pkg) }
+                        Modifier.fillMaxWidth().clip(yuRound(12)).clickable { pick = false; PushWake.enable(context, pkg) }
                             .padding(vertical = 4.dp).testTag("push_pick_$pkg"),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = st.distributor == pkg, onClick = { pick = false; PushWake.enable(context, pkg) }, colors = RadioButtonDefaults.colors(selectedColor = SpotifyGreen))
                         Column {
                             Text(PushWake.appLabel(context, pkg), color = TextPrimary)
-                            if (pkg == PushWake.NTFY_PACKAGE) Text("Recommended · supports scheduled wake-ups", color = TextTertiary, fontSize = 12.sp)
+                            if (pkg == PushWake.NTFY_PACKAGE) Text(stringResource(R.string.recommended_supports_scheduled_wake_ups), color = TextTertiary, fontSize = 12.sp)
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { pick = false }) { Text("Close") } },
+        confirmButton = { TextButton(onClick = { pick = false }) { Text(stringResource(R.string.close)) } },
     )
 
     if (install) TsukiDialog(
         tone = dev.asfakul.yumeiro.ui.components.DialogTone.INFO,
         onDismissRequest = { install = false },
         icon = { Icon(Icons.Default.NotificationsActive, null) },
-        title = { Text("Install ntfy first") },
+        title = { Text(stringResource(R.string.install_ntfy_first)) },
         text = {
             Text(
-                "Reliable alerts need a free UnifiedPush app. ntfy is open source, needs no account, and is free to use. Install it, open it once, then come back and turn this on.",
+                stringResource(R.string.reliable_alerts_need_a_free_unifiedpush),
                 color = TextSecondary, style = MaterialTheme.typography.bodyMedium,
             )
         },
         confirmButton = {
-            TextButton(onClick = { install = false; Links.open(context, "https://f-droid.org/packages/io.heckel.ntfy/") }, modifier = Modifier.testTag("push_get_fdroid")) { Text("F-Droid") }
+            TextButton(onClick = { install = false; Links.open(context, "https://f-droid.org/packages/io.heckel.ntfy/") }, modifier = Modifier.testTag("push_get_fdroid")) { Text(stringResource(R.string.f_droid)) }
         },
         dismissButton = {
-            TextButton(onClick = { install = false; Links.open(context, "https://play.google.com/store/apps/details?id=io.heckel.ntfy") }, modifier = Modifier.testTag("push_get_play")) { Text("Google Play") }
+            TextButton(onClick = { install = false; Links.open(context, "https://play.google.com/store/apps/details?id=io.heckel.ntfy") }, modifier = Modifier.testTag("push_get_play")) { Text(stringResource(R.string.google_play)) }
         },
     )
 }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -57,6 +59,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import kotlin.math.abs
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * Slim vertical level bar (like the phone's own volume slider): percentage on top, a thin rounded
@@ -89,10 +92,10 @@ private fun VerticalLevelBar(
         )
         Spacer(Modifier.height(8.dp))
         Box(
-            Modifier.weight(1f).width(3.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.28f)),
+            Modifier.weight(1f).width(3.dp).clip(yuRound(2)).background(Color.White.copy(alpha = 0.28f)),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            Box(Modifier.fillMaxWidth().fillMaxHeight(animated).clip(RoundedCornerShape(2.dp)).background(accent))
+            Box(Modifier.fillMaxWidth().fillMaxHeight(animated).clip(yuRound(2)).background(accent))
         }
         Spacer(Modifier.height(8.dp))
         Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -141,8 +144,8 @@ fun VolumeHUD(
             // F-06: the bar shows 100-200 %, in a warm warning colour, with a hearing warning beside it.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    "Loud: protect your hearing", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(end = 6.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xCC8A2A12)).padding(horizontal = 8.dp, vertical = 4.dp).testTag("volume_boost_warning"),
+                    stringResource(R.string.loud_protect_your_hearing), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(end = 6.dp).clip(yuRound(8)).background(Color(0xCC8A2A12)).padding(horizontal = 8.dp, vertical = 4.dp).testTag("volume_boost_warning"),
                 )
                 VerticalLevelBar(boost, icon, "Volume boost", "volume_hud", number = dev.asfakul.yumeiro.player.VolumeBoost.percent(volumeLevel, maxVolume, boost), fill = Color(0xFFFF8A3D))
             }
@@ -171,7 +174,7 @@ fun ScrubSeekHUD(
         val formattedDelta = "$deltaSign${formatDuration(abs(deltaMs))}"
 
         Surface(
-            shape = RoundedCornerShape(18.dp),
+            shape = yuRound(18),
             color = Color.Black.copy(alpha = 0.85f),
             tonalElevation = 8.dp,
             modifier = Modifier.testTag("scrub_seek_hud")
@@ -209,7 +212,7 @@ fun ScrubSeekHUD(
                     modifier = Modifier
                         .width(130.dp)
                         .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp)),
+                        .clip(yuRound(3)),
                     color = SpotifyGreen,
                     trackColor = Color.White.copy(alpha = 0.25f),
                 )
@@ -273,7 +276,7 @@ fun ToastHUD(
         modifier = modifier
     ) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = yuRound(24),
             color = Color.Black.copy(alpha = 0.85f),
             tonalElevation = 6.dp,
             modifier = Modifier.testTag("toast_hud")
@@ -297,7 +300,7 @@ fun ResumePill(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = yuRound(24),
         color = androidx.compose.ui.graphics.Color(0xFF2C2452),
         shadowElevation = 10.dp,
         modifier = modifier.testTag("video_resume_pill")
@@ -307,7 +310,7 @@ fun ResumePill(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Resumed at ${formatDuration(playbackPositionMs)}",
+                text = stringResource(R.string.resumed_at, formatDuration(playbackPositionMs)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = androidx.compose.ui.graphics.Color.White,
                 fontWeight = FontWeight.Medium
@@ -325,7 +328,7 @@ fun ResumePill(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Start over",
+                    text = stringResource(R.string.start_over),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -336,7 +339,7 @@ fun ResumePill(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss resume notice",
+                    contentDescription = stringResource(R.string.dismiss_resume_notice),
                     tint = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.75f),
                     modifier = Modifier.size(16.dp)
                 )

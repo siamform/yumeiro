@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -70,6 +72,7 @@ import dev.asfakul.yumeiro.ui.theme.Unbounded
 import dev.asfakul.yumeiro.ui.theme.artGradientFor
 import dev.asfakul.yumeiro.ui.theme.rememberGlassBorder
 import dev.asfakul.yumeiro.ui.theme.rememberSignatureBrush
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One entry of the YouTube-style "Mix" feed. */
 sealed interface FeedEntry {
@@ -152,7 +155,7 @@ fun mixGroups(channels: List<Pair<String, List<OnlineRow>>>, maxGroups: Int, row
 internal fun ChannelSectionHeader(name: String, titles: Int, onOpen: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(start = 16.dp, end = 10.dp, top = 22.dp, bottom = 0.dp)
-            .clip(RoundedCornerShape(14.dp)).clickable(onClickLabel = "Open $name", onClick = onOpen)
+            .clip(yuRound(14)).clickable(onClickLabel = "Open $name", onClick = onOpen)
             .padding(vertical = 4.dp).testTag("online_group_header"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -160,9 +163,9 @@ internal fun ChannelSectionHeader(name: String, titles: Int, onOpen: () -> Unit)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(name, color = TextPrimary, fontFamily = dev.asfakul.yumeiro.ui.theme.Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("$titles titles", color = TextTertiary, fontSize = 11.sp, maxLines = 1)
+            Text(stringResource(R.string.titles, titles), color = TextTertiary, fontSize = 11.sp, maxLines = 1)
         }
-        Text("View", color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
+        Text(stringResource(R.string.view), color = SpotifyGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp))
     }
 }
 
@@ -177,7 +180,7 @@ internal fun ChannelAvatar(name: String, selected: Boolean, size: androidx.compo
             Modifier.fillMaxSize().clip(CircleShape).background(if (mix) signature else Brush.linearGradient(listOf(art.start, art.end))),
             contentAlignment = Alignment.Center,
         ) {
-            if (mix) Icon(dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, "Yumix mix", tint = Color.White, modifier = Modifier.size(size * 0.46f))
+            if (mix) Icon(dev.asfakul.yumeiro.ui.components.YumixLogo.Icon, stringResource(R.string.yumix_mix), tint = Color.White, modifier = Modifier.size(size * 0.46f))
             else {
                 // Fallback (and what shows while the logo loads): the Hue's initials.
                 Text(
@@ -209,7 +212,7 @@ internal fun ChannelStrip(channels: List<String>, loading: Set<String>, selected
 private fun ChannelChipItem(name: String, selected: Boolean, mix: Boolean, loading: Boolean, onClick: () -> Unit) {
     val pulse by rememberInfiniteTransition(label = "ch").animateFloat(0.45f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "p")
     Column(
-        Modifier.width(66.dp).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).testTag("online_channel"),
+        Modifier.width(66.dp).clip(yuRound(16)).clickable(onClick = onClick).testTag("online_channel"),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.alpha(if (loading) pulse else 1f)) { ChannelAvatar(name, selected, mix = mix) }
@@ -236,8 +239,8 @@ internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit
     val mark = if (actions) marks[posterMarkKey(item)] else null
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_feed_card").feedCard("yumix", item.key)) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(22.dp))
-                .border(1.dp, border, RoundedCornerShape(22.dp)).background(GlassFill)
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(22))
+                .border(1.dp, border, yuRound(22)).background(GlassFill)
                 .posterPress(onClick, if (actions) ({ sheet = true }) else null),
         ) {
             if (horizontal) {
@@ -246,7 +249,7 @@ internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit
                 SoftBackdrop(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize().alpha(0.75f))
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.15f), Color.Black.copy(alpha = 0.65f)))))
                 Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(RoundedCornerShape(14.dp))) {
+                    Box(Modifier.fillMaxHeight().aspectRatio(2f / 3f).clip(yuRound(14))) {
                         PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
                     }
                     Spacer(Modifier.width(14.dp))
@@ -284,7 +287,7 @@ internal fun FeedCard(item: OnlineItem, horizontal: Boolean, onClick: () -> Unit
 
 @Composable
 private fun Badge(text: String) {
-    Surface(shape = RoundedCornerShape(8.dp), color = Color.Black.copy(alpha = 0.6f)) {
+    Surface(shape = yuRound(8), color = Color.Black.copy(alpha = 0.6f)) {
         Text(text, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp), maxLines = 1)
     }
 }
@@ -306,10 +309,10 @@ internal fun ChannelHeader(name: String, rows: Int, titles: Int, onChange: (() -
             Text("$rows playlist${if (rows == 1) "" else "s"} · $titles titles", maxLines = 1, color = TextTertiary, fontSize = 12.sp)
         }
         if (onChange != null) androidx.compose.material3.IconButton(onClick = onChange, modifier = Modifier.testTag("online_filter_active")) {
-            Icon(Icons.Default.FilterList, "Change extension", tint = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent)
+            Icon(Icons.Default.FilterList, stringResource(R.string.change_extension), tint = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.accent)
         }
         if (onClear != null) androidx.compose.material3.IconButton(onClick = onClear, modifier = Modifier.testTag("online_filter_active_clear")) {
-            Icon(Icons.Default.Close, "Show all extensions", tint = TextSecondary)
+            Icon(Icons.Default.Close, stringResource(R.string.show_all_extensions), tint = TextSecondary)
         }
     }
 }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * GROUP C (owner master prompt): page tools are small icons instead of wide boxes and paragraphs.
@@ -74,13 +77,13 @@ fun HelpIconButton(title: String, text: String, tag: String, modifier: Modifier 
     val p = LocalMtPalette.current
     var open by rememberSaveable(tag) { mutableStateOf(false) }
     IconButton(onClick = { open = true }, modifier = modifier.testTag(tag)) {
-        Icon(Icons.AutoMirrored.Filled.HelpOutline, "Help: $title", tint = p.textSecondary)
+        Icon(Icons.AutoMirrored.Filled.HelpOutline, stringResource(R.string.help, title), tint = p.textSecondary)
     }
     if (open) TsukiDialog(
         onDismissRequest = { open = false },
         title = { Text(title) },
         text = { Text(text, fontSize = 14.sp, modifier = Modifier.testTag(tag + "_text")) },
-        confirmButton = { TextButton(onClick = { open = false }, modifier = Modifier.testTag(tag + "_ok")) { Text("Got it", color = p.accent, fontWeight = FontWeight.Bold) } },
+        confirmButton = { TextButton(onClick = { open = false }, modifier = Modifier.testTag(tag + "_ok")) { Text(stringResource(R.string.got_it), color = p.accent, fontWeight = FontWeight.Bold) } },
         modifier = Modifier.testTag(tag + "_dialog"),
     )
 }
@@ -175,7 +178,7 @@ fun AddLinkSheet(
                     modifier = Modifier.weight(1f), leadingIcon = Icons.Default.Link, keyboardType = KeyboardType.Uri, onDone = { submit() },
                 )
                 IconButton(onClick = { clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { text = it } }, modifier = Modifier.testTag(tag + "_paste")) {
-                    Icon(Icons.Default.ContentPaste, "Paste link", tint = p.textSecondary)
+                    Icon(Icons.Default.ContentPaste, stringResource(R.string.paste_link), tint = p.textSecondary)
                 }
             }
             if (busy) LinearProgressIndicator(color = p.accent, modifier = Modifier.fillMaxWidth())
@@ -185,12 +188,12 @@ fun AddLinkSheet(
                     Spacer(Modifier.width(6.dp))
                     Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 12.sp, modifier = Modifier.weight(1f).testTag(tag + "_error")
                         .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
-                    if (showRetry) TextButton(onClick = { submit() }, enabled = !busy, modifier = Modifier.testTag(tag + "_retry")) { Text("Retry", color = p.accent, fontWeight = FontWeight.Bold) }
+                    if (showRetry) TextButton(onClick = { submit() }, enabled = !busy, modifier = Modifier.testTag(tag + "_retry")) { Text(stringResource(R.string.retry), color = p.accent, fontWeight = FontWeight.Bold) }
                 }
             }
             Button(
                 onClick = { submit() }, enabled = !busy && text.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent), shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = p.accent, contentColor = p.onAccent), shape = yuRound(24),
                 modifier = Modifier.fillMaxWidth().height(48.dp).testTag(tag + "_add"),
             ) { Text(if (busy) "Adding…" else "Add", fontWeight = FontWeight.Bold) }
             extra?.invoke(this)

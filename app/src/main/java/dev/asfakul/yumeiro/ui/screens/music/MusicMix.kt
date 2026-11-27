@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.music
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -60,6 +62,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.youtube.YouTubePlayback
 import dev.asfakul.yumeiro.youtube.YtHistory
 import dev.asfakul.yumeiro.youtube.YtItem
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 // Precompiled once (R15 audit): these ran a regex compile on every call.
 private val RX_MUSICMIX_HOT_1 = Regex("\\p{Mn}+")
@@ -175,7 +178,7 @@ fun MusicMixScreen(
         }
         if (onlineBusy && onlineHits.isEmpty()) items(4, key = { "sk$it" }) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                dev.asfakul.yumeiro.ui.components.SkeletonBlock(48.dp, 48.dp, shape = RoundedCornerShape(10.dp))
+                dev.asfakul.yumeiro.ui.components.SkeletonBlock(48.dp, 48.dp, shape = yuRound(10))
                 Spacer(Modifier.width(12.dp))
                 Column { dev.asfakul.yumeiro.ui.components.SkeletonBlock(180.dp, 12.dp); Spacer(Modifier.height(6.dp)); dev.asfakul.yumeiro.ui.components.SkeletonBlock(110.dp, 10.dp) }
             }
@@ -186,7 +189,7 @@ fun MusicMixScreen(
         contentPadding = PaddingValues(top = if (searching) dev.asfakul.yumeiro.ui.screens.youtube.YT_SEARCH_BAR_H else 0.dp, bottom = 170.dp),
     ) {
         item("hero") {
-            val shape = RoundedCornerShape(22.dp)
+            val shape = yuRound(22)
             Row(
                 Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().clip(shape)
                     .background(Brush.linearGradient(listOf(p.accent.copy(alpha = if (p.isDark) 0.24f else 0.16f), p.surfaceContainerHigh)))
@@ -194,8 +197,8 @@ fun MusicMixScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("混 · YOUR MIX", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                    Text("Device + YouTube Music", style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.your_mix), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                    Text(stringResource(R.string.device_youtube_music), style = MaterialTheme.typography.titleMedium, color = p.textPrimary, fontWeight = FontWeight.Bold)
                     Text(
                         when {
                             !online -> "Offline: your ${tracks.size} songs on this phone"
@@ -212,12 +215,12 @@ fun MusicMixScreen(
                         .clickable(enabled = canMix, role = Role.Button, onClickLabel = "Play your mix") { playAt(0) }
                         .testTag("music_mix_play"),
                     contentAlignment = Alignment.Center,
-                ) { Icon(Icons.Default.PlayArrow, "Play your mix", tint = if (canMix) p.onAccent else p.textTertiary, modifier = Modifier.size(28.dp)) }
+                ) { Icon(Icons.Default.PlayArrow, stringResource(R.string.play_your_mix), tint = if (canMix) p.onAccent else p.textTertiary, modifier = Modifier.size(28.dp)) }
             }
         }
         if (tracks.isEmpty() && onlinePool.isEmpty() && !loading) item("empty") {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Nothing to mix yet", style = MaterialTheme.typography.titleMedium, color = p.textPrimary)
+                Text(stringResource(R.string.nothing_to_mix_yet), style = MaterialTheme.typography.titleMedium, color = p.textPrimary)
                 Text(
                     if (online) "Add songs to this phone or play something on YouTube Music." else "Connect to the internet for online picks, or add songs to this phone.",
                     style = MaterialTheme.typography.bodySmall, color = p.textSecondary,
@@ -237,7 +240,7 @@ fun MusicMixScreen(
         because.forEach { (artist, songs) -> item("because_$artist") { OnlineShelf("Because you play $artist", "On YouTube Music", songs, null, onPlayOnline) } }
         if (loading && online && quick.isEmpty()) item("loading") {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                repeat(3) { dev.asfakul.yumeiro.ui.components.SkeletonBlock(128.dp, 128.dp, shape = RoundedCornerShape(14.dp)) }
+                repeat(3) { dev.asfakul.yumeiro.ui.components.SkeletonBlock(128.dp, 128.dp, shape = yuRound(14)) }
             }
         }
         if (mostPlayed.isNotEmpty()) item("most") { TrackShelf("Most played", "On this phone", mostPlayed.take(12), currentTrackId, onPlayTrack) }
@@ -296,7 +299,7 @@ private fun MixRow(e: MixEntry, current: Boolean, onClick: () -> Unit) {
         ).padding(horizontal = 16.dp, vertical = 6.dp).testTag("music_mix_row"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+        Box(Modifier.size(48.dp).clip(yuRound(10)).background(p.textPrimary.copy(alpha = 0.06f))) {
             when (e) {
                 is MixEntry.Device -> TrackArtwork(artUri = e.track.albumArtUri, key = e.track.id, size = 48.dp, cornerRadius = 10.dp)
                 is MixEntry.Online -> AsyncImage(model = e.item.thumbnail, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
@@ -324,8 +327,8 @@ private fun OnlineShelf(title: String, subtitle: String, songs: List<YtItem>, on
     MixHeader(title, subtitle, onMore)
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(songs, key = { title + it.id }) { yt ->
-            Column(Modifier.width(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onPlay(yt, songs) }.testTag("music_mix_online_${yt.id}").padding(bottom = 10.dp)) {
-                Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(14.dp)).background(p.textPrimary.copy(alpha = 0.06f))) {
+            Column(Modifier.width(128.dp).clip(yuRound(14)).clickable { onPlay(yt, songs) }.testTag("music_mix_online_${yt.id}").padding(bottom = 10.dp)) {
+                Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(yuRound(14)).background(p.textPrimary.copy(alpha = 0.06f))) {
                     TrackArtwork(artUri = null, key = yt.id, size = 128.dp, cornerRadius = 14.dp, modifier = Modifier.fillMaxSize())
                     AsyncImage(model = yt.thumbnail, contentDescription = yt.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
@@ -370,7 +373,7 @@ private fun TrackShelf(title: String, subtitle: String, shelfTracks: List<AudioT
     MixHeader(title, subtitle)
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(tracks, key = { title + it.id }) { t ->
-            Column(Modifier.width(128.dp).clip(RoundedCornerShape(14.dp)).clickable { onPlay(t, tracks) }.padding(bottom = 10.dp)) {
+            Column(Modifier.width(128.dp).clip(yuRound(14)).clickable { onPlay(t, tracks) }.padding(bottom = 10.dp)) {
                 TrackArtwork(artUri = t.albumArtUri, key = t.id, size = 128.dp, cornerRadius = 14.dp, contentDescription = t.album)
                 Spacer(Modifier.height(6.dp))
                 Text(t.title, style = MaterialTheme.typography.titleSmall, color = if (t.id == currentId) p.accent else p.textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -7,7 +7,11 @@ package dev.asfakul.yumeiro.online.web
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
@@ -68,6 +72,17 @@ object VerificationCenter {
     @Volatile private var appContext: Context? = null
     @Volatile private var loaded = false
 
+    private val _passed = MutableSharedFlow<String>(extraBufferCapacity = 16, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    /**
+     * B4 (Group M): every site whose check was just passed (normalized host), whether in Yumeiro's own check page,
+     * silently, or in an extension's window. Before, a pass was only recorded: the extension that had failed on the
+     * check stayed on "Couldn't load" (feed, search, title page) until the user found Retry, and Retry right after
+     * a pass often hit the in-memory failure and quarantine left by the check. Screens listen and reload the
+     * extensions of that site ([SitePass.matches]); [dev.asfakul.yumeiro.online.OnlineRepository.onSitePassed] drops
+     * what the failed attempt left behind.
+     */
+    val passed: SharedFlow<String> = _passed.asSharedFlow()
+
     /** Loads the saved states off the main thread (StrictMode: no disk read in onCreate). */
     fun init(context: Context) {
         val app = context.applicationContext
@@ -93,6 +108,17 @@ object VerificationCenter {
         val h = VerificationPolicy.normalize(host)
         var before: Site? = null
         val next = sites.compute(h) { _, cur -> before = cur; VerificationPolicy.next(cur, h, label, outcome, now) }!!
+        if (outcome == Outcome.NEEDS_PERSON) BrowserCheck.noteChallenge(h, now)
+        // B4: a pass is announced even when the site was already CLEAR (a pass that ran out and was earned again).
+        if (outcome == Outcome.PASSED) {
+            Log.i(TAG, "$h: passed, reloading its extensions")
+            // Off the caller's thread (it may be the main thread; the phone's copy of an empty answer is a file),
+            // and the reload is announced only once what the failed attempt left behind is gone.
+            Thread({
+                runCatching { dev.asfakul.yumeiro.online.OnlineRepository.onSitePassed(h) }.onFailure { Log.w(TAG, "after pass", it) }
+                _passed.tryEmit(h)
+            }, "yu-verify-pass").apply { isDaemon = true }.start()
+        }
         // A blocked site answers every request the same way: only a real change is logged, shown and saved.
         if (!VerificationPolicy.changed(before, next)) return next
         Log.i(TAG, "$h: $outcome -> ${next.state}${if (next.until > 0) " until +" + ((next.until - now) / 1000) + " s" else ""}")
@@ -121,7 +147,7 @@ object VerificationCenter {
         val h = VerificationPolicy.normalize(host)
         sites.computeIfPresent(h) { _, s -> s.copy(until = 0L) }
         publish()
-        BrowserCheck.openSite("https://$h/")
+        BrowserCheck.openSite(BrowserCheck.checkPageFor(h))
     }
 
     private fun publish() {

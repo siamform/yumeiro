@@ -143,7 +143,7 @@ class MockupRealAppShotsDeviceTest {
             FirstRun.shell("input keyevent 66")
             runCatching { rule.waitUntil(90_000) { rule.onAllNodesWithTag("online_poster", true).fetchSemanticsNodes().size >= 4 } }
             FirstRun.shell("input keyevent 111"); pause(10_000)
-            snap("search", has("online_search_results") && hasText(QUERY))
+            snap("search", (has("online_search_results") || has("online_search_groups")) && hasText(QUERY))
         }
         // 6 The real details page (HiAnime "Solo Leveling", 24 episodes, Sub and Dub).
         step("details") {

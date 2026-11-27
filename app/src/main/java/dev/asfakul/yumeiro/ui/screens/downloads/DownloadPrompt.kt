@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.downloads
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
@@ -67,6 +69,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Opens the Downloads page from anywhere (snackbar action, notification, Home, Library). */
 object DownloadsNav {
@@ -189,7 +192,7 @@ fun DownloadPromptHost() {
         onDismissRequest = { DownloadPrompt.dismiss() },
         modifier = Modifier.testTag("download_confirm"),
         icon = { Icon(Icons.Default.Download, null) },
-        title = { Text("Download ${req.what}?", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.download_3, req.what), fontWeight = FontWeight.Bold) },
         text = {
             Column {
                 if (offer != null && offer.heights.size > 1) TrackChips("Quality for this download", "download_track_quality", listOf(0 to "Best") + offer.heights.map { it to "${it}p" }, height) { height = it }
@@ -208,8 +211,8 @@ fun DownloadPromptHost() {
         },
         dismissButton = {
             Row {
-                TextButton(onClick = { DownloadPrompt.dismiss(); DownloadsNav.open() }) { Text("Settings") }
-                TextButton(onClick = { DownloadPrompt.dismiss() }) { Text("Cancel") }
+                TextButton(onClick = { DownloadPrompt.dismiss(); DownloadsNav.open() }) { Text(stringResource(R.string.settings)) }
+                TextButton(onClick = { DownloadPrompt.dismiss() }) { Text(stringResource(R.string.cancel)) }
             }
         },
     )
@@ -248,7 +251,7 @@ internal fun TrackPicker(
 @Composable
 internal fun QualityPicker(selected: Int, onPick: (Int) -> Unit) {
     Column(Modifier.padding(bottom = 8.dp).testTag("download_quality")) {
-        Text("Quality for this download", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Text(stringResource(R.string.quality_for_this_download), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (h in DownloadSettings.QUALITY_CHOICES) FilterChip(
                 selected = selected == h, onClick = { onPick(h) },
@@ -282,11 +285,11 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
             if (free > 0) "${DownloadPrompt.sizeText(free)} free" else null,
         ).joinToString(" · "))
         if (req.sizeBytes > 0 && free in 1 until req.sizeBytes)
-            Text("Not enough free space for this download.", color = if (dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(start = 26.dp, top = 2.dp))
+            Text(stringResource(R.string.not_enough_free_space_for_this), color = if (dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.isDark) Color(0xFFFF8A80) else Color(0xFFB3261E), fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(start = 26.dp, top = 2.dp))
 
         // Where
         Spacer(Modifier.height(10.dp))
-        Text("Where it goes", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Text(stringResource(R.string.where_it_goes), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         Spacer(Modifier.height(4.dp))
         InfoLine(Icons.Default.Folder, "Downloads → ${req.folder}  (open it from Home or Library → Videos)")
         if (yt && toPhone) InfoLine(Icons.Default.PhoneAndroid, "Phone: ${if (audio) "Music" else "Movies"}/Yumeiro, so your gallery and other players see it too")
@@ -294,7 +297,7 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
 
         // Keep as
         Spacer(Modifier.height(12.dp))
-        Text("Keep as", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+        Text(stringResource(R.string.keep_as), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         Spacer(Modifier.height(6.dp))
         KeepOption(
             selected = !keep, icon = Icons.Default.Schedule, title = "Offline copy",
@@ -316,12 +319,12 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
 
         // Tips
         Spacer(Modifier.height(12.dp))
-        Surface(shape = RoundedCornerShape(12.dp), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
+        Surface(shape = yuRound(12), color = GlassFill, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Lightbulb, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Tips", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(stringResource(R.string.tips), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
                 tipsFor(req.type).forEach { Text("• $it", color = TextTertiary, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.padding(top = 3.dp)) }
             }
@@ -329,7 +332,7 @@ internal fun DownloadConfirmBody(req: DownloadPrompt.Request, keep: Boolean, onK
 
         Row(Modifier.fillMaxWidth().padding(top = 8.dp).clickable { onDontAsk(!dontAsk) }, verticalAlignment = Alignment.CenterVertically) {
             Checkbox(dontAsk, onDontAsk, modifier = Modifier.testTag("download_dont_ask"))
-            Text("Don't ask again (turn it back on in Settings → Downloads)", color = TextSecondary, fontSize = 12.sp)
+            Text(stringResource(R.string.dont_ask_again_turn_it_back), color = TextSecondary, fontSize = 12.sp)
         }
     }
 }
@@ -360,7 +363,7 @@ private fun InfoLine(icon: ImageVector, text: String, small: Boolean = false) {
 @Composable
 private fun KeepOption(selected: Boolean, icon: ImageVector, title: String, body: String, tag: String, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(14.dp), color = if (selected) SpotifyGreen.copy(alpha = 0.12f) else GlassFill,
+        shape = yuRound(14), color = if (selected) SpotifyGreen.copy(alpha = 0.12f) else GlassFill,
         border = if (selected) BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)) else null,
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable(onClick = onClick).testTag(tag),
     ) {

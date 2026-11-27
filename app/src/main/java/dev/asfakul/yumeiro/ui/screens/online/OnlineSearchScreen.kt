@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.Suggestion.Kind as SuggestionKind
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.CircularProgressIndicator
@@ -76,6 +79,7 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private sealed interface ProviderResult {
     data object Searching : ProviderResult
@@ -99,6 +103,7 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     val keyboard = LocalSoftwareKeyboardController.current
     val engine by ExtensionManager.state.collectAsState()
     LaunchedEffect(Unit) { ExtensionManager.start(context) }
+    LaunchedEffect(Unit) { SearchView.load(context) }
     // 18+ off: adult-only extensions that are still installed (18+ was on earlier) are not searched,
     // and NSFW-typed items from mixed sources are dropped. With 18+ on (private or not) search finds them.
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
@@ -124,9 +129,40 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
     val watched by dev.asfakul.yumeiro.online.OnlineHistory.entries.collectAsState()
     LaunchedEffect(Unit) { if (submitted.isEmpty()) runCatching { focus.requestFocus() } }
 
+    // F3 (Group T): a pasted link, magnet or info-hash is played, not searched as words (and not kept in history).
+    val link = remember(text) { dev.asfakul.yumeiro.stream.SearchLink.parse(text) }
+    var linkBusy by remember { mutableStateOf(false) }
+    var linkError by remember(link) { mutableStateOf<String?>(null) }
+    val linkScope = androidx.compose.runtime.rememberCoroutineScope()
+    val msgPlaylist = stringResource(R.string.search_link_playlist)
+    val msgBrowser = stringResource(R.string.search_link_browser)
+    val msgFailed = stringResource(R.string.search_link_failed)
+    fun playLink(u: String) {
+        if (linkBusy) return
+        keyboard?.hide(); typing = false; linkError = null
+        val request = dev.asfakul.yumeiro.stream.StreamRequest(url = u)
+        if (!u.startsWith("http", ignoreCase = true) && !dev.asfakul.yumeiro.stream.LinkHosts.isTorrent(u)) {
+            dev.asfakul.yumeiro.stream.IncomingMedia.open(context, request, recent = dev.asfakul.yumeiro.stream.IncomingMedia.Recent.LINK); return
+        }
+        linkBusy = true
+        linkScope.launch {
+            val r = runCatching { dev.asfakul.yumeiro.stream.StreamResolver.resolve(context, request, thorough = true) }.getOrNull()
+            linkBusy = false
+            when (r) {
+                is dev.asfakul.yumeiro.stream.Resolution.Playable ->
+                    dev.asfakul.yumeiro.stream.IncomingMedia.open(context, r.request, recent = dev.asfakul.yumeiro.stream.IncomingMedia.Recent.LINK)
+                is dev.asfakul.yumeiro.stream.Resolution.Playlist -> linkError = msgPlaylist
+                is dev.asfakul.yumeiro.stream.Resolution.NeedsBrowser, is dev.asfakul.yumeiro.stream.Resolution.Handoff -> linkError = msgBrowser
+                is dev.asfakul.yumeiro.stream.Resolution.Failed -> linkError = String.format(msgFailed, r.message)
+                null -> linkError = String.format(msgFailed, "")
+            }
+        }
+    }
+
     // Debounced live search; pressing Search submits immediately.
     LaunchedEffect(text) {
         val q = text.trim()
+        if (dev.asfakul.yumeiro.stream.SearchLink.parse(q) != null) return@LaunchedEffect
         if (q.length >= 2 && q != submitted) { delay(450); submitted = q }
         if (q.isEmpty()) submitted = ""
     }
@@ -171,16 +207,36 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
         }
     }
 
+    SearchAgainAfterPass(submitted, { latestProviders.value }, results, adultOn) { submitted }
+
+    // F14 (Group U): BlackSource advanced search, opened from the header.
+    var blackSource by rememberSaveable { mutableStateOf(false) }
+    if (blackSource) {
+        BlackSourceScreen(
+            onBack = { blackSource = false }, onOpenTitle = onOpenTitle,
+            onSearchWords = { w -> blackSource = false; text = w; submitted = w; typing = false },
+            providers = { latestProviders.value },
+        )
+        return
+    }
+
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {
-        SubPageHeader(title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}")
+        SubPageHeader(
+            title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}",
+            actions = {
+                TextButton(onClick = { blackSource = true }, modifier = Modifier.testTag("online_search_blacksource")) {
+                    Text(stringResource(R.string.bs_open), color = SpotifyGreen, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                }
+            },
+        )
         OutlinedTextField(
             value = text, onValueChange = { text = it.take(120); typing = true },
-            placeholder = { Text("Title, series or anime", color = TextTertiary, fontSize = 13.sp) },
+            placeholder = { Text(stringResource(R.string.title_series_or_anime), color = TextTertiary, fontSize = 13.sp) },
             leadingIcon = { Icon(Icons.Default.Search, null, tint = SpotifyGreen, modifier = Modifier.size(20.dp)) },
-            trailingIcon = { if (text.isNotEmpty()) IconButton(onClick = { text = ""; submitted = "" }) { Icon(Icons.Default.Close, "Clear", tint = TextSecondary) } },
-            singleLine = true, shape = RoundedCornerShape(24.dp),
+            trailingIcon = { if (text.isNotEmpty()) IconButton(onClick = { text = ""; submitted = "" }) { Icon(Icons.Default.Close, stringResource(R.string.clear), tint = TextSecondary) } },
+            singleLine = true, shape = yuRound(24),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { submitted = text.trim(); typing = false; keyboard?.hide() }),
+            keyboardActions = KeyboardActions(onSearch = { val l = link; if (l != null) playLink(l) else { submitted = text.trim(); typing = false; keyboard?.hide() } }),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = SpotifyGreen, unfocusedBorderColor = DarkOutline,
                 focusedContainerColor = GlassFill, unfocusedContainerColor = GlassFill,
@@ -189,6 +245,10 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).focusRequester(focus).testTag("online_search_input"),
         )
         Spacer(Modifier.height(8.dp))
+        if (link != null) {
+            SearchLinkCard(busy = linkBusy, error = linkError, onPlay = { playLink(link) })
+            return@Column
+        }
 
         val searching = results.values.count { it is ProviderResult.Searching }
         // SEARCH-CAP-1 (A0): how each source is searched (its own search, a title lookup, or its catalog here).
@@ -242,71 +302,236 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
                 Icons.Default.Extension, "No sources to search", "Install or turn on an extension first.",
                 primary = "Extensions" to onOpenExtensions, testTag = "online_search_no_sources",
             )
-            submitted.isBlank() -> LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp)) {
-                if (history.isNotEmpty()) item {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Recent searches", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { SearchHistory.clear(context); history.clear() }) { Text("Clear", color = TextTertiary) }
-                    }
+            submitted.isBlank() -> RecentSearches(history, onClear = { SearchHistory.clear(context); history.clear() }) { h -> text = h; submitted = h }
+            else -> SearchResultsBody(
+                results = results, all = all, rankingBehind = rankingBehind, filter = filter, onFilter = { filter = it },
+                searching = searching, ways = ways, submitted = submitted, onRetry = { attempt++ }, onOpenTitle = onOpenTitle,
+            )
+        }
+    }
+}
+
+/** F3 (Group T): "Play this link" under the search field when the query is a link, magnet or info-hash. */
+@Composable
+private fun SearchLinkCard(busy: Boolean, error: String?, onPlay: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        androidx.compose.material3.Surface(
+            onClick = onPlay, enabled = !busy, shape = yuRound(18), color = GlassFill,
+            border = androidx.compose.foundation.BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.6f)),
+            modifier = Modifier.fillMaxWidth().testTag("online_search_play_link"),
+        ) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                if (busy) CircularProgressIndicator(Modifier.size(22.dp), color = SpotifyGreen, strokeWidth = 2.dp)
+                else Icon(androidx.compose.material.icons.Icons.Default.PlayArrow, null, tint = SpotifyGreen, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(if (busy) R.string.search_link_opening else R.string.search_link_play), color = TextPrimary, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                    Text(stringResource(R.string.search_link_hint), color = TextSecondary, fontSize = 12.sp)
                 }
-                items(history, key = { it }) { h -> SearchHistoryRow(h) { text = h; submitted = h } }
             }
-            else -> {
-                val names = results.keys.sorted()
-                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { OnlineChip("All (${all.size})", filter == null, { filter = null }) }
-                    items(names, key = { it }) { n ->
-                        val label = when (val r = results[n]) {
-                            ProviderResult.Searching -> "$n …"
-                            is ProviderResult.Done -> "$n (${r.items.size})"
-                            is ProviderResult.Failed -> "$n (!)"
-                            null -> n
-                        }
-                        OnlineChip(label, filter == n, { filter = if (filter == n) null else n }, Modifier.testTag("online_search_source_$n"))
-                    }
-                }
-                val shown = if (filter == null) all else all.filter { it.api == filter }
-                val failed = (results[filter] as? ProviderResult.Failed)?.message
-                val way = filter?.let { ways[it] } ?: dev.asfakul.yumeiro.online.SearchAdapters.Way.NATIVE
-                val summary = if (filter != null) null else dev.asfakul.yumeiro.online.SearchAdapters.summary(
-                    searching = searching,
-                    withResults = results.values.count { it is ProviderResult.Done && it.items.isNotEmpty() },
-                    empty = results.values.count { it is ProviderResult.Done && it.items.isEmpty() },
-                    failed = results.values.count { it is ProviderResult.Failed },
-                )
-                val note = filter?.let { dev.asfakul.yumeiro.online.SearchAdapters.note(way, it) }
-                if (names.size > 1 && summary != null) Text(summary, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 6.dp).testTag("online_search_summary"))
-                if (note != null) Text(note, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("online_search_way"))
-                when {
-                    shown.isEmpty() && (rankingBehind || searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
-                        Column(Modifier.fillMaxWidth()) {
-                            if (searching > 0) Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
-                            PosterGridSkeleton(rows = 3)
-                        }
-                    failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,
-                        primary = "Retry" to { attempt++ }, testTag = "online_search_failed")
-                    shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”",
-                        dev.asfakul.yumeiro.online.SearchAdapters.emptyReason(way, filter!!, submitted), testTag = "online_search_empty")
-                    shown.isEmpty() -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”", "Try another spelling or a shorter title.", testTag = "online_search_empty")
-                    else -> {
-                        if (searching > 0) Text("Still searching $searching source${if (searching == 1) "" else "s"}…", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(gridColumns()),
-                            contentPadding = PaddingValues(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier.fillMaxSize().testTag("online_search_results"),
-                        ) {
-                            items(shown, key = { it.key }) { item ->
-                                PosterCard(item, onClick = { OnlineRepository.previews[item.key] = item; onOpenTitle(item) }, modifier = Modifier.fillMaxWidth(), showSource = filter == null && names.size > 1)
-                            }
-                        }
-                    }
+        }
+        if (error != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(error, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("online_search_link_error"))
+        }
+    }
+}
+
+// B4 (Group M): a site's check was just passed; its sources that failed or found nothing for these words (the
+// check page parsed as "no titles") are asked again. Before, they kept the old failure until Retry, and Retry
+// inside 2 minutes got the remembered failure back.
+@Composable
+private fun SearchAgainAfterPass(
+    submitted: String, providers: () -> List<com.lagradost.cloudstream3.MainAPI>,
+    results: androidx.compose.runtime.snapshots.SnapshotStateMap<String, ProviderResult>, adultOn: Boolean, current: () -> String,
+) {
+    val adult by androidx.compose.runtime.rememberUpdatedState(adultOn)
+    LaunchedEffect(submitted) {
+        if (submitted.isBlank()) return@LaunchedEffect
+        val q = submitted
+        dev.asfakul.yumeiro.online.web.VerificationCenter.passed.collect { host ->
+            val again = providers().filter { api ->
+                dev.asfakul.yumeiro.online.web.SitePass.matches(runCatching { api.mainUrl }.getOrNull(), host) &&
+                    results[api.name].let { it is ProviderResult.Failed || (it is ProviderResult.Done && it.items.isEmpty()) }
+            }
+            if (again.isEmpty()) return@collect
+            android.util.Log.i("YuSearch", "check passed on $host: searching ${again.map { it.name }} again")
+            again.forEach { results[it.name] = ProviderResult.Searching }
+            launch {
+                OnlineRepository.search(q, again, retry = true).collect { u ->
+                    if (current() != q) return@collect
+                    results[u.api] = if (u.error != null) ProviderResult.Failed(u.error)
+                        else ProviderResult.Done(if (adult) u.items else u.items.filterNot { dev.asfakul.yumeiro.online.AdultContent.isAdultType(it.type) })
                 }
             }
         }
     }
 }
+
+@Composable
+private fun RecentSearches(history: List<String>, onClear: () -> Unit, onPick: (String) -> Unit) {
+    LazyColumn(contentPadding = PaddingValues(horizontal = 8.dp)) {
+        if (history.isNotEmpty()) item {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.recent_searches), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                TextButton(onClick = onClear) { Text(stringResource(R.string.clear), color = TextTertiary) }
+            }
+        }
+        items(history, key = { it }) { h -> SearchHistoryRow(h) { onPick(h) } }
+    }
+}
+
+/**
+ * TV-API24-JIT (Group L/M, probe run 45861134577): Android 7's JIT crashed (SIGSEGV in the register allocator,
+ * UsePosition::Dup recursion on the "Jit thread pool") while compiling OnlineSearchScreen as one very large method.
+ * The results part is its own composable now, so no single method is that large.
+ */
+@Composable
+private fun SearchResultsBody(
+    results: Map<String, ProviderResult>, all: List<OnlineItem>, rankingBehind: Boolean, filter: String?, onFilter: (String?) -> Unit,
+    searching: Int, ways: Map<String, dev.asfakul.yumeiro.online.SearchAdapters.Way>, submitted: String, onRetry: () -> Unit,
+    onOpenTitle: (OnlineItem) -> Unit,
+) {
+    val names = results.keys.sorted()
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { OnlineChip("All (${all.size})", filter == null, { onFilter(null) }) }
+        items(names, key = { it }) { n ->
+            val label = when (val r = results[n]) {
+                ProviderResult.Searching -> "$n …"
+                is ProviderResult.Done -> "$n (${r.items.size})"
+                is ProviderResult.Failed -> "$n (!)"
+                null -> n
+            }
+            OnlineChip(label, filter == n, { onFilter(if (filter == n) null else n) }, Modifier.testTag("online_search_source_$n"))
+        }
+    }
+    val shown = if (filter == null) all else all.filter { it.api == filter }
+    val failed = (results[filter] as? ProviderResult.Failed)?.message
+    val way = filter?.let { ways[it] } ?: dev.asfakul.yumeiro.online.SearchAdapters.Way.NATIVE
+    val summary = if (filter != null) null else dev.asfakul.yumeiro.online.SearchAdapters.summary(
+        searching = searching,
+        withResults = results.values.count { it is ProviderResult.Done && it.items.isNotEmpty() },
+        empty = results.values.count { it is ProviderResult.Done && it.items.isEmpty() },
+        failed = results.values.count { it is ProviderResult.Failed },
+    )
+    val note = filter?.let { dev.asfakul.yumeiro.online.SearchAdapters.note(way, it) }
+    if (names.size > 1 && summary != null) Text(summary, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 6.dp).testTag("online_search_summary"))
+    if (note != null) Text(note, color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp).testTag("online_search_way"))
+    when {
+        shown.isEmpty() && (rankingBehind || searching > 0 && (filter == null || results[filter] is ProviderResult.Searching)) ->
+            Column(Modifier.fillMaxWidth()) {
+                if (searching > 0) Text("Searching $searching extension${if (searching == 1) "" else "s"}…", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp))
+                PosterGridSkeleton(rows = 3)
+            }
+        failed != null -> StateMessage(Icons.Default.SearchOff, "$filter couldn't search", failed, tint = WarnColor,
+            primary = "Retry" to onRetry, testTag = "online_search_failed")
+        shown.isEmpty() && filter != null -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”",
+            dev.asfakul.yumeiro.online.SearchAdapters.emptyReason(way, filter!!, submitted), testTag = "online_search_empty")
+        shown.isEmpty() -> StateMessage(Icons.Default.SearchOff, "No results for “$submitted”", "Try another spelling or a shorter title.", testTag = "online_search_empty")
+        filter == null && names.size > 1 && SearchView.grouped -> {
+            SearchViewBar()
+            GroupedResults(results, all, onFilter, onRetry, onOpenTitle)
+        }
+        else -> {
+            if (filter == null && names.size > 1) SearchViewBar()
+            if (searching > 0) Text("Still searching $searching source${if (searching == 1) "" else "s"}…", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 4.dp))
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(gridColumns()),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize().testTag("online_search_results"),
+            ) {
+                items(shown, key = { it.key }) { item ->
+                    PosterCard(item, onClick = { OnlineRepository.previews[item.key] = item; onOpenTitle(item) }, modifier = Modifier.fillMaxWidth(), showSource = filter == null && names.size > 1)
+                }
+            }
+        }
+    }
+}
+
+/** F13: how results are shown (grouped by extension or one mixed grid) and how groups are sorted; kept on the device. */
+internal object SearchView {
+    private const val PREFS = "online"
+    var grouped by mutableStateOf(true)
+    var sort by mutableStateOf(dev.asfakul.yumeiro.online.SearchGroups.Sort.BEST)
+    private var loaded = false
+    /** Reads the saved choice off the main thread (first prefs read is disk I/O). */
+    suspend fun load(c: Context) {
+        if (loaded) return
+        loaded = true
+        val (g, s) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            p.getBoolean("search_grouped", true) to p.getString("search_sort", null)
+        }
+        grouped = g
+        sort = runCatching { dev.asfakul.yumeiro.online.SearchGroups.Sort.valueOf(s ?: "BEST") }.getOrDefault(dev.asfakul.yumeiro.online.SearchGroups.Sort.BEST)
+    }
+    fun save(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("search_grouped", grouped).putString("search_sort", sort.name).apply()
+    /** Tests only. */
+    internal fun resetForTest() { loaded = false; grouped = true; sort = dev.asfakul.yumeiro.online.SearchGroups.Sort.BEST }
+}
+
+@Composable
+private fun SearchViewBar() {
+    val c = androidx.compose.ui.platform.LocalContext.current
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("online_search_view")) {
+        item { OnlineChip("Grouped", SearchView.grouped, { SearchView.grouped = true; SearchView.save(c) }, Modifier.testTag("online_search_mode_grouped")) }
+        item { OnlineChip("Mixed", !SearchView.grouped, { SearchView.grouped = false; SearchView.save(c) }, Modifier.testTag("online_search_mode_mixed")) }
+        if (SearchView.grouped) items(dev.asfakul.yumeiro.online.SearchGroups.Sort.entries, key = { it.name }) { s ->
+            OnlineChip(s.label, SearchView.sort == s, { SearchView.sort = s; SearchView.save(c) }, Modifier.testTag("online_search_sort_${s.name.lowercase()}"))
+        }
+    }
+}
+
+/** F13: one row per extension (name, count, See all), the ones with nothing folded into summary lines. */
+@Composable
+private fun GroupedResults(
+    results: Map<String, ProviderResult>, all: List<OnlineItem>, onFilter: (String?) -> Unit, onRetry: () -> Unit, onOpenTitle: (OnlineItem) -> Unit,
+) {
+    val states = results.mapValues { (_, r) ->
+        when (r) {
+            ProviderResult.Searching -> dev.asfakul.yumeiro.online.SearchGroups.State.SEARCHING
+            is ProviderResult.Done -> dev.asfakul.yumeiro.online.SearchGroups.State.DONE
+            is ProviderResult.Failed -> dev.asfakul.yumeiro.online.SearchGroups.State.FAILED
+        }
+    }
+    val sort = SearchView.sort
+    val plan = remember(all, states, sort) { dev.asfakul.yumeiro.online.SearchGroups.plan(all, states, sort) }
+    // A new sort starts from its first row: the list would otherwise keep the old first row in place
+    // and hide the new one above it (seen on TV, where only a couple of rows fit).
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var shownSort by remember { mutableStateOf(sort) }
+    LaunchedEffect(sort) { if (shownSort != sort) { shownSort = sort; listState.scrollToItem(0) } }
+    LazyColumn(Modifier.fillMaxSize().testTag("online_search_groups"), state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
+        items(plan.groups, key = { "g_" + it.name }, contentType = { "group" }) { g ->
+            Column(Modifier.testTag("online_search_group_${g.name}")) {
+                SectionHeader(g.name, subtitle = "${g.items.size} result${if (g.items.size == 1) "" else "s"}") {
+                    TextButton(onClick = { onFilter(g.name) }, modifier = Modifier.testTag("online_search_group_all_${g.name}")) { Text(stringResource(R.string.see_all), color = SpotifyGreen, fontSize = 13.sp) }
+                }
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(g.items.take(GROUP_ROW_MAX), key = { it.key }) { item ->
+                        PosterCard(item, onClick = { OnlineRepository.previews[item.key] = item; onOpenTitle(item) }, width = 112.dp)
+                    }
+                }
+            }
+        }
+        if (plan.searching.isNotEmpty()) item("g_searching") {
+            Text("Still searching: " + plan.searching.joinToString(", "), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_search_group_searching"))
+        }
+        if (plan.empty.isNotEmpty()) item("g_empty") {
+            Text("Nothing found in: " + plan.empty.joinToString(", "), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("online_search_group_none"))
+        }
+        if (plan.failed.isNotEmpty()) item("g_failed") {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("online_search_group_failed"), verticalAlignment = Alignment.CenterVertically) {
+                Text("Couldn't search: " + plan.failed.joinToString(", "), color = WarnColor, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                TextButton(onClick = onRetry, modifier = Modifier.testTag("online_search_group_retry")) { Text(stringResource(R.string.retry), color = SpotifyGreen) }
+            }
+        }
+    }
+}
+
+private const val GROUP_ROW_MAX = 30
 
 /** One recent search. SEARCH-ML-1: shown whole (every line), at least one row high. */
 @Composable
@@ -327,7 +552,8 @@ internal fun SearchHistoryRow(h: String, onClick: () -> Unit) {
 /** Last searches, kept on the device. */
 internal object SearchHistory {
     private const val KEY = "online_search_history"
-    private fun prefs(c: Context) = c.getSharedPreferences("online", Context.MODE_PRIVATE)
+    // B19 (GH-47): each profile keeps its own searches ("online" for the default profile, "online@p<id>" otherwise).
+    private fun prefs(c: Context) = c.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(c, "online"), Context.MODE_PRIVATE)
     // SEARCH-ML-1: kept as a JSON array, so a search with line breaks stays one search (see SearchHistoryCodec).
     fun load(c: Context): List<String> = dev.asfakul.yumeiro.ui.components.SearchHistoryCodec.decode(prefs(c).getString(KEY, ""))
     fun add(c: Context, q: String) {

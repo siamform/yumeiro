@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -51,7 +53,7 @@ fun DownloadSettingsCard() {
         SettingsToggleRow("Ask before each download", "Shows where it's saved and lets you pick Permanent or Offline", askFirst,
             { DownloadSettings.setAskFirst(context, it) }, "setting_ask_first")
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        Text("Download with", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.download_with), color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(
             if (installed.isEmpty()) "Yumeiro's own downloader. Install a free download manager such as 1DM or ADM to hand videos to it instead."
             else "Send \"Download this video\" to another app. Whole-season and YouTube downloads always use Yumeiro.",
@@ -66,8 +68,8 @@ fun DownloadSettingsCard() {
             }
         }
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        Text("Auto-delete watched downloads", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("Offline copies are removed this long after they finish. Permanent (pinned) ones always stay.", color = TextTertiary, fontSize = 12.sp)
+        Text(stringResource(R.string.auto_delete_watched_downloads), color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.offline_copies_are_removed_this_long), color = TextTertiary, fontSize = 12.sp)
         FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DownloadSettings.AUTO_DELETE_CHOICES.forEach { d ->
                 FilterChip(selected = d == days, onClick = { DownloadSettings.setAutoDeleteDays(context, d) }, label = { Text(DownloadSettings.autoDeleteLabel(d)) },
@@ -77,15 +79,15 @@ fun DownloadSettingsCard() {
         SettingsToggleRow("Permanent by default", "New episode downloads start as Permanent, so the timer skips them", keepDefault,
             { DownloadSettings.setKeepByDefault(context, it) }, "setting_keep_default")
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        Text("Episode quality", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("Highest quality to save. Lower saves space and data.", color = TextTertiary, fontSize = 12.sp)
+        Text(stringResource(R.string.episode_quality), color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.highest_quality_to_save_lower_saves), color = TextTertiary, fontSize = 12.sp)
         FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DownloadSettings.QUALITY_CHOICES.forEach { q ->
                 FilterChip(selected = q == quality, onClick = { DownloadSettings.setQuality(context, q) }, label = { Text(DownloadSettings.qualityLabel(q)) })
             }
         }
-        Text("Downloads at once", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text("Never more than one per extension, so sites don't block you.", color = TextTertiary, fontSize = 12.sp)
+        Text(stringResource(R.string.downloads_at_once), color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.never_more_than_one_per_extension), color = TextTertiary, fontSize = 12.sp)
         FlowRow(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             (1..3).forEach { n -> FilterChip(selected = n == parallel, onClick = { DownloadSettings.setParallel(context, n) }, label = { Text("$n") }) }
         }
@@ -95,7 +97,7 @@ fun DownloadSettingsCard() {
         SettingsToggleRow("Show tips on the Downloads page", "The short \"How downloads work\" guide", tips,
             { DownloadSettings.setShowTips(context, it) }, "setting_download_tips")
         HorizontalDivider(Modifier.padding(vertical = 6.dp))
-        Text("Where files go", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.where_files_go), color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(
             "Episodes and movies: ${appPath ?: "app storage"}/<series folder>, private to Yumeiro and removed if you uninstall. " +
                 "YouTube: ${if (toPhone) "Movies/Yumeiro and Music/Yumeiro on your phone" else "the same app folder"}.",
@@ -105,6 +107,6 @@ fun DownloadSettingsCard() {
         TextButton(onClick = {
             val n = OnlineDownloads.cleanup(context)
             AppMessages.success(context, if (n == 0) "Nothing to clean up" else "Removed $n old download${if (n == 1) "" else "s"}")
-        }) { Text("Clean up now") }
+        }) { Text(stringResource(R.string.clean_up_now)) }
     }
 }

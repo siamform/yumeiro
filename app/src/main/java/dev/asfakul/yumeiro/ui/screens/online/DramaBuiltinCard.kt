@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,6 +49,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * OWN-13: the one built-in source, "Yumeiro" (short dramas + public-domain films, documentaries, cartoons, TV and
@@ -112,13 +115,13 @@ private fun BuiltinSourceCard(
         else AppMessages.show(context, "$name turned off", AppMessages.Kind.INFO)
     }
     Surface(
-        shape = RoundedCornerShape(20.dp), color = GlassFill,
-        modifier = modifier.fillMaxWidth().border(1.dp, SpotifyGreen.copy(alpha = if (on) 0.55f else 0.25f), RoundedCornerShape(20.dp)).testTag(tag),
+        shape = yuRound(20), color = GlassFill,
+        modifier = modifier.fillMaxWidth().border(1.dp, SpotifyGreen.copy(alpha = if (on) 0.55f else 0.25f), yuRound(20)).testTag(tag),
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                    Modifier.size(44.dp).clip(yuRound(14))
                         .background(Brush.linearGradient(listOf(SpotifyGreen, SpotifyGreen.copy(alpha = 0.45f)))),
                     contentAlignment = Alignment.Center,
                 ) { Text(glyph, color = OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp) }
@@ -128,15 +131,15 @@ private fun BuiltinSourceCard(
                     Text(kind, color = TextTertiary, fontSize = 11.sp, maxLines = 1)
                 }
                 AnimatedContent(on, label = "${tag}_toggle") { enabled ->
-                    if (enabled) OutlinedButton(onClick = ::toggle, shape = RoundedCornerShape(18.dp), modifier = Modifier.testTag("${tag}_toggle")) {
+                    if (enabled) OutlinedButton(onClick = ::toggle, shape = yuRound(18), modifier = Modifier.testTag("${tag}_toggle")) {
                         Icon(Icons.Default.Check, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("On", color = TextPrimary, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.on), color = TextPrimary, fontWeight = FontWeight.Bold)
                     } else Button(
-                        onClick = ::toggle, shape = RoundedCornerShape(18.dp),
+                        onClick = ::toggle, shape = yuRound(18),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.testTag("${tag}_toggle"),
-                    ) { Text("Turn on", fontWeight = FontWeight.Bold) }
+                    ) { Text(stringResource(R.string.turn_on), fontWeight = FontWeight.Bold) }
                 }
             }
             Spacer(Modifier.padding(top = 8.dp))

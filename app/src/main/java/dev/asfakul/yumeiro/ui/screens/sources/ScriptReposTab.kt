@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.sources
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -87,11 +89,11 @@ internal fun ScriptReposTab() {
                         "Streams that need DRM keys from a provider are not played.") { add = true }
             }
             if (state.repos.isEmpty()) item("norepo") {
-                Text("No repositories yet.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+                Text(stringResource(R.string.no_repositories_yet), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
             }
             items(state.repos, key = { "r" + it.url }) { r ->
                 HubCard(r.name, r.url, badge = r.ecosystem.label, modifier = Modifier.testTag("script_repo")) {
-                    IconButton(onClick = { confirmRemove = r }) { Icon(Icons.Default.Delete, "Remove ${r.name}", tint = TextSecondary) }
+                    IconButton(onClick = { confirmRemove = r }) { Icon(Icons.Default.Delete, stringResource(R.string.remove_3, r.name), tint = TextSecondary) }
                 }
             }
             item("inst") { SectionTitle("Installed", "${state.installed.size} sources") }
@@ -100,7 +102,7 @@ internal fun ScriptReposTab() {
                     modifier = Modifier.testTag("script_installed")) {
                     IconButton(onClick = {
                         scope.launch { withContext(Dispatchers.IO) { EcosystemRegistry.uninstall(context, p.key) }; OnlineRepository.clearCaches() }
-                    }) { Icon(Icons.Default.Delete, "Uninstall ${p.name}", tint = TextSecondary) }
+                    }) { Icon(Icons.Default.Delete, stringResource(R.string.uninstall_2, p.name), tint = TextSecondary) }
                 }
             }
             if (state.repos.isNotEmpty()) {
@@ -131,10 +133,10 @@ internal fun ScriptReposTab() {
     confirmRemove?.let { r ->
         TsukiDialog(
             onDismissRequest = { confirmRemove = null },
-            title = { Text("Remove ${r.name}?") },
-            text = { Text("Installed sources from it stay until you uninstall them.") },
-            confirmButton = { TextButton(onClick = { confirmRemove = null; scope.launch(Dispatchers.IO) { EcosystemRegistry.removeRepo(context, r.url) } }) { Text("Remove") } },
-            dismissButton = { TextButton(onClick = { confirmRemove = null }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.remove, r.name)) },
+            text = { Text(stringResource(R.string.installed_sources_from_it_stay_until)) },
+            confirmButton = { TextButton(onClick = { confirmRemove = null; scope.launch(Dispatchers.IO) { EcosystemRegistry.removeRepo(context, r.url) } }) { Text(stringResource(R.string.remove_2)) } },
+            dismissButton = { TextButton(onClick = { confirmRemove = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }

@@ -7,6 +7,8 @@
 
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -152,6 +154,7 @@ import dev.asfakul.yumeiro.subtitles.mimeFor
 import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @OptIn(UnstableApi::class)
 /**
@@ -213,8 +216,8 @@ fun VideoPlayerModal(
                     .padding(end = 12.dp, bottom = minimizedBottomInset)
                     .offset { androidx.compose.ui.unit.IntOffset(drag.x.toInt(), drag.y.toInt()) }
                     .size(miniWidth, miniHeight)
-                    .shadow(18.dp, RoundedCornerShape(14.dp))
-                    .clip(RoundedCornerShape(14.dp))
+                    .shadow(18.dp, yuRound(14))
+                    .clip(yuRound(14))
                     .pointerInput(maxDx, maxDy) {
                         detectDragGestures { change, d ->
                             change.consume()
@@ -1220,10 +1223,10 @@ private fun VideoPlayerModalContent(
     }
     if (askPlayer) dev.asfakul.yumeiro.ui.components.TsukiDialog(
         onDismissRequest = { askPlayer = false; exoPlayer.play() },
-        title = { Text("Play with") },
-        text = { Text("Watch in Yumeiro, or open this video in another player app.") },
-        confirmButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; exoPlayer.play() }, modifier = Modifier.testTag("ask_player_yumeiro")) { Text("Yumeiro") } },
-        dismissButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; handOffExternal() }, modifier = Modifier.testTag("ask_player_external")) { Text("Another app") } },
+        title = { Text(stringResource(R.string.play_with)) },
+        text = { Text(stringResource(R.string.watch_in_yumeiro_or_open_this)) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; exoPlayer.play() }, modifier = Modifier.testTag("ask_player_yumeiro")) { Text(stringResource(R.string.app_name)) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { askPlayer = false; handOffExternal() }, modifier = Modifier.testTag("ask_player_external")) { Text(stringResource(R.string.another_app)) } },
     )
 
     // ExoPlayer listener lifecycle
@@ -1963,7 +1966,7 @@ private fun VideoPlayerModalContent(
                     .padding(horizontal = 14.dp, vertical = 6.dp).testTag("video_hold_2x"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("2x", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(stringResource(R.string.t_2x), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 androidx.compose.foundation.layout.Spacer(Modifier.padding(start = 4.dp))
                 Icon(androidx.compose.material.icons.Icons.Default.FastForward, null, tint = Color.White, modifier = Modifier.size(16.dp))
             }
@@ -1996,7 +1999,7 @@ private fun VideoPlayerModalContent(
                 modifier = Modifier.align(Alignment.TopCenter).then(pillInset).padding(top = pillTop),
             ) {
                 Text(
-                    "Reset zoom · ${dev.asfakul.yumeiro.player.VideoZoom.label(videoZoom.scale)}",
+                    stringResource(R.string.reset_zoom, dev.asfakul.yumeiro.player.VideoZoom.label(videoZoom.scale)),
                     color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.6f))
                         .clickable(role = androidx.compose.ui.semantics.Role.Button) { videoZoom = dev.asfakul.yumeiro.player.VideoZoom.State() }
@@ -2009,7 +2012,7 @@ private fun VideoPlayerModalContent(
                 modifier = Modifier.align(Alignment.TopCenter).then(pillInset).padding(top = pillTop),
             ) {
                 Text(
-                    "Reset rotation · ${dev.asfakul.yumeiro.player.VideoRotation.label(chrome.rotation)}",
+                    stringResource(R.string.reset_rotation, dev.asfakul.yumeiro.player.VideoRotation.label(chrome.rotation)),
                     color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.6f))
                         .clickable(role = androidx.compose.ui.semantics.Role.Button) { rotateVideo(0) }
@@ -2643,7 +2646,7 @@ private fun BoxScope.FloatingPlayerChrome(
             Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Pause" else "Play", tint = Color.White)
         }
         IconButton(onClick = onClose, modifier = Modifier.size(34.dp).testTag("floating_close")) {
-            Icon(Icons.Default.Close, "Close", tint = Color.White)
+            Icon(Icons.Default.Close, stringResource(R.string.close), tint = Color.White)
         }
     }
     Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {

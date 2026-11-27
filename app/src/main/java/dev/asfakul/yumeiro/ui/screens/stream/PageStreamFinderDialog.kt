@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.online.web.SafeWebView
 import dev.asfakul.yumeiro.online.web.SafeWebViewClient
 import android.annotation.SuppressLint
@@ -86,10 +88,10 @@ private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, mod
     Box(modifier.background(DarkSurface).testTag("page_finder_auto"), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(32.dp)) {
             dev.asfakul.yumeiro.ui.components.YuLoader(size = 56.dp, label = "Looking for streams")
-            Text("Finding the video on $host", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Text(stringResource(R.string.finding_the_video_on, host), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             androidx.compose.animation.AnimatedContent(step, label = "autoStep") { Text("$it…", color = TextSecondary, fontSize = 13.sp) }
             androidx.compose.material3.TextButton(onClick = onShowPage, modifier = Modifier.testTag("page_finder_show_page")) {
-                Text("Show the page", color = SpotifyGreen)
+                Text(stringResource(R.string.show_the_page), color = SpotifyGreen)
             }
         }
     }
@@ -100,11 +102,11 @@ private fun AutoFindCard(host: String, step: String, onShowPage: () -> Unit, mod
 private fun MiniAppConsentCard(bot: String, onAllow: () -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier.background(DarkSurface).testTag("page_finder_miniapp_consent"), contentAlignment = Alignment.Center) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(28.dp)) {
-            Text("Open @$bot with your Telegram account?", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+            Text(stringResource(R.string.open_with_your_telegram_account, bot), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             Text(dev.asfakul.yumeiro.online.telegram.td.TgMiniApp.CONSENT_TEXT, color = TextSecondary, fontSize = 13.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.TextButton(onClick = onCancel, modifier = Modifier.testTag("page_finder_miniapp_cancel")) { Text("Not now", color = TextSecondary) }
-                androidx.compose.material3.Button(onClick = onAllow, modifier = Modifier.testTag("page_finder_miniapp_allow")) { Text("Open") }
+                androidx.compose.material3.TextButton(onClick = onCancel, modifier = Modifier.testTag("page_finder_miniapp_cancel")) { Text(stringResource(R.string.not_now), color = TextSecondary) }
+                androidx.compose.material3.Button(onClick = onAllow, modifier = Modifier.testTag("page_finder_miniapp_allow")) { Text(stringResource(R.string.widget_open)) }
             }
         }
     }
@@ -465,6 +467,7 @@ fun PageStreamFinderDialog(
 ) {
     val newTabNow = androidx.compose.runtime.rememberUpdatedState(onNewTab)
     var manageAds by remember { mutableStateOf(false) }
+    var vaultDraft by remember { mutableStateOf<dev.asfakul.yumeiro.ui.screens.vault.VaultDraft?>(null) }
     val capture = keep?.capture ?: remember(pageUrl) { PageStreamCapture() }
     // Auto mode: the page works behind a "finding the video" card and only shows when it needs the user.
     var autoActive by remember(pageUrl) { mutableStateOf(auto) }
@@ -646,6 +649,11 @@ fun PageStreamFinderDialog(
         barNote = BarNote("Pop-up blocked", if (target != null) "Open" else null, target?.let { t -> { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, t, emptyMap()) }; Unit } })
     }
 
+    /** B12: Stop redirects held the page's own jump to another site; the person can still go there. */
+    fun redirectHeld(target: String) = main.post {
+        barNote = BarNote("Redirect stopped", "Open", { webViewRef?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, target, emptyMap()) }; Unit })
+    }
+
     fun refresh() = main.post { found.clear(); found.addAll(synchronized(capture) { capture.all() }) }
 
     /** OL-3: the page switched video or page: keep only the new video's streams. */
@@ -814,12 +822,12 @@ fun PageStreamFinderDialog(
         Surface(color = DarkSurface, modifier = Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().systemBarsPadding()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onDismiss, modifier = Modifier.testTag("page_finder_close")) { Icon(Icons.Default.Close, "Close", tint = TextPrimary) }
+                    IconButton(onClick = onDismiss, modifier = Modifier.testTag("page_finder_close")) { Icon(Icons.Default.Close, stringResource(R.string.close), tint = TextPrimary) }
                     Column(Modifier.weight(1f)) {
                         Text(pageTitle.ifBlank { "Find stream" }, color = TextPrimary, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(PlatformRules.hostOf(currentUrl) ?: currentUrl, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, "Minimize", tint = TextSecondary) }
+                    if (onMinimize != null) IconButton(onClick = onMinimize, modifier = Modifier.testTag("page_finder_minimize")) { Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.minimize), tint = TextSecondary) }
                     // GROUP E2: in the browser the ad filter and Reload live in the bottom bar's menu.
                     if (!browser) IconButton(
                         onClick = { togglePageFilter() },
@@ -831,7 +839,7 @@ fun PageStreamFinderDialog(
                             tint = if (filterOn) SpotifyGreen else TextSecondary,
                         )
                     }
-                    if (!browser) IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, "Reload", tint = TextSecondary) }
+                    if (!browser) IconButton(onClick = { webViewRef?.reload() }) { Icon(Icons.Default.Refresh, stringResource(R.string.reload), tint = TextSecondary) }
                 }
                 if (progress in 1..99) LinearProgressIndicator(progress = { progress / 100f }, color = SpotifyGreen, modifier = Modifier.fillMaxWidth())
                 if (showHint && !autoActive) PageFinderHint(autoNote ?: reason, onHide = { showHint = false })
@@ -957,8 +965,34 @@ fun PageStreamFinderDialog(
                                             else popupHeld(request.url.toString())
                                             return true
                                         }
-                                        val scheme = request?.url?.scheme?.lowercase()
-                                        return scheme != "http" && scheme != "https" // block intent:, market:, file: …
+                                        if (request == null || !request.isForMainFrame) {
+                                            val scheme = request?.url?.scheme?.lowercase()
+                                            return scheme != "http" && scheme != "https" // block intent:, market:, file: …
+                                        }
+                                        // B12: app links never leave Yumeiro (an intent's web fallback loads here), media plays in
+                                        // Yumeiro's player, and with Stop redirects a page can't move to another site by itself.
+                                        val target = request.url.toString()
+                                        return when (val nav = dev.asfakul.yumeiro.online.web.PopupPolicy.navigation(view?.url, target, request.hasGesture(),
+                                            request.isRedirect, dev.asfakul.yumeiro.online.web.BrowserFilters.stopRedirects.value, chainActiveNow.value)) {
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Allow -> false
+                                            dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Block -> { android.util.Log.w("YuRedirect", "blocked app link ${target.substringBefore(':')}:"); true }
+                                            is dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.InApp -> { view?.let { dev.asfakul.yumeiro.online.web.SafeWebView.loadUrl(it, nav.url, emptyMap()) }; true }
+                                            is dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Hold -> {
+                                                android.util.Log.w("YuRedirect", "held a redirect to ${dev.asfakul.yumeiro.online.web.ChainDestination.hostOf(nav.url)}")
+                                                redirectHeld(nav.url); true
+                                            }
+                                            is dev.asfakul.yumeiro.online.web.PopupPolicy.Nav.Play -> {
+                                                android.util.Log.w("YuRedirect", "plays ${nav.label} link in Yumeiro's player")
+                                                val referer = view?.url
+                                                main.post {
+                                                    if (!played) {
+                                                        played = true; webViewRef?.onPause()
+                                                        onPlay(dev.asfakul.yumeiro.stream.StreamRequest(url = nav.url, title = pageTitle, referer = referer))
+                                                    }
+                                                }
+                                                true
+                                            }
+                                        }
                                     }
                                     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                                         // Built-in ad blocking: pre-rolls and pop-unders never load or get offered as "the stream".
@@ -1066,8 +1100,26 @@ fun PageStreamFinderDialog(
                     accent = SpotifyGreen,
                     filterOn = filterOn, onFilter = { togglePageFilter() }, onManageAds = { manageAds = true },
                     tabCount = tabCount, onTabs = onTabs, onCloseTab = onCloseTab,
+                    onSaveVault = {
+                        // F1: what the page's player loaded plus what the page links to (players, files, server buttons).
+                        val wv = webViewRef
+                        val streams = found.map { it.url to it.label }
+                        val page = currentUrl
+                        val title = found.firstOrNull { it.title.isNotBlank() }?.title ?: pageTitle
+                        val draft = { raw: String? ->
+                            vaultDraft = dev.asfakul.yumeiro.ui.screens.vault.VaultDraft(title, page, dev.asfakul.yumeiro.online.vault.VaultLinks.classify(
+                                page, streams, dev.asfakul.yumeiro.online.vault.VaultLinks.parseFound(raw),
+                                isAd = dev.asfakul.yumeiro.online.web.AdFilter::isAd,
+                                isMedia = { dev.asfakul.yumeiro.stream.StreamSniffer.fromUrl(it) != null },
+                            ))
+                        }
+                        if (wv == null) draft(null) else wv.evaluateJavascript(dev.asfakul.yumeiro.ui.screens.vault.VaultCollect.JS) { r -> draft(r) }
+                    },
                 )
             }
+        }
+        vaultDraft?.let { d ->
+            dev.asfakul.yumeiro.ui.screens.vault.VaultSaveDialog(d, onDismiss = { vaultDraft = null }, onSaved = { msg -> vaultDraft = null; barNote = BarNote(msg, null, null) })
         }
         if (manageAds) {
             var changed by remember { mutableStateOf(false) }

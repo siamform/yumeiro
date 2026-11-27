@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material.icons.outlined.Album
 import androidx.compose.foundation.basicMarquee
@@ -138,6 +140,7 @@ import dev.asfakul.yumeiro.ui.theme.artGradientFor
 import dev.asfakul.yumeiro.ui.theme.glass
 import dev.asfakul.yumeiro.ui.theme.pageBackground
 import dev.asfakul.yumeiro.ui.theme.rememberArtBrush
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 fun NowPlayingScreen(
@@ -251,7 +254,7 @@ fun NowPlayingScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(yuRound(16))
                         .background(Color(0xFF4A1525))
                         .padding(12.dp)
                         .testTag("now_playing_error_banner"),
@@ -267,10 +270,10 @@ fun NowPlayingScreen(
                         val tip = remember(playbackState.errorMessage) {
                             dev.asfakul.yumeiro.ui.components.ErrorHelp.suggestionsFor(playbackState.errorMessage.orEmpty()).firstOrNull()
                         }
-                        if (tip != null) Text("Tip: $tip", style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB3C0), modifier = Modifier.testTag("now_playing_error_tip"))
+                        if (tip != null) Text(stringResource(R.string.tip, tip), style = MaterialTheme.typography.labelSmall, color = Color(0xFFFFB3C0), modifier = Modifier.testTag("now_playing_error_tip"))
                     }
                     Box(Modifier.minimumInteractiveComponentSize().size(32.dp).clip(CircleShape).clickable(onClick = onDismissError).testTag("now_playing_error_dismiss"), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Close, "Dismiss error", tint = Color(0xFFFFD6DD), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Close, stringResource(R.string.dismiss_error), tint = Color(0xFFFFD6DD), modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -486,7 +489,7 @@ private fun ArtworkPanel(track: AudioTrack?, lyrics: Lyrics?, positionMs: () -> 
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(yuRound(14))
                     .clickable(onClick = onOpenLyrics)
                     .padding(horizontal = 8.dp, vertical = 6.dp)
                     .testTag("now_playing_lyric_preview")
@@ -526,8 +529,8 @@ private fun LyricsPanel(
     Column(
         Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(28.dp))
-            .glass(RoundedCornerShape(28.dp))
+            .clip(yuRound(28))
+            .glass(yuRound(28))
             .testTag("now_playing_lyrics_panel")
     ) {
         val lyrics = state.lyrics
@@ -542,10 +545,10 @@ private fun LyricsPanel(
             ) {
                 Icon(Icons.Default.Lyrics, null, tint = TextSecondary, modifier = Modifier.size(40.dp))
                 Spacer(Modifier.height(12.dp))
-                Text("No lyrics found", style = MaterialTheme.typography.titleLarge, color = TextPrimary)
+                Text(stringResource(R.string.no_lyrics_found), style = MaterialTheme.typography.titleLarge, color = TextPrimary)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Embed lyrics in the file's tags, put a .lrc file with the same name next to the song, or import one.",
+                    stringResource(R.string.embed_lyrics_in_the_files_tags),
                     style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(16.dp))
@@ -567,10 +570,10 @@ private fun LyricsPanel(
                         TextButton(onClick = {
                             val id = currentTrackId ?: return@TextButton
                             scope.launch { TrackDetailsRepository.removeImportedLyrics(context, id); onReload() }
-                        }) { Text("Remove", color = TextSecondary, style = MaterialTheme.typography.labelLarge) }
+                        }) { Text(stringResource(R.string.remove_2), color = TextSecondary, style = MaterialTheme.typography.labelLarge) }
                     }
                     TextButton(onClick = launchImport, modifier = Modifier.testTag("lyrics_import_button")) {
-                        Text("Import", color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.label_import), color = SpotifyGreen, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -615,7 +618,7 @@ private fun SyncedLyricsList(lyrics: Lyrics, positionMs: () -> Long, onSeek: (Lo
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
-                        if (line.timeMs != null) Modifier.clip(RoundedCornerShape(10.dp)).clickable { onSeek(line.timeMs) }
+                        if (line.timeMs != null) Modifier.clip(yuRound(10)).clickable { onSeek(line.timeMs) }
                         else Modifier
                     )
                     .padding(vertical = 2.dp)
@@ -650,7 +653,7 @@ private fun QueuePanel(playbackState: PlaybackState, onPlayQueueIndex: (Int) -> 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(yuRound(16))
                         .background(if (isCurrent) GlassFill else Color.Transparent)
                         .clickable { onPlayQueueIndex(index) }
                         .padding(horizontal = 8.dp, vertical = 6.dp)
@@ -680,7 +683,7 @@ private fun CodecLine(codec: dev.asfakul.yumeiro.player.AudioCodecInfo) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.testTag("now_playing_codec")) {
         if (codec.lossless) {
             Text(
-                "Lossless", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                stringResource(R.string.lossless), color = accent, fontSize = 10.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(accent.copy(alpha = 0.14f))
                     .padding(horizontal = 7.dp, vertical = 2.dp).testTag("now_playing_lossless"),
             )
@@ -705,6 +708,9 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
     }
     val d = details
     val q = quick
+    // B13: a streamed song waits for its stream facts, not for a file read.
+    val waiting = q == null && (d == null || dev.asfakul.yumeiro.player.SongFacts.streamed(track.uri))
+    val sizeBytes = dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, q?.second ?: d?.sizeBytes)
     val rows = buildList {
         add("Title" to track.title)
         add("Artist" to track.artist)
@@ -716,7 +722,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         d?.trackNumber?.let { add("Track" to it) }
         d?.discNumber?.let { add("Disc" to it) }
         // H-8: the file's own duration (then the player's) when the library row has none.
-        add("Duration" to (dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, q?.first ?: d?.durationMs, playerDurationMs)?.let(::formatDuration) ?: if (d == null && q == null) "\u2026" else "Unknown"))
+        add("Duration" to (dev.asfakul.yumeiro.player.SongFacts.durationMs(track.durationMs, q?.first ?: d?.durationMs, playerDurationMs)?.let(::formatDuration) ?: if (waiting) "\u2026" else "Unknown"))
         d?.format?.let { add("Format" to it) }
         // Live from the decoder first (works for online songs too), the file's tags otherwise.
         codec?.codecName?.let { add("Codec" to (if (codec.lossless) "$it (lossless)" else it)) }
@@ -727,7 +733,7 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
         codec?.channelsLabel?.let { add("Channels" to it) }
         codec?.decoder?.let { add("Decoder" to "${codec.decoderKind} · $it") }
         // H-8: always shown (it used to vanish when the library row had 0).
-        add("File size" to dev.asfakul.yumeiro.player.SongFacts.sizeLabel(dev.asfakul.yumeiro.player.SongFacts.sizeBytes(track.sizeBytes, q?.second ?: d?.sizeBytes), track.uri, ::formatFileSize).let { if (d == null && q == null && it == "Unknown") "\u2026" else it })
+        add("File size" to if (waiting && sizeBytes == null) "\u2026" else dev.asfakul.yumeiro.player.SongFacts.sizeLabel(sizeBytes, track.uri, ::formatFileSize))
         if (track.playCount > 0) add("Plays" to track.playCount.toString())
         add("Folder" to track.folderName)
         d?.path?.let { add("Path" to it) }
@@ -735,14 +741,14 @@ private fun SongInfoPanel(track: AudioTrack, codec: dev.asfakul.yumeiro.player.A
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(28.dp))
-            .glass(RoundedCornerShape(28.dp))
+            .clip(yuRound(28))
+            .glass(yuRound(28))
             .testTag("now_playing_info_panel"),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item(key = "header") {
-            Text("Song info", style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
+            Text(stringResource(R.string.song_info), style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
         }
         items(rows, key = { it.first }) { (label, value) ->
             Row(Modifier.fillMaxWidth().testTag("song_info_${label.lowercase().replace(' ', '_')}")) {
@@ -781,7 +787,7 @@ private fun RoundControl(
 private fun PillButton(
     icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, description: String? = null,
 ) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = yuRound(24)
     Row(
         modifier = modifier
             .height(48.dp)
@@ -811,7 +817,7 @@ private fun RailTool(
     Column(
         modifier = modifier
             .heightIn(min = 58.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(yuRound(16))
             .clickable(role = Role.Button, onClick = onClick)
             .then(if (description != null) Modifier.semantics { contentDescription = description } else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally,

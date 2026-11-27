@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.youtube
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.a11yLabel
 import dev.asfakul.yumeiro.ui.feed.feedCard
 import androidx.compose.ui.zIndex
@@ -104,6 +106,7 @@ import dev.asfakul.yumeiro.youtube.music.YtMusicApi
 import dev.asfakul.yumeiro.youtube.music.toYt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One loaded YouTube Music page with the shelves/rows appended by "load more". */
 internal data class YmState(val page: YmPage? = null, val loading: Boolean = true, val error: String? = null, val more: Boolean = false, val fails: Int = 0) {
@@ -351,10 +354,12 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
             val barOpen = asked == key || query.isNotEmpty() || submitted != null
             Column(Modifier.fillMaxSize().padding(top = if (submitted != null) YT_SEARCH_BAR_H else 0.dp)) {
             val sub = submitted
-            if (sub != null) {
+            // B2: the filter / category chips slide away on scroll down and come back on scroll up.
+            if (sub != null) dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = sub to filter, header = {
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("ytmusic_search_filters")) {
                     itemsIndexed(YtMusicApi.Filter.entries, key = { _, f -> f.name }) { _, f -> YtChip(f.label, f == filter) { if (f != filter) search(sub, f) } }
                 }
+            }) {
                 val state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_results:" + sub + ":" + filter.name)
                 YtEndlessTrigger(state, results.canLoadMore) { moreResults() }
                 LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_results"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
@@ -362,9 +367,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                     val p = results.page
                     if (p != null && p.shelves.isEmpty() && !results.loading) item("none") { YtProblem("No results for “$sub”.", null) }
                 }
-                return@Column
-            }
-
+            } else dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(showKey = chip, header = {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("ytmusic_chips")) {
                 item("c_home") { YtChip("Home", chip == CHIP_HOME, modifier = Modifier.testTag("ytmusic_chip_home")) { chip = CHIP_HOME } }
                 item("c_explore") { YtChip("Explore", chip == CHIP_EXPLORE, modifier = Modifier.testTag("ytmusic_chip_explore")) { chip = CHIP_EXPLORE } }
@@ -372,6 +375,7 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                     YtChip(c.title, chip == c.browse.params) { chip = c.browse.params ?: CHIP_HOME }
                 }
             }
+            }) {
             val state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("ytm_home:" + chip)
             YtEndlessTrigger(state, home.canLoadMore || endlessOpen) { moreHome() }
             LazyColumn(Modifier.fillMaxSize().testTag("youtube_music_list"), state = state, contentPadding = PaddingValues(bottom = 160.dp)) {
@@ -387,9 +391,10 @@ internal fun YtMusicBrowse(onPlay: (YtItem, List<YtItem>) -> Unit, onBasic: () -
                 pageBody(home, home = true, onOpen = open, onPlay = ::play, onRetry = { loadHome(true) })
                 if (home.error != null) item("basic") {
                     TextButton(onClick = onBasic, modifier = Modifier.padding(horizontal = 12.dp).testTag("ytmusic_basic")) {
-                        Text("Use simple discovery instead", color = SpotifyGreen)
+                        Text(stringResource(R.string.use_simple_discovery_instead), color = SpotifyGreen)
                     }
                 }
+            }
             }
                     }
             Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().zIndex(2f)) {
@@ -431,7 +436,7 @@ private fun LazyListScope.pageBody(
     if (page == null && state.loading) {
         item("sk_head") { SkeletonBlock(null, 22.dp, Modifier.padding(start = 18.dp, end = 120.dp, top = 18.dp, bottom = 10.dp)) }
         itemsIndexed(List(5) { it }, key = { i, _ -> "sk$i" }) { _, _ -> SongRowSkeleton() }
-        item("sk_row") { Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) { repeat(3) { SkeletonBlock(140.dp, 140.dp, shape = RoundedCornerShape(14.dp)) } } }
+        item("sk_row") { Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) { repeat(3) { SkeletonBlock(140.dp, 140.dp, shape = yuRound(14)) } } }
         return
     }
     state.error?.let { msg -> item("err") { YtProblem(msg, onRetry) }; return }
@@ -464,7 +469,7 @@ private fun YmShelfHeader(title: String, strapline: String?, icon: androidx.comp
         if (onMore != null) Row(
             Modifier.clip(CircleShape).background(GlassFill).clickable(onClick = onMore).padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-        ) { Text("More", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+        ) { Text(stringResource(R.string.more), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
     }
 }
 
@@ -509,8 +514,8 @@ private fun Carousel(shelf: YmShelf, onOpen: (YmBrowse) -> Unit, onSong: (YmItem
 private fun YmCover(title: String, subtitle: String, art: String?, size: Dp, round: Boolean, onClick: () -> Unit) {
     // G12 X8: the label sits on the clickable node, so TalkBack names a card even when its title
     // is scrolled off screen (the accessibility check found such cards unlabeled).
-    Column(Modifier.width(size).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).a11yLabel(title, subtitle).testTag("ytmusic_cover").feedCard("ytmusic", art ?: title), horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
-        Box(Modifier.size(size).clip(if (round) CircleShape else RoundedCornerShape(12.dp))) {
+    Column(Modifier.width(size).clip(yuRound(12)).clickable(onClick = onClick).a11yLabel(title, subtitle).testTag("ytmusic_cover").feedCard("ytmusic", art ?: title), horizontalAlignment = if (round) Alignment.CenterHorizontally else Alignment.Start) {
+        Box(Modifier.size(size).clip(if (round) CircleShape else yuRound(12))) {
             PosterImage(art, emptyMap(), Modifier.fillMaxSize(), if (round) Icons.Default.Person else Icons.Default.Album)
         }
         Spacer(Modifier.height(8.dp))
@@ -521,8 +526,8 @@ private fun YmCover(title: String, subtitle: String, art: String?, size: Dp, rou
 
 @Composable
 private fun YmVideoCover(song: YmItem.Song, onClick: () -> Unit) {
-    Column(Modifier.width(236.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).a11yLabel(song.title, song.artistLine).testTag("ytmusic_video").feedCard("ytmusic", song.videoId)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp))) {
+    Column(Modifier.width(236.dp).clip(yuRound(12)).clickable(onClick = onClick).a11yLabel(song.title, song.artistLine).testTag("ytmusic_video").feedCard("ytmusic", song.videoId)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(12))) {
             PosterImage(song.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
         }
         Spacer(Modifier.height(8.dp))
@@ -549,7 +554,7 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
             val thumb = item.thumbnail ?: art
             if (index != null && item.thumbnail == null) {
                 Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { Text("$index", color = TextTertiary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
-            } else Box(Modifier.size(if (compact) 50.dp else 52.dp).clip(RoundedCornerShape(8.dp))) {
+            } else Box(Modifier.size(if (compact) 50.dp else 52.dp).clip(yuRound(8))) {
                 PosterImage(thumb, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
             }
             Spacer(Modifier.width(12.dp))
@@ -570,7 +575,7 @@ private fun YmRow(item: YmItem, compact: Boolean = false, index: Int? = null, ar
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val round = item.kind == YmItem.Collection.Kind.ARTIST
-            Box(Modifier.size(52.dp).clip(if (round) CircleShape else RoundedCornerShape(8.dp))) {
+            Box(Modifier.size(52.dp).clip(if (round) CircleShape else yuRound(8))) {
                 PosterImage(item.thumbnail, emptyMap(), Modifier.fillMaxSize(), if (round) Icons.Default.Person else Icons.Default.Album)
             }
             Spacer(Modifier.width(12.dp))
@@ -600,7 +605,7 @@ internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmI
     val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     val download = { dev.asfakul.yumeiro.online.download.SongDownloads.ask((if (item.thumbnail == null && art != null) item.copy(thumbnail = art) else item).toYt()) }
     Row(
-        Modifier.fillMaxWidth().feedCard("ytmusic", item.videoId).clip(RoundedCornerShape(12.dp))
+        Modifier.fillMaxWidth().feedCard("ytmusic", item.videoId).clip(yuRound(12))
             .background(if (isCurrent) accent.copy(alpha = 0.10f) else Color.Transparent)
             .combinedClickable(
                 onClickLabel = "Play", onLongClickLabel = "Download song",
@@ -611,7 +616,7 @@ internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmI
             .padding(horizontal = 16.dp, vertical = pad).testTag("youtube_song"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(50.dp).clip(RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(50.dp).clip(yuRound(10)), contentAlignment = Alignment.Center) {
             PosterImage(item.thumbnail ?: art, emptyMap(), Modifier.fillMaxSize(), Icons.Default.MusicNote)
             if (isCurrent) {
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
@@ -632,7 +637,7 @@ internal fun QuickPickRow(item: YmItem.Song, art: String?, pad: Dp, onSong: (YmI
 private fun MoodButton(mood: YmItem.Mood, modifier: Modifier, onClick: () -> Unit) {
     val stripe = mood.color?.let { Color(it.toInt()) } ?: SpotifyGreen
     Row(
-        modifier.height(52.dp).clip(RoundedCornerShape(10.dp)).background(GlassFill).clickable(onClick = onClick).testTag("ytmusic_mood"),
+        modifier.height(52.dp).clip(yuRound(10)).background(GlassFill).clickable(onClick = onClick).testTag("ytmusic_mood"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(6.dp).fillMaxSize().background(stripe))
@@ -671,7 +676,7 @@ private fun ExploreTiles(onOpen: (YmBrowse) -> Unit) {
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         tiles.forEach { (label, icon, id) ->
             Row(
-                Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(12.dp)).background(GlassFill).clickable { onOpen(YmBrowse(id)) }
+                Modifier.fillMaxWidth().height(52.dp).clip(yuRound(12)).background(GlassFill).clickable { onOpen(YmBrowse(id)) }
                     .padding(horizontal = 14.dp).testTag("ytmusic_explore_$id"),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -760,7 +765,7 @@ private fun YmDetail(target: YmBrowse, onBack: () -> Unit, onOpen: (YmBrowse) ->
     LazyColumn(Modifier.fillMaxSize().testTag("ytmusic_detail"), state = listState, contentPadding = PaddingValues(bottom = 160.dp)) {
         item("bar") {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.testTag("ytmusic_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary) }
+                IconButton(onClick = onBack, modifier = Modifier.testTag("ytmusic_back")) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = TextPrimary) }
                 if (header == null) Text(state.page?.shelves?.firstOrNull()?.title.orEmpty(), color = TextPrimary, fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -811,7 +816,7 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
     val palette = LocalMtPalette.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (h.artist) {
-            Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(20.dp))) {
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(yuRound(20))) {
                 PosterImage(h.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.Person)
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)))))
                 Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
@@ -820,7 +825,7 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
                 }
             }
         } else {
-            Box(Modifier.size(208.dp).clip(RoundedCornerShape(16.dp))) { PosterImage(h.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.Album) }
+            Box(Modifier.size(208.dp).clip(yuRound(16))) { PosterImage(h.thumbnail, emptyMap(), Modifier.fillMaxSize(), Icons.Default.Album) }
             Spacer(Modifier.height(14.dp))
             Text(h.title, color = TextPrimary, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             if (h.subtitle.isNotBlank()) Text(h.subtitle, color = TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -833,11 +838,11 @@ private fun DetailHeader(h: dev.asfakul.yumeiro.youtube.music.YmHeader, canPlay:
                 Row(
                     Modifier.height(44.dp).clip(CircleShape).background(brush).clickable(onClick = onPlay).padding(horizontal = 22.dp).testTag("ytmusic_play_all"),
                     verticalAlignment = Alignment.CenterVertically,
-                ) { Icon(Icons.Default.PlayArrow, null, tint = OnAccent); Spacer(Modifier.width(6.dp)); Text("Play", color = OnAccent, fontWeight = FontWeight.Bold) }
+                ) { Icon(Icons.Default.PlayArrow, null, tint = OnAccent); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.play), color = OnAccent, fontWeight = FontWeight.Bold) }
                 Row(
                     Modifier.height(44.dp).clip(CircleShape).background(GlassFill).clickable(onClick = onShuffle).padding(horizontal = 20.dp).testTag("ytmusic_shuffle_all"),
                     verticalAlignment = Alignment.CenterVertically,
-                ) { Icon(Icons.Default.Shuffle, null, tint = palette.textPrimary); Spacer(Modifier.width(6.dp)); Text("Shuffle", color = TextPrimary, fontWeight = FontWeight.SemiBold) }
+                ) { Icon(Icons.Default.Shuffle, null, tint = palette.textPrimary); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.shuffle), color = TextPrimary, fontWeight = FontWeight.SemiBold) }
                 download?.invoke()
             }
             if (downloadStatus.isNotBlank()) Text(downloadStatus, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).testTag("ytmusic_download_status"))

@@ -228,6 +228,7 @@ object ExtensionManager {
                 runCatching { ExtensionSpeed.init(context) }
                 StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins, ExtensionSpeed::stat, System.currentTimeMillis())
             } else StartupSpeed.loadOrder(all.filter { it.enabled }, { it.name }, pins)
+            val pacer = StartupSpeed.PublishPacer(order.size)
             StartupSpeed.loadProgressively(
                 order,
                 ahead = if (dev.asfakul.yumeiro.DeviceClass.lowEnd) 2 else 4,
@@ -239,7 +240,8 @@ object ExtensionManager {
                 load = { ext, loader -> loadInternal(context, ext, loader) },
                 publish = { ext, info ->
                     runtime[ext.key] = info
-                    if (info.loaded) _state.update { it.copy(partial = true, runtime = it.runtime + (ext.key to info), generation = it.generation + 1) }
+                    // B20-PERF-EXT: paced, the final update below carries whatever is still waiting.
+                    if (info.loaded && pacer.loaded()) _state.update { it.copy(partial = true, runtime = it.runtime + runtime, generation = it.generation + 1) }
                 },
             )
             cleanupFiles(context)
@@ -297,7 +299,8 @@ object ExtensionManager {
         val ext = extensionLookup()
         uniqueNames(all, { it.name }, { ext(it)?.installedAt ?: Long.MAX_VALUE }, { ext(it)?.repoName })
             .forEach { (api, newName) -> runCatching { api.name = newName } }
-        return all.distinctBy { it.name }
+        // F7: clone sites join after their original (and after PIN-2 names, so a clone never takes the original's).
+        return SiteClones.expand(all.distinctBy { it.name })
             .also { ProviderOverrides.apply(it) }
     }
 
@@ -339,11 +342,12 @@ object ExtensionManager {
         runCatching { APIHolder.allProviders.size }.getOrDefault(-1),
         synchronized(plugins) { plugins.size },
         ProviderOverrides.ready,
+        SiteClones.version,
     )
 
-    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int, val overrides: Boolean) {
+    private class ProviderStamp(val engine: Any, val hub: Any, val apis: Int, val plugins: Int, val overrides: Boolean, val clones: Int) {
         override fun equals(other: Any?): Boolean = other is ProviderStamp && other.engine === engine &&
-            other.hub === hub && other.apis == apis && other.plugins == plugins && other.overrides == overrides
+            other.hub === hub && other.apis == apis && other.plugins == plugins && other.overrides == overrides && other.clones == clones
         override fun hashCode(): Int = System.identityHashCode(engine) * 31 + apis * 7 + plugins
     }
 
@@ -690,7 +694,8 @@ object ExtensionManager {
             runCatching { install(context, remote, ExtensionReview.Mode.AUTO) }.onSuccess { updated += it.name }.onFailure {
                 // NBUG-16 NB16-6: a refused update used to vanish into `failed`, which nothing showed.
                 // Reported once per extension version per app run; the Update button stays.
-                if (it is HeldBack) { if (heldBackTold.add(remote.key + "@" + remote.version)) heldBack += ext.name } else failed += ext.name
+                // B11: told once per extension version, also across app restarts (it was once per run).
+                if (it is HeldBack) { if (heldBackFirstTime(context, remote.key + "@" + remote.version)) heldBack += ext.name } else failed += ext.name
             }
         }
         mutex.withLock { _state.update { it.copy(lastSync = now) }; writeState(context) }
@@ -707,6 +712,16 @@ object ExtensionManager {
         val heldBack: List<String> = emptyList(),
     )
     private val heldBackTold = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    /** B11: true the first time a refused update of this extension version is seen on this phone (sync runs on IO). */
+    private fun heldBackFirstTime(context: Context, id: String): Boolean {
+        if (!heldBackTold.add(id)) return false
+        val p = context.getSharedPreferences("yu_ext_heldback_told", Context.MODE_PRIVATE)
+        val seen = p.getStringSet("ids", emptySet()).orEmpty()
+        if (id in seen) return false
+        p.edit().putStringSet("ids", (seen.toList().takeLast(199) + id).toSet()).apply()
+        return true
+    }
 
     // endregion
 
@@ -781,6 +796,22 @@ object ExtensionManager {
         Log.i(TAG, "Unloaded $key (${plugin.filename?.substringAfterLast('/')}) from ${Throwable().stackTrace.drop(1).take(4).joinToString(" < ") { it.methodName + ":" + it.lineNumber }}")
         runCatching { plugin.beforeUnload() }
         plugin.filename?.let { removeRegistrations(it) }
+        keepClassesOnN(plugin)
+    }
+
+    /**
+     * Android 7.0 / 7.1 only: keeps an unloaded extension's classes reachable for the life of the process. ART on
+     * those versions can crash the app in its own "Profile Saver" thread (SIGSEGV in
+     * JitCodeCache::GetProfiledMethods) after a class loader's classes are unloaded while it still profiles them;
+     * Group V hit it on the Android TV 7.0 emulator after 60 extensions were unloaded and loaded again (run
+     * 45954627880). Never letting those classes go costs some memory on 7.x only, and only after an unload
+     * (update, reinstall, remove); newer Android versions unload normally.
+     */
+    private val retainedOnN = mutableListOf<Any>()
+
+    private fun keepClassesOnN(plugin: Any) {
+        if (android.os.Build.VERSION.SDK_INT > android.os.Build.VERSION_CODES.N_MR1) return
+        synchronized(retainedOnN) { retainedOnN += plugin }
     }
 
     private fun removeRegistrations(filename: String) {

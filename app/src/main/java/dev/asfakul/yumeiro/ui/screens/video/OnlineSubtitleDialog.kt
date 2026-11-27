@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.video
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
@@ -73,6 +75,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Search & download subtitles from OpenSubtitles (title + file-hash matching). */
 @Composable
@@ -131,7 +134,7 @@ fun OnlineSubtitleDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Search, null, tint = SpotifyGreen, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Online subtitles", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.online_subtitles), style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.Bold)
             }
         },
         text = {
@@ -140,9 +143,9 @@ fun OnlineSubtitleDialog(
                     value = query,
                     onValueChange = { query = it },
                     singleLine = true,
-                    label = { Text("Movie or episode name") },
+                    label = { Text(stringResource(R.string.movie_or_episode_name)) },
                     trailingIcon = {
-                        IconButton(onClick = { search() }) { Icon(Icons.Default.Search, "Search", tint = SpotifyGreen) }
+                        IconButton(onClick = { search() }) { Icon(Icons.Default.Search, stringResource(R.string.search), tint = SpotifyGreen) }
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { search() }),
@@ -170,7 +173,7 @@ fun OnlineSubtitleDialog(
                         loading -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center), size = 48.dp, label = "Looking for subtitles")
                         error != null -> Text(error.orEmpty(), color = MaterialTheme.colorScheme.error, modifier = Modifier.align(Alignment.Center))
                         searched && results.isEmpty() -> Text(
-                            "No subtitles found. Try a shorter title or another language.",
+                            stringResource(R.string.no_subtitles_found_try_a_shorter),
                             color = TextSecondary, modifier = Modifier.align(Alignment.Center),
                         )
                         else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -193,14 +196,14 @@ fun OnlineSubtitleDialog(
                     if (sites.isEmpty()) " (add free SubDL / SubSource keys in Settings for more)" else "", color = TextSecondary, fontSize = 11.sp)
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close", color = SpotifyGreen) } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close), color = SpotifyGreen) } },
     )
 }
 
 @Composable
 private fun SubtitleResultRow(sub: OnlineSubtitle, downloading: Boolean, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = yuRound(12),
         color = DarkSurfaceContainerHigh,
         border = if (sub.hashMatch) BorderStroke(1.dp, SpotifyGreen.copy(alpha = 0.7f)) else null,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -212,14 +215,14 @@ private fun SubtitleResultRow(sub: OnlineSubtitle, downloading: Boolean, onClick
                     if (sub.hashMatch) {
                         Icon(Icons.Default.Verified, null, tint = SpotifyGreen, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("Exact match · ", color = SpotifyGreen, fontSize = 11.sp)
+                        Text(stringResource(R.string.exact_match), color = SpotifyGreen, fontSize = 11.sp)
                     }
                     Text(listOfNotNull(sub.provider, sub.language, sub.format.uppercase().takeIf { sub.provider == "OpenSubtitles" }, "${sub.downloads} downloads".takeIf { sub.downloads > 0 }).joinToString(" · "), color = TextSecondary, fontSize = 11.sp)
                 }
             }
             Spacer(Modifier.width(8.dp))
             if (downloading) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-            else Icon(Icons.Default.CloudDownload, "Download", tint = SpotifyGreen, modifier = Modifier.size(22.dp))
+            else Icon(Icons.Default.CloudDownload, stringResource(R.string.download), tint = SpotifyGreen, modifier = Modifier.size(22.dp))
         }
     }
 }

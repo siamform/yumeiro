@@ -45,6 +45,7 @@ object OnlineRuntime {
             runCatching { with(com.lagradost.cloudstream3.ui.settings.Globals) { app.updateTv() } }
             runCatching { BrowserCheck.init(app) }
             runCatching { ProviderOverrides.init(app) }
+            runCatching { SiteClones.init(app) }
             runCatching { OnlineSettings.init(app) }
             // Extensions use CloudStream's `app` HTTP helper: route it through our client so they get
             // the same DNS fallback / DNS-over-HTTPS, timeouts and cookie handling as the rest of the

@@ -69,6 +69,25 @@ object StartupSpeed {
         }
     }
 
+    /**
+     * B20-PERF-EXT (Group V): every loaded extension used to publish its own state change, so 60 extensions
+     * meant 61 rounds of Home, Yumix, Search and the Most-played check working everything out again (device run
+     * 45943498332: 62 emissions in one load). The first one still publishes at once (first usable source as
+     * fast as before); after that, at most one change per window, which grows with the number of extensions
+     * (0.5 s for 10, 1.5 s for 60). The caller publishes the rest when the load ends.
+     */
+    class PublishPacer(total: Int, private val now: () -> Long = System::currentTimeMillis) {
+        val windowMs: Long = (300L + 20L * total.coerceAtLeast(0)).coerceAtMost(1_500L)
+        private var last = -1L
+        /** Something loaded: true when it should be shown now. */
+        fun loaded(): Boolean {
+            val t = now()
+            if (last >= 0 && t - last < windowMs) return false
+            last = t
+            return true
+        }
+    }
+
     /** Installs every pick side by side; returns the names that installed, in pick order. */
     suspend fun <T> installAll(picks: List<T>, install: suspend (T) -> String?): List<String> = coroutineScope {
         picks.map { p ->

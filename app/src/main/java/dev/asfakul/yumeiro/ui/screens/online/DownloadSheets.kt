@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -74,6 +76,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.youtube.YtItem
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Download state of one episode, shown on its row (tap: download / pause / nothing when saved). */
 @Composable
@@ -84,17 +87,17 @@ internal fun EpisodeDownloadIcon(d: OnlineDetail, version: String, index: Int, e
     val item = all.firstOrNull { it.id == id }
     Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
         when (item?.status) {
-            OnlineDownloads.Status.DONE -> Icon(Icons.Default.DownloadDone, "Downloaded", tint = SpotifyGreen, modifier = Modifier.size(22.dp).testTag("episode_downloaded"))
+            OnlineDownloads.Status.DONE -> Icon(Icons.Default.DownloadDone, stringResource(R.string.downloaded_2), tint = SpotifyGreen, modifier = Modifier.size(22.dp).testTag("episode_downloaded"))
             OnlineDownloads.Status.RUNNING, OnlineDownloads.Status.QUEUED -> IconButton(onClick = { OnlineDownloads.pause(context, id) }) {
                 if (item.status == OnlineDownloads.Status.RUNNING && item.total > 0)
                     CircularProgressIndicator(progress = { item.fraction }, modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp, color = SpotifyGreen)
                 else CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp, color = SpotifyGreen)
             }
-            OnlineDownloads.Status.FAILED -> IconButton(onClick = { OnlineDownloads.start(context, id) }) { Icon(Icons.Default.ErrorOutline, "Retry download", tint = TextTertiary) }
+            OnlineDownloads.Status.FAILED -> IconButton(onClick = { OnlineDownloads.start(context, id) }) { Icon(Icons.Default.ErrorOutline, stringResource(R.string.retry_download), tint = TextTertiary) }
             else -> IconButton(onClick = {
                 if (item?.status == OnlineDownloads.Status.PAUSED) { OnlineDownloads.start(context, id); return@IconButton }
                 askEpisodes(context, d, version, listOf(index to e), e.label)
-            }, modifier = Modifier.testTag("episode_download")) { Icon(Icons.Default.Download, "Download episode", tint = TextSecondary) }
+            }, modifier = Modifier.testTag("episode_download")) { Icon(Icons.Default.Download, stringResource(R.string.download_episode), tint = TextSecondary) }
         }
     }
 }
@@ -107,7 +110,7 @@ internal fun TitleDownloadButton(d: OnlineDetail, version: String, ordered: List
     val folder = remember(d, version) { DownloadNaming.seriesFolder(d.name, d.api, version) }
     val saved = all.count { it.folder == folder && it.status == OnlineDownloads.Status.DONE }
     val active = all.count { it.folder == folder && it.active }
-    OutlinedButton(onClick = { open = true }, shape = RoundedCornerShape(24.dp), modifier = modifier.height(46.dp).testTag("online_detail_download")) {
+    OutlinedButton(onClick = { open = true }, shape = yuRound(24), modifier = modifier.height(46.dp).testTag("online_detail_download")) {
         Icon(if (saved > 0 && active == 0) Icons.Default.DownloadDone else Icons.Default.Download, null, tint = if (saved > 0) SpotifyGreen else TextPrimary)
         Spacer(Modifier.width(6.dp))
         Text(
@@ -137,7 +140,7 @@ private fun EpisodeDownloadSheet(
     }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("episode_download_sheet")) {
-            Text("Download for offline", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.download_for_offline), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Folder, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
@@ -145,12 +148,12 @@ private fun EpisodeDownloadSheet(
                 Text(folder, color = TextSecondary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             Text(
-                "Quality: ${DownloadSettings.qualityLabel(quality)} · Auto-delete: ${DownloadSettings.autoDeleteLabel(autoDelete)} · change in Settings → Downloads",
+                stringResource(R.string.quality_auto_delete_change_in_settings, DownloadSettings.qualityLabel(quality), DownloadSettings.autoDeleteLabel(autoDelete)),
                 color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
             )
             // OL-5: Sub / Dub (the source's versions) picked right here; the lists below follow it.
             if (onVersion != null && d.versions.size > 1 && dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.DOWNLOAD_TRACKS)) {
-                Text("Version", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(stringResource(R.string.version_2), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 4.dp, bottom = 10.dp).testTag("download_version"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     d.versions.forEachIndexed { i, v -> OnlineChip(v.ifBlank { "Default" }, v == version, { onVersion(v) }, Modifier.testTag("download_version_$i")) }
                 }
@@ -159,7 +162,7 @@ private fun EpisodeDownloadSheet(
                 val movie = d.playData
                 if (movie != null) SheetOption(Icons.Default.Movie, "Download movie", d.name) {
                     queue(listOf(0 to OnlineEpisode(movie, d.name, null, null, d.posterUrl, null, d.durationMin)), "title")
-                } else Text("Nothing to download here.", color = TextTertiary)
+                } else Text(stringResource(R.string.nothing_to_download_here), color = TextTertiary)
             } else {
                 val scopes = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.EPISODE_RANGE_DOWNLOAD)
                 // OL-11: "This episode only" = the episode Play / Continue opens.
@@ -186,7 +189,7 @@ private fun EpisodeDownloadSheet(
                 }
             }
             Text(
-                "Next you'll see where it's saved and choose Permanent or Offline (auto-delete). One episode per extension downloads at a time, so the site doesn't block you.",
+                stringResource(R.string.next_youll_see_where_its_saved),
                 color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 10.dp),
             )
         }
@@ -211,9 +214,9 @@ internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: S
     val picked = inRange.filter { it.second.data !in have }
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         val kb = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
-        androidx.compose.material3.OutlinedTextField(fromText, { fromText = it.filter(Char::isDigit).take(6) }, label = { Text("From") }, singleLine = true, keyboardOptions = kb, modifier = Modifier.weight(1f).testTag("episode_range_from"))
-        Text("to", color = TextSecondary)
-        androidx.compose.material3.OutlinedTextField(toText, { toText = it.filter(Char::isDigit).take(6) }, label = { Text("To") }, singleLine = true, keyboardOptions = kb, modifier = Modifier.weight(1f).testTag("episode_range_to"))
+        androidx.compose.material3.OutlinedTextField(fromText, { fromText = it.filter(Char::isDigit).take(6) }, label = { Text(stringResource(R.string.from)) }, singleLine = true, keyboardOptions = kb, modifier = Modifier.weight(1f).testTag("episode_range_from"))
+        Text(stringResource(R.string.to), color = TextSecondary)
+        androidx.compose.material3.OutlinedTextField(toText, { toText = it.filter(Char::isDigit).take(6) }, label = { Text(stringResource(R.string.to_2)) }, singleLine = true, keyboardOptions = kb, modifier = Modifier.weight(1f).testTag("episode_range_to"))
     }
     val skipped = inRange.size - picked.size
     Text(
@@ -226,7 +229,7 @@ internal fun EpisodeRangePicker(list: List<IndexedValue<OnlineEpisode>>, have: S
         color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp).testTag("episode_range_count"),
     )
     androidx.compose.material3.Button(
-        onClick = { onPick(picked) }, enabled = picked.isNotEmpty(), shape = RoundedCornerShape(24.dp),
+        onClick = { onPick(picked) }, enabled = picked.isNotEmpty(), shape = yuRound(24),
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp).testTag("episode_range_start"),
     ) { Text(if (picked.size == 1) "Download 1 episode" else "Download ${picked.size} episodes", fontWeight = FontWeight.SemiBold) }
 }
@@ -259,8 +262,8 @@ internal fun askEpisodes(context: android.content.Context, d: OnlineDetail, vers
 @Composable
 private fun SheetOption(icon: ImageVector, title: String, subtitle: String, enabled: Boolean = true, tag: String? = null, onClick: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(14.dp), color = GlassFill,
-        modifier = Modifier.fillMaxWidth().then(if (tag != null) Modifier.testTag(tag) else Modifier).padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).clickable(enabled = enabled, onClick = onClick),
+        shape = yuRound(14), color = GlassFill,
+        modifier = Modifier.fillMaxWidth().then(if (tag != null) Modifier.testTag(tag) else Modifier).padding(vertical = 4.dp).clip(yuRound(14)).clickable(enabled = enabled, onClick = onClick),
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = if (enabled) SpotifyGreen else TextTertiary)
@@ -297,7 +300,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
     var audioTab by remember(item.id) { mutableStateOf(item.music) }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.surface, shape = dev.asfakul.yumeiro.ui.theme.Yume.shapeSheet, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp).testTag("yt_download_sheet")) {
-            Text("Download", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(R.string.download), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Text(item.title, color = TextSecondary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OnlineChip("Video", !audioTab, { audioTab = false }, Modifier.testTag("yt_download_video_tab"))
@@ -310,7 +313,7 @@ fun YouTubeDownloadSheet(item: YtItem, onDismiss: () -> Unit) {
                 list == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { dev.asfakul.yumeiro.ui.components.YuLoader(size = 48.dp) }
                 else -> {
                     val shown = list.filter { it.audioOnly == audioTab }
-                    if (shown.isEmpty()) Text("Nothing in this format.", color = TextTertiary, modifier = Modifier.padding(vertical = 16.dp))
+                    if (shown.isEmpty()) Text(stringResource(R.string.nothing_in_this_format), color = TextTertiary, modifier = Modifier.padding(vertical = 16.dp))
                     LazyColumn(Modifier.heightIn(max = 380.dp)) {
                         items(shown, key = { "${it.videoItag}_${it.audioItag}_${it.audioOnly}" }) { c ->
                             SheetOption(if (c.audioOnly) Icons.Default.MusicNote else Icons.Default.Download, c.label, c.detail) {

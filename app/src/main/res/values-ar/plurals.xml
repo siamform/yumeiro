@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="vault_sources">
+        <item quantity="zero">لا توجد مصادر</item>
+        <item quantity="one">مصدر واحد</item>
+        <item quantity="two">مصدران</item>
+        <item quantity="few">%d مصادر</item>
+        <item quantity="many">%d مصدرًا</item>
+        <item quantity="other">%d مصدر</item>
+    </plurals>
+    <plurals name="vault_titles">
+        <item quantity="zero">لا توجد عناوين</item>
+        <item quantity="one">عنوان واحد</item>
+        <item quantity="two">عنوانان</item>
+        <item quantity="few">%d عناوين</item>
+        <item quantity="many">%d عنوانًا</item>
+        <item quantity="other">%d عنوان</item>
+    </plurals>
+    <plurals name="vault_sources_found">
+        <item quantity="zero">لم يُعثر على مصادر</item>
+        <item quantity="one">عُثر على مصدر واحد</item>
+        <item quantity="two">عُثر على مصدرين</item>
+        <item quantity="few">عُثر على %d مصادر</item>
+        <item quantity="many">عُثر على %d مصدرًا</item>
+        <item quantity="other">عُثر على %d مصدر</item>
+    </plurals>
+</resources>

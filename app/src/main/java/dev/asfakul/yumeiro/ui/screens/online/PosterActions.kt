@@ -69,6 +69,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.tv.LocalTvMode
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** F-09: Favorite heart colour (4.6:1 on the dark chip). */
 internal val FavoritePink = Color(0xFFFF6B8B)
@@ -133,7 +134,7 @@ internal fun PosterActionsSheet(item: OnlineItem, onDismiss: () -> Unit) {
             // Ask from inside the dialog, once per frame, until the panel really holds focus (max ~2.5 s).
             var held by remember { mutableStateOf(false) }
             Box(
-                Modifier.widthIn(max = 420.dp).clip(RoundedCornerShape(20.dp)).background(Color(0xFF16161C))
+                Modifier.widthIn(max = 420.dp).clip(yuRound(20)).background(Color(0xFF16161C))
                     .onFocusChanged { if (it.hasFocus) held = true }.padding(vertical = 12.dp),
             ) { body(first) }
             // The dialog's own window can start in touch mode (api33-lowram, device run 44502098420), where a
@@ -161,8 +162,8 @@ private fun ActionRow(icon: ImageVector, label: String, tint: Color, tag: String
     val source = remember { MutableInteractionSource() }
     val focused by source.collectIsFocusedAsState()
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(14.dp))
-            .then(if (focused) Modifier.border(2.dp, Color.White, RoundedCornerShape(14.dp)) else Modifier)
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(yuRound(14))
+            .then(if (focused) Modifier.border(2.dp, Color.White, yuRound(14)) else Modifier)
             .then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
             .clickable(interactionSource = source, indication = androidx.compose.material3.ripple(), onClick = onClick)
             .testTag(tag).padding(horizontal = 12.dp),

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.player
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -83,7 +85,7 @@ fun SleepTimerSheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Bedtime, null, tint = p.accent, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
-                Text("Sleep timer", style = MaterialTheme.typography.titleLarge, color = p.textPrimary)
+                Text(stringResource(R.string.sleep_timer), style = MaterialTheme.typography.titleLarge, color = p.textPrimary)
             }
             Spacer(Modifier.height(4.dp))
             Text(

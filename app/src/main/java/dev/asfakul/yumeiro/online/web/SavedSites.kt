@@ -35,7 +35,7 @@ object SavedSites {
     fun init(context: Context) {
         if (loaded) return
         loaded = true
-        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
+        val raw = context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).getString(KEY, null)
         _sites.value = decode(raw)
     }
 
@@ -132,7 +132,7 @@ object SavedSites {
     }
 
     private fun persist(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, json.encodeToString(_sites.value)).apply()
+        context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().putString(KEY, json.encodeToString(_sites.value)).apply()
     }
 
     fun hostOf(url: String): String? = runCatching { URI(url).host?.lowercase()?.removePrefix("www.") }.getOrNull()?.takeIf { it.isNotBlank() }

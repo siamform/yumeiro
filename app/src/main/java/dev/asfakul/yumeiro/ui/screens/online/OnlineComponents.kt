@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.yuEntrance
 import dev.asfakul.yumeiro.ui.components.yuPressScale
 import dev.asfakul.yumeiro.ui.feed.feedCard
@@ -78,6 +80,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreen
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Poster image with request headers (some sources need a Referer), shimmer while loading and a fallback icon. */
 @Composable
@@ -91,7 +94,7 @@ internal fun PosterImage(url: String?, headers: Map<String, String>, modifier: M
     if (!PosterImageMode.plain) {
         SubcomposeAsyncImage(
             model = request, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier,
-            loading = { Box(Modifier.fillMaxSize().shimmer(RoundedCornerShape(0.dp)).testTag(PosterImageMode.LOADING_TAG)) },
+            loading = { Box(Modifier.fillMaxSize().shimmer(yuRound(0)).testTag(PosterImageMode.LOADING_TAG)) },
             error = { PosterFallback(fallbackIcon) },
         )
         return
@@ -103,7 +106,7 @@ internal fun PosterImage(url: String?, headers: Map<String, String>, modifier: M
     // GATE-1-RENDER-4b: no picture to fetch means the fallback at once, with no image request at all.
     var phase by remember(request) { mutableIntStateOf(if (request.data == coil.request.NullRequestData) PosterImageMode.FAILED else PosterImageMode.LOADING) }
     Box(modifier, propagateMinConstraints = true) {
-        if (phase == PosterImageMode.LOADING) Box(Modifier.matchParentSize().shimmer(RoundedCornerShape(0.dp)).testTag(PosterImageMode.LOADING_TAG))
+        if (phase == PosterImageMode.LOADING) Box(Modifier.matchParentSize().shimmer(yuRound(0)).testTag(PosterImageMode.LOADING_TAG))
         if (request.data != coil.request.NullRequestData) coil.compose.AsyncImage(
             model = request, contentDescription = null, contentScale = ContentScale.Crop,
             onState = { st -> phase = PosterImageMode.next(phase, st) },
@@ -204,8 +207,8 @@ private fun TagChip(tag: dev.asfakul.yumeiro.online.ReleaseTags.Tag, compact: Bo
     Text(
         tag.label, color = fg, fontSize = if (compact) 8.5.sp else 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
         letterSpacing = 0.2.sp, lineHeight = if (compact) 10.sp else 12.sp,
-        modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(fill)
-            .border(0.5.dp, Color.White.copy(alpha = if (strong) 0f else 0.16f), RoundedCornerShape(5.dp))
+        modifier = Modifier.clip(yuRound(5)).background(fill)
+            .border(0.5.dp, Color.White.copy(alpha = if (strong) 0f else 0.16f), yuRound(5))
             .padding(horizontal = if (compact) 4.dp else 6.dp, vertical = if (compact) 1.dp else 2.dp),
     )
 }
@@ -228,14 +231,14 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
         .combinedClickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick, onLongClick = { sheet = true }, onLongClickLabel = "Watch later or Favorite")
     else Modifier.clickable(interactionSource = pressSource, indication = androidx.compose.material3.ripple(), onClick = onClick)
     if (sheet) PosterActionsSheet(item) { sheet = false }
-    Column((modifier ?: Modifier.width(w)).yuEntrance("poster_" + item.key).yuPressScale(pressSource).clip(RoundedCornerShape(14.dp)).then(press).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(RoundedCornerShape(14.dp))) {
+    Column((modifier ?: Modifier.width(w)).yuEntrance("poster_" + item.key).yuPressScale(pressSource).clip(yuRound(14)).then(press).testTag("online_poster").feedCard("poster", item.key).padding(bottom = 10.dp)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(if (horizontal) 16f / 9f else 2f / 3f).clip(yuRound(14))) {
             PosterImage(item.posterUrl, item.posterHeaders, Modifier.fillMaxSize())
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(28.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)))))
             PosterTags(item, compact = true, onVersion = { want -> dev.asfakul.yumeiro.online.VersionHint.set(item.url, want); onClick() })
             item.score?.takeIf { it > 0 }?.let { s ->
                 Row(
-                    Modifier.align(Alignment.TopEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp),
+                    Modifier.align(Alignment.TopEnd).padding(6.dp).clip(yuRound(6)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 4.dp, vertical = 1.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Default.Star, null, tint = Color(0xFFFFC94D), modifier = Modifier.size(10.dp))
@@ -325,7 +328,7 @@ internal fun PosterGridSkeleton(rows: Int = 2) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     repeat(cols) {
                         Column(Modifier.weight(1f)) {
-                            Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).shimmer(RoundedCornerShape(14.dp)))
+                            Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).shimmer(yuRound(14)))
                             Spacer(Modifier.height(6.dp))
                             SkeletonBlock(60.dp, 10.dp)
                         }
@@ -339,7 +342,7 @@ internal fun PosterGridSkeleton(rows: Int = 2) {
 @Composable
 internal fun SeeAllButton(onClick: () -> Unit) {
     TextButton(onClick = onClick, modifier = Modifier.testTag("online_see_all")) {
-        Text("See all", color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.see_all), color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
     }
 }
@@ -351,7 +354,7 @@ internal fun PosterRowSkeleton(count: Int = 6) {
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             repeat(count) {
                 Column(Modifier.width(116.dp)) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).shimmer(RoundedCornerShape(14.dp)))
+                    Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).shimmer(yuRound(14)))
                     Spacer(Modifier.height(6.dp))
                     SkeletonBlock(90.dp, 10.dp)
                 }
@@ -387,9 +390,9 @@ internal fun OnlineChip(label: String, selected: Boolean, onClick: () -> Unit, m
 /** Extension icon (from its repository) or a puzzle-piece fallback. */
 @Composable
 internal fun ExtensionIcon(url: String?, size: Dp = 44.dp) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).clip(yuRound(12)).background(GlassFill), contentAlignment = Alignment.Center) {
         if (url.isNullOrBlank()) Icon(Icons.Default.Extension, null, tint = SpotifyGreen, modifier = Modifier.size(size * 0.5f))
-        else PosterImage(url.replace("%size%", "128"), emptyMap(), Modifier.size(size * 0.7f).clip(RoundedCornerShape(8.dp)), Icons.Default.Extension)
+        else PosterImage(url.replace("%size%", "128"), emptyMap(), Modifier.size(size * 0.7f).clip(yuRound(8)), Icons.Default.Extension)
     }
 }
 

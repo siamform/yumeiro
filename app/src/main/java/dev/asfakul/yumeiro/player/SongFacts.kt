@@ -21,8 +21,15 @@ object SongFacts {
 
     /** The Size row's text: a size, "Streamed (no file)" or "Unknown". */
     fun sizeLabel(bytes: Long?, uri: String, format: (Long) -> String): String = when {
+        // B13: a streamed song shows the size of the audio it streams (an estimate is marked as one).
+        bytes != null && streamed(uri) -> if (estimated(uri)) "About ${format(bytes)} (streamed)" else "${format(bytes)} (streamed)"
         bytes != null -> format(bytes)
         streamed(uri) -> "Streamed (no file)"
         else -> "Unknown"
+    }
+
+    private fun estimated(uri: String): Boolean {
+        val id = dev.asfakul.yumeiro.youtube.YouTubeAudioDataSource.videoIdOf(runCatching { android.net.Uri.parse(uri) }.getOrNull()) ?: return false
+        return dev.asfakul.yumeiro.youtube.YouTubeStreams.cachedFacts(id)?.exact == false
     }
 }

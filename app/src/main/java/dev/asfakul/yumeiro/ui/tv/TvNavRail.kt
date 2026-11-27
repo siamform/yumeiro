@@ -5,6 +5,7 @@
  */
 package dev.asfakul.yumeiro.ui.tv
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -64,6 +65,7 @@ import androidx.compose.ui.zIndex
 import dev.asfakul.yumeiro.ui.navigation.BottomNavItem
 import dev.asfakul.yumeiro.ui.navigation.NavPrefs
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** Width the content keeps free for the collapsed rail. */
 val TvRailWidth = 84.dp
@@ -119,10 +121,10 @@ fun TvNavRail(
                 Image(
                     painter = painterResource(R.drawable.ic_app_logo),
                     contentDescription = "Yumeiro",
-                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp)),
+                    modifier = Modifier.size(40.dp).clip(yuRound(11)),
                 )
                 AnimatedVisibility(focusedInside, enter = fadeIn(tween(160)), exit = fadeOut(tween(90))) {
-                    Text("  Yumeiro", color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(stringResource(R.string.yumeiro_2), color = palette.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -182,7 +184,7 @@ private fun RailItem(
             else -> palette.textSecondary
         }, tween(140), label = "railFg",
     )
-    val shape = RoundedCornerShape(16.dp)
+    val shape = yuRound(16)
     Row(
         Modifier
             .fillMaxWidth()

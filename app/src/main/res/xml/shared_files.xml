@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only the crash report folder is shareable. -->
+<!-- Only the crash report folder and the Vault (F1) are shareable. -->
 <paths>
     <files-path name="crash" path="crash/" />
+    <files-path name="vault" path="vault/" />
 </paths>

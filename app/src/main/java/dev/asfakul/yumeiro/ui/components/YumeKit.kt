@@ -60,6 +60,7 @@ import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.ui.theme.Yume
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /*
  * Tsuki no Michi kit — the shared building blocks of the redesign. Every tab and sub-page uses
@@ -211,7 +212,7 @@ fun TopAction(
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.90f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 700f), label = "top_action")
-    val shape = RoundedCornerShape(14.dp)
+    val shape = yuRound(14)
     Box(modifier.size(44.dp), contentAlignment = Alignment.Center) {
         Box(
             Modifier.size(40.dp).graphicsLayer { scaleX = scale; scaleY = scale }.clip(shape)

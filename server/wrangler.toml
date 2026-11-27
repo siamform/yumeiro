@@ -44,6 +44,11 @@ name = "HUB"
 namespace_id = "7004"
 simple = { limit = 120, period = 60 }
 
+[[ratelimits]]
+name = "BLACKSOURCE"
+namespace_id = "7005"
+simple = { limit = 30, period = 60 }  # F14: AniList allows ~90 calls/min per server IP; the edge cache absorbs repeats
+
 # LASTFM_API_KEY and LASTFM_SHARED_SECRET are Worker secrets (scripts/deploy-worker.sh puts them from .env). TMDB_TOKEN too (E1-A).
 
 [triggers]

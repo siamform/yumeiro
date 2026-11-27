@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.stream
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +62,7 @@ import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /*
  * NBUG-15 (a)-(c), ADR-028: the Live TV page chrome. Header buttons (Filter, Tools), pinned playlist chips,
@@ -182,8 +185,8 @@ internal fun LiveToolsSheet(tools: List<LiveTool>, onDismiss: () -> Unit) {
             Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState())
                 .padding(start = 16.dp, end = 16.dp, bottom = 20.dp).testTag("live_tools_sheet"),
         ) {
-            Text("Tools", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
-            Text("Links, files and playlists", color = TextSecondary, fontSize = 12.sp)
+            Text(stringResource(R.string.tools), color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.links_files_and_playlists), color = TextSecondary, fontSize = 12.sp)
             Spacer(Modifier.size(14.dp))
             LiveToolsGrid(tools.map { t -> t.copy(onClick = { onDismiss(); t.onClick() }) })
         }
@@ -256,7 +259,7 @@ internal fun LiveSearchBox(query: String, onQuery: (String) -> Unit, matches: In
 @Composable
 internal fun LiveSearchEmpty(query: String, scoped: String?, onClear: () -> Unit, onWiden: (() -> Unit)?) {
     val pal = LocalMtPalette.current
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(16.dp)).background(GlassFill).padding(16.dp).testTag("live_search_empty")) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp).clip(yuRound(16)).background(GlassFill).padding(16.dp).testTag("live_search_empty")) {
         Text("No channel called \"${query.trim()}\"", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         Text(
             if (scoped != null) "Only $scoped is searched now. Search every channel, or check the spelling." else "Check the spelling, or try fewer words (for example \"sports\").",
@@ -264,11 +267,11 @@ internal fun LiveSearchEmpty(query: String, scoped: String?, onClear: () -> Unit
         )
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (onWiden != null) Text(
-                "Search every channel", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                stringResource(R.string.search_every_channel), color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = onWiden).padding(horizontal = 8.dp, vertical = 14.dp).testTag("live_search_widen"),
             )
             Text(
-                "Clear search", color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                stringResource(R.string.clear_search), color = pal.accent, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                 modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(50)).clickable(role = Role.Button, onClick = onClear).padding(horizontal = 8.dp, vertical = 14.dp).testTag("live_search_clear"),
             )
         }
@@ -302,11 +305,11 @@ internal fun LiveCountrySheet(
         Column(Modifier.fillMaxWidth().navigationBarsPadding().testTag("live_country_sheet")) {
             Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Country", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
-                    Text("${countries.size} countries in your playlists", color = TextSecondary, fontSize = 12.sp)
+                    Text(stringResource(R.string.country), color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
+                    Text(stringResource(R.string.countries_in_your_playlists, countries.size), color = TextSecondary, fontSize = 12.sp)
                 }
                 if (selected != null) Text(
-                    "Clear", color = pal.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
+                    stringResource(R.string.clear), color = pal.accent, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                     modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(50)).clickable(role = Role.Button) { onPick(null) }.padding(horizontal = 12.dp, vertical = 14.dp).testTag("live_country_clear"),
                 )
             }
@@ -324,7 +327,7 @@ internal fun LiveCountrySheet(
                 if (shown.isEmpty()) item("none") {
                     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp).testTag("live_country_empty")) {
                         Text("No country called \"${query.trim()}\"", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text("Your playlists have channels from ${countries.size} countries. Check the spelling.", color = TextSecondary, fontSize = 12.sp)
+                        Text(stringResource(R.string.your_playlists_have_channels_from_countries, countries.size), color = TextSecondary, fontSize = 12.sp)
                     }
                 }
                 items(shown, key = { "c_" + it.key }) { c -> LiveCountryRow(c, c.label, "${c.count} channels", selected.equals(c.key, ignoreCase = true)) { onPick(c) } }
@@ -349,14 +352,14 @@ private fun LiveCountryRow(
     val pal = LocalMtPalette.current
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
-            .background(if (sel) pal.accent.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .background(if (sel) pal.accent.copy(alpha = 0.14f) else androidx.compose.ui.graphics.Color.Transparent, yuRound(16))
+            .clip(yuRound(16))
             .selectable(selected = sel, role = Role.RadioButton, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag(if (c == null) "${tagPrefix}_any" else "${tagPrefix}_${c.key}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(GlassFill), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).clip(yuRound(12)).background(GlassFill), contentAlignment = Alignment.Center) {
             val flag = dev.asfakul.yumeiro.stream.LiveFind.flag(c?.code)
             if (flag != null) Text(flag, fontSize = 20.sp)
             else Icon(Icons.Default.Public, null, tint = TextSecondary, modifier = Modifier.size(20.dp))
@@ -366,6 +369,6 @@ private fun LiveCountryRow(
             Text(title, color = TextPrimary, fontSize = 15.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(sub, color = TextSecondary, fontSize = 12.sp, maxLines = 1)
         }
-        if (sel) Icon(Icons.Default.Check, "Selected", tint = pal.accent, modifier = Modifier.size(20.dp))
+        if (sel) Icon(Icons.Default.Check, stringResource(R.string.selected), tint = pal.accent, modifier = Modifier.size(20.dp))
     }
 }

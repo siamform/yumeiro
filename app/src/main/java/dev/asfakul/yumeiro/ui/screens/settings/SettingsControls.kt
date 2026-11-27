@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import android.Manifest
 import android.os.Build
@@ -62,6 +64,7 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 private fun keyState(k: Key) = NotifySettings.flow(k).collectAsState()
@@ -73,7 +76,7 @@ internal fun SettingsActionRow(
     status: String? = null, ok: Boolean? = null, danger: Boolean = false, onClick: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 8.dp).testTag(testTag),
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(yuRound(12)).clickable(onClick = onClick).padding(vertical = 8.dp).testTag(testTag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -186,7 +189,7 @@ fun NotificationSettingsCard() {
                 TextButton(
                     onClick = { copyToClipboard(context, "Yumeiro support ID", supportId) },
                     modifier = Modifier.testTag("notify_support_id"),
-                ) { Text("Copy support ID · $supportId", color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
+                ) { Text(stringResource(R.string.copy_support_id, supportId), color = TextSecondary, style = MaterialTheme.typography.bodySmall) }
             }
         }
         SettingsDivider()
@@ -311,9 +314,9 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
                             .onSuccess { AppMessages.success(context, a.done) }
                             .onFailure { AppMessages.error(context, "Couldn't clear. Try again") }
                     }
-                }, modifier = Modifier.testTag("privacy_confirm")) { Text("Clear", color = dev.asfakul.yumeiro.ui.theme.DangerTone) }
+                }, modifier = Modifier.testTag("privacy_confirm")) { Text(stringResource(R.string.clear), color = dev.asfakul.yumeiro.ui.theme.DangerTone) }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { pending = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     val io: suspend (() -> Unit) -> Unit = { f -> withContext(Dispatchers.IO) { f() } }
@@ -321,7 +324,7 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
         SettingsActionRow("Clear watch history", "Continue watching, resume points and watched marks (device, online and YouTube)", "privacy_clear_watch") {
             pending = ClearAction("Clear watch history?", "Continue watching, resume positions and watched marks are removed everywhere.", "Watch history cleared") {
                 onClearWatchHistory()
-                io { dev.asfakul.yumeiro.online.OnlineHistory.clear(context); dev.asfakul.yumeiro.youtube.YtHistory.clear(context); WatchHistoryClear.streams(context) }
+                io { dev.asfakul.yumeiro.online.OnlineHistory.clear(context); dev.asfakul.yumeiro.youtube.YtHistory.clear(context); WatchHistoryClear.streams(context); dev.asfakul.yumeiro.backup.HistoryWipe.watchExtras(context) }
             }
         }
         if (adultOn) {
@@ -336,12 +339,13 @@ fun PrivacyDataCard(onClearWatchHistory: () -> Unit, onClearListeningHistory: ()
         SettingsActionRow("Clear listening history", "Recently played songs and play counts", "privacy_clear_listening") {
             pending = ClearAction("Clear listening history?", "Recently played and play counts are reset. Playlists and favourites stay.", "Listening history cleared") {
                 onClearListeningHistory()
+                io { dev.asfakul.yumeiro.backup.HistoryWipe.listeningExtras(context) } // B9: Jump back in and the saved queue too
             }
         }
         SettingsDivider()
         SettingsActionRow("Clear search history", "Recent searches in every search box", "privacy_clear_search") {
             pending = ClearAction("Clear search history?", "All recent searches are forgotten.", "Search history cleared") {
-                io { dev.asfakul.yumeiro.ui.components.RecentSearches.clearAll(context); dev.asfakul.yumeiro.ui.screens.online.SearchHistory.clear(context) }
+                io { dev.asfakul.yumeiro.ui.components.RecentSearches.clearAll(context); dev.asfakul.yumeiro.ui.screens.online.SearchHistory.clear(context); dev.asfakul.yumeiro.backup.HistoryWipe.dropSearchCaches(context) }
             }
         }
         SettingsDivider()
@@ -405,7 +409,7 @@ internal fun SocialLinkRow(links: List<dev.asfakul.yumeiro.notify.SocialLinks.Li
     ) {
         links.forEach { l ->
             Column(
-                Modifier.width(72.dp).clip(RoundedCornerShape(12.dp))
+                Modifier.width(72.dp).clip(yuRound(12))
                     .clickable(onClickLabel = "Open ${l.label}") { Links.open(context, l.url) }
                     .padding(vertical = 6.dp).testTag(prefix + l.id),
                 horizontalAlignment = Alignment.CenterHorizontally,

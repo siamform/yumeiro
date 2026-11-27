@@ -20,6 +20,21 @@ FLAVOR="${FLAVOR:-Mobile}"
 # spent 70 min in one) can't hide every other result; results go into the job log.
 SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r'); case "$SDK" in ''|*[!0-9]*) SDK=99;; esac
 # GATE-1-ANR-T8: emulators scale the 5 s input-ANR timeout by ro.hw_timeout_multiplier; log it.
+# TV-API24-JIT diagnosis: ART 7.0's JIT dies in UsePosition::Dup while compiling one of our methods.
+# Only when the filter names TvJitProbeDeviceTest on API 24: log every method the compiler starts
+# ("Building ..."), so the last one before the SIGSEGV is the culprit. Needs a rootable image.
+case "$TEST_FILTER" in *TvJitProbeDeviceTest*)
+  if [ "$SDK" = "24" ]; then
+    adb root > /dev/null 2>&1 || true; sleep 3; adb wait-for-device
+    adb shell setprop dalvik.vm.extra-opts -verbose:compiler || true
+    echo "JITPROBE extra-opts='$(adb shell getprop dalvik.vm.extra-opts | tr -d '\r')' uid=$(adb shell id -u | tr -d '\r')"
+    adb shell stop; sleep 2; adb shell start
+    for i in $(seq 1 60); do sleep 3; [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1" ] && adb shell pm path android > /dev/null 2>&1 && break; done
+    sleep 20; adb logcat -G 16M || true
+    # adb root restarted adbd, which ended the background logcat above: start it again.
+    (adb logcat -v time >> logcat.txt &) ; sleep 1
+  fi;;
+esac
 echo "YuGateEnv hw_timeout_multiplier='$(adb shell getprop ro.hw_timeout_multiplier | tr -d '\r')' sdk=$SDK"
 REPEAT="${REPEAT:-1}"; case "$REPEAT" in ''|*[!0-9]*) REPEAT=1;; esac
 # Final test (MASTER-CHECKLIST-FINAL): P1 = every class from cleared data and a cold start; P2 = the

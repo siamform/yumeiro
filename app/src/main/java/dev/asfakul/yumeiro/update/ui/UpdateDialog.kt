@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.update.ui
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.theme.OnAccent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -95,6 +97,7 @@ import dev.asfakul.yumeiro.update.ReleaseInfo
 import dev.asfakul.yumeiro.update.UpdateSource
 import dev.asfakul.yumeiro.update.UpdateState
 import dev.asfakul.yumeiro.update.UpdateStatusText
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 private val ErrorRed: Color @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable get() = dev.asfakul.yumeiro.ui.theme.DangerTone
 
@@ -165,7 +168,7 @@ internal fun UpdateDialogCard(
             .widthIn(max = 440.dp)
             .fillMaxWidth()
             .testTag("update_dialog"),
-        shape = RoundedCornerShape(28.dp),
+        shape = yuRound(28),
         color = DarkSurface,
         border = BorderStroke(0.5.dp, DarkOutline),
         shadowElevation = 12.dp,
@@ -208,7 +211,7 @@ private fun AvailableContent(
             Column(Modifier.padding(horizontal = 22.dp)) {
                 MetaRow(release)
                 Spacer(Modifier.height(16.dp))
-                Text("What's new", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(stringResource(R.string.whats_new), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Spacer(Modifier.height(8.dp))
                 ReleaseNotes(release.notes, Modifier.heightIn(max = 260.dp))
             }
@@ -221,7 +224,7 @@ private fun AvailableContent(
                     modifier = Modifier.weight(1f).height(48.dp).testTag("update_remind_later"),
                     border = BorderStroke(1.dp, DarkOutline),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                ) { Text("Remind me later", maxLines = 1) }
+                ) { Text(stringResource(R.string.remind_me_later), maxLines = 1) }
                 Button(
                     onClick = onDownload,
                     modifier = Modifier.weight(1f).height(48.dp).testTag("update_download"),
@@ -229,7 +232,7 @@ private fun AvailableContent(
                 ) {
                     Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Download", fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text(stringResource(R.string.download), fontWeight = FontWeight.Bold, maxLines = 1)
                 }
             }
             Spacer(Modifier.height(20.dp))
@@ -254,14 +257,14 @@ private fun DownloadingContent(
             textAlign = TextAlign.Center, modifier = Modifier.testTag("update_stage_title"),
         )
         Spacer(Modifier.height(4.dp))
-        Text("Yumeiro v${s.release.versionName}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        Text(stringResource(R.string.yumeiro_v, s.release.versionName), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         Spacer(Modifier.height(20.dp))
         DownloadRing(progress = s.progress, indeterminate = UpdateStatusText.indeterminate(s.stage))
         Spacer(Modifier.height(20.dp))
         val detail = UpdateStatusText.detail(s.stage)
         if (detail == null) {
             Text(
-                "${formatBytes(s.downloadedBytes)} of ${formatBytes(s.totalBytes)}",
+                stringResource(R.string.of, formatBytes(s.downloadedBytes), formatBytes(s.totalBytes)),
                 style = MaterialTheme.typography.bodyLarge, color = TextPrimary,
             )
             Spacer(Modifier.height(4.dp))
@@ -280,17 +283,17 @@ private fun DownloadingContent(
             onClick = onBackground,
             modifier = Modifier.fillMaxWidth().height(48.dp).testTag("update_background"),
             colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-        ) { Text("Download in background", fontWeight = FontWeight.Bold, maxLines = 1) }
+        ) { Text(stringResource(R.string.download_in_background), fontWeight = FontWeight.Bold, maxLines = 1) }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(
             onClick = onCancel,
             modifier = Modifier.fillMaxWidth().height(48.dp).testTag("update_cancel"),
             border = BorderStroke(1.dp, ErrorRed.copy(alpha = 0.6f)),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = ErrorRed),
-        ) { Text("Cancel download", maxLines = 1) }
+        ) { Text(stringResource(R.string.cancel_download), maxLines = 1) }
         Spacer(Modifier.height(10.dp))
         Text(
-            "You'll get a notification when it's ready to install.",
+            stringResource(R.string.youll_get_a_notification_when_its),
             style = MaterialTheme.typography.bodySmall, color = TextTertiary, textAlign = TextAlign.Center,
         )
     }
@@ -321,7 +324,7 @@ private fun ReadyContent(
         Text(UpdateStatusText.READY_TITLE, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
         Text(
-            "Yumeiro v${release.versionName} has been downloaded and verified.",
+            stringResource(R.string.yumeiro_v_has_been_downloaded_and, release.versionName),
             style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
@@ -331,9 +334,9 @@ private fun ReadyContent(
         )
         if (needsPermission) {
             Spacer(Modifier.height(14.dp))
-            Surface(shape = RoundedCornerShape(14.dp), color = DarkSurfaceContainerHigh) {
+            Surface(shape = yuRound(14), color = DarkSurfaceContainerHigh) {
                 Text(
-                    "Android will ask you to allow Yumeiro to install updates. This is needed only once.",
+                    stringResource(R.string.android_will_ask_you_to_allow),
                     modifier = Modifier.padding(12.dp),
                     style = MaterialTheme.typography.bodySmall, color = TextSecondary,
                 )
@@ -346,7 +349,7 @@ private fun ReadyContent(
                 modifier = Modifier.weight(1f).height(48.dp),
                 border = BorderStroke(1.dp, DarkOutline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-            ) { Text("Later") }
+            ) { Text(stringResource(R.string.later)) }
             Button(
                 onClick = onInstall,
                 modifier = Modifier.weight(1.4f).height(48.dp).testTag("update_install"),
@@ -366,7 +369,7 @@ private fun InstallingContent(release: ReleaseInfo) {
         Spacer(Modifier.height(18.dp))
         Text(UpdateStatusText.INSTALLING_TITLE, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
         Spacer(Modifier.height(2.dp))
-        Text("Yumeiro v${release.versionName}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        Text(stringResource(R.string.yumeiro_v, release.versionName), style = MaterialTheme.typography.bodySmall, color = TextSecondary)
         Spacer(Modifier.height(4.dp))
         Text(UpdateStatusText.INSTALLING_DETAIL, style = MaterialTheme.typography.bodySmall, color = TextSecondary, textAlign = TextAlign.Center)
     }
@@ -380,7 +383,7 @@ private fun FailedContent(s: UpdateState.Failed, onRetry: () -> Unit, onClose: (
     ) {
         Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = ErrorRed, modifier = Modifier.size(56.dp))
         Spacer(Modifier.height(12.dp))
-        Text("Update didn't finish", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(stringResource(R.string.update_didnt_finish), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
         Spacer(Modifier.height(6.dp))
         Text(s.message, style = MaterialTheme.typography.bodyMedium, color = TextSecondary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(22.dp))
@@ -390,13 +393,13 @@ private fun FailedContent(s: UpdateState.Failed, onRetry: () -> Unit, onClose: (
                 modifier = Modifier.weight(1f).height(48.dp),
                 border = BorderStroke(1.dp, DarkOutline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-            ) { Text("Close") }
+            ) { Text(stringResource(R.string.close)) }
             if (s.release != null) {
                 Button(
                     onClick = onRetry,
                     modifier = Modifier.weight(1f).height(48.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
-                ) { Text("Retry", fontWeight = FontWeight.Bold) }
+                ) { Text(stringResource(R.string.retry), fontWeight = FontWeight.Bold) }
             }
         }
     }
@@ -485,13 +488,13 @@ fun ReleaseNotes(markdown: String, modifier: Modifier = Modifier) {
     val lines = remember(markdown) { parseNotes(markdown) }
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = yuRound(16),
         color = DarkSurfaceContainerHigh,
         border = BorderStroke(0.5.dp, DarkOutline),
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(14.dp)) {
             if (lines.isEmpty()) {
-                Text("Bug fixes and improvements.", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                Text(stringResource(R.string.bug_fixes_and_improvements), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
             }
             lines.forEachIndexed { i, line ->
                 when (line) {
@@ -570,7 +573,7 @@ private fun DownloadRing(progress: Float, indeterminate: Boolean, size: Int = 14
                         "${(animated * 100).toInt()}%",
                         fontSize = (size / 4.6f).sp, fontWeight = FontWeight.Black, color = TextPrimary,
                     )
-                    Text("downloaded", style = MaterialTheme.typography.labelMedium, color = TextTertiary)
+                    Text(stringResource(R.string.downloaded), style = MaterialTheme.typography.labelMedium, color = TextTertiary)
                 }
             }
         }

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.online.OnlineItem
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /**
  * The banner every Yumix extension gets: a wide backdrop taken from the extension's own first
@@ -58,7 +61,7 @@ internal fun ExtensionBanner(
     action: String = "Open",
 ) {
     val p = LocalMtPalette.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = yuRound(20)
     Box(
         modifier
             .height(height)
@@ -83,7 +86,7 @@ internal fun ExtensionBanner(
                     Icon(Icons.Default.Extension, null, tint = p.onAccent, modifier = Modifier.size(13.dp))
                 }
                 Spacer(Modifier.width(8.dp))
-                Text("Yumix source", color = Color.White.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.yumix_source), color = Color.White.copy(alpha = 0.78f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {

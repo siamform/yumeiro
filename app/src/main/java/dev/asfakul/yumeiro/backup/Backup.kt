@@ -66,8 +66,9 @@ object Backup {
     /** Top-level files that are device-specific. */
     private val excludedFiles = setOf("online_downloads.json", dev.asfakul.yumeiro.player.LastPlayed.QUEUE_FILE) // G6-QP: device URIs, refills on play
     /** Folders under filesDir that hold user data. */
-    internal val dataDirs = listOf("streams", "servers", "manga", "stremio", "js", "lyrics", "extensions", "tachiyomi", "profiles")
+    internal val dataDirs = listOf("streams", "servers", "manga", "stremio", "js", "lyrics", "extensions", "tachiyomi", "profiles", "scripts")
     private const val PHOTO = "backdrop_photo.jpg"
+    private const val SCRIPT_LIST = "scripts/registry.json"
 
     data class Summary(val entries: Int, val bytes: Long, val createdAt: Long, val appVersion: String)
 
@@ -88,6 +89,9 @@ object Backup {
             top == "profiles" -> if (rel.endsWith(".json")) Section.LIBRARY else null // PR-1: each profile's lists
             top == "tachiyomi" && rel.startsWith("tachiyomi/memo/") -> Section.LIBRARY
             top == "extensions" -> if (rel == "extensions/state.json") Section.SOURCES else null // market caches refill themselves
+            // B16: Vega / Nuvio / SkyStream plugins. The list (repos + installed) is a source list;
+            // the plugin files are code. Before, scripts/ was not backed up at all.
+            top == "scripts" -> if (rel == SCRIPT_LIST) Section.SOURCES else null
             top in dataDirs -> Section.SOURCES
             else -> null
         }
@@ -101,7 +105,8 @@ object Backup {
     internal fun isCode(name: String): Boolean {
         val rel = name.removePrefix("files/")
         return rel.startsWith("extensions/plugins/") || (rel.startsWith("extensions/") && rel.endsWith(".cs3")) ||
-            (rel.startsWith("tachiyomi/") && rel.endsWith(".ext")) || (rel.startsWith("js/") && rel.endsWith(".js"))
+            (rel.startsWith("tachiyomi/") && rel.endsWith(".ext")) || (rel.startsWith("js/") && rel.endsWith(".js")) ||
+            (rel.startsWith("scripts/") && rel.count { it == '/' } >= 4) // scripts/<ecosystem>/<repo>/<plugin>/<file>
     }
 
     private fun isTransient(f: File): Boolean {
@@ -196,6 +201,7 @@ object Backup {
         }
         val extensions = JSONArray()
         val tachiyomi = JSONArray()
+        val scripts = JSONArray()
         if (Section.SOURCES in sections) {
             runCatching {
                 val st = JSONObject(File(context.filesDir, "extensions/state.json").readText())
@@ -211,14 +217,23 @@ object Backup {
                 kindDir.listFiles()?.filter { it.name.endsWith(".ext") }?.forEach { tachiyomi.put(JSONObject().put("pkg", it.name.removeSuffix(".ext")).put("kind", kindDir.name)) }
             }
             counts.put("playlists", files.count { it.first.startsWith("files/streams/") })
-            counts.put("extensions", extensions.length() + tachiyomi.length())
+            // B16: script plugins are listed too, so the restore screen counts them.
+            runCatching {
+                val reg = JSONObject(File(context.filesDir, SCRIPT_LIST).readText())
+                reg.optJSONArray("installed")?.let { a ->
+                    for (i in 0 until a.length()) a.optJSONObject(i)?.let { e ->
+                        scripts.put(JSONObject().put("name", e.optString("name")).put("ecosystem", e.optString("ecosystem")).put("repoUrl", e.optString("repoUrl")))
+                    }
+                }
+            }
+            counts.put("extensions", extensions.length() + tachiyomi.length() + scripts.length())
         }
         return JSONObject().put("format", FORMAT).put("app", BuildConfig.APPLICATION_ID)
             .put("version", BuildConfig.VERSION_NAME).put("versionCode", BuildConfig.VERSION_CODE)
             .put("createdAt", now).put("kind", kind)
             .put("device", "${Build.MANUFACTURER} ${Build.MODEL}".trim().take(60))
             .put("sections", JSONArray(sections.map { it.name }))
-            .put("extensions", extensions).put("tachiyomi", tachiyomi)
+            .put("extensions", extensions).put("tachiyomi", tachiyomi).put("scripts", scripts)
             .put("counts", counts)
     }
 
@@ -256,6 +271,7 @@ object Backup {
         val format = manifest.optInt("format", 1)
         val counts = manifest.optJSONObject("counts") ?: JSONObject()
         val ext = manifest.optJSONArray("extensions")?.length()?.plus(manifest.optJSONArray("tachiyomi")?.length() ?: 0)
+            ?.plus(manifest.optJSONArray("scripts")?.length() ?: 0)
             ?: counts.optInt("extensions")
         return Info(manifest, format, manifest.optLong("createdAt"), manifest.optString("version").take(32),
             manifest.optString("kind", "manual"), manifest.optString("device").take(60), found, hasCode, ext, counts)

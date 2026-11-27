@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -74,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.pageBackground
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 /** One guide chapter: an illustration, a short intro and numbered steps. */
 private data class GuideChapter(
@@ -91,17 +94,17 @@ private data class GuideChapter(
 fun UserGuideEntryCard(onOpen: () -> Unit) {
     val p = LocalMtPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.glass)
+        Modifier.fillMaxWidth().clip(yuRound(20)).background(p.glass)
             .clickable(onClick = onOpen).padding(16.dp).testTag("open_user_guide"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(yuRound(14)).background(p.accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
             Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = p.accent)
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text("How Yumeiro works", color = p.textPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text("Illustrated guide to every section, gesture and fix", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.how_yumeiro_works), color = p.textPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.illustrated_guide_to_every_section_gesture), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = p.textSecondary)
     }
@@ -123,11 +126,11 @@ fun UserGuideScreen(onBack: () -> Unit) {
                     Box(
                         Modifier.minimumInteractiveComponentSize().size(44.dp).clip(CircleShape).background(p.glass).clickable(onClick = onBack).testTag("user_guide_back"),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = p.textPrimary) }
+                    ) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back), tint = p.textPrimary) }
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("User guide", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
-                        Text("How Yumeiro works", color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
+                        Text(stringResource(R.string.user_guide), color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                        Text(stringResource(R.string.how_yumeiro_works), color = p.textPrimary, style = MaterialTheme.typography.headlineSmall)
                     }
                 }
             }
@@ -148,12 +151,12 @@ fun UserGuideScreen(onBack: () -> Unit) {
 private fun ChapterCard(c: GuideChapter) {
     val p = LocalMtPalette.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.glass)
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(24.dp))
+        Modifier.fillMaxWidth().clip(yuRound(24)).background(p.glass)
+            .border(1.dp, Color.White.copy(alpha = 0.06f), yuRound(24))
             .padding(16.dp).testTag("guide_${c.key}"),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(36.dp).clip(yuRound(12)).background(p.accent.copy(alpha = 0.16f)), contentAlignment = Alignment.Center) {
                 Icon(c.icon, null, tint = p.accent, modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.width(12.dp))
@@ -161,7 +164,7 @@ private fun ChapterCard(c: GuideChapter) {
         }
         Spacer(Modifier.height(12.dp))
         Box(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = if (p.isDark) 0.35f else 0.06f)).padding(14.dp),
+            Modifier.fillMaxWidth().clip(yuRound(18)).background(Color.Black.copy(alpha = if (p.isDark) 0.35f else 0.06f)).padding(14.dp),
             contentAlignment = Alignment.Center,
         ) { c.diagram() }
         Spacer(Modifier.height(12.dp))
@@ -179,7 +182,7 @@ private fun ChapterCard(c: GuideChapter) {
         if (c.tip != null) {
             Spacer(Modifier.height(8.dp))
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.accent.copy(alpha = 0.10f)).padding(10.dp),
+                Modifier.fillMaxWidth().clip(yuRound(12)).background(p.accent.copy(alpha = 0.10f)).padding(10.dp),
                 verticalAlignment = Alignment.Top,
             ) {
                 Icon(Icons.Outlined.Lightbulb, null, tint = p.accent, modifier = Modifier.size(18.dp))
@@ -196,7 +199,7 @@ private fun ChapterCard(c: GuideChapter) {
 private fun Block(label: String, icon: ImageVector, modifier: Modifier = Modifier, strong: Boolean = false) {
     val p = LocalMtPalette.current
     Column(
-        modifier.clip(RoundedCornerShape(12.dp)).background(if (strong) p.accent else Color.White.copy(alpha = 0.08f)).padding(horizontal = 6.dp, vertical = 8.dp),
+        modifier.clip(yuRound(12)).background(if (strong) p.accent else Color.White.copy(alpha = 0.08f)).padding(horizontal = 6.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, null, tint = if (strong) p.onAccent else p.accent, modifier = Modifier.size(18.dp))
@@ -223,7 +226,7 @@ private fun Flow(vararg steps: Pair<String, ImageVector>) {
 
 @Composable
 private fun Bar(fraction: Float, height: Int = 8, alpha: Float = 0.12f, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth(fraction).height(height.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = alpha)))
+    Box(modifier.fillMaxWidth(fraction).height(height.dp).clip(yuRound(4)).background(Color.White.copy(alpha = alpha)))
 }
 
 /** Bottom navigation map: the five tabs and what lives in each. */
@@ -231,19 +234,19 @@ private fun Bar(fraction: Float, height: Int = 8, alpha: Float = 0.12f, modifier
 private fun AppMapCard() {
     val p = LocalMtPalette.current
     Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.glass).padding(16.dp).testTag("guide_map"),
+        Modifier.fillMaxWidth().clip(yuRound(24)).background(p.glass).padding(16.dp).testTag("guide_map"),
     ) {
-        Text("The app at a glance", color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.the_app_at_a_glance), color = p.textPrimary, style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(4.dp))
-        Text("Four tabs in the floating dock at the bottom. The bar above it is the music player.", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.four_tabs_in_the_floating_dock), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(14.dp))
         // Mock dock
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.Black.copy(alpha = if (p.isDark) 0.35f else 0.06f)).padding(10.dp)) {
+        Column(Modifier.fillMaxWidth().clip(yuRound(22)).background(Color.Black.copy(alpha = if (p.isDark) 0.35f else 0.06f)).padding(10.dp)) {
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp, 16.dp, 6.dp, 6.dp)).background(Color.White.copy(alpha = 0.08f)).padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(p.accent.copy(alpha = 0.5f)))
+                Box(Modifier.size(30.dp).clip(yuRound(8)).background(p.accent.copy(alpha = 0.5f)))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) { Bar(0.6f, 8, 0.3f); Spacer(Modifier.height(4.dp)); Bar(0.4f, 6) }
                 Box(Modifier.size(28.dp).clip(CircleShape).background(p.accent), contentAlignment = Alignment.Center) {
@@ -282,14 +285,14 @@ private fun AppMapCard() {
 @Composable
 private fun GestureDiagram() {
     val p = LocalMtPalette.current
-    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
+    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(yuRound(12)).background(Color.Black)) {
         Row(Modifier.fillMaxSize()) {
             Zone("Brightness\nswipe up/down", Icons.Default.BrightnessMedium, p.accent.copy(alpha = 0.18f))
             Zone("Swipe down\nto shrink", Icons.Default.KeyboardArrowDown, Color.White.copy(alpha = 0.06f))
             Zone("Volume\nswipe up/down", Icons.AutoMirrored.Filled.VolumeUp, p.accent.copy(alpha = 0.18f))
         }
         Text(
-            "← drag sideways to seek →   ·   double-tap a side: ±10 s",
+            stringResource(R.string.drag_sideways_to_seek_double_tap),
             color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
         )
@@ -313,23 +316,23 @@ private fun RowScope.Zone(label: String, icon: ImageVector, tint: Color) {
 private fun HomeDiagram() {
     val p = LocalMtPalette.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Continue", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.label_continue), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MockTile(Modifier.weight(1f), Icons.Default.MusicNote, "Last song")
             MockTile(Modifier.weight(1f), Icons.Default.SmartDisplay, "Last video")
         }
-        Text("Spaces", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.spaces), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(Icons.Default.MusicNote, Icons.Default.Equalizer, Icons.Default.Extension, Icons.Default.LiveTv).forEach {
-                Box(Modifier.weight(1f).height(30.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).height(30.dp).clip(yuRound(8)).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
                     Icon(it, null, tint = p.accent, modifier = Modifier.size(16.dp))
                 }
             }
         }
-        Text("Yumix random  ·  keeps loading as you scroll ↓", color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.yumix_random_keeps_loading_as_you), color = p.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         repeat(2) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(24.dp).clip(RoundedCornerShape(6.dp)).background(p.accent.copy(alpha = 0.35f)))
+                Box(Modifier.size(24.dp).clip(yuRound(6)).background(p.accent.copy(alpha = 0.35f)))
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) { Bar(0.7f, 6, 0.25f); Spacer(Modifier.height(3.dp)); Bar(0.4f, 5) }
             }
@@ -340,8 +343,8 @@ private fun HomeDiagram() {
 @Composable
 private fun MockTile(modifier: Modifier, icon: ImageVector, label: String) {
     val p = LocalMtPalette.current
-    Row(modifier.clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.08f)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(26.dp).clip(RoundedCornerShape(6.dp)).background(p.accent.copy(alpha = 0.35f)), contentAlignment = Alignment.Center) {
+    Row(modifier.clip(yuRound(10)).background(Color.White.copy(alpha = 0.08f)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(26.dp).clip(yuRound(6)).background(p.accent.copy(alpha = 0.35f)), contentAlignment = Alignment.Center) {
             Icon(icon, null, tint = Color.White, modifier = Modifier.size(14.dp))
         }
         Spacer(Modifier.width(6.dp))
@@ -367,7 +370,7 @@ private fun FloatingDiagram() {
         PhoneMock(Modifier.weight(1f)) {
             Column(Modifier.padding(6.dp)) { repeat(4) { Bar(0.9f, 6); Spacer(Modifier.height(5.dp)) } }
             Box(Modifier.fillMaxWidth().padding(6.dp), contentAlignment = Alignment.BottomEnd) {
-                Box(Modifier.width(52.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(5.dp)).background(Color.Black).border(1.dp, p.accent, RoundedCornerShape(5.dp)))
+                Box(Modifier.width(52.dp).aspectRatio(16f / 9f).clip(yuRound(5)).background(Color.Black).border(1.dp, p.accent, yuRound(5)))
             }
         }
     }
@@ -376,8 +379,8 @@ private fun FloatingDiagram() {
 @Composable
 private fun PhoneMock(modifier: Modifier, content: @Composable () -> Unit) {
     Column(
-        modifier.aspectRatio(0.62f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+        modifier.aspectRatio(0.62f).clip(yuRound(14)).background(Color.White.copy(alpha = 0.06f))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), yuRound(14)),
     ) { content() }
 }
 

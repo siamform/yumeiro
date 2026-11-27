@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -62,9 +64,9 @@ fun NetworkSettingsCard() {
     var testResult by remember { mutableStateOf<String?>(null) }
 
     SettingsCard {
-        Text("DNS for streams", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.dns_for_streams), color = TextPrimary, style = MaterialTheme.typography.titleMedium)
         Text(
-            "Used for playlists, stream links and playback inside the app. System DNS is the default.",
+            stringResource(R.string.used_for_playlists_stream_links_and),
             color = TextSecondary, style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(8.dp))
@@ -103,13 +105,13 @@ fun NetworkSettingsCard() {
                     color = TextTertiary, fontSize = 11.sp, modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = { dev.asfakul.yumeiro.network.Connectivity.openVpnSettings(context) }, modifier = Modifier.testTag("dns_vpn_settings")) {
-                    Text("VPN settings", color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.vpn_settings), color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
         if (config.usesAlternative) {
             Spacer(Modifier.height(10.dp))
-            Text("Connection", color = TextSecondary, fontSize = 12.sp)
+            Text(stringResource(R.string.connection), color = TextSecondary, fontSize = 12.sp)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(DnsTransport.entries, key = { it.name }) { t ->
                     Chip(t.label, config.transport == t, "dns_transport_${t.name.lowercase()}") {
@@ -153,7 +155,7 @@ fun NetworkSettingsCard() {
                 modifier = Modifier.testTag("dns_test_btn"),
             ) {
                 if (testing) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-                else Text("Test", color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
+                else Text(stringResource(R.string.test), color = SpotifyGreen, fontWeight = FontWeight.SemiBold)
             }
         }
         Spacer(Modifier.height(6.dp))

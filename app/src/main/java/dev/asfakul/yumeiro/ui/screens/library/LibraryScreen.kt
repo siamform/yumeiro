@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.library
 
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import dev.asfakul.yumeiro.ui.theme.GlassFill
 import dev.asfakul.yumeiro.ui.theme.OnAccent
@@ -92,6 +94,7 @@ import dev.asfakul.yumeiro.ui.theme.SpotifyGreenBright
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
 import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
+import dev.asfakul.yumeiro.ui.theme.yuRound
 
 @Composable
 fun LibraryScreen(
@@ -144,7 +147,7 @@ fun LibraryScreen(
             },
             title = {
                 Text(
-                    text = "New playlist",
+                    text = stringResource(R.string.new_playlist),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -153,7 +156,7 @@ fun LibraryScreen(
             text = {
                 Column {
                     Text(
-                        text = "Name your playlist:",
+                        text = stringResource(R.string.name_your_playlist),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary
                     )
@@ -162,7 +165,7 @@ fun LibraryScreen(
                         value = newPlaylistName,
                         onValueChange = { newPlaylistName = it },
                         singleLine = true,
-                        placeholder = { Text("e.g. Focus Chill", color = TextTertiary) },
+                        placeholder = { Text(stringResource(R.string.e_g_focus_chill), color = TextTertiary) },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = SpotifyGreen,
                             unfocusedBorderColor = DarkOutline,
@@ -186,7 +189,7 @@ fun LibraryScreen(
                     },
                     modifier = Modifier.testTag("create_playlist_confirm")
                 ) {
-                    Text("Create", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.create), color = SpotifyGreen, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -194,7 +197,7 @@ fun LibraryScreen(
                     showCreateDialog = false
                     newPlaylistName = ""
                 }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text(stringResource(R.string.cancel), color = TextSecondary)
                 }
             },
             containerColor = DarkSurfaceContainerHigh
@@ -207,7 +210,7 @@ fun LibraryScreen(
             onDismissRequest = { playlistToRename = null },
             title = {
                 Text(
-                    text = "Rename playlist",
+                    text = stringResource(R.string.rename_playlist),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -236,12 +239,12 @@ fun LibraryScreen(
                         }
                     }
                 ) {
-                    Text("Save", color = SpotifyGreen, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.save), color = SpotifyGreen, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { playlistToRename = null }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text(stringResource(R.string.cancel), color = TextSecondary)
                 }
             },
             containerColor = DarkSurfaceContainerHigh
@@ -255,7 +258,7 @@ fun LibraryScreen(
             onDismissRequest = { playlistToDelete = null },
             title = {
                 Text(
-                    text = "Delete playlist?",
+                    text = stringResource(R.string.delete_playlist),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -263,7 +266,7 @@ fun LibraryScreen(
             },
             text = {
                 Text(
-                    text = "Are you sure you want to delete '${pl.name}'? Audio files on your device storage will not be affected.",
+                    text = stringResource(R.string.are_you_sure_you_want_to, pl.name),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
@@ -278,12 +281,12 @@ fun LibraryScreen(
                         playlistToDelete = null
                     }
                 ) {
-                    Text("Delete", color = dev.asfakul.yumeiro.ui.theme.DangerTone, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.delete), color = dev.asfakul.yumeiro.ui.theme.DangerTone, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { playlistToDelete = null }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text(stringResource(R.string.cancel), color = TextSecondary)
                 }
             },
             containerColor = DarkSurfaceContainerHigh
@@ -314,7 +317,7 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to Library",
+                            contentDescription = stringResource(R.string.back_to_library),
                             tint = TextPrimary
                         )
                     }
@@ -329,7 +332,7 @@ fun LibraryScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "${playlistTracks.size} songs",
+                            text = stringResource(R.string.songs, playlistTracks.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -345,7 +348,7 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Rename playlist",
+                            contentDescription = stringResource(R.string.rename_playlist),
                             tint = TextSecondary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -358,7 +361,7 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete playlist",
+                            contentDescription = stringResource(R.string.delete_playlist_2),
                             tint = dev.asfakul.yumeiro.ui.theme.DangerTone,
                             modifier = Modifier.size(20.dp)
                         )
@@ -378,12 +381,12 @@ fun LibraryScreen(
                                 playlistTracks.firstOrNull()?.let { onTrackClick(it, playlistTracks) }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = yuRound(20),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = OnAccent)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Play all", color = OnAccent, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.play_all), color = OnAccent, fontWeight = FontWeight.Bold)
                         }
 
                         Button(
@@ -394,12 +397,12 @@ fun LibraryScreen(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = yuRound(20),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(imageVector = Icons.Default.Shuffle, contentDescription = null, tint = SpotifyGreen)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Shuffle", color = TextPrimary, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.shuffle), color = TextPrimary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -420,7 +423,7 @@ fun LibraryScreen(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp)),
+                            .clip(yuRound(10)),
                         color = if (currentPlayingTrack?.id == track.id) SpotifyGreen.copy(alpha = 0.15f) else GlassFill
                     ) {
                         Row(
@@ -463,7 +466,7 @@ fun LibraryScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowUp,
-                                        contentDescription = "Move up",
+                                        contentDescription = stringResource(R.string.move_up),
                                         tint = TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -478,7 +481,7 @@ fun LibraryScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.KeyboardArrowDown,
-                                        contentDescription = "Move down",
+                                        contentDescription = stringResource(R.string.move_down),
                                         tint = TextSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -492,7 +495,7 @@ fun LibraryScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.RemoveCircleOutline,
-                                    contentDescription = "Remove from playlist",
+                                    contentDescription = stringResource(R.string.remove_from_playlist),
                                     tint = TextTertiary,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -541,7 +544,7 @@ fun LibraryCategoryCard(
 ) {
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(yuRound(20))
             .clickable { onClick() }
             .testTag(testTag),
         color = GlassFill,
@@ -554,7 +557,7 @@ fun LibraryCategoryCard(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(yuRound(12))
                     .background(iconTint.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {

@@ -57,6 +57,10 @@ class F22CountryDeviceTest {
         assumeTrue("api.tvmaze.com is unreachable from this machine", tvmazeUp())
         assertTrue("flag f22_country_genre on", FeatureFlags.isOn(FeatureFlags.Flag.F22_COUNTRY_GENRE))
         File(ctx.cacheDir, "upcoming_tvmaze_jp.json").delete()
+        // B14 (Group O): a country asks Yumeiro Cloud first; this test is about the TVmaze schedule, so the hub is
+        // pointed at a closed local port (refused at once) and the page uses its TVmaze fallback.
+        dev.asfakul.yumeiro.sources.hub.HubDiscover.baseForTest = "http://127.0.0.1:9"
+        File(ctx.cacheDir, "upcoming_hub_tv_jp.json").delete()
         UpcomingPrefs.setCountry(ctx, null); UpcomingPrefs.setGenre(ctx, null)
         rule.setContent { MTPlayerTheme { UpcomingScreen(onBack = {}, onSearch = {}) } }
         rule.waitUntil(5_000) { count("upcoming_category_button") > 0 }
@@ -93,6 +97,7 @@ class F22CountryDeviceTest {
         val kept = TvmazeSchedule.filterGenre(TvmazeSchedule.cached(ctx, "JP", java.time.LocalDate.now()).orEmpty(), g)
         assertTrue("genre $g: filter kept nothing", kept.isNotEmpty() && kept.all { e -> e.genres.any { it.equals(g, true) } })
         rule.waitUntil(5_000) { UpcomingPrefs.country(ctx) == "JP" && UpcomingPrefs.genre(ctx) == g }
+        dev.asfakul.yumeiro.sources.hub.HubDiscover.baseForTest = null
         log("F22C_RESULT PASS saved country=${UpcomingPrefs.country(ctx)} genre=${UpcomingPrefs.genre(ctx)}")
     }
 }
