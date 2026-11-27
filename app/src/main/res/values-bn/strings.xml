@@ -954,4 +954,9 @@
     <string name="hx_sheet_note">এই সময়ে শেষবার দেখা শিরোনাম ও সেগুলোর আবার-শুরুর জায়গা সরানো হবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।</string>
     <string name="hx_nothing_in_range">এই সময়ে কিছু দেখা হয়নি</string>
     <string name="hx_remove_title">%1$s ইতিহাস থেকে সরান</string>
+    <string name="hx_by_source">শুধু এই উৎসগুলো</string>
+    <string name="hx_by_type">শুধু এই ধরনগুলো</string>
+    <string name="hx_any">যেকোনো</string>
+    <string name="hx_confirm_selected">ইতিহাস থেকে %1$d টি শিরোনাম মুছবেন?</string>
+    <string name="hx_confirm_selected_body">আবার-শুরুর জায়গাও মুছে যাবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।</string>
 </resources>

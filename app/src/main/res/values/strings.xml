@@ -953,4 +953,9 @@
     <string name="hx_sheet_note">Titles last watched in this time and their resume spots are removed. You can undo right after.</string>
     <string name="hx_nothing_in_range">Nothing watched in this time</string>
     <string name="hx_remove_title">Remove %1$s from history</string>
+    <string name="hx_by_source">Only these sources</string>
+    <string name="hx_by_type">Only these types</string>
+    <string name="hx_any">Any</string>
+    <string name="hx_confirm_selected">Delete %1$d titles from history?</string>
+    <string name="hx_confirm_selected_body">Their resume spots go too. You can undo right after.</string>
 </resources>

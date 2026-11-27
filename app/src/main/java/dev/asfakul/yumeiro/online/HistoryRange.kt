@@ -19,5 +19,27 @@ enum class HistoryRange(val ms: Long?) {
 
     companion object {
         fun count(entries: List<OnlineHistory.Entry>, range: HistoryRange, now: Long): Int = entries.count { range.contains(it.updatedAt, now) }
+
+        /** The type a title is grouped under in the delete sheet ("Other" when the source gave none). */
+        fun typeOf(e: OnlineHistory.Entry): String = e.type?.trim()?.takeIf { it.isNotEmpty() } ?: OTHER_TYPE
+        const val OTHER_TYPE = "Other"
     }
+}
+
+/**
+ * Group Y (B6): the advanced delete choice: a time range plus, optionally, only some sources (providers) and some
+ * types. Empty sets mean "every source" / "every type". Pure.
+ */
+data class HistoryDeleteFilter(
+    val range: HistoryRange = HistoryRange.HOUR,
+    val apis: Set<String> = emptySet(),
+    val types: Set<String> = emptySet(),
+) {
+    fun matches(e: OnlineHistory.Entry, now: Long): Boolean =
+        range.contains(e.updatedAt, now) && (apis.isEmpty() || e.api in apis) && (types.isEmpty() || HistoryRange.typeOf(e) in types)
+
+    fun pick(entries: List<OnlineHistory.Entry>, now: Long): List<OnlineHistory.Entry> = entries.filter { matches(it, now) }
+
+    /** Marks recorded in the range are forgotten too, but only when no source/type narrowing is on (they carry neither). */
+    fun marksSince(now: Long): Long? = if (apis.isEmpty() && types.isEmpty()) range.since(now) ?: Long.MIN_VALUE else null
 }

@@ -954,4 +954,9 @@
     <string name="hx_sheet_note">تُزال العناوين التي شوهدت آخر مرة في هذه الفترة ومواضع الاستئناف الخاصة بها. يمكنك التراجع مباشرة بعد ذلك.</string>
     <string name="hx_nothing_in_range">لم تشاهد شيئًا في هذه الفترة</string>
     <string name="hx_remove_title">إزالة %1$s من السجل</string>
+    <string name="hx_by_source">هذه المصادر فقط</string>
+    <string name="hx_by_type">هذه الأنواع فقط</string>
+    <string name="hx_any">أي</string>
+    <string name="hx_confirm_selected">حذف %1$d من العناوين من السجل؟</string>
+    <string name="hx_confirm_selected_body">تُحذف مواضع الاستئناف أيضًا. يمكنك التراجع مباشرة بعد ذلك.</string>
 </resources>

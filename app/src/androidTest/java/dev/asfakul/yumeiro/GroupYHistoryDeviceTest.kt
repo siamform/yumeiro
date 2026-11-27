@@ -37,9 +37,10 @@ import org.junit.runners.MethodSorters
  * 90 days ago.
  *  a: Delete history → each time range shows how many titles it removes; "Last 24 hours" removes exactly the two
  *     newest; Undo brings both back with their resume spots.
- *  b: Select → pick two titles → Delete selected removes exactly those; Undo restores them; Select all picks all.
+ *  b: Select → pick two titles → Delete selected asks first, then removes exactly those; Undo restores them; Select all picks all.
  *  c: Remove on one title → Undo bar → it goes away by itself after the undo time and the delete stays.
- * Log tag YuGroupY: GY_… lines, GY_RESULT_A/B/C PASS. Shots gy_a_sheet, gy_a_undo, gy_b_select, gy_c_undo.
+ *  d: the sheet narrows by source (provider) and type; "All time" + Movie removes only the movie.
+ * Log tag YuGroupY: GY_… lines, GY_RESULT_A/B/C/D PASS. Shots gy_a_sheet, gy_a_undo, gy_b_select, gy_c_undo.
  */
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -51,14 +52,16 @@ class GroupYHistoryDeviceTest {
     private val day = 86_400_000L
     private val ages = listOf("Aoi" to 10 * 60_000L, "Beni" to 3 * 3_600_000L, "Cha" to 3 * day, "Doro" to 20 * day, "Enji" to 90 * day)
 
+    // Doro comes from a second source and is a movie, for the source / type filters (d).
+    private fun apiOf(name: String) = if (name == "Doro") "YuOther" else "YuDemo"
     private fun entry(name: String, ago: Long) = OnlineHistory.Entry(
-        "YuDemo", "https://yu.test/$name", name, null, emptyMap(), "Anime", "1", "$name-ep2", "Episode 2", 600_000, 1_400_000, now - ago,
+        apiOf(name), "https://yu.test/$name", name, null, emptyMap(), if (name == "Doro") "Movie" else "Anime", "1", "$name-ep2", "Episode 2", 600_000, 1_400_000, now - ago,
     )
 
     @Before fun setUp() {
         Privacy.setIncognito(ctx, false)
         OnlineHistory.seedForTests(ctx, ages.map { (n, a) -> entry(n, a) },
-            ages.associate { (n, a) -> OnlineHistory.progressKey("YuDemo", "$n-ep2") to OnlineHistory.Progress(600_000, 1_400_000, now - a) })
+            ages.associate { (n, a) -> OnlineHistory.progressKey(apiOf(n), "$n-ep2") to OnlineHistory.Progress(600_000, 1_400_000, now - a) })
     }
 
     @After fun tearDown() { OnlineHistory.clear(ctx); OnlineHistory.flush() }
@@ -112,6 +115,9 @@ class GroupYHistoryDeviceTest {
         assertTrue("header shows 2 selected", textShown(ctx.getString(R.string.hx_selected, 2)))
         SystemClock.sleep(400); compose.waitForIdle(); FirstRun.shot("gy_b_select")
         click("history_delete_selected")
+        waitFor("confirm") { has("history_delete_selected_confirm") }
+        assertEquals("nothing deleted before confirming", 5, names().size)
+        click("history_delete_selected_confirm")
         waitFor("undo bar") { has("history_undo_bar") }
         log("GY_B after delete=${names()}")
         assertEquals(listOf("Aoi", "Cha", "Enji"), names())
@@ -137,5 +143,29 @@ class GroupYHistoryDeviceTest {
         assertTrue("Undo stayed long enough to use ($stayed ms)", stayed >= 6_000)
         assertEquals(listOf("Aoi", "Beni", "Doro", "Enji"), names())
         log("GY_RESULT_C PASS")
+    }
+
+    @Test fun d_onlyOneSourceOrTypeAllTime() {
+        open()
+        click("online_history_clear")
+        waitFor("sheet") { has("history_delete_sheet") }
+        click("history_range_all")
+        assertEquals("5", countText("all").filter(Char::isDigit))
+        click("history_api_YuOther")
+        assertEquals("one title from YuOther", "1", countText("all").filter(Char::isDigit))
+        click("history_api_any")
+        click("history_type_Anime")
+        assertEquals("four anime", "4", countText("all").filter(Char::isDigit))
+        click("history_type_any")
+        click("history_type_Movie")
+        SystemClock.sleep(400); compose.waitForIdle(); FirstRun.shot("gy_d_filters")
+        click("history_range_delete")
+        waitFor("undo bar") { has("history_undo_bar") }
+        log("GY_D after delete=${names()}")
+        assertEquals(listOf("Aoi", "Beni", "Cha", "Enji"), names())
+        // A narrowed delete only takes the picked titles' own marks.
+        assertEquals(600_000L, OnlineHistory.progressOf("YuDemo", "Aoi-ep2")?.positionMs)
+        assertEquals(null, OnlineHistory.progressOf("YuOther", "Doro-ep2"))
+        log("GY_RESULT_D PASS")
     }
 }

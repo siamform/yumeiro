@@ -100,6 +100,20 @@ class GroupYHistoryDeleteTest {
         assertEquals(1, OnlineHistory.entries.value.count { it.name == "c" })
     }
 
+    @Test fun filterNarrowsBySourceAndType() {
+        val list = seed + OnlineHistory.Entry("Other", "https://y/m", "m", null, emptyMap(), "Movie", "1", null, null, 0, 0, now - 5 * min) +
+            OnlineHistory.Entry("Other", "https://y/n", "n", null, emptyMap(), null, "1", null, null, 0, 0, now - 5 * day)
+        val all = HistoryDeleteFilter(HistoryRange.ALL)
+        assertEquals(7, all.pick(list, now).size)
+        assertEquals(listOf("m", "n"), all.copy(apis = setOf("Other")).pick(list, now).map { it.name })
+        assertEquals(listOf("m"), all.copy(types = setOf("Movie")).pick(list, now).map { it.name })
+        assertEquals(listOf("n"), all.copy(types = setOf(HistoryRange.OTHER_TYPE)).pick(list, now).map { it.name })
+        assertEquals(listOf("m"), HistoryDeleteFilter(HistoryRange.HOUR, apis = setOf("Other")).pick(list, now).map { it.name })
+        assertEquals(Long.MIN_VALUE, all.marksSince(now))
+        assertEquals(now - 3_600_000L, HistoryDeleteFilter(HistoryRange.HOUR).marksSince(now))
+        assertNull(all.copy(apis = setOf("Other")).marksSince(now))
+    }
+
     @Test fun nothingMatchedIsANoOp() {
         val r = OnlineHistory.removeWhere(ctx) { false }
         assertEquals(true, r.isEmpty)
