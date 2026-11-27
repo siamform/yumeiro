@@ -415,7 +415,12 @@ private fun GroupedResults(
     }
     val sort = SearchView.sort
     val plan = remember(all, states, sort) { dev.asfakul.yumeiro.online.SearchGroups.plan(all, states, sort) }
-    LazyColumn(Modifier.fillMaxSize().testTag("online_search_groups"), contentPadding = PaddingValues(bottom = 32.dp)) {
+    // A new sort starts from its first row: the list would otherwise keep the old first row in place
+    // and hide the new one above it (seen on TV, where only a couple of rows fit).
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var shownSort by remember { mutableStateOf(sort) }
+    LaunchedEffect(sort) { if (shownSort != sort) { shownSort = sort; listState.scrollToItem(0) } }
+    LazyColumn(Modifier.fillMaxSize().testTag("online_search_groups"), state = listState, contentPadding = PaddingValues(bottom = 32.dp)) {
         items(plan.groups, key = { "g_" + it.name }, contentType = { "group" }) { g ->
             Column(Modifier.testTag("online_search_group_${g.name}")) {
                 SectionHeader(g.name, subtitle = "${g.items.size} result${if (g.items.size == 1) "" else "s"}") {
