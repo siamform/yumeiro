@@ -209,8 +209,26 @@ fun OnlineSearchScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit, on
 
     SearchAgainAfterPass(submitted, { latestProviders.value }, results, adultOn) { submitted }
 
+    // F14 (Group U): BlackSource advanced search, opened from the header.
+    var blackSource by rememberSaveable { mutableStateOf(false) }
+    if (blackSource) {
+        BlackSourceScreen(
+            onBack = { blackSource = false }, onOpenTitle = onOpenTitle,
+            onSearchWords = { w -> blackSource = false; text = w; submitted = w; typing = false },
+            providers = { latestProviders.value },
+        )
+        return
+    }
+
     Column(Modifier.fillMaxSize().imePadding().testTag("online_search_screen")) {
-        SubPageHeader(title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}")
+        SubPageHeader(
+            title = "Search online", onBack = onBack, subtitle = if (providers.isEmpty()) null else "${providers.size} source${if (providers.size == 1) "" else "s"}",
+            actions = {
+                TextButton(onClick = { blackSource = true }, modifier = Modifier.testTag("online_search_blacksource")) {
+                    Text(stringResource(R.string.bs_open), color = SpotifyGreen, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                }
+            },
+        )
         OutlinedTextField(
             value = text, onValueChange = { text = it.take(120); typing = true },
             placeholder = { Text(stringResource(R.string.title_series_or_anime), color = TextTertiary, fontSize = 13.sp) },

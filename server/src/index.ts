@@ -15,6 +15,7 @@ import {
 } from "./fcm.ts";
 import { apiSig, signRequest } from "./lastfm.ts";
 import { plan as hubPlan, shape as hubShape, shelves as hubShelves } from "./hub.ts";
+import { ANILIST, DEMOGRAPHICS, GENRES, SEARCH_QUERY, SORTS, TAGS_QUERY, plan as bsPlan, shape as bsShape, tagList as bsTags } from "./blacksource.ts";
 
 export interface Env {
   DB: D1Database;
@@ -40,6 +41,8 @@ export interface Env {
   TMDB_TOKEN?: string;
   /** E1-A: per-IP limit on hub catalog calls (cache hits are not counted). */
   HUB?: RateLimit;
+  /** F14 BlackSource: per-IP limit on AniList lookups (cache hits are not counted). */
+  BLACKSOURCE?: RateLimit;
 }
 
 /** Airing nudges (UnifiedPush endpoints) or NOTIFY-1 direct copies of a broadcast (FCM ids). */
@@ -63,6 +66,7 @@ export default {
     const url = new URL(req.url);
     try {
       if (url.pathname.startsWith("/v1/hub/") && req.method === "GET") return await hub(req, env, url, ctx);
+      if (url.pathname.startsWith("/v1/blacksource/") && req.method === "GET") return await blacksource(req, env, url, ctx);
       if (url.pathname === "/v1/health" && req.method === "GET") return await health(env);
       if (url.pathname === "/v1/devices" && req.method === "POST") return await register(req, env);
       if (url.pathname === "/v1/devices" && req.method === "DELETE") return await unregister(req, env);
@@ -121,6 +125,43 @@ async function hub(req: Request, env: Env, url: URL, ctx?: ExecutionContext): Pr
   const body = hubShape(url.pathname, await r.json<Record<string, unknown>>(), p.kind, region);
   if (body && typeof body === "object" && "error" in body) return fail(404, "not_found");
   const res = cached(json(body), p.ttl);
+  if (cache) { const put = cache.put(key, res.clone()); if (ctx) ctx.waitUntil(put); else await put; }
+  return res;
+}
+
+/**
+ * F14 BlackSource: AniList genre / tag / demographic search, cached at the edge (1 h with words, 6 h filters only,
+ * 24 h for the tag list). One fixed GraphQL query; the app sends values only. No third-party code runs here.
+ */
+async function blacksource(req: Request, env: Env, url: URL, ctx?: ExecutionContext): Promise<Response> {
+  const meta = url.pathname === "/v1/blacksource/meta";
+  if (!meta && url.pathname !== "/v1/blacksource/search") return fail(404, "not_found");
+  const p = meta ? null : bsPlan(url.searchParams);
+  if (p && "error" in p) return fail(400, p.error);
+  const key = new Request(`https://blacksource.cache${url.pathname}?${[...url.searchParams].sort().map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}`);
+  const cache = (globalThis as { caches?: { default?: Cache } }).caches?.default;
+  const hit = cache ? await cache.match(key) : undefined;
+  if (hit) return hit;
+  if (env.BLACKSOURCE && !(await env.BLACKSOURCE.limit({ key: `bs:${req.headers.get("cf-connecting-ip") ?? "?"}` })).success) return fail(429, "slow_down");
+  let r: Response;
+  try {
+    r = await fetch(ANILIST, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(meta ? { query: TAGS_QUERY } : { query: SEARCH_QUERY, variables: p!.variables }),
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    return fail(504, "upstream_timeout");
+  }
+  if (r.status === 429) return fail(503, "upstream_busy");
+  if (!r.ok) return fail(502, "upstream");
+  const raw = await r.json<unknown>().catch(() => null);
+  const body = meta
+    ? (() => { const t = bsTags(raw); return t && { genres: GENRES, demographics: DEMOGRAPHICS, sorts: Object.keys(SORTS), tags: t.tags }; })()
+    : bsShape(raw, p!);
+  if (!body) return fail(502, "upstream_shape");
+  const res = cached(json(body), meta ? 24 * 3600 : p!.ttl);
   if (cache) { const put = cache.put(key, res.clone()); if (ctx) ctx.waitUntil(put); else await put; }
   return res;
 }
