@@ -7,6 +7,8 @@ package dev.asfakul.yumeiro
 
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -66,6 +68,17 @@ class GroupB11NavDeviceTest {
             if (icon != null && !inside(icon, cap)) bad += "${item.testTag}: icon outside capsule"
             if (!inside(text, cap)) bad += "${item.testTag}: label outside capsule ($text vs $cap)"
             if (!centred) bad += "${item.testTag}: capsule not under the tab"
+            if (item.testTag == "nav_tab_videos" && filled.size == 1) {
+                // The lit Videos glyph is a filled screen with the play triangle cut out: the cut-out must
+                // show (it closed to a dot when the stroke ran round its inside).
+                val px = rule.onNodeWithTag("nav_icon_filled", true).captureToImage().toPixelMap()
+                fun lum(x: Float, y: Float): Float = px[(x * px.width).toInt().coerceIn(0, px.width - 1), (y * px.height).toInt().coerceIn(0, px.height - 1)]
+                    .let { 0.2126f * it.red + 0.7152f * it.green + 0.0722f * it.blue }
+                val solid = lum(5f / 24f, 12f / 24f)
+                val hole = lum(11.6f / 24f, 12f / 24f)
+                log("GB11_$label videos glyph solid=$solid hole=$hole size=${px.width}x${px.height}")
+                if (kotlin.math.abs(hole - solid) < 0.25f) bad += "videos: play cut-out not visible (solid=$solid hole=$hole)"
+            }
         }
         assertTrue("B11 $label: ${bad.joinToString("; ")}", bad.isEmpty())
     }

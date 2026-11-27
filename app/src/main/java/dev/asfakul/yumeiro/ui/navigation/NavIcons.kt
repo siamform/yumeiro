@@ -44,6 +44,10 @@ object NavIcons {
     private const val NOTE_HEAD2 = "M13 14.5 A3 3 0 1 0 19 14.5 A3 3 0 1 0 13 14.5 Z"
     private const val SCREEN = "M3.5 7.5 A3 3 0 0 1 6.5 4.5 H17.5 A3 3 0 0 1 20.5 7.5 V16.5 A3 3 0 0 1 17.5 19.5 H6.5 A3 3 0 0 1 3.5 16.5 Z"
     private const val PLAY = "M10.2 9.2 V14.8 L15 12 Z"
+    /** [SCREEN] grown by half a line on every side (2.6..21.4 x 3.6..20.4, corner 3.9). */
+    internal const val SCREEN_SOLID = "M2.6 7.5 A3.9 3.9 0 0 1 6.5 3.6 H17.5 A3.9 3.9 0 0 1 21.4 7.5 V16.5 A3.9 3.9 0 0 1 17.5 20.4 H6.5 A3.9 3.9 0 0 1 2.6 16.5 Z"
+    /** The play triangle as the outline draws it (its 1.8 line included), so both states share one glyph. */
+    internal const val PLAY_HOLE = "M9.5 8.2 V15.8 L16 12 Z"
     private const val SHELF_A = "M4.5 5 V19.5"
     private const val SHELF_B = "M8.8 5 V19.5"
     private const val BOOK = "M12.6 6.2 L16.2 5.2 L19.8 18.6 L16.2 19.6 Z"
@@ -53,8 +57,19 @@ object NavIcons {
     val MusicOutline = icon("yu_music", NOTE_HEAD to false, NOTE_HEAD2 to false, NOTE_STEM to false)
     val MusicFilled = icon("yu_music_filled", NOTE_HEAD to true, NOTE_HEAD2 to true, NOTE_STEM to false)
     val VideosOutline = icon("yu_videos", SCREEN to false, PLAY to true)
-    /** Filled screen with the play triangle cut out (even-odd in one path). */
-    val VideosFilled = icon("yu_videos_filled", "$SCREEN $PLAY" to true)
+    /**
+     * Filled screen with the play triangle cut out (even-odd, one path). B11: fill only, no stroke.
+     * With the 1.8 stroke the line ran round the inside of the cut-out too and closed it to a dot,
+     * so the lit Videos tab showed a plain brown block (device shots gb11_a_nav_tab_videos, run
+     * 46066256387). The screen is drawn half a line wider to match the outline's size.
+     */
+    val VideosFilled: ImageVector = ImageVector.Builder("yu_videos_filled", 24.dp, 24.dp, 24f, 24f).apply {
+        addPath(
+            pathData = PathParser().parsePathString("$SCREEN_SOLID $PLAY_HOLE").toNodes(),
+            pathFillType = PathFillType.EvenOdd,
+            fill = SolidColor(Color.Black),
+        )
+    }.build()
     val LibraryOutline = icon("yu_library", SHELF_A to false, SHELF_B to false, BOOK to false)
     val LibraryFilled = icon("yu_library_filled", SHELF_A to false, SHELF_B to false, BOOK to true)
 }
