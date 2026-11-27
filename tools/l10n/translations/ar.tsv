@@ -926,3 +926,10 @@ dw_kind_movie	أفلام
 dw_kind_tv	مسلسلات
 dw_kind_anime	أنمي
 dw_score_plus	%1$d+
+nx_all_sources	كل المصادر
+nx_fallback_note	لم يستجب %1$s، لذلك تُعرض كل مصادرك.
+nx_fallback_retry	جرّب %1$s مرة أخرى
+nx_some_failed	لم يستجب: %1$s
+nx_try_again	حاول مرة أخرى
+nx_all_none_title	لا يوجد شيء هنا
+nx_all_none_text	لم يعرض أي من مصادرك أي روايات.

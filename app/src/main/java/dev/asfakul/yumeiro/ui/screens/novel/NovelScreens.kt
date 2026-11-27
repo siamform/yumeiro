@@ -62,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -101,6 +102,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.first
+import dev.asfakul.yumeiro.sources.reading.ReadingSpot
+import dev.asfakul.yumeiro.sources.novel.NovelFeedMerge
+import dev.asfakul.yumeiro.sources.reading.ReadingSaves
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import dev.asfakul.yumeiro.ui.theme.yuRound
@@ -126,7 +131,16 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
         ready = true
     }
     var selectedId by rememberSaveable { mutableStateOf(prefs(context).getString("source", null)) }
-    val plugin = state.installed.firstOrNull { it.id == selectedId } ?: state.installed.firstOrNull()
+    // Group X (B4): "All sources" is the default once more than one source is installed (and nothing was chosen).
+    val choice = remember(selectedId, state.installed) { NovelFeedMerge.pick(selectedId, state.installed.map { it.id }) }
+    // A chosen source that fails or lists nothing switches the page to All sources for this visit (said in a note);
+    // "Try <source> again" goes back to it and does not switch again.
+    var fellBackFrom by rememberSaveable { mutableStateOf<String?>(null) }
+    var noFallback by rememberSaveable { mutableStateOf<String?>(null) }
+    val all = choice == NovelFeedMerge.ALL || (fellBackFrom != null && fellBackFrom == choice && state.installed.size > 1)
+    val plugin = if (choice == NovelFeedMerge.ALL) null else state.installed.firstOrNull { it.id == choice }
+    fun choose(id: String) { selectedId = id; fellBackFrom = null; noFallback = null; prefs(context).edit().putString("source", id).apply() }
+    val barHide = dev.asfakul.yumeiro.ui.components.rememberHideOnScrollState()
     var feed by rememberSaveable { mutableStateOf(Feed.POPULAR) }
     var query by rememberSaveable { mutableStateOf("") }
     var submitted by rememberSaveable { mutableStateOf("") }
@@ -141,7 +155,7 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
     }
 
     Column(Modifier.fillMaxSize().testTag("novel_home")) {
-        SubPageHeader(title = "Novels", onBack = onBack, subtitle = if (state.installed.isEmpty()) "Add a source to start reading" else plugin?.name) {
+        SubPageHeader(title = "Novels", onBack = onBack, subtitle = if (state.installed.isEmpty()) "Add a source to start reading" else if (choice == NovelFeedMerge.ALL) stringResource(R.string.nx_all_sources) else plugin?.name) {
             // GROUP C: search and the source choice are icons; the box and the sheet open on demand.
             if (ready && state.installed.isNotEmpty()) {
                 dev.asfakul.yumeiro.ui.components.SearchIconButton(searchOpen || query.isNotEmpty(), {
@@ -162,8 +176,9 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
         dev.asfakul.yumeiro.ui.components.HeaderSearchField(searchOpen || query.isNotEmpty(), query, { query = it.take(80) }, "Search all novel sources", "novel_search")
         if (sourceSheet) dev.asfakul.yumeiro.ui.components.FilterSheet(onDismiss = { sourceSheet = false }, onReset = null, resultCount = null, tag = "novel_source_sheet") {
             dev.asfakul.yumeiro.ui.components.FilterGroup("Source") {
+                FilterPill(stringResource(R.string.nx_all_sources), choice == NovelFeedMerge.ALL, { choose(NovelFeedMerge.ALL) }, testTag = "novel_source_all")
                 state.installed.forEach { p ->
-                    FilterPill(p.name, p.id == plugin?.id, { selectedId = p.id; prefs(context).edit().putString("source", p.id).apply() }, testTag = "novel_source_${p.id}")
+                    FilterPill(p.name, p.id == choice, { choose(p.id) }, testTag = "novel_source_${p.id}")
                 }
             }
         }
@@ -171,19 +186,39 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
             SearchAllResults(submitted, onOpenNovel)
             return@Column
         }
-        LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("novel_feeds")) {
-            item("f_pop") { FilterPill("Popular", feed == Feed.POPULAR, { feed = Feed.POPULAR }, testTag = "novel_feed_popular") }
-            item("f_new") { FilterPill("Latest", feed == Feed.LATEST, { feed = Feed.LATEST }, testTag = "novel_feed_latest") }
-            item("f_saved") { FilterPill("Saved", feed == Feed.SAVED, { feed = Feed.SAVED }, testTag = "novel_feed_saved") }
-            item("f_hist") { FilterPill("Continue", feed == Feed.HISTORY, { feed = Feed.HISTORY }, testTag = "novel_feed_history") }
-        }
-        when (feed) {
-            Feed.SAVED -> EntryGrid(library.values.filter { it.saved }.sortedByDescending { maxOf(it.readAt, it.addedAt) }, "Nothing saved yet", "Tap the bookmark on a novel to keep it here.", onOpenNovel)
-            Feed.HISTORY -> EntryGrid(library.values.filter { it.readAt > 0 }.sortedByDescending { it.readAt }, "Nothing read yet", "Novels you open are listed here with the chapter you reached.", onOpenNovel)
-            else -> if (plugin != null) {
-                // GROUP G3: the page opens on a banner: the novel you were reading, then this source's top picks.
-                val reading = remember(library) { library.values.filter { it.readAt > 0 }.maxByOrNull { it.readAt } }
-                BrowseGrid(plugin, feed == Feed.LATEST, onOpenNovel, reading)
+        // Group X (B4): the feed chips (and the fallback note) slide away while scrolling down the list and come back
+        // on the way up, like the Manga page; a new feed or source always shows them.
+        dev.asfakul.yumeiro.ui.components.HideOnScrollColumn(Modifier.fillMaxSize(), state = barHide, showKey = Triple(feed, choice, all), header = {
+            Column {
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("novel_feeds")) {
+                    item("f_pop") { FilterPill("Popular", feed == Feed.POPULAR, { feed = Feed.POPULAR }, testTag = "novel_feed_popular") }
+                    item("f_new") { FilterPill("Latest", feed == Feed.LATEST, { feed = Feed.LATEST }, testTag = "novel_feed_latest") }
+                    item("f_saved") { FilterPill("Saved", feed == Feed.SAVED, { feed = Feed.SAVED }, testTag = "novel_feed_saved") }
+                    item("f_hist") { FilterPill("Continue", feed == Feed.HISTORY, { feed = Feed.HISTORY }, testTag = "novel_feed_history") }
+                }
+                val from = fellBackFrom?.let { id -> state.installed.firstOrNull { it.id == id } }
+                if (from != null && all && (feed == Feed.POPULAR || feed == Feed.LATEST)) Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp).clip(yuRound(12)).background(GlassFill)
+                        .padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp).testTag("novel_fallback_note"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.nx_fallback_note, from.name), color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { noFallback = from.id; fellBackFrom = null }, modifier = Modifier.testTag("novel_fallback_retry")) {
+                        Text(stringResource(R.string.nx_fallback_retry, from.name), color = SpotifyGreen, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }) {
+            when (feed) {
+                Feed.SAVED -> EntryGrid(library.values.filter { it.saved }.sortedByDescending { maxOf(it.readAt, it.addedAt) }, "Nothing saved yet", "Tap the bookmark on a novel to keep it here.", onOpenNovel)
+                Feed.HISTORY -> EntryGrid(library.values.filter { it.readAt > 0 }.sortedByDescending { it.readAt }, "Nothing read yet", "Novels you open are listed here with the chapter you reached.", onOpenNovel)
+                else -> {
+                    // GROUP G3: the page opens on a banner: the novel you were reading, then this source's top picks.
+                    val reading = remember(library) { library.values.filter { it.readAt > 0 }.maxByOrNull { it.readAt } }
+                    if (all) BrowseAllGrid(feed == Feed.LATEST, onOpenNovel, reading)
+                    else if (plugin != null) BrowseGrid(plugin, feed == Feed.LATEST, onOpenNovel, reading,
+                        onUnusable = if (state.installed.size > 1 && noFallback != plugin.id) ({ fellBackFrom = plugin.id }) else null)
+                }
             }
         }
     }
@@ -218,7 +253,7 @@ private fun NovelError(pluginId: String, title: String, error: String, testTag: 
 }
 
 @Composable
-private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry? = null) {
+private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry? = null, onUnusable: (() -> Unit)? = null) {
     val context = LocalContext.current
     val items = remember(plugin.id, latest) { mutableStateListOf<NovelItem>() }
     var page by remember(plugin.id, latest) { mutableIntStateOf(1) }
@@ -236,6 +271,10 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
         } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: "Couldn't load" }
         loading = false
     }
+    // Group X (B4): the first page failed or was empty: with other sources installed, the page switches to them.
+    val unusable = items.isEmpty() && !loading && (error != null || end)
+    val switchAway by rememberUpdatedState(onUnusable)
+    LaunchedEffect(unusable) { if (unusable) switchAway?.invoke() }
     if (items.isEmpty() && error != null) {
         NovelError(plugin.id, "Couldn't load ${plugin.name}", error!!, "novel_browse_error", onRetry = { attempt++ })
         return
@@ -262,6 +301,72 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
         }
         if (error != null && items.isNotEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
             TextButton(onClick = { attempt++ }) { Text(stringResource(R.string.couldnt_load_more_try_again), color = SpotifyGreen) }
+        }
+    }
+}
+
+/**
+ * Group X (B4): Popular / Latest from every installed source in one grid (taken in turns, the same novel once), each
+ * cover saying its source. Sources that fail are named above the grid with "Try again"; one that runs out of pages
+ * stops being asked.
+ */
+@Composable
+private fun BrowseAllGrid(latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry?) {
+    val context = LocalContext.current
+    val state by NovelSources.state.collectAsState()
+    val ids = state.installed.map { it.id }
+    val items = remember(ids, latest) { mutableStateListOf<NovelItem>() }
+    var page by remember(ids, latest) { mutableIntStateOf(1) }
+    var loading by remember(ids, latest) { mutableStateOf(false) }
+    var live by remember(ids, latest) { mutableStateOf(ids.toSet()) }
+    var failed by remember(ids, latest) { mutableStateOf<List<NovelSources.SearchGroup>>(emptyList()) }
+    var attempt by remember(ids, latest) { mutableIntStateOf(0) }
+    LaunchedEffect(ids, latest, page, attempt) {
+        if (live.isEmpty()) return@LaunchedEffect
+        loading = true
+        val groups = NovelSources.popularAll(context, page, latest, only = live)
+        val ok = groups.filter { it.error == null }
+        items.addAll(NovelFeedMerge.merge(items, ok.map { it.items }))
+        // A source that answered with nothing has no more pages; a failing one stops being asked until "Try again".
+        val bad = groups.filter { it.error != null }
+        live = live - ok.filter { g -> g.items.isEmpty() }.map { it.plugin.id }.toSet() - bad.map { it.plugin.id }.toSet()
+        failed = failed.filter { f -> groups.none { it.plugin.id == f.plugin.id } } + bad
+        loading = false
+    }
+    val names = remember(state.installed) { state.installed.associate { it.id to it.name } }
+    if (items.isEmpty() && loading) { Column(Modifier.fillMaxSize().padding(top = 8.dp).testTag("novel_all_loading")) { repeat(3) { dev.asfakul.yumeiro.ui.components.CoverRowSkeleton() } }; return }
+    if (items.isEmpty()) {
+        StateMessage(Icons.AutoMirrored.Filled.MenuBook, stringResource(R.string.nx_all_none_title),
+            failed.joinToString("\n") { "${it.plugin.name}: ${it.error}" }.ifBlank { stringResource(R.string.nx_all_none_text) },
+            primary = stringResource(R.string.nx_try_again) to { items.clear(); failed = emptyList(); live = ids.toSet(); page = 1; attempt++ }, testTag = "novel_all_empty")
+        return
+    }
+    val grid = rememberLazyGridState()
+    LaunchedEffect(grid, items.size) {
+        snapshotFlow { grid.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { last ->
+            if (!loading && live.isNotEmpty() && last >= items.size - 6) page++
+        }
+    }
+    val label = stringResource(R.string.nx_all_sources)
+    LazyVerticalGrid(GridCells.Adaptive(108.dp), state = grid, modifier = Modifier.fillMaxSize().testTag("novel_all_grid"),
+        contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 48.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (failed.isNotEmpty()) item(key = "novel_all_failed", span = { GridItemSpan(maxLineSpan) }) {
+            Row(Modifier.fillMaxWidth().clip(yuRound(12)).background(GlassFill).padding(start = 12.dp, end = 4.dp).testTag("novel_all_failed"), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.nx_some_failed, failed.joinToString(", ") { it.plugin.name }), color = TextSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                TextButton(onClick = {
+                    items.clear(); failed = emptyList(); live = ids.toSet(); page = 1; attempt++
+                }) { Text(stringResource(R.string.nx_try_again), color = SpotifyGreen, fontSize = 12.sp) }
+            }
+        }
+        val banner = NovelBanner.slides(items, reading, label, latest)
+        if (banner.isNotEmpty()) item(key = "novel_banner", span = { GridItemSpan(maxLineSpan) }, contentType = "banner") {
+            Box(Modifier.padding(bottom = 6.dp)) {
+                dev.asfakul.yumeiro.ui.screens.home.HeroCarousel(banner.map { it.slide }, tag = "novel_banner") { i -> onOpen(banner[i].item) }
+            }
+        }
+        itemsIndexed(items, key = { _, it -> it.pluginId + "|" + it.path }) { _, it -> NovelCover(it, names[it.pluginId]) { n -> onOpen(n) } }
+        if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(true), key = { "sk_$it" }, contentType = { "skeleton" }) {
+            dev.asfakul.yumeiro.ui.components.CoverSkeleton()
         }
     }
 }
@@ -545,8 +650,13 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
     // The chapter loads before the novel's details may arrive: progress always uses the latest of both.
     val where by rememberUpdatedState(Triple(item, chapter, index))
 
+    var spot by remember { mutableFloatStateOf(0f) }
+    // The spot when the text size was changed (taken at the tap, before the paragraphs change height).
+    var resizeSpot by remember { mutableStateOf<Float?>(null) }
+    // The chapter whose saved spot is back on screen; nothing is saved before (it used to write the top first).
+    var restoredFor by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(current, attempt) {
-        paras = null; error = null; translated = null; tlNote = null
+        paras = null; error = null; translated = null; tlNote = null; restoredFor = null
         try {
             val html = NovelSources.chapterHtml(context, pluginId, current)
             val ps = withContext(Dispatchers.Default) { NovelText.paragraphs(html) }
@@ -554,19 +664,49 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
             paras = ps
             withContext(Dispatchers.IO) { NovelLibrary.ensureLoaded(context) }
             val saved = NovelLibrary.get(pluginId, path)
-            val at = if (saved?.chapterPath == current) (saved.position * ps.size).toInt().coerceIn(0, ps.size - 1) else 0
-            list.scrollToItem(at + 1)
-            val (it0, ch0, ix0) = where
-            withContext(Dispatchers.IO) { NovelLibrary.progress(context, it0, ch0, ix0, at.toFloat() / ps.size) }
+            // Group X (B5): back to the exact line: the paragraph and how far into it (a long paragraph re-opened at
+            // its first line before, and the spot was then rewritten without the part inside the paragraph).
+            val (at, inPara) = if (saved?.chapterPath == current) ReadingSpot.decode(saved.position, ps.size) else (0 to 0f)
+            NovelSpot.restore(list, at, inPara)
+            spot = if (saved?.chapterPath == current) saved.position.coerceIn(0f, 1f) else 0f
+            restoredFor = current
         } catch (e: CancellationException) { throw e } catch (e: Exception) { error = e.message ?: "Couldn't load this chapter" }
     }
-    LaunchedEffect(current, paras) {
+    // The spot follows the reading (also while the text grows or shrinks), saved 0.5 s after the list settles.
+    LaunchedEffect(current, paras, restoredFor) {
         val ps = paras ?: return@LaunchedEffect
-        snapshotFlow { list.firstVisibleItemIndex }.debounce(800).collect { i ->
-            val pos = ((i - 1).coerceAtLeast(0).toFloat() / ps.size).coerceIn(0f, 1f)
+        if (restoredFor != current) return@LaunchedEffect
+        snapshotFlow { NovelSpot.read(list, ps.size) }.collect { spot = it }
+    }
+    LaunchedEffect(current, restoredFor) {
+        if (restoredFor != current) return@LaunchedEffect
+        snapshotFlow { spot }.debounce(500).collect { s ->
             val (it0, ch0, ix0) = where
-            withContext(Dispatchers.IO) { NovelLibrary.progress(context, it0, ch0, ix0, if (!list.canScrollForward) 1f else pos) }
+            withContext(Dispatchers.IO) { NovelLibrary.progress(context, it0, ch0, ix0, s) }
         }
+    }
+    // A new text size keeps the same line at the top (the paragraphs change height; the share into one does not).
+    LaunchedEffect(size) {
+        val keep = resizeSpot ?: return@LaunchedEffect
+        val ps = paras
+        if (ps == null || restoredFor != current) { resizeSpot = null; return@LaunchedEffect }
+        restoredFor = null
+        val (at, inPara) = ReadingSpot.decode(keep, ps.size)
+        NovelSpot.restore(list, at, inPara)
+        spot = keep; resizeSpot = null; restoredFor = current
+    }
+    // Leaving the chapter or the app keeps the very last spot (the 0.5 s save could still be waiting).
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val keep = {
+            if (restoredFor == current && paras != null) {
+                val (it0, ch0, ix0) = where; val s = spot
+                ReadingSaves.scope.launch { NovelLibrary.progress(context, it0, ch0, ix0, s) }
+            }
+        }
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) keep() }
+        lifecycle.addObserver(obs)
+        onDispose { lifecycle.removeObserver(obs); keep() }
     }
     LaunchedEffect(tlOn, paras) {
         val ps = paras ?: return@LaunchedEffect
@@ -596,9 +736,9 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
             IconButton(onClick = { tlOn = !tlOn }, modifier = Modifier.testTag("novel_translate")) { Icon(Icons.Default.Translate, if (tlOn) "Show original" else "Translate", tint = if (tlOn) SpotifyGreen else TextPrimary) }
         }
         if (showSize) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { size = (size - 1).coerceAtLeast(14) }, modifier = Modifier.testTag("novel_size_down")) { Text(stringResource(R.string.a), color = TextPrimary, fontSize = 15.sp) }
+            TextButton(onClick = { resizeSpot = resizeSpot ?: spot; size = (size - 1).coerceAtLeast(14) }, modifier = Modifier.testTag("novel_size_down")) { Text(stringResource(R.string.a), color = TextPrimary, fontSize = 15.sp) }
             Text("$size", color = TextSecondary, modifier = Modifier.padding(horizontal = 8.dp))
-            TextButton(onClick = { size = (size + 1).coerceAtMost(28) }, modifier = Modifier.testTag("novel_size_up")) { Text(stringResource(R.string.a_2), color = TextPrimary, fontSize = 19.sp) }
+            TextButton(onClick = { resizeSpot = resizeSpot ?: spot; size = (size + 1).coerceAtMost(28) }, modifier = Modifier.testTag("novel_size_up")) { Text(stringResource(R.string.a_2), color = TextPrimary, fontSize = 19.sp) }
         }
         if (translating) LinearProgressIndicator(Modifier.fillMaxWidth(), color = SpotifyGreen)
         tlNote?.let { Text(it, color = TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("novel_tl_note")) }
@@ -656,5 +796,31 @@ internal object NovelBanner {
             ))
         }
         return out
+    }
+}
+
+/**
+ * Group X (B5): the novel reader's exact spot. The list is a top spacer (0), the paragraphs (1..n) and the chapter
+ * buttons (n+1); the spot is the paragraph at the top and the share of it scrolled past ([ReadingSpot]).
+ */
+internal object NovelSpot {
+    fun read(list: androidx.compose.foundation.lazy.LazyListState, paras: Int): Float {
+        if (paras <= 0) return 0f
+        if (!list.canScrollForward && list.firstVisibleItemIndex > 0) return 1f
+        val i = list.firstVisibleItemIndex
+        if (i == 0) return 0f
+        if (i > paras) return 1f
+        val size = list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == i }?.size ?: 0
+        return ReadingSpot.encode(i - 1, list.firstVisibleItemScrollOffset, size, paras)
+    }
+
+    suspend fun restore(list: androidx.compose.foundation.lazy.LazyListState, para: Int, within: Float) {
+        list.scrollToItem(para + 1)
+        if (within <= 0f) return
+        // The paragraph's height is known once it is laid out (the frame after the jump).
+        val h = kotlinx.coroutines.withTimeoutOrNull(2_000) {
+            snapshotFlow { list.layoutInfo.visibleItemsInfo.firstOrNull { it.index == para + 1 }?.size ?: 0 }.first { it > 0 }
+        } ?: return
+        list.scrollToItem(para + 1, ReadingSpot.offsetPx(within, h))
     }
 }

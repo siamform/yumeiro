@@ -926,3 +926,10 @@ dw_kind_movie	সিনেমা
 dw_kind_tv	সিরিজ
 dw_kind_anime	অ্যানিমে
 dw_score_plus	%1$d+
+nx_all_sources	সব উৎস
+nx_fallback_note	%1$s সাড়া দেয়নি, তাই আপনার সব উৎস দেখানো হচ্ছে।
+nx_fallback_retry	%1$s আবার চেষ্টা করুন
+nx_some_failed	সাড়া দেয়নি: %1$s
+nx_try_again	আবার চেষ্টা করুন
+nx_all_none_title	এখানে কিছু নেই
+nx_all_none_text	আপনার কোনো উৎসেই কোনো উপন্যাস পাওয়া যায়নি।

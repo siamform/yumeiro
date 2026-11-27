@@ -132,6 +132,10 @@ import dev.asfakul.yumeiro.ui.theme.TextSecondary
 import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.takeWhile
+import androidx.compose.runtime.rememberUpdatedState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import dev.asfakul.yumeiro.ui.theme.yuRound
@@ -562,6 +566,7 @@ private suspend fun loadPage(provider: MangaProvider, page: MangaPageRef, lowRam
  * F-18: previous / next chapter in the top bar, and a "Next chapter" card at the end of a chapter, so reading
  * goes on without going back to the title page. Each chapter gets fresh reader state ([key]).
  */
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 @Composable
 fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, chapterUrl: String, chapterName: String, onBack: () -> Unit) {
     var cur by rememberSaveable { mutableStateOf(chapterUrl to chapterName) }
@@ -636,10 +641,29 @@ private fun MangaReaderChapter(
         catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (e: Exception) { error = OnlineErrors.friendly(e) }
     }
-    val start = remember(pages) { MangaLibrary.get(providerId, mangaUrl)?.takeIf { it.lastChapterUrl == chapterUrl }?.lastPage ?: 0 }
-    LaunchedEffect(current, pages) {
-        val n = pages?.size ?: return@LaunchedEffect
-        if (n > 0) MangaLibrary.progress(context, item, chapter, current, finished = current >= n - 1)
+    // Group X (B5): the exact spot: the page at the top and how far into it (a webtoon page is often several screens
+    // tall; before, only the page was kept and a chapter re-opened at that page's top). [anchor] is where a new list
+    // or pager opens: the saved spot first, then (after a switch between vertical and paged) where the reader was.
+    var anchor by remember(pages) {
+        mutableStateOf(MangaLibrary.get(providerId, mangaUrl)?.takeIf { it.lastChapterUrl == chapterUrl }?.let { it.lastPage to it.lastOffset } ?: (0 to 0f))
+    }
+    var within by remember { mutableFloatStateOf(0f) }
+    // Nothing is saved until the saved spot is back on screen (it used to write page 0 first, then the real page).
+    var restored by remember(pages, vertical) { mutableStateOf(false) }
+    val latest by rememberUpdatedState(Triple(current, within, pages?.size ?: 0))
+    LaunchedEffect(pages, restored) {
+        if (!restored || (pages?.size ?: 0) == 0) return@LaunchedEffect
+        snapshotFlow { latest }.debounce(400).collect { (page, w, n) ->
+            if (n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w)
+        }
+    }
+    // Leaving the chapter (or the app going to the background) keeps the very last spot, not one 0.4 s old.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val keep = { val (page, w, n) = latest; if (restored && n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w) }
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) keep() }
+        lifecycle.addObserver(obs)
+        onDispose { lifecycle.removeObserver(obs); keep() }
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black).testTag("manga_reader")) {
@@ -650,8 +674,14 @@ private fun MangaReaderChapter(
             }
             list == null -> dev.asfakul.yumeiro.ui.components.YuLoader(Modifier.align(Alignment.Center))
             vertical -> {
-                val state = rememberLazyListState(initialFirstVisibleItemIndex = start.coerceIn(0, (list.size - 1).coerceAtLeast(0)))
-                LaunchedEffect(state) { snapshotFlow { state.firstVisibleItemIndex }.collect { current = it } }
+                val startPage = anchor.first.coerceIn(0, (list.size - 1).coerceAtLeast(0))
+                val state = rememberLazyListState(initialFirstVisibleItemIndex = startPage)
+                LaunchedEffect(state) {
+                    current = startPage; within = anchor.second
+                    MangaSpot.restore(state, startPage, anchor.second)
+                    restored = true
+                    snapshotFlow { MangaSpot.read(state, list.size) }.collect { (page, w) -> current = page; within = w }
+                }
                 ZoomBox(onTap = { chrome = !chrome }) {
                     LazyColumn(state = state, modifier = Modifier.fillMaxSize()) {
                         itemsIndexed(list, key = { i, _ -> i }) { _, p -> PageImage(provider!!, p, fillWidth = true, tl = tlUse) }
@@ -663,8 +693,13 @@ private fun MangaReaderChapter(
             else -> {
                 // F-18: one extra page after the last one offers the next chapter.
                 val extra = if (next != null || provider?.ecosystem == "offline") 1 else 0
-                val pager = rememberPagerState(initialPage = start.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size + extra }
-                LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { current = it.coerceAtMost(list.size - 1) } }
+                val pager = rememberPagerState(initialPage = anchor.first.coerceIn(0, (list.size - 1).coerceAtLeast(0))) { list.size + extra }
+                LaunchedEffect(pager) {
+                    restored = true
+                    // A paged reader shows a whole page: the share into it is kept as it was (so going back to
+                    // vertical returns to the same line when the page did not change).
+                    snapshotFlow { pager.currentPage }.collect { val p = it.coerceAtMost(list.size - 1); if (p != current) within = 0f; current = p }
+                }
                 HorizontalPager(pager, modifier = Modifier.fillMaxSize(), reverseLayout = false, beyondViewportPageCount = 1) { i ->
                     if (i >= list.size) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { next?.let { n -> NextChapterCard(n) { onGo(n) } } ?: SavedEndCard() }
                     else ZoomBox(onTap = { chrome = !chrome }) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PageImage(provider!!, list[i], fillWidth = false, tl = tlUse) } }
@@ -687,7 +722,7 @@ private fun MangaReaderChapter(
                 if (tlAllowed) IconButton(onClick = { tlSheet = true }, modifier = Modifier.testTag("reader_translate")) {
                     Icon(Icons.Default.Translate, if (tl.on) "Translate pages: on" else "Translate pages: off", tint = if (tl.on) SpotifyGreen else Color.White)
                 }
-                IconButton(onClick = { vertical = !vertical; context.getSharedPreferences("manga_reader", 0).edit().putBoolean("vertical", vertical).apply() }, modifier = Modifier.testTag("reader_mode")) {
+                IconButton(onClick = { anchor = current to within; vertical = !vertical; context.getSharedPreferences("manga_reader", 0).edit().putBoolean("vertical", vertical).apply() }, modifier = Modifier.testTag("reader_mode")) {
                     Icon(if (vertical) Icons.Default.ViewCarousel else Icons.Default.SwapVert, if (vertical) "Paged mode" else "Vertical mode", tint = Color.White)
                 }
             }
@@ -938,6 +973,37 @@ private fun PageImage(provider: MangaProvider, page: MangaPageRef, fillWidth: Bo
                 TlPill(tlState, page.index, Modifier.align(Alignment.TopEnd)) { tlTry++ }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Group X (B5): reading and restoring the exact spot in the vertical (webtoon) reader. A page shows a 0.7 placeholder
+ * until its image is decoded, then takes the image's height, so the spot is applied again each time the page's
+ * height changes, until the person scrolls or the page settles (5 s at most).
+ */
+internal object MangaSpot {
+    /** The page at the top of [state] and the share of it scrolled past. */
+    fun read(state: androidx.compose.foundation.lazy.LazyListState, pages: Int): Pair<Int, Float> {
+        val i = state.firstVisibleItemIndex
+        if (i >= pages) return (pages - 1).coerceAtLeast(0) to 0.999f
+        val size = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == i }?.size ?: 0
+        val spot = dev.asfakul.yumeiro.sources.reading.ReadingSpot.encode(i, state.firstVisibleItemScrollOffset, size, pages)
+        return dev.asfakul.yumeiro.sources.reading.ReadingSpot.decode(spot, pages).let { (p, w) -> if (p != i) i to 0f else p to w }
+    }
+
+    suspend fun restore(state: androidx.compose.foundation.lazy.LazyListState, page: Int, within: Float) {
+        if (within <= 0f) return
+        var touched = false
+        kotlinx.coroutines.coroutineScope {
+            val watch = launch { state.interactionSource.interactions.collect { if (it is androidx.compose.foundation.interaction.DragInteraction.Start) touched = true } }
+            kotlinx.coroutines.withTimeoutOrNull(5_000) {
+                snapshotFlow { state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == page }?.size ?: 0 }
+                    .filter { it > 0 }.distinctUntilChanged()
+                    .takeWhile { !touched }
+                    .collect { h -> state.scrollToItem(page, dev.asfakul.yumeiro.sources.reading.ReadingSpot.offsetPx(within, h)) }
+            }
+            watch.cancel()
         }
     }
 }

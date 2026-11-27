@@ -28,6 +28,8 @@ object MangaLibrary {
         val lastChapterUrl: String? = null,
         val lastChapterName: String? = null,
         val lastPage: Int = 0,
+        /** Group X (B5): how far into [lastPage] the top of the screen was (share of the page's height, 0..1). */
+        val lastOffset: Float = 0f,
         val readChapters: List<String> = emptyList(),
         val updatedAt: Long = 0,
     ) { val key get() = "$providerId|$url" }
@@ -105,11 +107,11 @@ object MangaLibrary {
         save(context)
     }
 
-    fun progress(context: Context, item: MangaItem, chapter: MangaChapter, page: Int, finished: Boolean) {
+    fun progress(context: Context, item: MangaItem, chapter: MangaChapter, page: Int, finished: Boolean, offset: Float = 0f) {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         upsert(context, Entry(item.providerId, item.url, item.title, item.cover)) {
             it.copy(
-                lastChapterUrl = chapter.url, lastChapterName = chapter.name, lastPage = page,
+                lastChapterUrl = chapter.url, lastChapterName = chapter.name, lastPage = page, lastOffset = offset.coerceIn(0f, 0.999f),
                 readChapters = if (finished && chapter.url !in it.readChapters) (it.readChapters + chapter.url).takeLast(5000) else it.readChapters,
             )
         }
