@@ -330,11 +330,24 @@ object ExtensionCheckWindows {
         var seen = 0
         fun walk(v: View, depth: Int): WebView? {
             if (seen++ > 400 || depth > 30) return null
-            if (v is WebView) return v
+            if (v is WebView) return v.also(::harden)
             if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i), depth + 1)?.let { return it }
             return null
         }
         return walk(root, 0)
+    }
+
+    /**
+     * The extension's own WebView (a site's check page): content:// and file access are turned off the first time
+     * Yumeiro finds it, so a link on that page cannot read the app's or the device's files. The page itself is
+     * left alone (no reload, no script change).
+     */
+    private fun harden(w: WebView) {
+        runCatching {
+            val s = w.settings
+            if (s.allowContentAccess) s.allowContentAccess = false
+            if (s.allowFileAccess) s.allowFileAccess = false
+        }
     }
 
     private fun webHost(root: View): String? = firstWeb(root)?.let { w -> runCatching { w.url }.getOrNull() }?.let(VerificationPolicy::hostOf)
