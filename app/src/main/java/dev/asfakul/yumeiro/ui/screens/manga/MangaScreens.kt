@@ -651,6 +651,9 @@ private fun MangaReaderChapter(
     // Nothing is saved until the saved spot is back on screen (it used to write page 0 first, then the real page).
     var restored by remember(pages, vertical) { mutableStateOf(false) }
     val latest by rememberUpdatedState(Triple(current, within, pages?.size ?: 0))
+    // The leave / background save below outlives this state's re-creation (it is keyed on the page list), so it
+    // reads the current one through this (run 46055991744: it read the first, never-restored one and saved nothing).
+    val restoredNow by rememberUpdatedState(restored)
     LaunchedEffect(pages, restored) {
         if (!restored || (pages?.size ?: 0) == 0) return@LaunchedEffect
         snapshotFlow { latest }.debounce(400).collect { (page, w, n) ->
@@ -660,7 +663,7 @@ private fun MangaReaderChapter(
     // Leaving the chapter (or the app going to the background) keeps the very last spot, not one 0.4 s old.
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     androidx.compose.runtime.DisposableEffect(lifecycle) {
-        val keep = { val (page, w, n) = latest; if (restored && n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w) }
+        val keep = { val (page, w, n) = latest; if (restoredNow && n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w) }
         val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) keep() }
         lifecycle.addObserver(obs)
         onDispose { lifecycle.removeObserver(obs); keep() }
