@@ -66,7 +66,7 @@ class GroupWDiscoverTest {
         assertFalse(GenreCatalog.forKind(Kind.MOVIE).any { it.group == GenreCatalog.Group.ANIME })
         assertTrue(GenreCatalog.forKind(Kind.ANIME).any { it.key == "isekai" })
         assertEquals("action", GenreCatalog.ofTmdb(28, "movie")?.key)
-        assertEquals("scifi", GenreCatalog.ofTmdb(10765, "tv")?.key)
+        assertEquals("fantasy", GenreCatalog.ofTmdb(10765, "tv")?.key)
     }
 
     @Test fun unknownGenresSeenOftenBecomeGenres() {

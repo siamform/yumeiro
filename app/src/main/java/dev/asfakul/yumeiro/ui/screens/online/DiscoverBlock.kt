@@ -208,11 +208,11 @@ internal fun DiscoverBar(section: Discover.Section, onPick: (Discover.Section) -
         Row(
             Modifier.padding(horizontal = 16.dp).padding(bottom = 10.dp).fillMaxWidth().height(48.dp).clip(Chip)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                .clickable(role = Role.Button, onClickLabel = "Find something", onClick = onFind).padding(horizontal = 16.dp).testTag("discover_find"),
+                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.dw_find_something), onClick = onFind).padding(horizontal = 16.dp).testTag("discover_find"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Filled.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-            Text("Find something: genre, service, year, score…", color = TextSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp).weight(1f))
+            Text(stringResource(R.string.dw_find_hint), color = TextSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp).weight(1f))
         }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(Discover.Section.entries, key = { it.name }) { s ->
@@ -281,7 +281,7 @@ private fun ShelfError(posters: Boolean = true, height: androidx.compose.ui.unit
         if (posters) Box(Modifier.alpha(0f)) { ShelfPostersSkeleton(112.dp, still = true) } else Spacer(Modifier.fillMaxWidth().height(height))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(stringResource(R.string.yumeiro_cloud_didnt_answer), color = TextSecondary, fontSize = 13.sp)
-            OnlineChip("Try again", false, onRetry, Modifier.padding(top = 8.dp).testTag("discover_shelf_retry"))
+            OnlineChip(stringResource(R.string.try_again), false, onRetry, Modifier.padding(top = 8.dp).testTag("discover_shelf_retry"))
         }
     }
 }
@@ -357,7 +357,7 @@ private fun ServicesRow(kind: String) {
     val shownRegion = Discover.providerRegion[region] ?: region
     val cardW = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 900) 220.dp else 176.dp
     Column(Modifier.testTag("discover_services")) {
-        SectionHeader("Streaming services", subtitle = "In ${Locale("", shownRegion).getDisplayCountry(Locale.ENGLISH).ifBlank { shownRegion }}") {
+        SectionHeader(stringResource(R.string.dw_services_title), subtitle = stringResource(R.string.dw_in_country, countryName(shownRegion))) {
             SeeAllButton { Discover.openServices() }
         }
         when {
@@ -371,7 +371,7 @@ private fun ServicesRow(kind: String) {
                         Discover.openFilter(dev.asfakul.yumeiro.sources.hub.DiscoverFilter(kind = serviceKind(kind), services = listOf(p.id), region = shownRegion, title = p.name))
                     }
                 }
-                item("all") { SeeAllCard(cardW, ServiceCardHeight, "All services") { Discover.openServices() } }
+                item("all") { SeeAllCard(cardW, ServiceCardHeight, stringResource(R.string.dw_all_services)) { Discover.openServices() } }
             }
         }
     }
@@ -393,7 +393,7 @@ private fun GenresRow(kind: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind) {
         all.filter { it.group == group }.take(14)
     }
     Column(Modifier.testTag("discover_genres")) {
-        SectionHeader(if (kind == dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ANIME) "Anime themes" else "Genres", subtitle = kind.label) {
+        SectionHeader(stringResource(if (kind == dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ANIME) R.string.dw_anime_themes else R.string.dw_genres), subtitle = kindLabel(kind)) {
             SeeAllButton { Discover.openGenres(kind) }
         }
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -402,7 +402,7 @@ private fun GenresRow(kind: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind) {
                     GenreArtCard(g, kind, width = 164.dp) { Discover.openFilter(dev.asfakul.yumeiro.sources.hub.DiscoverFilter(kind = kind, genres = listOf(g.key), title = g.name)) }
                 }
             }
-            item("all") { SeeAllCard(164.dp, 92.dp, "All genres") { Discover.openGenres(kind) } }
+            item("all") { SeeAllCard(164.dp, 92.dp, stringResource(R.string.dw_all_genres)) { Discover.openGenres(kind) } }
         }
     }
 }

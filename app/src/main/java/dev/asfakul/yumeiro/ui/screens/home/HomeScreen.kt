@@ -1245,13 +1245,13 @@ internal fun YtRowSkeleton(square: Boolean) {
                 Box(Modifier.fillMaxWidth().aspectRatio(if (square) 1f else 16f / 9f).shimmer(yuRound(14)))
                 Spacer(Modifier.height(6.dp))
                 Box {
-                    Text(" ", style = MaterialTheme.typography.titleSmall, minLines = 2, maxLines = 2, color = Color.Transparent)
+                    Text(SpacerLine, style = MaterialTheme.typography.titleSmall, minLines = 2, maxLines = 2, color = Color.Transparent)
                     Column(Modifier.matchParentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Box(Modifier.fillMaxWidth(0.9f).height(12.dp).shimmer(yuRound(6)))
                         Box(Modifier.fillMaxWidth(0.5f).height(12.dp).shimmer(yuRound(6)))
                     }
                 }
-                Text(" ", style = MaterialTheme.typography.bodySmall, maxLines = 1, color = Color.Transparent)
+                Text(SpacerLine, style = MaterialTheme.typography.bodySmall, maxLines = 1, color = Color.Transparent)
             }
         }
     }
@@ -1372,3 +1372,6 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier, onSeeAll: (() ->
 /** Kept for callers/tests that referenced the old Home helpers. */
 @Composable
 fun rememberGreeting(): String = dev.asfakul.yumeiro.ui.components.greetingForNow()
+
+/** A blank line that keeps a placeholder's text height (not shown, nothing to translate). */
+private const val SpacerLine = " "

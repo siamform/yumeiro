@@ -38,6 +38,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import dev.asfakul.yumeiro.R
+import dev.asfakul.yumeiro.ui.components.sheetDragHandle
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -110,15 +113,15 @@ fun DiscoverScreen(initial: DiscoverFilter, onBack: () -> Unit, onOpenTitle: (On
     }
     Column(Modifier.fillMaxSize().testTag("discover_page")) {
         SubPageHeader(
-            filter.title ?: "Find something", onBack = onBack,
-            subtitle = if (filter.filterable) "Films, series and anime · Yumeiro Cloud" else "Yumeiro Cloud · TMDB",
+            filter.title ?: stringResource(R.string.dw_find_something), onBack = onBack,
+            subtitle = stringResource(if (filter.filterable) R.string.dw_subtitle_filterable else R.string.dw_subtitle_shelf),
         ) {
             if (filter.filterable) FilterButton(filter.activeCount) { sheet = true }
         }
         if (filter.filterable) {
             LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("discover_kinds")) {
                 items(GenreCatalog.Kind.entries, key = { it.name }) { k ->
-                    OnlineChip(k.label, filter.kind == k, { set(filter.copy(kind = k, only = null, genres = filter.genres.filter { g -> GenreCatalog.byKey(g)?.supports(k) == true })) },
+                    OnlineChip(kindLabel(k), filter.kind == k, { set(filter.copy(kind = k, only = null, genres = filter.genres.filter { g -> GenreCatalog.byKey(g)?.supports(k) == true })) },
                         Modifier.testTag("discover_kind_${k.name.lowercase()}"))
                 }
                 item("sort") { SortChip(filter.sort) { set(filter.copy(sort = it)) } }
@@ -135,18 +138,18 @@ fun DiscoverScreen(initial: DiscoverFilter, onBack: () -> Unit, onOpenTitle: (On
             else if (busy || (more && !failed)) items(3, key = { "more$it" }) { PosterCardSkeleton(null) }
             if (failed) item(span = { GridItemSpan(maxLineSpan) }, key = "failed") {
                 StateMessage(
-                    Icons.Default.ErrorOutline, "Yumeiro Cloud didn't answer", "Check the connection, then try again.",
-                    primary = "Try again" to { failed = false }, testTag = "discover_error", suggestions = false,
+                    Icons.Default.ErrorOutline, stringResource(R.string.dw_cloud_error_title), stringResource(R.string.dw_cloud_error_text),
+                    primary = stringResource(R.string.try_again) to { failed = false }, testTag = "discover_error", suggestions = false,
                 )
             }
             if (!more && items.isEmpty() && !failed) item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                 StateMessage(
-                    Icons.Default.SearchOff, "Nothing matches", if (filter.activeCount > 0) "Try fewer filters." else "Nothing is listed here yet.",
-                    primary = if (filter.activeCount > 0) "Clear filters" to { set(filter.cleared()) } else null, testTag = "discover_empty",
+                    Icons.Default.SearchOff, stringResource(R.string.dw_nothing_matches), stringResource(if (filter.activeCount > 0) R.string.dw_try_fewer else R.string.dw_nothing_listed),
+                    primary = if (filter.activeCount > 0) stringResource(R.string.dw_clear_filters) to { set(filter.cleared()) } else null, testTag = "discover_empty",
                 )
             }
             if (items.isNotEmpty() && !more) item(span = { GridItemSpan(maxLineSpan) }, key = "credit") {
-                Text("Data: TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp))
+                Text(stringResource(R.string.dw_tmdb_credit), color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp))
             }
         }
     }
@@ -155,8 +158,9 @@ fun DiscoverScreen(initial: DiscoverFilter, onBack: () -> Unit, onOpenTitle: (On
 
 @Composable
 private fun FilterButton(count: Int, onClick: () -> Unit) {
-    BadgedBox(badge = { if (count > 0) Badge(containerColor = SpotifyGreen) { Text("$count", color = Color.Black) } }) {
-        IconButton(onClick = onClick, modifier = Modifier.testTag("discover_filters").semantics { contentDescription = if (count > 0) "Filters, $count on" else "Filters" }) {
+    BadgedBox(badge = { if (count > 0) Badge(containerColor = SpotifyGreen) { Text(count.toString(), color = Color.Black) } }) {
+        val label = if (count > 0) stringResource(R.string.dw_filters_on, count) else stringResource(R.string.filters)
+        IconButton(onClick = onClick, modifier = Modifier.testTag("discover_filters").semantics { contentDescription = label }) {
             Icon(Icons.Default.Tune, contentDescription = null, tint = TextPrimary)
         }
     }
@@ -166,7 +170,7 @@ private fun FilterButton(count: Int, onClick: () -> Unit) {
 private fun SortChip(sort: HubDiscover.Sort, onPick: (HubDiscover.Sort) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        OnlineChip("Sort: ${sortLabel(sort)}", false, { open = true }, Modifier.testTag("discover_sort"))
+        OnlineChip(stringResource(R.string.dw_sort_label, sortLabel(sort)), false, { open = true }, Modifier.testTag("discover_sort"))
         DropdownMenu(open, onDismissRequest = { open = false }) {
             HubDiscover.Sort.entries.forEach { s ->
                 DropdownMenuItem(text = { Text(sortLabel(s)) }, onClick = { onPick(s); open = false }, modifier = Modifier.testTag("discover_sort_${s.key}").semantics { selected = s == sort })
@@ -175,13 +179,29 @@ private fun SortChip(sort: HubDiscover.Sort, onPick: (HubDiscover.Sort) -> Unit)
     }
 }
 
-internal fun sortLabel(s: HubDiscover.Sort): String = when (s) {
-    HubDiscover.Sort.POPULAR -> "Popular"
-    HubDiscover.Sort.TOP -> "All-time best"
-    HubDiscover.Sort.NEW -> "Newest"
-    HubDiscover.Sort.UPCOMING -> "Coming soon"
-    HubDiscover.Sort.RATING -> "Highest score"
-}
+@Composable
+internal fun sortLabel(s: HubDiscover.Sort): String = stringResource(when (s) {
+    HubDiscover.Sort.POPULAR -> R.string.dw_sort_popular
+    HubDiscover.Sort.TOP -> R.string.dw_sort_top
+    HubDiscover.Sort.NEW -> R.string.dw_sort_new
+    HubDiscover.Sort.UPCOMING -> R.string.dw_sort_upcoming
+    HubDiscover.Sort.RATING -> R.string.dw_sort_rating
+})
+
+@Composable
+internal fun kindLabel(k: GenreCatalog.Kind): String = stringResource(when (k) {
+    GenreCatalog.Kind.ALL -> R.string.dw_kind_all
+    GenreCatalog.Kind.MOVIE -> R.string.dw_kind_movie
+    GenreCatalog.Kind.TV -> R.string.dw_kind_tv
+    GenreCatalog.Kind.ANIME -> R.string.dw_kind_anime
+})
+
+@Composable
+internal fun groupLabel(g: GenreCatalog.Group): String = stringResource(when (g) {
+    GenreCatalog.Group.MAIN -> R.string.dw_genres
+    GenreCatalog.Group.ANIME -> R.string.dw_anime_themes
+    GenreCatalog.Group.THEMES -> R.string.dw_themes
+})
 
 /** The filters that are on, each with ×, then "Clear all". Wraps onto more lines (labels are never cut). */
 @OptIn(ExperimentalLayoutApi::class)
@@ -194,12 +214,12 @@ private fun ActiveFilters(f: DiscoverFilter, onChange: (DiscoverFilter) -> Unit)
         horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         f.genres.forEach { g -> RemovableChip(GenreCatalog.byKey(g)?.name ?: g) { onChange(f.copy(genres = f.genres - g)) } }
-        f.services.forEach { s -> RemovableChip(services[s]?.name ?: "Service") { onChange(f.copy(services = f.services - s)) } }
-        f.origin?.let { RemovableChip("From " + countryName(it)) { onChange(f.copy(origin = null)) } }
-        f.lang?.let { RemovableChip(Locale(it).getDisplayLanguage(Locale.ENGLISH).ifBlank { it }) { onChange(f.copy(lang = null)) } }
+        f.services.forEach { s -> RemovableChip(services[s]?.name ?: stringResource(R.string.dw_service)) { onChange(f.copy(services = f.services - s)) } }
+        f.origin?.let { RemovableChip(stringResource(R.string.dw_from_country, countryName(it))) { onChange(f.copy(origin = null)) } }
+        f.lang?.let { RemovableChip(Locale(it).getDisplayLanguage(Locale.getDefault()).ifBlank { it }) { onChange(f.copy(lang = null)) } }
         if (f.yearFrom != null || f.yearTo != null) RemovableChip(yearsLabel(f.yearFrom, f.yearTo)) { onChange(f.copy(yearFrom = null, yearTo = null)) }
-        f.minRating?.let { RemovableChip("Score $it+") { onChange(f.copy(minRating = null)) } }
-        TextButton(onClick = { onChange(f.cleared()) }, modifier = Modifier.heightIn(min = 32.dp).testTag("discover_clear")) { Text("Clear all", color = SpotifyGreen, fontSize = 12.sp) }
+        f.minRating?.let { RemovableChip(stringResource(R.string.dw_score_at_least, it)) { onChange(f.copy(minRating = null)) } }
+        TextButton(onClick = { onChange(f.cleared()) }, modifier = Modifier.heightIn(min = 32.dp).testTag("discover_clear")) { Text(stringResource(R.string.dw_clear_all), color = SpotifyGreen, fontSize = 12.sp) }
     }
 }
 
@@ -207,20 +227,22 @@ private fun ActiveFilters(f: DiscoverFilter, onChange: (DiscoverFilter) -> Unit)
 private fun RemovableChip(label: String, onRemove: () -> Unit) {
     InputChip(
         selected = true, onClick = onRemove, label = { Text(label, fontSize = 12.sp, maxLines = 1) },
-        trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove $label", modifier = Modifier.size(16.dp)) },
+        trailingIcon = { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.dw_remove, label), modifier = Modifier.size(16.dp)) },
         modifier = Modifier.testTag("discover_active_chip"),
     )
 }
 
+@Composable
 internal fun yearsLabel(from: Int?, to: Int?): String = when {
-    from != null && to != null && from == to -> "$from"
-    from != null && to != null -> "$from–$to"
-    from != null -> "$from and later"
-    to != null -> "Up to $to"
-    else -> "Any year"
+    from != null && to != null && from == to -> "%d".format(from)
+    from != null && to != null -> stringResource(R.string.dw_years_range, from, to)
+    from != null -> stringResource(R.string.dw_years_from, from)
+    to != null -> stringResource(R.string.dw_years_to, to)
+    else -> stringResource(R.string.dw_years_any)
 }
 
-private fun countryName(iso: String) = Locale("", iso).getDisplayCountry(Locale.ENGLISH).ifBlank { iso }
+/** The country's name in the app's language (Android's own list of names). */
+internal fun countryName(iso: String) = Locale("", iso).getDisplayCountry(Locale.getDefault()).ifBlank { iso }
 
 /** Countries titles often come from (origin filter), the user's own first. */
 internal fun originChoices(phone: String): List<String> =
@@ -238,27 +260,27 @@ private fun FilterSheet(current: DiscoverFilter, onDismiss: () -> Unit, onApply:
     val services by produceState(Discover.providerMemory[region], region) {
         if (value == null) HubDiscover.providersNear(region)?.let { (r, list) -> Discover.providerMemory[region] = list; Discover.providerRegion[region] = r; value = list }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag("discover_sheet")) {
+    ModalBottomSheet(onDismissRequest = onDismiss, dragHandle = sheetDragHandle(), modifier = Modifier.testTag("discover_sheet")) {
       // Group W (B1): Reset / Show results stay pinned under the scrolling filters (they were at the very end of a
       // long list, out of reach on phones and several D-pad presses away on TV).
       Column(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 8.dp).testTag("discover_sheet_list")) {
-            Text("Filters", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.filters), color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             val genres = GenreCatalog.forKind(draft.kind)
-            SheetGroup("Genres", "Up to ${DiscoverFilter.MAX_GENRES}; titles must have all of them") {
+            SheetGroup(stringResource(R.string.dw_genres), stringResource(R.string.dw_genres_hint, DiscoverFilter.MAX_GENRES)) {
                 genres.filter { it.group == GenreCatalog.Group.MAIN }.forEach { g -> GenreToggle(g, draft) { draft = it } }
             }
-            if (draft.kind == GenreCatalog.Kind.ANIME || draft.kind == GenreCatalog.Kind.ALL) SheetGroup("Anime themes", null) {
+            if (draft.kind == GenreCatalog.Kind.ANIME || draft.kind == GenreCatalog.Kind.ALL) SheetGroup(stringResource(R.string.dw_anime_themes), null) {
                 genres.filter { it.group == GenreCatalog.Group.ANIME }.forEach { g -> GenreToggle(g, draft) { draft = it } }
             }
-            SheetGroup("Themes and moods", null) {
+            SheetGroup(stringResource(R.string.dw_themes), null) {
                 genres.filter { it.group == GenreCatalog.Group.THEMES }.forEach { g -> GenreToggle(g, draft) { draft = it } }
             }
-            SheetGroup("Streaming on", "Up to ${DiscoverFilter.MAX_SERVICES}; any of them · ${countryName(Discover.providerRegion[region] ?: region)}") {
+            SheetGroup(stringResource(R.string.dw_streaming_on), stringResource(R.string.dw_streaming_hint, DiscoverFilter.MAX_SERVICES, countryName(Discover.providerRegion[region] ?: region))) {
                 val list = services
                 when {
                     list == null -> repeat(6) { Box(Modifier.size(96.dp, 32.dp).shimmer(Pill)) }
-                    list.isEmpty() -> Text("No services listed for this country.", color = TextTertiary, fontSize = 12.sp)
+                    list.isEmpty() -> Text(stringResource(R.string.dw_no_services_country), color = TextTertiary, fontSize = 12.sp)
                     else -> list.take(24).forEach { p ->
                         val on = p.id in draft.services
                         FilterChip(
@@ -271,31 +293,31 @@ private fun FilterSheet(current: DiscoverFilter, onDismiss: () -> Unit, onApply:
                     }
                 }
             }
-            SheetGroup("From", null) {
+            SheetGroup(stringResource(R.string.dw_from), null) {
                 originChoices(Discover.region()).forEach { c ->
                     FilterChip(selected = draft.origin == c, onClick = { draft = draft.copy(origin = if (draft.origin == c) null else c) }, label = { Text(countryName(c), fontSize = 12.sp) },
                         modifier = Modifier.testTag("discover_sheet_origin_${c.lowercase()}"))
                 }
             }
-            SheetGroup("Released", null) {
+            SheetGroup(stringResource(R.string.dw_released), null) {
                 yearChoices().forEach { (a, b) ->
                     val on = draft.yearFrom == a && draft.yearTo == b
                     FilterChip(selected = on, onClick = { draft = if (on) draft.copy(yearFrom = null, yearTo = null) else draft.copy(yearFrom = a, yearTo = b) },
                         label = { Text(yearsLabel(a, b), fontSize = 12.sp) }, modifier = Modifier.testTag("discover_sheet_year_${a ?: 0}_${b ?: 0}"))
                 }
             }
-            SheetGroup("Score", "TMDB users' score") {
+            SheetGroup(stringResource(R.string.dw_score), stringResource(R.string.dw_score_hint)) {
                 listOf(6, 7, 8).forEach { r ->
                     FilterChip(selected = draft.minRating == r, onClick = { draft = draft.copy(minRating = if (draft.minRating == r) null else r) },
-                        label = { Text("$r+", fontSize = 12.sp) }, modifier = Modifier.testTag("discover_sheet_score_$r"))
+                        label = { Text(stringResource(R.string.dw_score_plus, r), fontSize = 12.sp) }, modifier = Modifier.testTag("discover_sheet_score_$r"))
                 }
             }
         }
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp).testTag("discover_sheet_footer"), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = { draft = draft.cleared() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("discover_sheet_reset")) { Text("Reset") }
+                OutlinedButton(onClick = { draft = draft.cleared() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("discover_sheet_reset")) { Text(stringResource(R.string.dw_reset)) }
                 Button(onClick = { onApply(draft) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("discover_sheet_apply"),
                     colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black)) {
-                    Text(if (draft.activeCount > 0) "Show results (${draft.activeCount})" else "Show results")
+                    Text(if (draft.activeCount > 0) stringResource(R.string.dw_show_results_n, draft.activeCount) else stringResource(R.string.dw_show_results))
                 }
             }
       }
@@ -337,15 +359,15 @@ fun GenresScreen(initialKind: GenreCatalog.Kind, onBack: () -> Unit, onOpen: (Di
     val learnedShown = remember(learned, q) { learned.filter { q.isEmpty() || GenreCatalog.normalize(it).contains(q) } }
     val tv = LocalConfiguration.current.screenWidthDp >= 900
     Column(Modifier.fillMaxSize().testTag("genres_page")) {
-        SubPageHeader("Genres", onBack = onBack, subtitle = "${shown.size + learnedShown.size} genres and themes")
+        SubPageHeader(stringResource(R.string.dw_genres), onBack = onBack, subtitle = stringResource(R.string.dw_genres_count, shown.size + learnedShown.size))
         OutlinedTextField(
             value = query, onValueChange = { query = it.take(40) }, singleLine = true,
-            placeholder = { Text("Search genres") }, leadingIcon = { Icon(Icons.Default.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear search") } },
+            placeholder = { Text(stringResource(R.string.dw_search_genres)) }, leadingIcon = { Icon(Icons.Default.Search, null) },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, stringResource(R.string.dw_clear_search)) } },
             shape = Pill, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("genres_search"),
         )
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(GenreCatalog.Kind.entries, key = { it.name }) { k -> OnlineChip(k.label, kind == k, { kind = k }, Modifier.testTag("genres_kind_${k.name.lowercase()}")) }
+            items(GenreCatalog.Kind.entries, key = { it.name }) { k -> OnlineChip(kindLabel(k), kind == k, { kind = k }, Modifier.testTag("genres_kind_${k.name.lowercase()}")) }
         }
         LazyVerticalGrid(
             if (tv) GridCells.Adaptive(220.dp) else GridCells.Fixed(2),
@@ -356,15 +378,15 @@ fun GenresScreen(initialKind: GenreCatalog.Kind, onBack: () -> Unit, onOpen: (Di
             GenreCatalog.Group.entries.forEach { group ->
                 val list = shown.filter { it.group == group }
                 if (list.isEmpty()) return@forEach
-                item(span = { GridItemSpan(maxLineSpan) }, key = "h_${group.name}") { GroupTitle(group.label) }
+                item(span = { GridItemSpan(maxLineSpan) }, key = "h_${group.name}") { GroupTitle(groupLabel(group)) }
                 items(list, key = { it.key }) { g -> GenreArtCard(g, kind) { onOpen(DiscoverFilter(kind = kind, genres = listOf(g.key), title = g.name)) } }
             }
             if (learnedShown.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "h_learned") { GroupTitle("From your sources", "Genres your extensions use; opens a search") }
+                item(span = { GridItemSpan(maxLineSpan) }, key = "h_learned") { GroupTitle(stringResource(R.string.dw_from_sources), stringResource(R.string.dw_from_sources_hint)) }
                 items(learnedShown, key = { "l_$it" }) { name -> GenreArtCard(null, kind, name) { onSearch(name) } }
             }
             if (shown.isEmpty() && learnedShown.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }, key = "none") {
-                StateMessage(Icons.Default.SearchOff, "No genre called \"$query\"", "Search your sources for it instead.", primary = "Search sources" to { onSearch(query.trim()) }, testTag = "genres_empty")
+                StateMessage(Icons.Default.SearchOff, stringResource(R.string.dw_no_genre, query), stringResource(R.string.dw_search_instead), primary = stringResource(R.string.bs_search_sources) to { onSearch(query.trim()) }, testTag = "genres_empty")
             }
         }
     }
@@ -399,7 +421,7 @@ internal fun GenreArtCard(genre: GenreCatalog.Genre?, kind: GenreCatalog.Kind, l
     Box(
         (if (width == null) Modifier.fillMaxWidth() else Modifier.width(width)).height(92.dp).clip(yuRound(16))
             .background(Brush.linearGradient(listOf(Color.hsl(hue, 0.45f, 0.30f), Color.hsl((hue + 40) % 360, 0.5f, 0.18f))))
-            .clickable(role = Role.Button, onClickLabel = "Open $name", onClick = onClick)
+            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.dw_open, name), onClick = onClick)
             .testTag("genre_card_${genre?.key ?: "learned"}"),
         contentAlignment = Alignment.BottomStart,
     ) {
@@ -427,13 +449,13 @@ fun ServicesScreen(onBack: () -> Unit, onOpen: (DiscoverFilter) -> Unit) {
     val failed = got?.first == ""
     val tv = LocalConfiguration.current.screenWidthDp >= 900
     Column(Modifier.fillMaxSize().testTag("services_page")) {
-        SubPageHeader("Streaming services", onBack = onBack, subtitle = "Where to watch · ${countryName(region)}")
+        SubPageHeader(stringResource(R.string.dw_services_title), onBack = onBack, subtitle = stringResource(R.string.dw_where_to_watch, countryName(region)))
         LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.testTag("services_regions")) {
             items(originChoices(Discover.region()), key = { it }) { c -> OnlineChip(countryName(c), region == c, { region = c }, Modifier.testTag("services_region_${c.lowercase()}")) }
         }
         val shownRegion = got?.first?.takeIf { it.isNotEmpty() }
         if (shownRegion != null && shownRegion != region) {
-            Text("No services are listed for ${countryName(region)}; showing ${countryName(shownRegion)}.", color = TextSecondary, fontSize = 12.sp,
+            Text(stringResource(R.string.dw_services_fallback, countryName(region), countryName(shownRegion)), color = TextSecondary, fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("services_fallback"))
         }
         LazyVerticalGrid(
@@ -444,10 +466,10 @@ fun ServicesScreen(onBack: () -> Unit, onOpen: (DiscoverFilter) -> Unit) {
             when {
                 got == null -> items(12, key = { "sk$it" }) { Box(Modifier.fillMaxWidth().height(ServiceCardHeight).shimmer(yuRound(16))) }
                 failed -> item(span = { GridItemSpan(maxLineSpan) }, key = "err") {
-                    StateMessage(Icons.Default.ErrorOutline, "Yumeiro Cloud didn't answer", "Check the connection, then try again.", primary = "Try again" to { attempt++ }, testTag = "services_error", suggestions = false)
+                    StateMessage(Icons.Default.ErrorOutline, stringResource(R.string.dw_cloud_error_title), stringResource(R.string.dw_cloud_error_text), primary = stringResource(R.string.try_again) to { attempt++ }, testTag = "services_error", suggestions = false)
                 }
                 list.isNullOrEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-                    StateMessage(Icons.Default.SearchOff, "No services listed", "TMDB lists none for ${countryName(region)}. Pick another country above.", testTag = "services_empty")
+                    StateMessage(Icons.Default.SearchOff, stringResource(R.string.dw_no_services), stringResource(R.string.dw_no_services_text, countryName(region)), testTag = "services_empty")
                 }
                 else -> items(list, key = { it.id }) { p ->
                     ServiceCard(p, Modifier.fillMaxWidth()) { onOpen(DiscoverFilter(services = listOf(p.id), region = shownRegion ?: region, title = p.name)) }
@@ -465,7 +487,7 @@ internal fun ServiceCard(p: HubDiscover.Provider, modifier: Modifier, onClick: (
     Row(
         modifier.height(ServiceCardHeight).clip(yuRound(16)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
             .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), yuRound(16))
-            .clickable(role = Role.Button, onClickLabel = "Open ${p.name}", onClick = onClick).padding(10.dp).testTag("service_card_${p.id}"),
+            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.dw_open, p.name), onClick = onClick).padding(10.dp).testTag("service_card_${p.id}"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(56.dp).clip(yuRound(12)).background(MaterialTheme.colorScheme.surface), contentAlignment = Alignment.Center) {

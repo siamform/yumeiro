@@ -278,13 +278,13 @@ internal fun PosterCardSkeleton(width: Dp? = 116.dp, modifier: Modifier = Modifi
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).block(14))
         Spacer(Modifier.height(6.dp))
         Box {
-            Text(" ", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, lineHeight = 15.sp, color = Color.Transparent)
+            Text(SpacerLine, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, lineHeight = 15.sp, color = Color.Transparent)
             Column(Modifier.matchParentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box(Modifier.fillMaxWidth(0.9f).height(11.dp).block(6))
                 Box(Modifier.fillMaxWidth(0.6f).height(11.dp).block(6))
             }
         }
-        Text(" ", fontSize = 10.sp, maxLines = 1, color = Color.Transparent)
+        Text(SpacerLine, fontSize = 10.sp, maxLines = 1, color = Color.Transparent)
     }
 }
 
@@ -460,3 +460,6 @@ internal fun EpisodeThumb(d: dev.asfakul.yumeiro.online.OnlineDetail, e: dev.asf
         }
     }
 }
+
+/** A blank line that keeps a placeholder's text height (not shown, nothing to translate). */
+private const val SpacerLine = " "
