@@ -12,6 +12,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.CompositionLocalProvider
@@ -20,6 +22,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.intel.ai.AiPreset
@@ -99,7 +102,7 @@ class GroupZR27AiShotsDeviceTest {
 
     @Test fun c_nextEpisodeSwitches() {
         AnticipationPrefs.setEnabled(ctx, true); AnticipationPrefs.setAskBeforeAlternative(ctx, true)
-        show { Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { QualityAndAudioCard() } }
+        show { Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) { QualityAndAudioCard() } }
         assertTrue(waitFor(20_000) { has("qa_prepare_upcoming") })
         runCatching { rule.onNodeWithTag("qa_ask_alternative", true).performScrollTo() }
         snap("next_episode", has("qa_prepare_upcoming") && has("qa_ask_alternative"))
