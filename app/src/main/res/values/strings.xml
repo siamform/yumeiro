@@ -689,7 +689,7 @@
     <string name="restore">Restore</string>
     <string name="delete_backup">Delete backup</string>
     <string name="lock_again">Lock again</string>
-    <string name="every_tracker_is_free_kitsu_simkl">Every tracker is free. Kitsu, Simkl and Last.fm only need a sign-in; AniList, MyAnimeList and Trakt need a free key you create once. Yumeiro has no server, so your sign-in goes straight to the tracker. Each card has step-by-step instructions.</string>
+    <string name="every_tracker_is_free_kitsu_simkl">Every tracker is free. Kitsu, Simkl and Last.fm only need a sign-in; AniList and MyAnimeList need a free key you create once, SubDL a free API key, and Trakt uses the built-in key or your own. Yumeiro has no server, so your sign-in goes straight to the service. Tap ? on a card for the steps.</string>
     <string name="tokens_and_keys_are_encrypted_with">Tokens and keys are encrypted with the Android Keystore and never leave the device except to talk to the tracker. They\'re not included in backups.</string>
     <string name="client_id">Client ID</string>
     <string name="sign_in_to_kitsu">Sign in to Kitsu</string>

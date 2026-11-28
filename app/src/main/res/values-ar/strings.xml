@@ -690,7 +690,7 @@
     <string name="restore">استعادة</string>
     <string name="delete_backup">حذف النسخة الاحتياطية</string>
     <string name="lock_again">القفل مجددًا</string>
-    <string name="every_tracker_is_free_kitsu_simkl">كل المتتبعات مجانية. يحتاج Kitsu وSimkl وLast.fm إلى تسجيل الدخول فقط؛ ويحتاج AniList وMyAnimeList وTrakt إلى مفتاح مجاني تنشئه مرة واحدة. ليس لدى Yumeiro خادم، فيذهب تسجيل دخولك مباشرة إلى المتتبع. في كل بطاقة تعليمات خطوة بخطوة.</string>
+    <string name="every_tracker_is_free_kitsu_simkl">كل المتتبعات مجانية. يحتاج Kitsu وSimkl وLast.fm إلى تسجيل الدخول فقط؛ ويحتاج AniList وMyAnimeList إلى مفتاح مجاني تنشئه مرة واحدة، وSubDL إلى مفتاح API مجاني، ويستخدم Trakt المفتاح المدمج أو مفتاحك. ليس لدى Yumeiro خادم، فيذهب تسجيل دخولك مباشرة إلى الخدمة. اضغط ? على البطاقة لعرض الخطوات.</string>
     <string name="tokens_and_keys_are_encrypted_with">تُشفَّر الرموز والمفاتيح عبر Android Keystore ولا تغادر الجهاز إلا للتواصل مع المتتبع. لا تُضمَّن في النسخ الاحتياطية.</string>
     <string name="client_id">Client ID</string>
     <string name="sign_in_to_kitsu">تسجيل الدخول إلى Kitsu</string>

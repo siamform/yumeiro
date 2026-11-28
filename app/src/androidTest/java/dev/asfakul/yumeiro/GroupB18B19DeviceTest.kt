@@ -82,7 +82,7 @@ class GroupB18B19DeviceTest {
         val trackers = listOf("anilist", "mal", "kitsu", "trakt", "simkl", "subdl", "lastfm")
         val missingCard = trackers.filterNot { t -> runCatching { compose.onNodeWithTag("tracker_$t", true).performScrollTo() }; has("tracker_$t") }
         log("GB18 cards missing=$missingCard")
-        val inline = listOf("anilist", "myanimelist", "kitsu", "trakt", "simkl", "lastfm", "subdl").filter { has("guide_$it") }
+        val inline = listOf("anilist", "mal", "kitsu", "trakt", "simkl", "lastfm", "subdl").filter { has("guide_$it") }
         val stepHint = compose.onAllNodesWithText("Step by step", substring = true, useUnmergedTree = true).fetchSemanticsNodes().size
         log("GB18 inline guide cards=$inline stepByStepHints=$stepHint")
         FirstRun.shot("gb18_tracking_page")

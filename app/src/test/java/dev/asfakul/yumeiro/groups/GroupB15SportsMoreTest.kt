@@ -12,8 +12,8 @@ import dev.asfakul.yumeiro.sports.SportsScores.State
 import dev.asfakul.yumeiro.stream.LiveChannelFeed
 import dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch
 import kotlinx.coroutines.runBlocking
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -52,7 +52,7 @@ class GroupB15SportsMoreTest {
     @After fun tearDown() {
         SportsScores.espnForTest = null; SportsScores.sportsDbForTest = null; SportsScores.clockForTest = null
         SportsScores.resetForTest()
-        server.shutdown()
+        server.close()
     }
 
     @Test fun volleyball_isAFilterWithRealMatchesFromBothFeeds() {
@@ -142,7 +142,7 @@ class GroupB15SportsMoreTest {
         assertNull(h.sides[0].score); assertEquals("2", h.sides[1].score)
     }
 
-    private fun ok(body: String) = MockResponse().setResponseCode(200).setBody(body)
+    private fun ok(body: String) = MockResponse.Builder().code(200).body(body).build()
     private val ctx get() = ApplicationProvider.getApplicationContext<android.content.Context>()
 
     @Test fun cache_reusesFreshAnswersAndSpacesRequests() = runBlocking {
@@ -170,17 +170,17 @@ class GroupB15SportsMoreTest {
         server.enqueue(ok(res("espn_soccer.json")))
         val a = SportsScores.load(ctx, Sport.FOOTBALL, day, today = day).getOrThrow()
         clock += 60_000
-        server.enqueue(MockResponse().setResponseCode(500)); server.enqueue(MockResponse().setResponseCode(500))
+        server.enqueue(MockResponse.Builder().code(500).build()); server.enqueue(MockResponse.Builder().code(500).build())
         val s = SportsScores.load(ctx, Sport.FOOTBALL, day, force = true, today = day).getOrThrow()
         assertTrue(s.stale); assertEquals(a.fetchedAt, s.fetchedAt) // the old time, never "now"
         clock += SportsScores.STALE_MAX_MS
-        server.enqueue(MockResponse().setResponseCode(500)); server.enqueue(MockResponse().setResponseCode(500))
+        server.enqueue(MockResponse.Builder().code(500).build()); server.enqueue(MockResponse.Builder().code(500).build())
         val e = SportsScores.load(ctx, Sport.FOOTBALL, day, force = true, today = day).exceptionOrNull()
         assertEquals(SportsScores.Reason.SOURCE_DOWN, (e as SportsScores.Failed).reason)
     }
 
     @Test fun tooManyRequests_backsOffForRetryAfter() = runBlocking {
-        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "120"))
+        server.enqueue(MockResponse.Builder().code(429).setHeader("Retry-After", "120").build())
         val e = SportsScores.load(ctx, Sport.HANDBALL, day, today = day).exceptionOrNull() as SportsScores.Failed
         assertEquals(SportsScores.Reason.BUSY, e.reason)
         assertEquals(1, server.requestCount)
@@ -196,7 +196,7 @@ class GroupB15SportsMoreTest {
     }
 
     @Test fun espnDown_fallsBackToSportsDbAndSaysSo() = runBlocking {
-        server.enqueue(MockResponse().setResponseCode(500))
+        server.enqueue(MockResponse.Builder().code(500).build())
         server.enqueue(ok(res("sportsdb_soccer.json")))
         val b = SportsScores.load(ctx, Sport.FOOTBALL, day.plusDays(1), today = day).getOrThrow()
         assertTrue(b.fallback); assertEquals(SportsScores.Source.SPORTSDB, b.source)

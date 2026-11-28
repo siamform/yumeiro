@@ -247,6 +247,8 @@ class RetryActionsDeviceTest {
      * the form, not a bottom message behind it.
      */
     @Test fun e_kitsuSignInFailureIsShownInTheForm() {
+        // Other device tests in the same run may leave Kitsu signed in (run 46104092927 api36); this case needs it signed out.
+        dev.asfakul.yumeiro.tracking.Kitsu.signOut(ctx)
         compose.setContent { Box(Modifier.fillMaxSize()) { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = {}); AppMessageHost() } }
         wait("tracking screen") { has("tracking_screen") }
         wait("Kitsu sign-in button") { has("tracker_kitsu_signin") }

@@ -690,7 +690,7 @@
     <string name="restore">ফিরিয়ে আনুন</string>
     <string name="delete_backup">ব্যাকআপ মুছুন</string>
     <string name="lock_again">আবার লক করুন</string>
-    <string name="every_tracker_is_free_kitsu_simkl">সব ট্র্যাকার ফ্রি। Kitsu, Simkl ও Last.fm-এ শুধু সাইন ইন লাগে; AniList, MyAnimeList ও Trakt-এ একবার তৈরি করা একটি ফ্রি কি লাগে। Yumeiro-র কোনো সার্ভার নেই, তাই আপনার সাইন ইন সরাসরি ট্র্যাকারে যায়। প্রতিটি কার্ডে ধাপে ধাপে নির্দেশনা আছে।</string>
+    <string name="every_tracker_is_free_kitsu_simkl">সব ট্র্যাকার ফ্রি। Kitsu, Simkl ও Last.fm-এ শুধু সাইন ইন লাগে; AniList ও MyAnimeList-এ একবার তৈরি করা একটি ফ্রি কি লাগে, SubDL-এ একটি ফ্রি API কি, আর Trakt বিল্ট-ইন কি বা আপনার নিজের কি ব্যবহার করে। Yumeiro-র কোনো সার্ভার নেই, তাই আপনার সাইন ইন সরাসরি সেবায় যায়। ধাপগুলো দেখতে কার্ডের ? চাপুন।</string>
     <string name="tokens_and_keys_are_encrypted_with">টোকেন ও কি Android Keystore দিয়ে এনক্রিপ্ট করা থাকে এবং ট্র্যাকারের সাথে কথা বলা ছাড়া কখনও ডিভাইস ছেড়ে যায় না। এগুলো ব্যাকআপে থাকে না।</string>
     <string name="client_id">Client ID</string>
     <string name="sign_in_to_kitsu">Kitsu-তে সাইন ইন করুন</string>
