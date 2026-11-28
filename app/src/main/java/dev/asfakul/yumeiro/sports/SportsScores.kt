@@ -8,6 +8,7 @@ package dev.asfakul.yumeiro.sports
 import android.content.Context
 import dev.asfakul.yumeiro.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.json.JSONArray
@@ -32,15 +33,22 @@ import java.util.concurrent.TimeUnit
  * dressed up as new.
  */
 object SportsScores {
-    enum class Sport(val id: String, val espn: String, val sportsDb: String) {
-        FOOTBALL("football", "sport=soccer", "Soccer"),
-        CRICKET("cricket", "sport=cricket", "Cricket"),
-        BASKETBALL("basketball", "sport=basketball&league=nba", "Basketball"),
-        AMERICAN_FOOTBALL("american_football", "sport=football&league=nfl", "American Football"),
-        HOCKEY("hockey", "sport=hockey&league=nhl", "Ice Hockey"),
-        BASEBALL("baseball", "sport=baseball&league=mlb", "Baseball"),
-        TENNIS("tennis", "sport=tennis", "Tennis"),
-        RUGBY("rugby", "sport=rugby", "Rugby"),
+    /**
+     * [espn]: ESPN scoreboard queries (several are merged; empty = ESPN has no free feed for it).
+     * [sportsDb]: TheSportsDB sport name. [alsoSportsDb]: ESPN covers only part of this sport (volleyball: US
+     * college only), so TheSportsDB's pro leagues are added next to it, not only used as a fallback.
+     */
+    enum class Sport(val id: String, val espn: List<String>, val sportsDb: String, val alsoSportsDb: Boolean = false) {
+        FOOTBALL("football", listOf("sport=soccer"), "Soccer"),
+        CRICKET("cricket", listOf("sport=cricket"), "Cricket"),
+        BASKETBALL("basketball", listOf("sport=basketball&league=nba"), "Basketball"),
+        VOLLEYBALL("volleyball", listOf("sport=volleyball&league=womens-college-volleyball", "sport=volleyball&league=mens-college-volleyball"), "Volleyball", alsoSportsDb = true),
+        AMERICAN_FOOTBALL("american_football", listOf("sport=football&league=nfl"), "American Football"),
+        HOCKEY("hockey", listOf("sport=hockey&league=nhl"), "Ice Hockey"),
+        BASEBALL("baseball", listOf("sport=baseball&league=mlb"), "Baseball"),
+        TENNIS("tennis", listOf("sport=tennis"), "Tennis"),
+        RUGBY("rugby", listOf("sport=rugby"), "Rugby"),
+        HANDBALL("handball", emptyList(), "Handball"),
     }
 
     enum class State { UPCOMING, LIVE, FINISHED, OFF }
@@ -60,9 +68,20 @@ object SportsScores {
         val note: String,
         val sides: List<Side>,
         val link: String?,
+        /** ESPN "sport/league" path for the match page ([loadDetail]); null when the source has no detail feed. */
+        val espnPath: String? = null,
     )
     data class League(val name: String, val matches: List<Match>)
-    data class Board(val sport: Sport, val day: LocalDate, val leagues: List<League>, val source: Source, val fetchedAt: Long) {
+    data class Board(
+        val sport: Sport, val day: LocalDate, val leagues: List<League>, val sources: List<Source>, val fetchedAt: Long,
+        /** TheSportsDB stood in because ESPN did not answer (fewer matches). */
+        val fallback: Boolean = false,
+        /** The source could not be reached just now; this is the last answer it gave, from [fetchedAt]. */
+        val stale: Boolean = false,
+    ) {
+        constructor(sport: Sport, day: LocalDate, leagues: List<League>, source: Source, fetchedAt: Long) :
+            this(sport, day, leagues, listOf(source), fetchedAt)
+        val source: Source get() = sources.first()
         val liveCount: Int get() = leagues.sumOf { l -> l.matches.count { it.state == State.LIVE } }
         val empty: Boolean get() = leagues.isEmpty()
     }
@@ -71,8 +90,8 @@ object SportsScores {
     private const val MAX_TEXT = 80
     private const val MAX_MATCHES = 400
 
-    fun espnUrl(sport: Sport, day: LocalDate): String =
-        "https://site.web.api.espn.com/apis/v2/scoreboard/header?${sport.espn}&dates=${day.format(DAY)}&lang=en&region=us"
+    fun espnUrl(sport: Sport, day: LocalDate, query: String = sport.espn.first()): String =
+        "https://site.web.api.espn.com/apis/v2/scoreboard/header?$query&dates=${day.format(DAY)}&lang=en&region=us"
 
     fun sportsDbUrl(sport: Sport, day: LocalDate): String =
         "https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d=$day&s=" + java.net.URLEncoder.encode(sport.sportsDb, "UTF-8").replace("+", "%20")
@@ -85,6 +104,9 @@ object SportsScores {
         return if (t.length > MAX_TEXT) t.take(MAX_TEXT - 1) + "…" else t
     }
 
+    /** An ESPN slug goes into a URL path, so only plain [a-z0-9.-] slugs are kept. */
+    private fun slug(s: String?): String? = clean(s).takeIf { it.isNotEmpty() && it.length <= 60 && it.all { c -> c.isLetterOrDigit() || c == '.' || c == '-' } }
+
     /** Only https links to the source's own sites; anything else is dropped. */
     private fun safeLink(s: String?, hosts: List<String>): String? {
         val u = clean(s).takeIf { it.startsWith("https://") } ?: return null
@@ -96,7 +118,9 @@ object SportsScores {
     private fun score(s: String?): String? {
         val t = clean(s)
         if (t.isEmpty() || !t.any { it.isDigit() }) return null
-        return t.takeIf { it.length <= 40 && it.all { c -> c.isDigit() || c in " /()&.-*+ovdfOVDF" } }
+        // Cricket chases read "93/3 (8.5/16 ov, target 93)": the word "target" and its comma are allowed too.
+        val bare = t.replace("target", "").replace(",", "")
+        return t.takeIf { it.length <= 40 && bare.all { c -> c.isDigit() || c in " /()&.-*+ovdfOVDF" } }
     }
 
     private fun instant(s: String?): Instant? = runCatching {
@@ -116,9 +140,12 @@ object SportsScores {
         var total = 0
         val sports = root.optJSONArray("sports") ?: JSONArray()
         for (i in 0 until sports.length()) {
+            val sportSlug = slug(sports.optJSONObject(i)?.optString("slug"))
             val ls = sports.optJSONObject(i)?.optJSONArray("leagues") ?: continue
             for (j in 0 until ls.length()) {
                 val l = ls.optJSONObject(j) ?: continue
+                val leagueSlug = slug(l.optString("slug"))
+                val path = if (sportSlug != null && leagueSlug != null) "$sportSlug/$leagueSlug" else null
                 val name = clean(l.optString("name")).ifEmpty { clean(l.optString("shortName")) }
                 if (name.isEmpty()) continue
                 val evs = l.optJSONArray("events") ?: continue
@@ -170,7 +197,7 @@ object SportsScores {
                         link = safeLink(links.optJSONObject(q)?.optString("href"), hosts); if (link != null) break
                     }
                     if (link == null) link = safeLink(e.optString("link"), hosts)
-                    matches += Match(id, instant(e.optString("date")), state, detail, note, ordered.map { it.second }.take(2), link)
+                    matches += Match(id, instant(e.optString("date")), state, detail, note, ordered.map { it.second }.take(2), link, path)
                     total++
                 }
                 if (matches.isNotEmpty()) leagues += League(name, sortMatches(matches))
@@ -230,18 +257,231 @@ object SportsScores {
     fun refreshEveryMs(board: Board?, today: LocalDate): Long? =
         if (board != null && board.day == today && board.liveCount > 0) 30_000L else null
 
+    /** Two boards from different feeds as one: leagues keep each feed's order, live leagues first. */
+    fun merge(boards: List<Board>): Board {
+        val first = boards.first()
+        val leagues = LinkedHashMap<String, List<Match>>()
+        boards.forEach { b -> b.leagues.forEach { l -> leagues[l.name] = (leagues[l.name] ?: emptyList()) + l.matches } }
+        return Board(
+            first.sport, first.day, sortLeagues(leagues.map { League(it.key, sortMatches(it.value.distinctBy { m -> m.id })) }),
+            boards.flatMap { it.sources }.distinct(), boards.minOf { it.fetchedAt },
+        )
+    }
+
+    // ---------- match page (ESPN summary) ----------
+
+    data class DetailSide(val name: String, val score: String?, val periods: List<String>, val record: String?, val winner: Boolean)
+    data class StatLine(val label: String, val home: String, val away: String)
+    data class Moment(val clock: String, val text: String, val team: String?)
+    /** One past game from a team's own point of view: [own]–[other], W/L/D as the source wrote it. */
+    data class FormGame(val result: String, val own: String?, val other: String?, val opponent: String, val atHome: Boolean, val date: Instant?)
+    data class Form(val team: String, val games: List<FormGame>)
+    data class Detail(
+        val id: String,
+        val state: State?,
+        val status: String,
+        val summary: String,
+        val sides: List<DetailSide>,
+        val stats: List<StatLine>,
+        val moments: List<Moment>,
+        val form: List<Form>,
+        val venue: String?,
+        val attendance: Int?,
+        val notes: List<String>,
+        val fetchedAt: Long,
+    ) {
+        /** Nothing beyond the names and score: the page says so instead of showing empty sections. */
+        val thin: Boolean get() = stats.isEmpty() && moments.isEmpty() && form.isEmpty() && sides.all { it.periods.isEmpty() }
+    }
+
+    fun detailUrl(path: String, id: String): String =
+        "https://site.api.espn.com/apis/site/v2/sports/$path/summary?event=" + java.net.URLEncoder.encode(id, "UTF-8")
+
+    private const val MAX_STATS = 16
+    private const val MAX_MOMENTS = 24
+    private val MOMENT_KINDS = Regex("goal|penalty - scored|red card|touchdown|field goal|safety|\\btry\\b|conversion|home run", RegexOption.IGNORE_CASE)
+
+    /** Shares in 0..1 under a "%" label read as percentages ("0.7" → "70%"); possession gets its sign. Values are never made up. */
+    private fun statValue(label: String, v: String): String {
+        val d = v.toDoubleOrNull()
+        return when {
+            d != null && label.endsWith("%") && d in 0.0..1.0 && v.contains('.') -> "${Math.round(d * 100)}%"
+            d != null && label.contains("possession", true) && !v.endsWith("%") -> "$v%"
+            else -> v
+        }
+    }
+
+    fun parseDetail(json: String, id: String, now: Long): Detail {
+        val root = JSONObject(json)
+        val comp = root.optJSONObject("header")?.optJSONArray("competitions")?.optJSONObject(0)
+        val type = comp?.optJSONObject("status")?.optJSONObject("type")
+        val state = when (clean(type?.optString("state"))) { "in" -> State.LIVE; "post" -> State.FINISHED; "pre" -> State.UPCOMING; else -> null }
+        val cs = comp?.optJSONArray("competitors") ?: JSONArray()
+        data class Raw(val id: String, val home: Boolean, val side: DetailSide)
+        val raws = ArrayList<Raw>()
+        for (i in 0 until cs.length()) {
+            val o = cs.optJSONObject(i) ?: continue
+            val t = o.optJSONObject("team")
+            val name = clean(t?.optString("displayName")).ifEmpty { clean(t?.optString("name")) }
+            if (name.isEmpty()) continue
+            val ls = o.optJSONArray("linescores")
+            val periods = ArrayList<String>()
+            if (ls != null) for (k in 0 until ls.length()) {
+                val v = score(ls.optJSONObject(k)?.optString("displayValue")) ?: run { periods.clear(); break }
+                periods += v
+            }
+            val rec = o.optJSONArray("record")?.let { r -> (0 until r.length()).mapNotNull { r.optJSONObject(it) }.firstOrNull { clean(it.optString("type")) == "total" } }
+            raws += Raw(
+                clean(o.optString("id")), clean(o.optString("homeAway")) == "home",
+                DetailSide(
+                    name, if (state == State.UPCOMING) null else score(o.optString("score")),
+                    if (state == State.UPCOMING) emptyList() else periods.take(12),
+                    rec?.let { clean(it.optString("displayValue")).takeIf { v -> v.isNotEmpty() && v.length <= 16 } },
+                    state == State.FINISHED && o.optBoolean("winner", false),
+                ),
+            )
+        }
+        val ordered = if (raws.any { it.home }) raws.sortedBy { if (it.home) 0 else 1 } else raws
+        val homeId = ordered.getOrNull(0)?.id; val awayId = ordered.getOrNull(1)?.id
+        // Team statistics: only labels both teams have, in the source's order.
+        val stats = ArrayList<StatLine>()
+        val teams = root.optJSONObject("boxscore")?.optJSONArray("teams")
+        if (teams != null && homeId != null && awayId != null && state != State.UPCOMING) {
+            fun statsOf(teamId: String): LinkedHashMap<String, String> {
+                val m = LinkedHashMap<String, String>()
+                for (i in 0 until teams.length()) {
+                    val t = teams.optJSONObject(i) ?: continue
+                    if (clean(t.optJSONObject("team")?.optString("id")) != teamId) continue
+                    val st = t.optJSONArray("statistics") ?: continue
+                    for (k in 0 until st.length()) {
+                        val x = st.optJSONObject(k) ?: continue
+                        val label = clean(x.optString("label")); val v = clean(x.optString("displayValue"))
+                        if (label.isEmpty() || v.isEmpty() || v.length > 16 || !v.any { it.isDigit() }) continue
+                        m.putIfAbsent(label, v)
+                    }
+                }
+                return m
+            }
+            val h = statsOf(homeId); val a = statsOf(awayId)
+            for ((label, hv) in h) {
+                val av = a[label] ?: continue
+                val shown = label.split(' ').joinToString(" ") { w -> if (w.length > 1 && w.all { it.isUpperCase() }) w.lowercase().replaceFirstChar { it.uppercase() } else w }
+                stats += StatLine(shown, statValue(label, hv), statValue(label, av))
+                if (stats.size >= MAX_STATS) break
+            }
+        }
+        val names = raws.associate { it.id to it.side.name }
+        // Moments: goals, cards and scores, as the source wrote them.
+        val moments = ArrayList<Moment>()
+        root.optJSONArray("keyEvents")?.let { ev ->
+            for (i in 0 until ev.length()) {
+                val e = ev.optJSONObject(i) ?: continue
+                val kind = clean(e.optJSONObject("type")?.optString("text"))
+                if (!MOMENT_KINDS.containsMatchIn(kind)) continue
+                val who = e.optJSONArray("participants")?.optJSONObject(0)?.optJSONObject("athlete")?.optString("displayName")?.let(::clean).orEmpty()
+                val text = if (who.isNotEmpty()) "$kind · $who" else clean(e.optString("shortText")).ifEmpty { kind }
+                moments += Moment(clean(e.optJSONObject("clock")?.optString("displayValue")), text, names[clean(e.optJSONObject("team")?.optString("id"))])
+                if (moments.size >= MAX_MOMENTS) break
+            }
+        }
+        if (moments.isEmpty()) root.optJSONArray("scoringPlays")?.let { ev ->
+            for (i in 0 until ev.length()) {
+                val e = ev.optJSONObject(i) ?: continue
+                val text = clean(e.optString("text")).ifEmpty { clean(e.optJSONObject("type")?.optString("text")) }
+                if (text.isEmpty()) continue
+                val period = e.optJSONObject("period")?.optInt("number", 0) ?: 0
+                val clock = listOfNotNull(if (period > 0) "P$period" else null, clean(e.optJSONObject("clock")?.optString("displayValue")).ifEmpty { null }).joinToString(" ")
+                moments += Moment(clock, text, names[clean(e.optJSONObject("team")?.optString("id"))])
+                if (moments.size >= MAX_MOMENTS) break
+            }
+        }
+        // Each team's last games (the "last match" and the form before it).
+        val form = ArrayList<Form>()
+        root.optJSONArray("lastFiveGames")?.let { lf ->
+            for (i in 0 until lf.length()) {
+                val t = lf.optJSONObject(i) ?: continue
+                val team = clean(t.optJSONObject("team")?.optString("displayName"))
+                val teamId = clean(t.optJSONObject("team")?.optString("id"))
+                if (team.isEmpty()) continue
+                val evs = t.optJSONArray("events") ?: continue
+                val games = ArrayList<FormGame>()
+                for (k in 0 until minOf(evs.length(), 5)) {
+                    val g = evs.optJSONObject(k) ?: continue
+                    val opp = clean(g.optJSONObject("opponent")?.optString("displayName"))
+                    if (opp.isEmpty()) continue
+                    val atHome = clean(g.optString("homeTeamId")) == teamId
+                    val hs = score(g.optString("homeTeamScore")); val aws = score(g.optString("awayTeamScore"))
+                    val res = clean(g.optString("gameResult")).uppercase().takeIf { it in setOf("W", "L", "D", "T") }.orEmpty()
+                    games += FormGame(res, if (atHome) hs else aws, if (atHome) aws else hs, opp, atHome, instant(g.optString("gameDate")))
+                }
+                if (games.isNotEmpty()) form += Form(team, games)
+            }
+        }
+        val form2 = form.sortedBy { f -> ordered.indexOfFirst { it.side.name == f.team }.let { if (it < 0) 9 else it } }
+        val info = root.optJSONObject("gameInfo")
+        val venue = clean(info?.optJSONObject("venue")?.optString("fullName")).ifEmpty { null }
+        val att = info?.optInt("attendance", 0)?.takeIf { it in 1..500_000 }
+        val notes = root.optJSONArray("notes")?.let { n -> (0 until minOf(n.length(), 3)).mapNotNull { clean(n.optJSONObject(it)?.optString("text")).ifEmpty { null } } }.orEmpty()
+        return Detail(
+            id, state, clean(type?.optString("shortDetail")).ifEmpty { clean(type?.optString("description")) },
+            clean(comp?.optJSONObject("status")?.optString("summary")),
+            ordered.map { it.side }.take(2), stats, moments, form2, venue, att, notes, now,
+        )
+    }
+
     // ---------- network ----------
 
     class Failed(val reason: Reason) : Exception(reason.name)
-    enum class Reason { OFFLINE, SOURCE_DOWN, BAD_ANSWER }
+    enum class Reason { OFFLINE, SOURCE_DOWN, BAD_ANSWER, BUSY }
 
     @Volatile internal var espnForTest: String? = null
     @Volatile internal var sportsDbForTest: String? = null
+    @Volatile internal var clockForTest: (() -> Long)? = null
+    private fun now() = clockForTest?.invoke() ?: System.currentTimeMillis()
+
+    /**
+     * Polite use of free feeds (documented in AUDIT_B15): one request at a time, answers kept in memory for a
+     * while ([ttlMs]), a manual refresh within [MIN_GAP_MS] of the last answer reuses it, and a feed that says
+     * "too many requests" (429/503) is left alone for its Retry-After (60 s when it gives none).
+     */
+    const val MIN_GAP_MS = 10_000L
+    const val STALE_MAX_MS = 2 * 60 * 60_000L
+    private const val MAX_CACHE = 40
+    private val gate = kotlinx.coroutines.sync.Mutex()
+    private val cache = object : LinkedHashMap<String, Board>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Board>?) = size > MAX_CACHE
+    }
+    private val details = object : LinkedHashMap<String, Detail>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Detail>?) = size > MAX_CACHE
+    }
+    private val blockedUntil = HashMap<String, Long>()
+    @Volatile internal var requestsForTest = 0
+
+    /** How long an answer is reused: live day 25 s, today 3 min, future 15 min, past days 30 min. */
+    fun ttlMs(board: Board, today: LocalDate): Long = when {
+        board.day == today && board.liveCount > 0 -> 25_000L
+        board.day == today -> 3 * 60_000L
+        board.day.isAfter(today) -> 15 * 60_000L
+        else -> 30 * 60_000L
+    }
+
+    internal fun resetForTest() { synchronized(cache) { cache.clear(); details.clear(); blockedUntil.clear() }; requestsForTest = 0 }
+
+    private fun hostOf(url: String) = runCatching { java.net.URI(url).host }.getOrNull() ?: url
 
     private fun fetch(ctx: Context, url: String): String {
+        val host = hostOf(url)
+        val until = synchronized(cache) { blockedUntil[host] ?: 0L }
+        if (now() < until) throw Failed(Reason.BUSY)
+        requestsForTest++
         val client = NetworkClient.get(ctx).newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
         val req = Request.Builder().url(url).header("Accept", "application/json").build()
         client.newCall(req).execute().use { r ->
+            if (r.code == 429 || r.code == 503) {
+                val wait = r.header("Retry-After")?.trim()?.toLongOrNull()?.coerceIn(5, 15 * 60)?.times(1000) ?: 60_000L
+                synchronized(cache) { blockedUntil[host] = now() + wait }
+                throw Failed(Reason.BUSY)
+            }
             if (!r.isSuccessful) throw Failed(Reason.SOURCE_DOWN)
             val body = r.body?.string() ?: throw Failed(Reason.BAD_ANSWER)
             if (body.length > 3_000_000) throw Failed(Reason.BAD_ANSWER)
@@ -249,20 +489,58 @@ object SportsScores {
         }
     }
 
-    /** ESPN first; TheSportsDB only if ESPN could not be read. The answer always names its source. */
-    suspend fun load(ctx: Context, sport: Sport, day: LocalDate): Result<Board> = withContext(Dispatchers.IO) {
-        val now = System.currentTimeMillis()
-        val first = runCatching { parseEspn(fetch(ctx, espnForTest ?: espnUrl(sport, day)), sport, day, now) }
-        if (first.isSuccess) return@withContext first
-        val second = runCatching { parseSportsDb(fetch(ctx, sportsDbForTest ?: sportsDbUrl(sport, day)), sport, day, now) }
-        if (second.isSuccess) return@withContext second
-        val e = first.exceptionOrNull()
-        val reason = when {
-            e is java.net.UnknownHostException || e is java.net.ConnectException || e is java.net.SocketTimeoutException -> Reason.OFFLINE
-            e is Failed -> e.reason
-            e is org.json.JSONException -> Reason.BAD_ANSWER
-            else -> Reason.SOURCE_DOWN
+    private fun reasonOf(e: Throwable?): Reason = when {
+        e is java.net.UnknownHostException || e is java.net.ConnectException || e is java.net.SocketTimeoutException -> Reason.OFFLINE
+        e is Failed -> e.reason
+        e is org.json.JSONException -> Reason.BAD_ANSWER
+        else -> Reason.SOURCE_DOWN
+    }
+
+    private fun fetchBoard(ctx: Context, sport: Sport, day: LocalDate): Board {
+        val t = now()
+        val espn = sport.espn.map { q -> runCatching { parseEspn(fetch(ctx, espnForTest ?: espnUrl(sport, day, q)), sport, day, t) } }
+        val espnOk = espn.mapNotNull { it.getOrNull() }
+        val wantDb = sport.alsoSportsDb || sport.espn.isEmpty() || espnOk.isEmpty()
+        val db = if (wantDb) runCatching { parseSportsDb(fetch(ctx, sportsDbForTest ?: sportsDbUrl(sport, day)), sport, day, t) } else null
+        val all = espnOk + listOfNotNull(db?.getOrNull())
+        if (all.isEmpty()) throw Failed(reasonOf(espn.firstNotNullOfOrNull { it.exceptionOrNull() } ?: db?.exceptionOrNull()))
+        val merged = if (all.size == 1) all.single() else merge(all)
+        // "Fallback" only when ESPN was meant to answer and did not.
+        return merged.copy(fallback = sport.espn.isNotEmpty() && espnOk.isEmpty())
+    }
+
+    /**
+     * The day's board. Reuses a fresh answer; [force] (pull to refresh, the refresh button, live updates)
+     * asks again unless the last answer is under [MIN_GAP_MS] old. When the feeds cannot be reached, the last
+     * answer (under [STALE_MAX_MS]) comes back marked [Board.stale] so the page can say how old it is;
+     * nothing is ever presented as newer than it is.
+     */
+    suspend fun load(ctx: Context, sport: Sport, day: LocalDate, force: Boolean = false, today: LocalDate = LocalDate.now()): Result<Board> = withContext(Dispatchers.IO) {
+        gate.withLock {
+            val key = "${sport.id}|$day"
+            val have = synchronized(cache) { cache[key] }
+            val age = have?.let { now() - it.fetchedAt } ?: Long.MAX_VALUE
+            if (have != null && (age < MIN_GAP_MS || (!force && age < ttlMs(have, today)))) return@withLock Result.success(have)
+            val fresh = runCatching { fetchBoard(ctx, sport, day) }
+            fresh.onSuccess { b -> synchronized(cache) { cache[key] = b } }
+            if (fresh.isSuccess) return@withLock fresh
+            if (have != null && age < STALE_MAX_MS) return@withLock Result.success(have.copy(stale = true))
+            Result.failure(Failed(reasonOf(fresh.exceptionOrNull())))
         }
-        Result.failure(Failed(reason))
+    }
+
+    /** The match page, from ESPN only (TheSportsDB's free tier has no match statistics). Cached like boards. */
+    suspend fun loadDetail(ctx: Context, m: Match): Result<Detail> = withContext(Dispatchers.IO) {
+        val path = m.espnPath ?: return@withContext Result.failure(Failed(Reason.SOURCE_DOWN))
+        val key = "$path|${m.id}"
+        val have = synchronized(cache) { details[key] }
+        val ttl = if (m.state == State.LIVE) 25_000L else if (m.state == State.FINISHED) 30 * 60_000L else 5 * 60_000L
+        if (have != null && now() - have.fetchedAt < ttl) return@withContext Result.success(have)
+        gate.withLock {
+            runCatching { parseDetail(fetch(ctx, detailUrl(path, m.id)), m.id, now()) }
+                .onSuccess { d -> synchronized(cache) { details[key] = d } }
+                // The last page read (its time is on screen) beats an error; with none, say why.
+                .recoverCatching { e -> have ?: throw Failed(reasonOf(e)) }
+        }
     }
 }

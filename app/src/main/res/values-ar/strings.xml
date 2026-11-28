@@ -1053,4 +1053,21 @@
     <string name="sports_cd_vs">%1$s ضد %2$s</string>
     <string name="sports_status_live">مباشر، %1$s</string>
     <string name="sports_starts">يبدأ %1$s</string>
+    <string name="sport_volleyball">الكرة الطائرة</string>
+    <string name="sport_handball">كرة اليد</string>
+    <string name="sports_watch">شاهد قنوات الرياضة على البث المباشر</string>
+    <string name="sports_stale">تعذّر التحديث. يُعرض ما أرسله المصدر عند %1$s.</string>
+    <string name="sports_err_busy">طلبت خدمة النتائج التمهّل. حاول مرة أخرى بعد دقيقة.</string>
+    <string name="sports_detail_none_source">لا يقدّم %1$s إحصاءات المباريات في خدمته المجانية، لذا تُعرض النتيجة فقط.</string>
+    <string name="sports_detail_failed">تفاصيل المباراة غير متاحة الآن. النتيجة أعلاه من القائمة.</string>
+    <string name="sports_detail_stats">إحصاءات الفريقين</string>
+    <string name="sports_detail_moments">أبرز اللحظات</string>
+    <string name="sports_detail_form">آخر المباريات</string>
+    <string name="sports_detail_venue_att">%1$s · %2$d حاضرًا</string>
+    <string name="sports_detail_thin">لا توجد تفاصيل أخرى من ESPN لهذه المباراة بعد.</string>
+    <string name="sports_detail_source">التفاصيل من ESPN · آخر تحديث %1$s</string>
+    <string name="sports_detail_open_espn">افتح على ESPN</string>
+    <string name="sports_detail_vs">ضد %1$s</string>
+    <string name="sports_detail_at">في ملعب %1$s</string>
+    <string name="sports_detail_last">آخر مباراة</string>
 </resources>

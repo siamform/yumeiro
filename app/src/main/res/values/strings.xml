@@ -1052,4 +1052,21 @@
     <string name="sports_cd_vs">%1$s versus %2$s</string>
     <string name="sports_status_live">live, %1$s</string>
     <string name="sports_starts">starts %1$s</string>
+    <string name="sport_volleyball">Volleyball</string>
+    <string name="sport_handball">Handball</string>
+    <string name="sports_watch">Watch sports channels on Live TV</string>
+    <string name="sports_stale">Couldn\'t update. Showing what the source sent at %1$s.</string>
+    <string name="sports_err_busy">The score service asked Yumeiro to slow down. Try again in a minute.</string>
+    <string name="sports_detail_none_source">%1$s gives no match statistics on its free service, so only the score is shown.</string>
+    <string name="sports_detail_failed">Match details aren\'t available right now. The score above is from the list.</string>
+    <string name="sports_detail_stats">Team statistics</string>
+    <string name="sports_detail_moments">Key moments</string>
+    <string name="sports_detail_form">Last games</string>
+    <string name="sports_detail_venue_att">%1$s · %2$d attending</string>
+    <string name="sports_detail_thin">ESPN has no more detail for this match yet.</string>
+    <string name="sports_detail_source">Details from ESPN · updated %1$s</string>
+    <string name="sports_detail_open_espn">Open on ESPN</string>
+    <string name="sports_detail_vs">vs %1$s</string>
+    <string name="sports_detail_at">at %1$s</string>
+    <string name="sports_detail_last">last match</string>
 </resources>

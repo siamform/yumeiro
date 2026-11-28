@@ -41,6 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -103,16 +104,18 @@ import java.util.Locale
 
 /** The sports in tab order with their labels. */
 @Composable
-private fun sportLabel(s: Sport): String = stringResource(
+internal fun sportLabel(s: Sport): String = stringResource(
     when (s) {
         Sport.FOOTBALL -> R.string.sport_football
         Sport.CRICKET -> R.string.sport_cricket
         Sport.BASKETBALL -> R.string.sport_basketball
+        Sport.VOLLEYBALL -> R.string.sport_volleyball
         Sport.AMERICAN_FOOTBALL -> R.string.sport_american_football
         Sport.HOCKEY -> R.string.sport_hockey
         Sport.BASEBALL -> R.string.sport_baseball
         Sport.TENNIS -> R.string.sport_tennis
         Sport.RUGBY -> R.string.sport_rugby
+        Sport.HANDBALL -> R.string.sport_handball
     }
 )
 
@@ -123,7 +126,7 @@ private val LiveRed = Color(0xFFE5484D)
  * Today's board updates itself every 30 s while a game is live and the page is on screen; nothing polls otherwise.
  */
 @Composable
-fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier, onWatch: (() -> Unit)? = null) {
     val context = LocalContext.current
     val tv = LocalTvMode.current
     val zone = remember { ZoneId.systemDefault() }
@@ -138,14 +141,20 @@ fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     var ask by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
+    var open by remember { mutableStateOf<SportsScores.Match?>(null) }
+
+    /**
+     * [quiet]: keep what is on screen while asking (refresh button, live updates). The service reuses a fresh
+     * answer, spaces requests out and, when the feeds can't be reached, hands back its last answer marked stale
+     * (the banner says how old it is). With nothing to show, the error says why; numbers are never made up.
+     */
     suspend fun load(quiet: Boolean) {
         if (!quiet) { loading = true; board = null; failed = null }
-        val r = SportsScores.load(context, sport, day)
+        val r = SportsScores.load(context, sport, day, force = quiet, today = today)
         r.onSuccess { board = it; failed = null }
             .onFailure { e ->
-                // A failed quiet update keeps the board it has but says how old it is (the line under the tabs);
-                // a failed first load shows the error, never made-up or stale numbers as if new.
                 if (!quiet || board == null) { board = null; failed = (e as? SportsScores.Failed)?.reason ?: SportsScores.Reason.SOURCE_DOWN }
+                else board = board?.copy(stale = true)
             }
         loading = false
     }
@@ -170,6 +179,9 @@ fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             onBack = onBack,
             subtitle = day.format(dayFmt),
             actions = {
+                if (onWatch != null) IconButton(onClick = onWatch, modifier = Modifier.testTag("sports_watch")) {
+                    Icon(Icons.Default.LiveTv, stringResource(R.string.sports_watch), tint = TextPrimary)
+                }
                 IconButton(onClick = { scope.launch { load(quiet = board != null) } }, enabled = !loading, modifier = Modifier.testTag("sports_refresh")) {
                     Icon(Icons.Default.Refresh, stringResource(R.string.sports_refresh), tint = TextPrimary)
                 }
@@ -204,8 +216,20 @@ fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
         // Where the numbers come from and how fresh they are, always on screen (and one calm status for TalkBack).
         val b = board
         if (b != null) {
-            val src = stringResource(if (b.source == SportsScores.Source.ESPN) R.string.sports_source else R.string.sports_source_fallback, b.source.label, clock(Instant.ofEpochMilli(b.fetchedAt)))
-            val liveLine = if (b.liveCount > 0) stringResource(R.string.sports_live_count, b.liveCount) + " · " + stringResource(R.string.sports_auto) else null
+            val names = b.sources.joinToString(" + ") { it.label }
+            val at = clock(Instant.ofEpochMilli(b.fetchedAt))
+            val src = if (b.fallback) stringResource(R.string.sports_source_fallback, names, at) else stringResource(R.string.sports_source, names, at)
+            val liveLine = if (b.liveCount > 0 && !b.stale) stringResource(R.string.sports_live_count, b.liveCount) + " · " + stringResource(R.string.sports_auto) else null
+            if (b.stale) Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(yuRound(12)).background(LiveRed.copy(alpha = 0.12f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp).testTag("sports_stale")
+                    .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.CloudOff, null, tint = LiveRed, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.sports_stale, at), color = TextPrimary, style = MaterialTheme.typography.labelMedium)
+            }
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp).testTag("sports_source")
                     .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
@@ -221,6 +245,7 @@ fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                     val (icon, title, msg) = when (failed) {
                         SportsScores.Reason.OFFLINE -> Triple(Icons.Default.CloudOff, R.string.sports_err_offline_title, R.string.sports_err_offline)
                         SportsScores.Reason.BAD_ANSWER -> Triple(Icons.Default.ErrorOutline, R.string.sports_err_down_title, R.string.sports_err_bad)
+                        SportsScores.Reason.BUSY -> Triple(Icons.Default.ErrorOutline, R.string.sports_err_down_title, R.string.sports_err_busy)
                         else -> Triple(Icons.Default.ErrorOutline, R.string.sports_err_down_title, R.string.sports_err_down)
                     }
                     StateMessage(icon, stringResource(title), stringResource(msg), primary = stringResource(R.string.sports_retry) to { ask++ },
@@ -244,9 +269,7 @@ fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
                             )
                         }
                         items(league.matches, key = { "M$li:${it.id}" }) { m ->
-                            MatchRow(m, day, zone, ::clock, dayFmt, tv) { url ->
-                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                            }
+                            MatchRow(m, day, zone, ::clock, dayFmt, tv) { open = m }
                         }
                     }
                     item(key = "foot") { Spacer(Modifier.navigationBarsPadding()) }
@@ -254,12 +277,17 @@ fun SportsScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             }
         }
     }
+    open?.let { m ->
+        SportsMatchSheet(m, sportLabel(sport), ::clock, onDismiss = { open = null }, onOpenLink = { url ->
+            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        })
+    }
 }
 
 @Composable
 private fun MatchRow(
     m: SportsScores.Match, day: LocalDate, zone: ZoneId, clock: (Instant) -> String, dayFmt: DateTimeFormatter,
-    tv: Boolean, open: (String) -> Unit,
+    tv: Boolean, open: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -283,9 +311,8 @@ private fun MatchRow(
         Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(shape).background(DarkSurfaceContainer, shape)
             .then(if (focused) Modifier.border(2.dp, SpotifyGreen, shape) else Modifier)
             .then(
-                if (m.link != null) Modifier.clickable(interactionSource = interaction, indication = androidx.compose.foundation.LocalIndication.current, role = Role.Button) { open(m.link) }
-                else if (tv) Modifier.clickable(interactionSource = interaction, indication = null) {} // D-pad can still walk the list
-                else Modifier
+                // Every row opens its match page (score by period, statistics, key moments, each team's last games).
+                Modifier.clickable(interactionSource = interaction, indication = androidx.compose.foundation.LocalIndication.current, role = Role.Button) { open() }
             )
             .semantics(mergeDescendants = true) { contentDescription = spoken }
             .padding(horizontal = 14.dp, vertical = 10.dp)

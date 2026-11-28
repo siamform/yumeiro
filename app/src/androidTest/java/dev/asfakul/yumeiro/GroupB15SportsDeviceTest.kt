@@ -11,7 +11,10 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.ui.navigation.NavPrefs
@@ -123,5 +126,54 @@ class GroupB15SportsDeviceTest {
         androidx.test.espresso.Espresso.pressBack(); rule.waitForIdle()
         assertTrue("Back did not leave Sports", waitFor(10_000) { !has("sports_page") })
         log("GB15_RESULT_A PASS")
+    }
+
+    /**
+     * Second pass: a match row opens its match page (header numbers ESPN sent; statistics, moments or last games,
+     * or a plain line saying there are none), Volleyball lists real matches, and Watch goes back to Live TV.
+     */
+    @Test fun b_matchPageVolleyballAndWatch() {
+        NavPrefs.reset(ctx)
+        NavPrefs.setShortcut(ctx, NavPrefs.Shortcut.LIVE, true)
+        FirstRun.toTabs(rule)
+        FirstRun.clickTag(rule, "nav_shortcut_live")
+        assertTrue("Live TV header never showed", waitFor(30_000) { has("live_tools_button") })
+        click("live_tools_button")
+        assertTrue(waitFor(10_000) { has("live_tool_sports") })
+        click("live_tool_sports")
+        assertTrue("Sports page did not open", waitFor(10_000) { has("sports_page") })
+        // Yesterday always has finished football somewhere, so the match page has real numbers to show.
+        click("sports_day_-1"); waitBoard("football yesterday")
+        assertTrue("no football yesterday", has("sports_match"))
+        val truth = espn("sport=soccer", LocalDate.now().minusDays(1)) + espn("sport=soccer", LocalDate.now())
+        rule.onAllNodesWithTag("sports_match", true)[0].performSemanticsAction(SemanticsActions.OnClick); rule.waitForIdle()
+        assertTrue("match page did not open", waitFor(10_000) { has("sports_match_sheet") })
+        val settled = waitFor(30_000) {
+            listOf("sports_detail_stat", "sports_detail_moment", "sports_detail_form", "sports_detail_thin", "sports_detail_none", "sports_detail_failed", "sports_detail_periods").any { has(it) }
+        }
+        assertTrue("match page never finished loading", settled)
+        SystemClock.sleep(500); rule.waitForIdle()
+        FirstRun.shot("gb15_b_match")
+        val teams = texts("sports_detail_team")
+        val score = texts("sports_detail_score").joinToString()
+        log("GB15 detail teams=$teams score=$score stats=${rule.onAllNodesWithTag("sports_detail_stat", true).fetchSemanticsNodes().size} " +
+            "moments=${rule.onAllNodesWithTag("sports_detail_moment", true).fetchSemanticsNodes().size} form=${rule.onAllNodesWithTag("sports_detail_form", true).fetchSemanticsNodes().size} failed=${has("sports_detail_failed")}")
+        assertTrue("teams on the match page ESPN never sent: $teams", teams.size == 2 && teams.all { it in truth.keys || it.endsWith("…") })
+        val allScores = truth.values.flatten().toSet()
+        score.split(":").map { it.trim() }.filter { it.isNotEmpty() && it != "–" }.forEach { assertTrue("score '$it' ESPN never sent", it in allScores) }
+        assertTrue("a working network still failed the match page", !has("sports_detail_failed"))
+        androidx.test.espresso.Espresso.pressBack(); rule.waitForIdle()
+        assertTrue("sheet did not close", waitFor(10_000) { !has("sports_match_sheet") })
+        click("sports_day_0")
+        rule.onNodeWithTag("sports_sports", true).performScrollToNode(hasTestTag("sports_sport_volleyball")); rule.waitForIdle()
+        click("sports_sport_volleyball"); waitBoard("volleyball today")
+        SystemClock.sleep(600); rule.waitForIdle(); FirstRun.shot("gb15_b_volleyball")
+        val vSource = texts("sports_source", merged = true).joinToString(" ")
+        log("GB15 volleyball source=$vSource teams=${texts("sports_team").take(6)} empty=${has("sports_empty")}")
+        assertTrue("volleyball names no source: $vSource", has("sports_empty") || vSource.contains("ESPN") || vSource.contains("TheSportsDB"))
+        click("sports_watch")
+        assertTrue("Watch did not land on Live TV", waitFor(15_000) { !has("sports_page") && has("live_tools_button") })
+        FirstRun.shot("gb15_b_watch")
+        log("GB15_RESULT_B PASS")
     }
 }

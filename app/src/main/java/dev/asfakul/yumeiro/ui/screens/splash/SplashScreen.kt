@@ -199,7 +199,10 @@ object SplashProbe {
     @Volatile var motionAtNs = 0L
     /** When the leave started (the mark starts to dissolve). */
     @Volatile var leaveAtNs = 0L
-    fun reset() { shownAtNs = 0L; finishedAtNs = 0L; disposedAtNs = 0L; motionAtNs = 0L; leaveAtNs = 0L }
+    /** Frames the splash drew with a new motion value (arrival or leave): proof the motion ran, not a still. */
+    @Volatile var movingFrames = 0
+    @Volatile internal var lastDrawn = -1f
+    fun reset() { shownAtNs = 0L; finishedAtNs = 0L; disposedAtNs = 0L; motionAtNs = 0L; leaveAtNs = 0L; movingFrames = 0; lastDrawn = -1f }
 }
 
 object SplashGate {
@@ -268,6 +271,8 @@ fun SplashScreen(
             .drawBehind {
                 val t = clock.value
                 val f = frame()
+                val v = t + leaving.value
+                if (v != SplashProbe.lastDrawn) { if (SplashProbe.lastDrawn >= 0f) SplashProbe.movingFrames++; SplashProbe.lastDrawn = v }
                 if (f.wash > 0f && f.sky > 0f) drawRect(wash, alpha = f.wash * f.sky)
                 val rise = 10.dp.toPx()
                 for (s in SplashMotion.stars) {

@@ -1053,4 +1053,21 @@
     <string name="sports_cd_vs">%1$s বনাম %2$s</string>
     <string name="sports_status_live">লাইভ, %1$s</string>
     <string name="sports_starts">শুরু %1$s</string>
+    <string name="sport_volleyball">ভলিবল</string>
+    <string name="sport_handball">হ্যান্ডবল</string>
+    <string name="sports_watch">লাইভ টিভিতে খেলার চ্যানেল দেখুন</string>
+    <string name="sports_stale">হালনাগাদ করা যায়নি। %1$s-এ উৎস যা পাঠিয়েছিল তা দেখানো হচ্ছে।</string>
+    <string name="sports_err_busy">স্কোর পরিষেবা একটু ধীরে চাইতে বলেছে। এক মিনিট পর আবার চেষ্টা করুন।</string>
+    <string name="sports_detail_none_source">%1$s তাদের ফ্রি পরিষেবায় ম্যাচের পরিসংখ্যান দেয় না, তাই শুধু স্কোর দেখানো হচ্ছে।</string>
+    <string name="sports_detail_failed">ম্যাচের বিস্তারিত এখন পাওয়া যাচ্ছে না। উপরের স্কোর তালিকা থেকে।</string>
+    <string name="sports_detail_stats">দলের পরিসংখ্যান</string>
+    <string name="sports_detail_moments">গুরুত্বপূর্ণ মুহূর্ত</string>
+    <string name="sports_detail_form">শেষ ম্যাচগুলো</string>
+    <string name="sports_detail_venue_att">%1$s · %2$d জন দর্শক</string>
+    <string name="sports_detail_thin">এই ম্যাচের আর কোনো বিস্তারিত ESPN এখনো দেয়নি।</string>
+    <string name="sports_detail_source">বিস্তারিত ESPN থেকে · হালনাগাদ %1$s</string>
+    <string name="sports_detail_open_espn">ESPN-এ খুলুন</string>
+    <string name="sports_detail_vs">বনাম %1$s</string>
+    <string name="sports_detail_at">%1$s-এর মাঠে</string>
+    <string name="sports_detail_last">শেষ ম্যাচ</string>
 </resources>

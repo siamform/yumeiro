@@ -1344,7 +1344,13 @@ fun MTPlayerApp(
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.WEBSITE) }
                     }
                     page(subPad, Screen.Sports.route) {
-                        OpaquePage { dev.asfakul.yumeiro.ui.screens.stream.SportsScreen(onBack = popSub) }
+                        OpaquePage {
+                            // B15 "watch sports": back on Live TV with the user's own sports channels picked.
+                            dev.asfakul.yumeiro.ui.screens.stream.SportsScreen(onBack = popSub, onWatch = {
+                                dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch.watchSports()
+                                openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
+                            })
+                        }
                     }
                     page(subPad, Screen.Telegram.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.TELEGRAM) }
