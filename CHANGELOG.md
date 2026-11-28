@@ -11,6 +11,32 @@ Yumeiro Beta installs next to the stable app with its own data (yumeiro.click/be
 real app on Android emulators (phone API 36, phone API 33 low-RAM, Android TV API 34 and API 24); checks on real
 phones and TVs are listed as open. The full list is on [yumeiro.click/changelog](https://yumeiro.click/changelog).
 
+### New (Beta r27, owner list B1–B19, branch `beta-r27`)
+- Live TV › Tools › Sports: live scores, yesterday / today / tomorrow, sport filters (football, cricket, basketball,
+  volleyball, handball, tennis, rugby and more) and a match page with score and statistics where the feed has them.
+  ESPN's public scoreboard first, TheSportsDB fallback; nothing invented (B15; emulator phones + TV 34/24).
+- Find something has its own results page with filters; Genres and Streaming services have rows on Home and Yumix
+  and pages of their own (B1–B3; emulator. Release builds need the Yumeiro Cloud hub deploy).
+- Novel page starts on All sources, switches on a failing source with a note, category bar hides on scroll (B4).
+- Manga and novels reopen at the exact chapter, page and line from every Continue row (B5).
+- History: delete by range, extension, type or selection, with confirmation and Undo (B6).
+- Compressor: more presets, Manual with every setting and knee, saved presets, reset (B8).
+- BlackSource: more filters and a per-ecosystem source picker with an extra-time note (B9).
+- Navigation bar editor: reorder with handles or Move up / Move down, add, remove, live preview, reset (B14).
+- Animated splash: the moon and the play mark move separately for about 2 s, no logo left behind, still logo with
+  Remove animations (B17; emulator; real-GPU 60 fps check is MANUAL_TESTS B17-FPS-REAL).
+- SubDL card under Tracking: paste a free API key, checked live with SubDL (B19).
+- Tracking cards use a ? help button instead of inline instruction blocks (B18).
+
+### Fixed (Beta r27)
+- Trakt linking opens Trakt's real sign-in and code pages (the old join address returned 404) (B18).
+- Telegram: large withheld public videos play with the signed-in account from any entry point (B16).
+- Just released / Deep focus: fixed-size skeletons, no "No sources" flash, faster moods (B12).
+- Watch page without cast, About and trailers; Cast to TV stays (B7).
+- Videos tab icon keeps its play mark when lit; every page lights its own bar item and sub-pages keep the bar
+  (B11, B13).
+- Extension list: 385 broken or author-disabled entries removed, automatic health check (B10).
+
 ### New
 - BlackSource: search anime by genre, tags and demographic from AniList, then find the copies in your own
   extensions (F14; emulator. Going live needs the Yumeiro Cloud update).
