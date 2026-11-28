@@ -15,7 +15,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.asfakul.yumeiro.backup.Backup
@@ -166,7 +166,7 @@ Thank you very much.
         assertFalse("no key field before a provider is chosen", has("ai_key_field"))
         tap("ai_provider_custom")
         wait("address field") { has("ai_extra") }
-        compose.onNodeWithTag("ai_extra", true).performTextInput("$base/v1")
+        compose.onNodeWithTag("ai_extra", true).performTextReplacement("$base/v1") // no IME (the TV one is full screen)
         tap("ai_extra_save")
         wait("models from the server", 30_000) { has("ai_model_yu-local") }
         tap("ai_model_yu-local")

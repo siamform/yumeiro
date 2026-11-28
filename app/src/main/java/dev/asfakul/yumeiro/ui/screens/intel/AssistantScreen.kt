@@ -94,7 +94,9 @@ import dev.asfakul.yumeiro.ui.theme.TextTertiary
 import dev.asfakul.yumeiro.ui.theme.WarnTone
 import dev.asfakul.yumeiro.ui.theme.yuRound
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Categories the assistant can be pointed at (null = everything). */
 private val CHAT_CATEGORIES: List<MediaCategory?> = listOf(null, MediaCategory.ANIME, MediaCategory.MANGA, MediaCategory.NOVEL, MediaCategory.MOVIE, MediaCategory.SERIES, MediaCategory.MUSIC, MediaCategory.YOUTUBE)
@@ -120,7 +122,9 @@ internal fun assistantPrompts(cat: MediaCategory?): List<String> = when (cat) {
 fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenSettings: () -> Unit, onOpenRec: (Discovery.Rec) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    remember { AiSettings.get(context); AssistantChats.ensure(context); true }
+    remember { AiSettings.get(context); true }
+    // B20 S8: past chats are a file read; loaded off the main thread (the list fills in when ready).
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { AssistantChats.ensure(context) } }
     val cfg by AiSettings.config.collectAsState()
     val chats by AssistantChats.chats.collectAsState()
     val profileName = remember { Profiles.current(context).name }

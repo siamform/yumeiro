@@ -186,12 +186,14 @@ The show is: ${title.take(120)}."""
             _status.value = Status.Failed(if (MangaTranslate.allowedOn(app)) "Translation needs a language pack or Yumeiro AI" else "On TV, subtitles are translated by Yumeiro AI. Add a free key in Settings → Yumeiro AI")
             return
         }
-        save(app, s)
         job?.cancel()
         jobKey = key
+        // Right away, so a Ready / Failed from the last run is never read as this run's result.
+        _status.value = Status.Finding("Finding an English subtitle")
         SubtitleTemp.keepOnly(app, key)
         job = scope.launch {
             try {
+                save(app, s) // B20 S8: preferences off the main thread
                 run(app, state, key, positionMs, s, engine)
             } catch (e: CancellationException) {
                 throw e

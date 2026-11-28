@@ -98,10 +98,11 @@ fun AiSettingsScreen(onBack: () -> Unit) {
         val list = AiSettings.models(context)
         models = list
         if (cfg.model.isBlank()) list.firstOrNull { it.id.contains("flash") || it.id.endsWith(":free") }?.let { AiSettings.setModel(context, it.id) }
-        if (list.isEmpty()) "The key works, but it can't use any chat model." else "The key works: ${list.size} models."
+        val who = if (cfg.hasKey) "The key works" else "The server answered"
+        if (list.isEmpty()) "$who, but it can't use any chat model." else "$who: ${list.size} models."
     }
     // A saved key lists its models once on open (that also shows the key still works).
-    LaunchedEffect(cfg.preset, cfg.hasKey) { if (cfg.preset != null && (cfg.hasKey || cfg.preset == AiPreset.CUSTOM && cfg.extra.isNotBlank()) && models == null) loadModels() }
+    LaunchedEffect(cfg.preset, cfg.hasKey, cfg.extra) { if (cfg.preset != null && (cfg.hasKey || cfg.preset == AiPreset.CUSTOM && cfg.extra.isNotBlank()) && models == null) loadModels() }
 
     Column(Modifier.fillMaxSize().testTag("ai_settings")) {
         SubPageHeader(title = "Yumeiro AI", onBack = onBack, subtitle = "Optional · your own free key")

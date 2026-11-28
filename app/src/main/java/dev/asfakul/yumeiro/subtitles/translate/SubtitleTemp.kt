@@ -50,8 +50,9 @@ object SubtitleTemp {
     /** Another episode starts: every other folder of this profile goes. */
     fun keepOnly(c: Context, key: String?) {
         val app = c.applicationContext
-        val dir = profileDir(app)
-        scope.launch { dir.listFiles()?.filter { it.isDirectory && it.name != key }?.forEach { delete(it) } }
+        val profile = Profiles.currentId(app)
+        // B20 S8: cacheDir is a disk read (StrictMode on the main thread); worked out on the IO scope.
+        scope.launch { File(root(app), profile).listFiles()?.filter { it.isDirectory && it.name != key }?.forEach { delete(it) } }
     }
 
     /** The player reached the end of [key]'s episode. */
@@ -60,8 +61,9 @@ object SubtitleTemp {
     /** The player closed: a finished episode's folder goes. */
     fun onPlayerClosed(c: Context, key: String?) {
         if (key == null || !finished.remove(key)) return
-        val f = File(profileDir(c.applicationContext), key)
-        scope.launch { delete(f) }
+        val app = c.applicationContext
+        val profile = Profiles.currentId(app)
+        scope.launch { delete(File(File(root(app), profile), key)) }
     }
 
     /**

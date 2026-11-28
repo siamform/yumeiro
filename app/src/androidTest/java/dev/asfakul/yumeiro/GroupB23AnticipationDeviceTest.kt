@@ -150,6 +150,7 @@ class GroupB23AnticipationDeviceTest {
     }.getOrDefault(false)
 
     private fun startEpisodeOne(own: MainAPI) {
+        FirstRun.toTabs(rule) // past the first-run screens, so the player's offer card can be found
         PlaybackDiagnostics.reset("")
         val detail = runBlocking { OnlineRepository.load(own, "$base/own/show", force = true) }
         rule.runOnUiThread { OnlineSession.play(ctx, detail, version = "", episodeIndex = 0, resumeMs = 0L) }
