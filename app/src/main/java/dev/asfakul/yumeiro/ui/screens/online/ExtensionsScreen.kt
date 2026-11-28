@@ -234,6 +234,7 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
             }
             IconButton(onClick = onOpenSources, modifier = Modifier.testTag("extensions_sources_hub")) { Icon(Icons.Default.Language, stringResource(R.string.more_sources), tint = TextPrimary) }
             IconButton(onClick = onOpenMarket, modifier = Modifier.testTag("extensions_market")) { Icon(Icons.Default.Storefront, stringResource(R.string.market), tint = TextPrimary) }
+            dev.asfakul.yumeiro.ui.screens.settings.GuideHelpButton(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.cloudstream)
             IconButton(onClick = { showAddMenu = true }, modifier = Modifier.testTag("extensions_add")) {
                 Icon(Icons.Default.Add, stringResource(R.string.add), tint = TextPrimary)
                 DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
@@ -368,7 +369,6 @@ fun ExtensionsScreen(onBack: () -> Unit, onOpenMarket: () -> Unit, onOpenSources
                 }
                 item("popups") { ExtensionPopupsCard() }
                 item("security_checks") { SecurityChecksCard() }
-                item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.cloudstream) }
                 item("note") {
                     Text(
                         stringResource(R.string.extensions_run_code_from_their_authors),

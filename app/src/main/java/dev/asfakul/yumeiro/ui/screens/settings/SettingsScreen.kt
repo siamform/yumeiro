@@ -440,9 +440,11 @@ private fun CategoryPage(
                     item("c") { NotificationSettingsCard() }
                     item("push") {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            GroupLabel("On-time alerts")
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.weight(1f)) { GroupLabel("On-time alerts") }
+                                GuideHelpButton(SetupGuides.unifiedPush)
+                            }
                             PushAlertsCard()
-                            GuideCard(SetupGuides.unifiedPush)
                         }
                     }
                 }

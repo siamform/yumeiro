@@ -5,6 +5,9 @@
  */
 package dev.asfakul.yumeiro.ui.components
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +76,7 @@ object YuActions {
 
 /** "?" help icon; the text shows in a small card with one "Got it" button. */
 @Composable
-fun HelpIconButton(title: String, text: String, tag: String, modifier: Modifier = Modifier) {
+fun HelpIconButton(title: String, text: String, tag: String, modifier: Modifier = Modifier, guide: dev.asfakul.yumeiro.ui.screens.settings.SetupGuide? = null) {
     val p = LocalMtPalette.current
     var open by rememberSaveable(tag) { mutableStateOf(false) }
     IconButton(onClick = { open = true }, modifier = modifier.testTag(tag)) {
@@ -82,7 +85,15 @@ fun HelpIconButton(title: String, text: String, tag: String, modifier: Modifier 
     if (open) TsukiDialog(
         onDismissRequest = { open = false },
         title = { Text(title) },
-        text = { Text(text, fontSize = 14.sp, modifier = Modifier.testTag(tag + "_text")) },
+        // B18: with a [guide] the step-by-step setup lives here too, instead of a card on the page.
+        text = {
+            if (guide == null) Text(text, fontSize = 14.sp, modifier = Modifier.testTag(tag + "_text"))
+            else androidx.compose.foundation.layout.Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) {
+                Text(text, fontSize = 14.sp, modifier = Modifier.testTag(tag + "_text"))
+                androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
+                dev.asfakul.yumeiro.ui.screens.settings.GuideBody(guide)
+            }
+        },
         confirmButton = { TextButton(onClick = { open = false }, modifier = Modifier.testTag(tag + "_ok")) { Text(stringResource(R.string.got_it), color = p.accent, fontWeight = FontWeight.Bold) } },
         modifier = Modifier.testTag(tag + "_dialog"),
     )

@@ -122,7 +122,9 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().testTag("youtube_account")) {
-        SubPageHeader(title = "YouTube account", onBack = onBack, subtitle = "Optional · off unless you sign in")
+        SubPageHeader(title = "YouTube account", onBack = onBack, subtitle = "Optional · off unless you sign in") {
+            GuideHelpButton(SetupGuides.youtube)
+        }
         Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -182,8 +184,6 @@ fun YouTubeAccountScreen(onBack: () -> Unit) {
                 }
             }
 
-            GuideCard(SetupGuides.youtube)
-            GuideCard(SetupGuides.youtubeCookie)
         }
     }
 
@@ -311,7 +311,9 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().testTag("yt_paste_page")) {
-        SubPageHeader(title = "Paste cookie", onBack = { if (!busy) onDone(false) }, subtitle = "Advanced · for when Google blocks the sign-in page", handleBack = false)
+        SubPageHeader(title = "Paste cookie", onBack = { if (!busy) onDone(false) }, subtitle = "Advanced · for when Google blocks the sign-in page", handleBack = false) {
+            GuideHelpButton(SetupGuides.youtubeCookie)
+        }
         Column(Modifier.verticalScroll(dev.asfakul.yumeiro.ui.components.ScrollMemory.scroll("yt_account_2")).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             GlassGroup {
                 Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
@@ -355,7 +357,6 @@ private fun PasteCookiePage(onDone: (Boolean) -> Unit) {
                     else Text(stringResource(R.string.check_and_save), fontWeight = FontWeight.SemiBold)
                 }
             }
-            GuideCard(SetupGuides.youtubeCookie)
         }
     }
 

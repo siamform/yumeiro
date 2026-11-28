@@ -91,7 +91,6 @@ import dev.asfakul.yumeiro.ui.components.AppMessages
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
 import dev.asfakul.yumeiro.ui.components.sheetDragHandle
-import dev.asfakul.yumeiro.ui.screens.settings.GuideCard
 import dev.asfakul.yumeiro.ui.screens.settings.SetupGuides
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import kotlinx.coroutines.Dispatchers
@@ -174,7 +173,7 @@ fun TelegramHome(onBack: () -> Unit) {
 
     if (help) TsukiDialog(
         onDismissRequest = { help = false },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(SetupGuides.telegram, startExpanded = true) } },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) { dev.asfakul.yumeiro.ui.screens.settings.GuideBody(SetupGuides.telegram) } },
         confirmButton = { TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text(stringResource(R.string.got_it)) } },
     )
 

@@ -131,7 +131,7 @@ object AnimeSync {
                 }
             }
             val ep = if (episode != null) num else null
-            track("trakt") { dev.asfakul.yumeiro.tracking.Trakt.watched(app, client, detail.name, detail.year, episode?.season, ep) }
+            track("trakt") { dev.asfakul.yumeiro.tracking.Trakt.watched(app, client, detail.name, detail.year, episode?.season, ep, tmdb = detail.tmdbId, imdb = detail.imdbId) }
             track("simkl") {
                 val match = dev.asfakul.yumeiro.tracking.Simkl.Match(
                     title = detail.name, year = detail.year, mal = ids?.mal ?: detail.malId, anilist = ids?.anilist ?: detail.aniListId,

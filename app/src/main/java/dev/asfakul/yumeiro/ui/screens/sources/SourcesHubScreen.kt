@@ -303,7 +303,7 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
             when (part) { HubPart.INSTALLED -> "${kind.label.replaceFirstChar { it.uppercase() }} extensions"; else -> page },
         ) {
             dev.asfakul.yumeiro.ui.components.AddIconButton("Add a ${kind.label} repository", kTag + "_add_plus", { addOpen = true })
-            dev.asfakul.yumeiro.ui.components.HelpIconButton("About ${kind.label} extensions", help, kTag + "_help")
+            dev.asfakul.yumeiro.ui.components.HelpIconButton("About ${kind.label} extensions", help, kTag + "_help", guide = if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon)
         }
         if (loading || busy != null) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_tachiyomi_${kind.name.lowercase()}"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_tachiyomi_" + kind.name + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -381,7 +381,6 @@ private fun TachiyomiTab(kind: TachiyomiExtensions.Kind, nav: SourcesPageNav) {
                             onAdd = { addRepoUrl(it) },
                         )
                     }
-                    item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(if (kind == TachiyomiExtensions.Kind.ANIME) dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.aniyomi else dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.mihon) }
                 }
             }
         }
@@ -437,7 +436,7 @@ private fun StremioTab(nav: SourcesPageNav) {
             dev.asfakul.yumeiro.ui.components.AddIconButton("Add a Stremio add-on", "hub_stremio_add_plus", { addOpen = true })
             dev.asfakul.yumeiro.ui.components.HelpIconButton("About Stremio add-ons",
                 "Stremio add-ons give catalogs (movies, series, channels, sports, anime) and streams. Pick one from Get add-ons or add any add-on's manifest link with +. HTTP streams and subtitles are supported; torrent-only streams are skipped.",
-                "hub_stremio_help")
+                "hub_stremio_help", guide = dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio)
         }
         if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_stremio"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_stremio" + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -461,7 +460,6 @@ private fun StremioTab(nav: SourcesPageNav) {
                     val have = addons.map { it.manifestUrl }.toSet()
                     AddonMarket(isAdded = { StremioAddons.normalize(it) in have }, startExpanded = addons.isEmpty(), onAdd = { addUrl(it) })
                 }
-                item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.stremio) }
             }
         }
     }
@@ -512,7 +510,7 @@ private fun JsTab(nav: SourcesPageNav) {
             dev.asfakul.yumeiro.ui.components.AddIconButton("Add a JavaScript repository", "hub_js_add_plus", { addOpen = true })
             dev.asfakul.yumeiro.ui.components.HelpIconButton("About JavaScript sources",
                 "JavaScript sources in the Mangayomi format run in a sandboxed QuickJS engine (no file or app access). Manga sources show in the Manga section; anime and video sources in Videos → Online." +
-                    "\n\nAdd a Mangayomi-format repository with +. Only JavaScript sources are used.", "hub_js_help")
+                    "\n\nAdd a Mangayomi-format repository with +. Only JavaScript sources are used.", "hub_js_help", guide = dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript)
         }
         if (loading) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_js"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_js" + part.tag), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -574,7 +572,6 @@ private fun JsTab(nav: SourcesPageNav) {
                             onAdd = { addRepoUrl(it) },
                         )
                     }
-                    item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.javascript) }
                 }
             }
         }
@@ -602,11 +599,10 @@ private fun ServersTab(nav: SourcesPageNav) {
         nav.Header("Home servers", "Play your own media") {
             dev.asfakul.yumeiro.ui.components.HelpIconButton("About home servers",
                 "Play your own media from Jellyfin, Emby, Plex, DLNA/UPnP, WebDAV or SMB shares. Yumeiro talks to your server directly; passwords and tokens are encrypted with the Android Keystore." +
-                    "\n\nServers with self-signed HTTPS certificates aren't supported yet; use plain HTTP on your home network or a real certificate.", "hub_servers_help")
+                    "\n\nServers with self-signed HTTPS certificates aren't supported yet; use plain HTTP on your home network or a real certificate.", "hub_servers_help", guide = dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.servers)
         }
         if (scanning) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
         LazyColumn(Modifier.fillMaxSize().testTag("hub_servers"), state = dev.asfakul.yumeiro.ui.components.ScrollMemory.list("hub_servers"), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item("guide") { dev.asfakul.yumeiro.ui.screens.settings.GuideCard(dev.asfakul.yumeiro.ui.screens.settings.SetupGuides.servers) }
             item("add") {
                 SectionTitle("Add a server")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

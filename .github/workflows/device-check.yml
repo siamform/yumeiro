@@ -136,6 +136,9 @@ jobs:
         env:
           YUMEIRO_TG_API_ID: ${{ secrets.YUMEIRO_TG_API_ID }}
           YUMEIRO_TG_API_HASH: ${{ secrets.YUMEIRO_TG_API_HASH }}
+          # B18: the built-in Trakt app (a public client id, sent in every Trakt header; never echoed) so the
+          # Trakt device test signs in against the real API like the release-beta build does.
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
         run: ./gradlew --no-daemon assemble${{ matrix.device.flavor }}Debug assemble${{ matrix.device.flavor }}DebugAndroidTest
       - name: Run on emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
@@ -144,6 +147,9 @@ jobs:
           # keys here the installed build had none (device run 44875721952). Never echoed.
           YUMEIRO_TG_API_ID: ${{ secrets.YUMEIRO_TG_API_ID }}
           YUMEIRO_TG_API_HASH: ${{ secrets.YUMEIRO_TG_API_HASH }}
+          # B18: the built-in Trakt app (a public client id, sent in every Trakt header; never echoed) so the
+          # Trakt device test signs in against the real API like the release-beta build does.
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           TEST_FILTER: ${{ github.event.inputs.test || (inputs.tv && 'dev.asfakul.yumeiro.HomeNavigationDeviceTest,dev.asfakul.yumeiro.BackNavigationDeviceTest,dev.asfakul.yumeiro.StabilityStressDeviceTest' || '') }}
           FLAVOR: ${{ matrix.device.flavor }}
           REPEAT: ${{ github.event.inputs.repeat || '1' }}

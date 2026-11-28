@@ -697,7 +697,7 @@
     <string name="e_mail">البريد الإلكتروني</string>
     <string name="your_password_goes_to_kitsu_once">تُرسل كلمة مرورك إلى Kitsu مرة واحدة؛ ويُحتفظ بالرمز فقط.</string>
     <string name="trakt_api_app">تطبيق Trakt API</string>
-    <string name="create_a_free_app_at_trakt">أنشئ تطبيقًا مجانيًا على trakt.tv/oauth/applications/new بعنوان إعادة التوجيه هذا، ثم الصق Client ID. تطبيقات Trakt الجديدة ليس لها client secret؛ املأه فقط إذا أظهره Trakt.</string>
+    <string name="create_a_free_app_at_trakt">أنشئ تطبيقًا مجانيًا على developer.trakt.tv/apps/new بعنوان إعادة التوجيه هذا، ثم الصق Client ID. تطبيقات Trakt الجديدة ليس لها client secret؛ املأه فقط إذا أظهره Trakt.</string>
     <string name="client_secret_optional">Client secret (اختياري)</string>
     <string name="your_own_simkl_app">تطبيق Simkl الخاص بك</string>
     <string name="optional_leave_empty_to_use_yumeiros">اختياري. اتركه فارغًا لاستخدام تطبيق Yumeiro المدمج. لاستخدام تطبيقك، أنشئه على simkl.com/settings/developer والصق Client ID.</string>

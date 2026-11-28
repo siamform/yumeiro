@@ -27,7 +27,7 @@ class TokenHostsHttpsOnlyTest {
 
     @Test fun everyTokenHostIsHttpsOnly() {
         val hosts = listOf(
-            "api.trakt.tv", "trakt.tv", "api.simkl.com", "graphql.anilist.co", "anilist.co", "api.myanimelist.net",
+            "api.trakt.tv", "auth.trakt.tv", "trakt.tv", "api.simkl.com", "graphql.anilist.co", "anilist.co", "api.myanimelist.net",
             "myanimelist.net", "kitsu.app", "plex.tv", "app.plex.tv", "accounts.google.com", "api.onedrive.com",
             "ws.audioscrobbler.com", "api.opensubtitles.com", "api.subdl.com", "lrclib.net", "api.aniskip.com",
             "api.github.com", "raw.githubusercontent.com", "api.yumeiro.click", "yumeiro.click",
