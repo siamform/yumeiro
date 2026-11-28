@@ -11,7 +11,7 @@ Yumeiro Beta installs next to the stable app with its own data (yumeiro.click/be
 real app on Android emulators (phone API 36, phone API 33 low-RAM, Android TV API 34 and API 24); checks on real
 phones and TVs are listed as open. The full list is on [yumeiro.click/changelog](https://yumeiro.click/changelog).
 
-### New (Beta r27, owner list B1–B19, branch `beta-r27`)
+### New (Beta r27, owner list B1–B23, branch `beta-r27`)
 - Live TV › Tools › Sports: live scores, yesterday / today / tomorrow, sport filters (football, cricket, basketball,
   volleyball, handball, tennis, rugby and more) and a match page with score and statistics where the feed has them.
   ESPN's public scoreboard first, TheSportsDB fallback; nothing invented (B15; emulator phones + TV 34/24).
@@ -27,6 +27,23 @@ phones and TVs are listed as open. The full list is on [yumeiro.click/changelog]
   Remove animations (B17; emulator; real-GPU 60 fps check is MANUAL_TESTS B17-FPS-REAL).
 - SubDL card under Tracking: paste a free API key, checked live with SubDL (B19).
 - Tracking cards use a ? help button instead of inline instruction blocks (B18).
+- For You: shelves on Home and each category picked from what this profile watches, reads and listens to, each with
+  its reason, Not interested, and a one-time "what did you think" after finishing (B20; emulator).
+- Yumeiro AI (optional, your own key): Google Gemini, OpenRouter, Groq, Cloudflare Workers AI or any
+  OpenAI-compatible server. The key is sealed with Android Keystore per profile; nothing needs AI (B20; emulator with a
+  local test server. A real provider key is MANUAL_TESTS M-B20-AI-KEY).
+- Assistant: ask in plain words; picks come from your taste and are checked against real catalogues before they are
+  shown; chats are kept per profile (B21; emulator with a local test server).
+- Translated subtitles: English subtitles into Bangla, Hindi, Arabic and more, on the phone with the on-device
+  translator or with Yumeiro AI; translated, romanised or both lines. On TV this uses Yumeiro AI (B22; real on-device
+  English → Bangla on the phone emulators).
+- Password-locked backups that can carry keys and sign-ins and seal them again on restore (B20; emulator, phones and
+  TV 34/24).
+- Next episodes ready sooner: while an episode plays, links for the next ones are prepared in the background (fewer on
+  mobile data, a hot phone or low memory; off in Settings › Quality & audio). If the episode's own extension has
+  nothing, another extension or BlackSource is offered with Play alternative / Skip / Never show again; the playing
+  source is never swapped silently. Preparation data older than 7 days is cleaned; history and downloads are never
+  touched (B23; emulator phones + TV 34/24 with local test sources. Real extensions: MANUAL_TESTS M-B23-REAL-EXT).
 
 ### Fixed (Beta r27)
 - Trakt linking opens Trakt's real sign-in and code pages (the old join address returned 404) (B18).
@@ -36,6 +53,9 @@ phones and TVs are listed as open. The full list is on [yumeiro.click/changelog]
 - Videos tab icon keeps its play mark when lit; every page lights its own bar item and sub-pages keep the bar
   (B11, B13).
 - Extension list: 385 broken or author-disabled entries removed, automatic health check (B10).
+- Yumeiro AI with a custom server: the model list now loads as soon as the address is saved (B20 device run).
+- Fewer main-thread disk reads (subtitle translation, subtitle cleanup, Assistant chats), and a new subtitle no longer
+  shows the last one's "Ready" translation status (B20–B22 device runs).
 
 ### New
 - BlackSource: search anime by genre, tags and demographic from AniList, then find the copies in your own
