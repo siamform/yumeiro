@@ -92,7 +92,7 @@ class GroupZR27AiShotsDeviceTest {
         AiSettings.setProvider(ctx, AiPreset.GEMINI)
         show { AiSettingsScreen(onBack = {}) }
         assertTrue(waitFor(20_000) { has("ai_settings") && has("ai_provider_note") })
-        snap("ai_settings", has("ai_provider_gemini") && has("ai_get_key"))
+        snap("ai_settings", has("ai_provider") && has("ai_get_key"))
     }
 
     @Test fun b_assistantBeforeSetup() {

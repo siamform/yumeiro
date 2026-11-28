@@ -101,6 +101,9 @@ object AssistantChats {
 
     private fun encodeAnswer(a: Assistant.Answer): JSONObject = JSONObject().put("r", a.reply).put("m", a.model).apply {
         if (a.clarify.isNotBlank()) put("q", a.clarify)
+        if (a.kind != "recs") put("k", a.kind)
+        if (a.followUps.isNotEmpty()) put("f", JSONArray(a.followUps))
+        a.offer?.let { put("o", JSONObject().put("s", it.source).put("t", it.target).put("n", it.note)) }
         a.research?.let { r -> put("rs", JSONObject().put("al", r.anilist).put("tm", r.tmdb).put("w", r.web).put("n", r.evidence).put("s", JSONArray(r.seeds)).put("g", JSONArray(r.tags))) }
         put("src", JSONArray().apply { a.sources.forEach { put(JSONObject().put("t", it.title).put("u", it.url)) } })
         put("s", JSONArray().apply {
@@ -134,7 +137,8 @@ object AssistantChats {
         }.orEmpty()
         val rs = o.optJSONObject("rs")?.let { r -> Assistant.Research(r.optBoolean("al"), r.optBoolean("tm"), r.optBoolean("w"), r.optInt("n"), strs(r.optJSONArray("s")), strs(r.optJSONArray("g"))) }
         val src = o.optJSONArray("src")?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { AiSource(it.optString("t"), it.optString("u")) } }.orEmpty()
-        return Assistant.Answer(o.optString("r"), o.optString("q"), sections, src, rs, o.optString("m"))
+        val offer = o.optJSONObject("o")?.let { AiPersonal.cleanTerm(it.optString("s"), it.optString("t"), it.optString("n")) }
+        return Assistant.Answer(o.optString("r"), o.optString("q"), sections, src, rs, o.optString("m"), strs(o.optJSONArray("f")), offer, o.optString("k").ifBlank { "recs" })
     }
 
     // endregion

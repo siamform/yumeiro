@@ -92,15 +92,18 @@ class AiTest {
 
     // region Gemini
 
-    @Test fun geminiListsOnlyChatModels() {
+    /** R28 item 15: models that can't chat stay listed (marked), so the picker can say why; only chat ones are selectable. */
+    @Test fun geminiMarksModelsThatCantChat() {
         val o = JSONObject("""{"models":[
             {"name":"models/gemini-2.5-flash","displayName":"Gemini 2.5 Flash","inputTokenLimit":1048576,"supportedGenerationMethods":["generateContent","countTokens"]},
             {"name":"models/text-embedding-004","supportedGenerationMethods":["embedContent"]},
             {"name":"models/gemini-embedding-001","supportedGenerationMethods":["generateContent"]},
             {"name":"models/imagen-4","supportedGenerationMethods":["predict"]}]}""")
         val m = GeminiProvider.parseModels(o)
-        assertEquals(listOf("gemini-2.5-flash"), m.map { it.id })
-        assertEquals("Gemini 2.5 Flash", m[0].name)
+        assertEquals(listOf("gemini-2.5-flash"), m.filter { it.chat }.map { it.id })
+        assertEquals(setOf("text-embedding-004", "gemini-embedding-001", "imagen-4"), m.filter { !it.chat }.map { it.id }.toSet())
+        assertEquals("Gemini 2.5 Flash", m.first { it.chat }.name)
+        assertEquals(listOf("gemini-2.5-flash"), AiCatalog.rank(AiPreset.GEMINI, m).map { it.id })
     }
 
     @Test fun geminiBodyAsksForJsonOnlyWithoutTheSearchTool() {
@@ -152,8 +155,9 @@ class AiTest {
     @Test fun openRouterListsFreeModelsFirst() {
         val o = JSONObject("""{"data":[{"id":"openai/gpt-5","name":"GPT-5"},{"id":"meta-llama/llama-4:free","name":"Llama 4"},{"id":"openai/whisper-1"}]}""")
         val m = OpenAiCompatProvider.parseModels(o, AiPreset.OPENROUTER)
-        assertEquals(listOf("meta-llama/llama-4:free", "openai/gpt-5"), m.map { it.id })
+        assertEquals(listOf("meta-llama/llama-4:free", "openai/gpt-5", "openai/whisper-1"), m.map { it.id })
         assertEquals("Llama 4 (free)", m[0].name)
+        assertFalse(m.last().chat)
         val cf = OpenAiCompatProvider.parseCloudflareModels(JSONObject("""{"result":[{"name":"@cf/meta/llama-3.1-8b-instruct"},{"name":"other"}]}"""))
         assertEquals(listOf("@cf/meta/llama-3.1-8b-instruct"), cf.map { it.id })
     }

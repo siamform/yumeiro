@@ -25,7 +25,8 @@ import java.util.concurrent.TimeUnit
  * Search grounding) and the OpenAI-compatible Chat Completions API (OpenRouter, Groq, Cloudflare Workers AI, a custom
  * URL such as Ollama). The key goes only to the provider's own host ([AiHttp.scoped]) and is never logged.
  */
-data class AiModel(val id: String, val name: String = id, val contextTokens: Int = 0)
+/** [chat] false = the provider says it can't chat (embeddings, images…): listed, never selectable ([AiCatalog]). */
+data class AiModel(val id: String, val name: String = id, val contextTokens: Int = 0, val chat: Boolean = true)
 
 data class AiMessage(val user: Boolean, val text: String)
 
@@ -52,6 +53,8 @@ sealed class AiError(message: String) : Exception(message) {
     class ModelGone(model: String) : AiError("The model \"$model\" isn't available any more. Pick another in Settings → Yumeiro AI.")
     class Offline : AiError("Couldn't reach the AI provider. Check your connection.")
     class NotSetUp : AiError("Add an AI key in Settings → Yumeiro AI to use this.")
+    /** The conversation is longer than the model can read at once. */
+    class TooLong : AiError("This chat is longer than the model can read at once. Start a new chat, or Yumeiro will send only the latest messages.")
     class Failed(detail: String) : AiError(detail)
 }
 
@@ -61,18 +64,37 @@ interface AiProvider {
     suspend fun chat(key: String, request: AiRequest): AiReply
 }
 
-/** The providers offered in Settings (all have a free tier or run locally). */
-enum class AiPreset(val code: String, val label: String, val base: String, val keyUrl: String, val note: String, val webSearch: Boolean = false) {
+/**
+ * The providers offered in Settings. [free] = has a free tier or runs locally; [group] orders the dropdown.
+ * R28 item 15: OpenAI (GPT), xAI (Grok), Anthropic (Claude), Mistral, DeepSeek and Cerebras added beside the free
+ * ones; all but Gemini speak the OpenAI-compatible Chat Completions API.
+ */
+enum class AiPreset(
+    val code: String, val label: String, val base: String, val keyUrl: String, val note: String,
+    val webSearch: Boolean = false, val free: Boolean = true, val group: String = "Free tier",
+) {
     GEMINI("gemini", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta", "https://aistudio.google.com/apikey",
         "Free tier: Google may use free-tier prompts to improve its products.", webSearch = true),
+    GROQ("groq", "Groq", "https://api.groq.com/openai/v1", "https://console.groq.com/keys",
+        "Free tier with per-minute limits. Very fast."),
     OPENROUTER("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", "https://openrouter.ai/keys",
         "Free models end in \":free\"; their providers may log prompts."),
-    GROQ("groq", "Groq", "https://api.groq.com/openai/v1", "https://console.groq.com/keys",
-        "Free tier with per-minute limits."),
+    CEREBRAS("cerebras", "Cerebras", "https://api.cerebras.ai/v1", "https://cloud.cerebras.ai/",
+        "Free tier with daily limits."),
+    MISTRAL("mistral", "Mistral AI", "https://api.mistral.ai/v1", "https://console.mistral.ai/api-keys",
+        "Free \"Experiment\" plan after phone verification; prompts may be used for training on it."),
     CLOUDFLARE("cloudflare", "Cloudflare Workers AI", "https://api.cloudflare.com/client/v4/accounts/{account}/ai/v1", "https://dash.cloudflare.com/profile/api-tokens",
         "Free daily allowance. Needs your account ID and an API token with Workers AI access."),
+    OPENAI("openai", "OpenAI (GPT)", "https://api.openai.com/v1", "https://platform.openai.com/api-keys",
+        "Paid: needs credit on your OpenAI account.", free = false, group = "Paid"),
+    XAI("xai", "xAI (Grok)", "https://api.x.ai/v1", "https://console.x.ai/",
+        "Paid: needs credit on your xAI account.", free = false, group = "Paid"),
+    ANTHROPIC("anthropic", "Anthropic (Claude)", "https://api.anthropic.com/v1", "https://console.anthropic.com/settings/keys",
+        "Paid: needs credit on your Anthropic account.", free = false, group = "Paid"),
+    DEEPSEEK("deepseek", "DeepSeek", "https://api.deepseek.com/v1", "https://platform.deepseek.com/api_keys",
+        "Paid, low cost: needs a small top-up.", free = false, group = "Paid"),
     CUSTOM("custom", "Custom (OpenAI-compatible)", "", "",
-        "Any OpenAI-compatible server, such as Ollama on your network (http://<computer>:11434/v1).");
+        "Any OpenAI-compatible server, such as Ollama on your network (http://<computer>:11434/v1).", group = "Your own server");
 
     companion object { fun of(code: String?): AiPreset? = entries.firstOrNull { it.code == code } }
 }
@@ -108,8 +130,9 @@ internal object AiHttp {
     fun url(base: String, path: String): HttpUrl =
         (base.trimEnd('/') + path).toHttpUrlOrNull()?.takeIf { hostAllowed(it) } ?: throw AiError.Failed("That server address isn't valid (use https, or http only on your own network).")
 
-    suspend fun call(base: HttpUrl, header: String, value: String, url: HttpUrl, body: JSONObject?, model: String? = null): JSONObject = withContext(Dispatchers.IO) {
+    suspend fun call(base: HttpUrl, header: String, value: String, url: HttpUrl, body: JSONObject?, model: String? = null, extra: Map<String, String> = emptyMap()): JSONObject = withContext(Dispatchers.IO) {
         val b = Request.Builder().url(url).header("Accept", "application/json")
+        extra.forEach { (k, v) -> b.header(k, v) }
         if (value.isNotBlank()) b.header(header, value)
         if (body != null) b.post(body.toString().toRequestBody(JSON_TYPE))
         val res = try { scoped(base, header).newCall(b.build()).execute() } catch (e: java.io.IOException) { throw AiError.Offline() }
@@ -126,6 +149,7 @@ internal object AiHttp {
         val lower = msg.lowercase()
         return when {
             code == 401 || code == 403 || lower.contains("api key not valid") || lower.contains("api_key_invalid") || lower.contains("invalid api key") -> AiError.KeyRejected()
+            code == 413 || lower.contains("context length") || lower.contains("context_length") || lower.contains("maximum context") || lower.contains("too many tokens") || lower.contains("too long") -> AiError.TooLong()
             code == 429 || lower.contains("quota") || lower.contains("rate limit") -> AiError.LimitReached()
             code == 404 && model != null -> AiError.ModelGone(model)
             code >= 500 -> AiError.Failed("The AI provider had a problem ($code). Try again in a moment.")
@@ -187,10 +211,10 @@ class GeminiProvider(private val base: String = AiPreset.GEMINI.base) : AiProvid
             return (0 until a.length()).mapNotNull { i ->
                 val m = a.optJSONObject(i) ?: return@mapNotNull null
                 val methods = m.optJSONArray("supportedGenerationMethods")
-                if (methods == null || (0 until methods.length()).none { methods.optString(it) == "generateContent" }) return@mapNotNull null
+                val generates = methods != null && (0 until methods.length()).any { methods.optString(it) == "generateContent" }
                 val id = m.optString("name").removePrefix("models/").ifBlank { return@mapNotNull null }
-                if (id.contains("embedding") || id.contains("imagen") || id.contains("-tts") || id.contains("image-generation")) return@mapNotNull null
-                AiModel(id, m.optString("displayName").ifBlank { id }, m.optInt("inputTokenLimit"))
+                // R28: models that can't chat stay in the list, marked, so the picker can say why they can't be chosen.
+                AiModel(id, m.optString("displayName").ifBlank { id }, m.optInt("inputTokenLimit"), chat = generates && AiCatalog.kindOf(id) == AiModelKind.CHAT)
             }
         }
 
@@ -235,6 +259,10 @@ class OpenAiCompatProvider(override val preset: AiPreset, private val base: Stri
             val url = AiHttp.url(base.removeSuffix("/").removeSuffix("/v1"), "/models/search").newBuilder().addQueryParameter("task", "Text Generation").addQueryParameter("per_page", "100").build()
             return parseCloudflareModels(AiHttp.call(baseUrl, HEADER, bearer(key), url, null))
         }
+        if (preset == AiPreset.ANTHROPIC) {
+            // Anthropic lists models with its own header; chat goes through its OpenAI-compatible endpoint.
+            return parseModels(AiHttp.call(baseUrl, "x-api-key", key, AiHttp.url(base, "/models"), null, extra = mapOf("anthropic-version" to "2023-06-01")), preset)
+        }
         return parseModels(AiHttp.call(baseUrl, HEADER, bearer(key), AiHttp.url(base, "/models"), null), preset)
     }
 
@@ -259,11 +287,12 @@ class OpenAiCompatProvider(override val preset: AiPreset, private val base: Stri
             return (0 until a.length()).mapNotNull { i ->
                 val m = a.optJSONObject(i) ?: return@mapNotNull null
                 val id = m.optString("id").ifBlank { m.optString("name") }.ifBlank { return@mapNotNull null }
-                if (id.contains("whisper") || id.contains("embed") || id.contains("tts") || id.contains("guard")) return@mapNotNull null
                 // OpenRouter lists paid and free models together: free ones are marked and listed first.
                 val name = m.optString("name").ifBlank { id }
-                AiModel(id, if (preset == AiPreset.OPENROUTER && id.endsWith(":free") && !name.contains("free", true)) "$name (free)" else name, m.optInt("context_length").takeIf { it > 0 } ?: m.optInt("context_window"))
-            }.sortedWith(compareByDescending<AiModel> { it.id.endsWith(":free") }.thenBy { it.name.lowercase() })
+                val name0 = if (m.optString("display_name").isNotBlank()) m.optString("display_name") else name
+                AiModel(id, if (preset == AiPreset.OPENROUTER && id.endsWith(":free") && !name0.contains("free", true)) "$name0 (free)" else name0,
+                    m.optInt("context_length").takeIf { it > 0 } ?: m.optInt("context_window"), chat = AiCatalog.kindOf(id) == AiModelKind.CHAT)
+            }.sortedWith(compareByDescending<AiModel> { it.chat }.thenByDescending { it.id.endsWith(":free") }.thenBy { it.name.lowercase() })
         }
 
         internal fun parseCloudflareModels(o: JSONObject): List<AiModel> {

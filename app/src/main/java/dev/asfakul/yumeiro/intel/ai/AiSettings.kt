@@ -74,6 +74,7 @@ object AiSettings {
     fun setProvider(c: Context, preset: AiPreset?) = update(c) { old ->
         if (old.preset == preset) old else {
             OnlineSettings.setSecret(c, keyName(Profiles.currentId(c)), null)
+            clearRemembered(c, old.preset)
             old.copy(preset = preset, model = "", extra = "", hasKey = false, webSearch = false, testedAt = 0)
         }
     }
@@ -88,6 +89,7 @@ object AiSettings {
     fun setKey(c: Context, key: String?) {
         val clean = key?.trim().orEmpty()
         OnlineSettings.setSecret(c, keyName(Profiles.currentId(c)), clean.ifBlank { null })
+        clearRemembered(c, get(c).preset)
         update(c) { it.copy(hasKey = clean.isNotBlank(), testedAt = 0) }
     }
 
@@ -110,9 +112,10 @@ object AiSettings {
         OnlineSettings.setSecret(c, keyName(Profiles.currentId(c)), null)
         prefs(c).edit().clear().apply()
         _config.value = Config()
+        _status.value = emptyMap()
     }
 
-    fun unload() { loadedFor = null; _config.value = Config() }
+    fun unload() { loadedFor = null; _config.value = Config(); _status.value = emptyMap() }
 
     // region the provider
 
@@ -132,13 +135,83 @@ object AiSettings {
 
     private val ACCOUNT = Regex("[0-9a-fA-F]{32}")
 
-    /** Lists the models the key can use (also proves the key works). */
+    /** Lists the models the key can use (also proves the key works). The list is kept for the picker (offline too). */
     suspend fun models(c: Context): List<AiModel> {
         val cfg = get(c)
         val p = provider(cfg) ?: throw AiError.NotSetUp()
         if (!cfg.hasKey && cfg.preset != AiPreset.CUSTOM) throw AiError.NotSetUp()
-        return p.models(key(c))
+        return p.models(key(c)).also { list -> if (list.isNotEmpty()) prefs(c).edit().putString(modelsKey(cfg.preset), AiCatalog.encodeModels(list)).apply() }
     }
+
+    // region R28 item 15: remembered models, probe results and automatic choice
+
+    private fun modelsKey(p: AiPreset?) = "models_" + (p?.code ?: "none")
+    private fun statusKey(p: AiPreset?) = "status_" + (p?.code ?: "none")
+
+    private val _status = MutableStateFlow<Map<String, AiModelStatus>>(emptyMap())
+    /** Probe results for the open profile's provider (model id → worked or why not). */
+    val status: StateFlow<Map<String, AiModelStatus>> = _status.asStateFlow()
+
+    /** The last model list this key gave (empty before the first load). */
+    fun cachedModels(c: Context): List<AiModel> = AiCatalog.decodeModels(prefs(c).getString(modelsKey(get(c).preset), null))
+
+    fun loadStatus(c: Context): Map<String, AiModelStatus> = AiCatalog.decode(prefs(c).getString(statusKey(get(c).preset), null)).also { _status.value = it }
+
+    internal fun putStatus(c: Context, model: String, s: AiModelStatus) {
+        val now = loadStatus(c) + (model to s)
+        _status.value = now
+        prefs(c).edit().putString(statusKey(get(c).preset), AiCatalog.encode(now)).apply()
+    }
+
+    private fun clearRemembered(c: Context, p: AiPreset?) {
+        prefs(c).edit().remove(modelsKey(p)).remove(statusKey(p)).apply()
+        _status.value = emptyMap()
+    }
+
+    /** One tiny request to [model]; the answer is remembered as that model's status. Throws only [AiError.KeyRejected]. */
+    suspend fun probe(c: Context, model: String, now: Long = System.currentTimeMillis()): AiModelStatus {
+        val cfg = get(c)
+        val p = provider(cfg) ?: throw AiError.NotSetUp()
+        val s = try {
+            p.chat(key(c), AiRequest(model, "Reply with the single word: ready", listOf(AiMessage(true, "Are you there?")), maxTokens = 16, temperature = 0.0))
+            AiModelStatus(true, "", now)
+        } catch (e: AiError.KeyRejected) { throw e } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            AiModelStatus(false, AiCatalog.reason(e), now)
+        }
+        putStatus(c, model, s)
+        return s
+    }
+
+    data class AutoResult(val model: String?, val tried: Int, val models: List<AiModel>, val message: String)
+
+    /**
+     * After a key is saved: list the key's models, probe the best [AiCatalog.rank] candidates one by one (at most
+     * [tries]) and select the first that answers. A model the person picked before and that still answers is kept.
+     * [onStep] says what is happening in plain words. Throws [AiError] when the key or the provider fails outright.
+     */
+    suspend fun autoSetup(c: Context, tries: Int = 4, onStep: (String) -> Unit = {}): AutoResult {
+        onStep("Checking the key…")
+        val list = models(c)
+        val cfg = get(c)
+        val chat = AiCatalog.rank(cfg.preset, list)
+        if (chat.isEmpty()) return AutoResult(null, 0, list, if (list.isEmpty()) "The key works, but it can't use any model." else "The key works, but none of its models can chat.")
+        val order = (listOfNotNull(chat.firstOrNull { it.id == cfg.model }) + chat).distinctBy { it.id }.take(tries)
+        order.forEachIndexed { i, m ->
+            onStep("Trying ${m.name} (${i + 1} of ${order.size})…")
+            val s = probe(c, m.id)
+            if (s.ok) {
+                setModel(c, m.id)
+                markTested(c, s.at)
+                return AutoResult(m.id, i + 1, list, "Ready: ${m.name} answers on this key.")
+            }
+        }
+        return AutoResult(null, order.size, list, "The key works, but the ${order.size} best models didn't answer (${loadStatus(c)[order.first().id]?.reason ?: "no answer"}). Pick another model below.")
+    }
+
+    /** The selected model's context size from the remembered list (0 = unknown). */
+    fun contextTokens(c: Context): Int = get(c).let { cfg -> cachedModels(c).firstOrNull { it.id == cfg.model }?.contextTokens ?: 0 }
+
+    // endregion
 
     /** "Test connection": one tiny request to the chosen model. */
     suspend fun test(c: Context, now: Long = System.currentTimeMillis()): AiReply {

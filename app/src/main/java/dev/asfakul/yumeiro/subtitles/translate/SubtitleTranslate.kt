@@ -147,14 +147,14 @@ object SubtitleTranslate {
     }
 
     /** The AI prompt for one batch: numbered lines in, the same count out. */
-    internal fun aiRequest(lines: List<String>, target: String, title: String): AiRequest {
+    internal fun aiRequest(lines: List<String>, target: String, title: String, personal: String = ""): AiRequest {
         val name = MangaTlPlan.TARGETS[target] ?: target
         val system = """You translate film and TV subtitles from English into $name.
 Write natural, spoken $name as people really talk, keeping meaning, tone, jokes and politeness level.
 Keep names, places and made-up terms as they are (write them in $name script only when that is the usual way).
 Each input line is one subtitle; return exactly the same number of lines in the same order, never merge or split lines, never add notes.
 Answer with one JSON object: {"t": ["line 1", "line 2", ...]}.
-The show is: ${title.take(120)}."""
+The show is: ${title.take(120)}.""" + personal
         val body = JSONObject().put("lines", JSONArray(lines)).toString()
         return AiRequest(model = "", system = system, messages = listOf(AiMessage(true, body)), json = true, maxTokens = 4096, temperature = 0.2)
     }
@@ -260,7 +260,9 @@ The show is: ${title.take(120)}."""
     private suspend fun ai(app: Context, lines: List<String>, target: String, title: String): List<String> {
         // Two tries: models now and then return one line too few; the second try sends the same lines again.
         repeat(2) {
-            val reply = AiSettings.chat(app, aiRequest(lines, target, title))
+            // R28 item 31: the person's translation style and the glossary terms that appear in this batch.
+            val personal = dev.asfakul.yumeiro.intel.ai.AiPersonal.block(dev.asfakul.yumeiro.intel.ai.AiPersonal.get(app), dev.asfakul.yumeiro.intel.ai.AiPersonal.Purpose.TRANSLATE, lines.joinToString("\n"))
+            val reply = AiSettings.chat(app, aiRequest(lines, target, title, personal))
             parseAi(reply.text, lines.size)?.let { return it }
         }
         // Halves, so one odd line doesn't cost the whole batch.

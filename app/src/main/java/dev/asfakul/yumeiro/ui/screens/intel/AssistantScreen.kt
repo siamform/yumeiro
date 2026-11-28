@@ -36,6 +36,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddComment
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Verified
@@ -74,7 +79,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.intel.Discovery
 import dev.asfakul.yumeiro.intel.MediaCategory
+import dev.asfakul.yumeiro.intel.TasteSignals
 import dev.asfakul.yumeiro.intel.ai.AiError
+import dev.asfakul.yumeiro.intel.ai.AiPersonal
+import dev.asfakul.yumeiro.intel.ai.AssistantTalk
 import dev.asfakul.yumeiro.intel.ai.AiMessage
 import dev.asfakul.yumeiro.intel.ai.AiSettings
 import dev.asfakul.yumeiro.intel.ai.Assistant
@@ -114,8 +122,11 @@ internal fun assistantPrompts(cat: MediaCategory?): List<String> = when (cat) {
 }
 
 /**
- * B21: the assistant space. One chat at a time for the open profile (its history in the sheet), the section's
- * category preselected, every pick verified against AniList / TMDB before it is shown.
+ * B21: the assistant space, redesigned for R28 item 16 / 32. One chat at a time for the open profile (its history in
+ * the sheet). The start screen greets the person and suggests questions built from their own titles
+ * ([AssistantTalk.starters]); the composer is one pill with the category chip inside it, "/" opens the commands, and
+ * every message goes through [AssistantTalk.respond] (researched picks, plain conversation or a local command).
+ * Answers can be copied, retried and followed up; a translation correction offers "Add to glossary".
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,7 +135,7 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
     val scope = rememberCoroutineScope()
     remember { AiSettings.get(context); true }
     // B20 S8: past chats are a file read; loaded off the main thread (the list fills in when ready).
-    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { AssistantChats.ensure(context) } }
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { AssistantChats.ensure(context); AiPersonal.get(context) } }
     val cfg by AiSettings.config.collectAsState()
     val chats by AssistantChats.chats.collectAsState()
     val profileName = remember { Profiles.current(context).name }
@@ -137,6 +148,8 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
     var historyOpen by remember { mutableStateOf(false) }
     val list = rememberLazyListState()
     val cat = MediaCategory.of(category)
+    var starters by remember(cat) { mutableStateOf(assistantPrompts(cat)) }
+    LaunchedEffect(cat) { starters = withContext(Dispatchers.IO) { runCatching { AssistantTalk.starters(cat, TasteSignals.entries(context), assistantPrompts(cat)) }.getOrDefault(assistantPrompts(cat)) } }
 
     LaunchedEffect(chatId) { chatId?.let { id -> AssistantChats.get(context, id)?.let { turns = it.turns; category = it.category?.code } } }
     LaunchedEffect(turns.size, step) { if (turns.isNotEmpty()) runCatching { list.animateScrollToItem(turns.size + 1) } }
@@ -147,12 +160,13 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
         input = ""
         val id = chatId ?: "c" + System.currentTimeMillis().toString(36)
         chatId = id
-        val history = turns.filter { !it.error }.map { t -> AiMessage(t.user, if (t.user) t.text else (t.answer?.let { a -> a.reply + a.picks.joinToString("") { "\n- ${it.title}" } } ?: t.text)) }
+        val history = turns.filter { !it.error && it.answer?.kind != "local" && !(it.user && AssistantTalk.parse(it.text)?.let { p -> p.command != "recom" && p.command != "translate" } == true) }
+            .map { t -> AiMessage(t.user, if (t.user) t.text else (t.answer?.let { a -> a.reply + a.picks.joinToString("") { "\n- ${it.title}" } } ?: t.text)) }
         val asked = turns + AssistantChats.Turn(true, q, at = System.currentTimeMillis())
         turns = asked
         job = scope.launch {
             val turn = try {
-                val a = Assistant.ask(context, q, cat, history, AssistantChats.recentlySuggested(context)) { s -> step = s }
+                val a = AssistantTalk.respond(context, q, cat, history, AssistantChats.recentlySuggested(context)) { s -> step = s }
                 AssistantChats.Turn(false, a.reply, a, System.currentTimeMillis())
             } catch (e: CancellationException) { throw e } catch (e: AiError) {
                 AssistantChats.Turn(false, e.message.orEmpty(), at = System.currentTimeMillis(), error = true)
@@ -163,39 +177,45 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
             AssistantChats.put(context, AssistantChats.Chat(id, asked.first { it.user }.text.take(60), cat, turns, System.currentTimeMillis()))
         }
     }
+    fun retryLast() { turns.lastOrNull { it.user }?.text?.let { q -> turns = turns.dropLastWhile { !it.user }.dropLast(1); send(q) } }
 
     Column(Modifier.fillMaxSize().imePadding().testTag("assistant")) {
         SubPageHeader(
             title = "Yumeiro AI", onBack = onBack,
-            subtitle = listOf("Assistant", profileName.ifBlank { null }, cfg.preset?.takeIf { cfg.ready }?.label?.substringBefore(" (")).filterNotNull().joinToString(" · "),
+            subtitle = listOf(profileName.ifBlank { null }, cfg.preset?.takeIf { cfg.ready }?.label?.substringBefore(" (")).filterNotNull().joinToString(" · ").ifBlank { "Assistant" },
             actions = {
                 IconButton(onClick = { historyOpen = true }, modifier = Modifier.testTag("assistant_history")) { Icon(Icons.Default.History, "Past chats", tint = TextPrimary) }
                 IconButton(onClick = { job?.cancel(); chatId = null; turns = emptyList() }, modifier = Modifier.testTag("assistant_new")) { Icon(Icons.Default.AddComment, "New chat", tint = TextPrimary) }
             },
         )
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CHAT_CATEGORIES.forEach { c ->
-                FilterPill(c?.label ?: "Everything", cat == c, onClick = { category = c?.code }, testTag = "assistant_cat_${c?.code ?: "all"}")
-            }
-        }
         if (!cfg.ready || !cfg.forAssistant) {
             SetupCard(cfg.ready, onOpenSettings)
             return@Column
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (turns.isEmpty()) item("intro") {
-                Column(Modifier.fillMaxWidth().testTag("assistant_intro"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().padding(top = 12.dp).testTag("assistant_intro"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(if (profileName.isBlank()) "What are you in the mood for?" else "Hi $profileName, what are you in the mood for?",
+                        color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 28.sp, modifier = Modifier.testTag("assistant_greeting"))
                     Text(stringResource(R.string.as_intro), color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
-                    assistantPrompts(cat).forEachIndexed { i, p ->
-                        Text(p, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().clip(yuRound(12)).background(GlassFill)
-                            .clickable { send(p) }.padding(horizontal = 14.dp, vertical = 12.dp).testTag("assistant_prompt_$i"))
+                    Spacer(Modifier.height(4.dp))
+                    starters.forEachIndexed { i, p ->
+                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(yuRound(14)).background(GlassFill).clickable { send(p) }.padding(horizontal = 14.dp, vertical = 10.dp)
+                            .testTag("assistant_prompt_$i"), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, null, tint = SpotifyGreen, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(p, color = TextPrimary, fontSize = 14.sp, lineHeight = 19.sp)
+                        }
                     }
+                    Text("Tip: type / for commands such as /recom, /translate and /glossary.", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp).testTag("assistant_tip"))
                 }
             }
-            itemsIndexed(turns, key = { i, t -> "$i-${t.at}" }) { _, t ->
-                if (t.user) UserBubble(t.text) else AnswerBlock(t, onOpen = { r -> Discovery.opened(context, r); onOpenRec(r) },
+            itemsIndexed(turns, key = { i, t -> "$i-${t.at}" }) { i, t ->
+                if (t.user) UserBubble(t.text) else AnswerBlock(t, last = i == turns.lastIndex && job == null,
+                    onOpen = { r -> Discovery.opened(context, r); onOpenRec(r) },
                     onNotInterested = { r -> Discovery.dismiss(context, r); AppMessages.show(context, "You won't see ${r.title} in For You again") },
-                    onRetry = { turns.lastOrNull { it.user }?.text?.let { q -> turns = turns.dropLast(2); send(q) } })
+                    onRetry = { retryLast() }, onFollow = { send(it) },
+                    onSaveTerm = { term -> if (AiPersonal.addTerm(context, term.source, term.target, term.note)) AppMessages.show(context, "Added ${term.source} → ${term.target} to your glossary") })
             }
             step?.let { s ->
                 item("step") {
@@ -207,16 +227,8 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(input, { input = it.take(1_000) }, Modifier.weight(1f).testTag("assistant_input"), maxLines = 4,
-                placeholder = { Text(if (cat == null) "Ask Yumeiro AI" else "Ask about ${cat.label.lowercase()}", color = TextTertiary) },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send(input) }))
-            Spacer(Modifier.width(8.dp))
-            if (job != null) TextButton(onClick = { job?.cancel(); job = null; step = null; turns = turns.dropLastWhile { it.user } }, modifier = Modifier.testTag("assistant_stop")) { Text(stringResource(R.string.stop)) }
-            else IconButton(onClick = { send(input) }, enabled = input.isNotBlank(), modifier = Modifier.testTag("assistant_send")) {
-                Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = if (input.isNotBlank()) SpotifyGreen else TextTertiary)
-            }
-        }
+        Composer(input, { input = it.take(1_000) }, cat, { category = it?.code }, busy = job != null, onSend = { send(input) },
+            onStop = { job?.cancel(); job = null; step = null; turns = turns.dropLastWhile { it.user } })
     }
 
     if (historyOpen) ModalBottomSheet(onDismissRequest = { historyOpen = false }, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(), containerColor = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.surface) {
@@ -249,7 +261,7 @@ private fun SetupCard(keySet: Boolean, onOpenSettings: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(16.dp).clip(yuRound(16)).background(GlassFill).padding(18.dp).testTag("assistant_setup"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(if (keySet) "The assistant is turned off" else "Add your own AI key", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 17.sp)
         Text(if (keySet) "Turn on \"Assistant\" in Settings → Yumeiro AI to chat here." else
-            "The assistant uses your own free key from Google Gemini, OpenRouter, Groq or Cloudflare (or your own server). " +
+            "The assistant uses your own key: free ones from Google Gemini, Groq, OpenRouter, Cerebras, Mistral or Cloudflare, paid ones from OpenAI, xAI, Anthropic or DeepSeek, or your own server. " +
                 "For You and Similar by story work without it.", color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
         Button(onClick = onOpenSettings, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("assistant_setup_open")) {
             Text(stringResource(R.string.as_open_ai_settings))
@@ -265,8 +277,58 @@ private fun UserBubble(text: String) {
     }
 }
 
+/** The composer pill: category chip inside the field (its menu picks the category), the text, send or stop; "/" lists commands above it. */
 @Composable
-private fun AnswerBlock(t: AssistantChats.Turn, onOpen: (Discovery.Rec) -> Unit, onNotInterested: (Discovery.Rec) -> Unit, onRetry: () -> Unit) {
+private fun Composer(input: String, onInput: (String) -> Unit, cat: MediaCategory?, onCategory: (MediaCategory?) -> Unit, busy: Boolean, onSend: () -> Unit, onStop: () -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    val commands = remember(input) { AssistantTalk.suggestions(input) }
+    Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
+        androidx.compose.animation.AnimatedVisibility(commands.isNotEmpty(), enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(140)) + androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(180)),
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(100)) + androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(140))) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(yuRound(16)).background(dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.surfaceContainer).padding(vertical = 4.dp).testTag("assistant_commands")) {
+                commands.forEach { c ->
+                    Column(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onInput("/${c.name} ") }.padding(horizontal = 14.dp, vertical = 8.dp).testTag("assistant_cmd_${c.name}")) {
+                        Text("/${c.name}" + (if (c.args.isNotBlank()) " ${c.args}" else ""), color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(c.description, color = TextTertiary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().clip(yuRound(26)).background(GlassFill).padding(start = 6.dp, end = 4.dp, top = 4.dp, bottom = 4.dp).testTag("assistant_composer"),
+            verticalAlignment = Alignment.CenterVertically) {
+            Box {
+                Row(Modifier.heightIn(min = 40.dp).clip(yuRound(20)).background(SpotifyGreen.copy(alpha = 0.14f)).clickable(onClickLabel = "Choose what to ask about") { menu = true }
+                    .padding(horizontal = 10.dp).testTag("assistant_cat"), verticalAlignment = Alignment.CenterVertically) {
+                    Text(cat?.label ?: "Everything", color = SpotifyGreen, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Icon(Icons.Default.ArrowDropDown, null, tint = SpotifyGreen, modifier = Modifier.size(18.dp))
+                }
+                androidx.compose.material3.DropdownMenu(menu, { menu = false }, modifier = Modifier.testTag("assistant_cat_menu")) {
+                    CHAT_CATEGORIES.forEach { c ->
+                        androidx.compose.material3.DropdownMenuItem(text = { Text(c?.label ?: "Everything", fontWeight = if (c == cat) FontWeight.SemiBold else FontWeight.Normal) },
+                            onClick = { onCategory(c); menu = false }, trailingIcon = { if (c == cat) Icon(Icons.Default.Check, "Selected", tint = SpotifyGreen) },
+                            modifier = Modifier.testTag("assistant_cat_${c?.code ?: "all"}"))
+                    }
+                }
+            }
+            androidx.compose.material3.TextField(input, onInput, Modifier.weight(1f).testTag("assistant_input"), maxLines = 5,
+                placeholder = { Text(if (cat == null) "Ask anything, or type /" else "Ask about ${cat.label.lowercase()}, or type /", color = TextTertiary, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                colors = androidx.compose.material3.TextFieldDefaults.colors(focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent, unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { onSend() }))
+            if (busy) TextButton(onClick = onStop, modifier = Modifier.testTag("assistant_stop")) { Text(stringResource(R.string.stop)) }
+            else IconButton(onClick = onSend, enabled = input.isNotBlank(), modifier = Modifier.testTag("assistant_send")) {
+                Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (input.isNotBlank()) SpotifyGreen else GlassFill), contentAlignment = Alignment.Center) {
+                    Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = if (input.isNotBlank()) OnAccent else TextTertiary, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun AnswerBlock(t: AssistantChats.Turn, last: Boolean, onOpen: (Discovery.Rec) -> Unit, onNotInterested: (Discovery.Rec) -> Unit, onRetry: () -> Unit,
+                        onFollow: (String) -> Unit, onSaveTerm: (AiPersonal.Term) -> Unit) {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().testTag(if (t.error) "assistant_error" else "assistant_answer"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (t.error) {
@@ -290,6 +352,25 @@ private fun AnswerBlock(t: AssistantChats.Turn, onOpen: (Discovery.Rec) -> Unit,
             s.picks.forEach { p -> PickCard(p, onOpen, onNotInterested) }
         }
         if (a.sections.isEmpty() && a.reply.isBlank() && a.clarify.isBlank()) Text(stringResource(R.string.as_no_answer), color = TextSecondary, fontSize = 14.sp)
+        a.offer?.let { term ->
+            var saved by remember(t.at) { mutableStateOf(false) }
+            if (!saved) OutlinedButton(onClick = { onSaveTerm(term); saved = true }, modifier = Modifier.testTag("assistant_offer")) {
+                Text("Add \"${term.source} → ${term.target}\" to glossary", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (last && a.followUps.isNotEmpty()) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            a.followUps.forEachIndexed { i, f ->
+                Text(f, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.clip(yuRound(16)).background(GlassFill).clickable { onFollow(f) }
+                    .heightIn(min = 36.dp).padding(horizontal = 12.dp, vertical = 8.dp).testTag("assistant_follow_$i"))
+            }
+        }
+        if (a.kind != "local") Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
+            val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+            IconButton(onClick = { clip.setText(androidx.compose.ui.text.AnnotatedString(a.reply + a.picks.joinToString("") { "\n• ${it.title}" + (it.year?.let { y -> " ($y)" } ?: "") })); AppMessages.show(context, "Copied") },
+                modifier = Modifier.testTag("assistant_copy")) { Icon(Icons.Default.ContentCopy, "Copy answer", tint = TextTertiary, modifier = Modifier.size(18.dp)) }
+            if (last) IconButton(onClick = onRetry, modifier = Modifier.testTag("assistant_regen")) { Icon(Icons.Default.Refresh, "Ask again", tint = TextTertiary, modifier = Modifier.size(18.dp)) }
+            if (a.model.isNotBlank()) Text(a.model, color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         if (a.sources.isNotEmpty()) {
             Text(stringResource(R.string.as_sources), color = TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
             a.sources.take(8).forEach { src ->

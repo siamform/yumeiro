@@ -169,13 +169,20 @@ Thank you very much.
         wait("AI settings") { has("ai_settings") }
         if (!tv) {
             assertFalse("no key field before a provider is chosen", has("ai_key_field"))
+            // R28 item 15: providers are chosen from one row that opens a grouped list.
+            tap("ai_provider")
+            wait("provider list") { has("ai_provider_custom") }
             tap("ai_provider_custom")
             wait("address field") { has("ai_extra") }
             compose.onNodeWithTag("ai_extra", true).performTextReplacement("$base/v1")
             tap("ai_extra_save")
         }
-        wait("models from the server", 30_000) { has("ai_model_yu-local") }
+        // R28 item 15: the model is chosen in a searchable picker opened from the Model row.
+        wait("models from the server", 30_000) { has("ai_model_row") && !has("ai_models_load") && !has("ai_busy") }
+        tap("ai_model_row")
+        wait("model picker", 30_000) { has("ai_model_yu-local") }
         tap("ai_model_yu-local")
+        wait("picked model answers", 30_000) { has("ai_ok") }
         wait("test button") { has("ai_test") }
         FirstRun.shot("gb20_ai_settings_local")
         tap("ai_test")

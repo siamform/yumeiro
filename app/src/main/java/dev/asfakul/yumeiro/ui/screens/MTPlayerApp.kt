@@ -1427,7 +1427,10 @@ fun MTPlayerApp(
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = popSub) }
                     }
                     page(subPad, Screen.AiSettings.route) {
-                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.AiSettingsScreen(onBack = popSub) }
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.AiSettingsScreen(onBack = popSub, onPersonal = { navigateSub(Screen.AiPersonal.route) }) }
+                    }
+                    page(subPad, Screen.AiPersonal.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.AiPersonalScreen(onBack = popSub) }
                     }
                     page(subPad, Screen.Assistant.route, arguments = listOf(navArgument(Screen.Assistant.ARG) { type = NavType.StringType; defaultValue = "" })) { entry ->
                         OpaquePage {

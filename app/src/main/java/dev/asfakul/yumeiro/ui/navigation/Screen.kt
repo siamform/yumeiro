@@ -108,6 +108,8 @@ sealed class Screen(val route: String) {
     data object Privacy : Screen("settings/privacy")
     data object Tracking : Screen("settings/tracking")
     data object AiSettings : Screen("settings/ai")
+    /** R28 item 31: the person's instructions, translation style, glossary and notes for Yumeiro AI. */
+    data object AiPersonal : Screen("settings/ai/personal")
     /** B21: the assistant space; [ARG] = a MediaCategory code or empty (everything). */
     data object Assistant : Screen("assistant?cat={cat}") {
         const val ARG = "cat"

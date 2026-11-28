@@ -42,6 +42,26 @@ object SetupGuides {
         ),
     )
 
+    /** R28 item 15: where the free AI keys come from (Settings → Yumeiro AI → help). */
+    val aiKeys = SetupGuide(
+        id = "ai_keys",
+        title = "Get a free AI key",
+        intro = "Yumeiro AI uses your own key, sealed on this device. Several providers give free keys; you only need one. After you save it, Yumeiro checks the key, finds its models and picks one that answers.",
+        steps = listOf(
+            SetupGuide.Step("Google Gemini (recommended, has web search): sign in with a Google account and create a key. It starts with \"AIza\".", "https://aistudio.google.com/apikey", "Open Google AI Studio"),
+            SetupGuide.Step("Groq (very fast): sign up and create a key. It starts with \"gsk_\".", "https://console.groq.com/keys", "Open Groq Console"),
+            SetupGuide.Step("OpenRouter: sign up and create a key (\"sk-or-\"). Models ending in \":free\" cost nothing.", "https://openrouter.ai/keys", "Open OpenRouter"),
+            SetupGuide.Step("Cerebras: sign up and create a key (\"csk-\").", "https://cloud.cerebras.ai/", "Open Cerebras Cloud"),
+            SetupGuide.Step("Back in Yumeiro, choose the same provider, paste the key and tap Save and set up."),
+        ),
+        tips = listOf(
+            "Paste the key itself, not a Google sign-in token: Gemini keys start with \"AIza\". Tokens that start with \"ya29.\" or \"AQ.\" don't work as API keys.",
+            "Free tiers have per-minute and daily limits. When one is used up, Yumeiro says so; try again later or pick another model.",
+            "Free tiers may use your prompts to improve the provider's products. Don't paste anything private into the chat.",
+            "OpenAI, xAI (Grok), Anthropic (Claude) and DeepSeek need credit on your account.",
+        ),
+    )
+
     /** TG-PAGE-2: the Telegram page's own help (it showed the Websites guide). */
     val telegram = SetupGuide(
         id = "telegram",
@@ -342,5 +362,5 @@ object SetupGuides {
 
     const val TRAKT_REDIRECT = dev.asfakul.yumeiro.tracking.Trakt.REDIRECT_LOCAL
 
-    val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, subdl, youtube, youtubeCookie, unifiedPush)
+    val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, subdl, youtube, youtubeCookie, unifiedPush, aiKeys)
 }

@@ -52,6 +52,12 @@ object Assistant {
     data class Answer(
         val reply: String, val clarify: String = "", val sections: List<Section> = emptyList(),
         val sources: List<AiSource> = emptyList(), val research: Research? = null, val model: String = "",
+        /** R28 item 32: tappable follow-up questions the model offered. */
+        val followUps: List<String> = emptyList(),
+        /** R28 item 32: a glossary correction the model noticed ("add to glossary?"); never saved without a tap. */
+        val offer: AiPersonal.Term? = null,
+        /** R28 item 32: "recs" (research + picks), "chat" (plain conversation) or "local" (a command answered on the phone). */
+        val kind: String = "recs",
     ) {
         val picks: List<Pick> get() = sections.flatMap { it.picks }
     }
@@ -390,8 +396,16 @@ object Assistant {
             append("EVIDENCE:\n").append(evidenceJson(evidence).toString()).append("\n\n")
             append("REQUEST: ").append(q.take(1_000))
         }
-        val system = rules(c) + "\n\nRESEARCH STATUS: " + status(research, web)
-        val reply = AiSettings.chat(c, AiRequest("", system, history.takeLast(6) + AiMessage(true, message), json = true, webSearch = web, maxTokens = 4096, temperature = 0.6))
+        val system = rules(c) + "\n\nRESEARCH STATUS: " + status(research, web) + AiPersonal.block(AiPersonal.get(c), AiPersonal.Purpose.RECOMMEND)
+        // R28 item 32: a model with a small context gets fewer earlier turns; a "too long" answer retries without them.
+        val earlier = AssistantTalk.fit(history.takeLast(6), system.length + message.length, AssistantTalk.budget(AiSettings.contextTokens(c)))
+        val reply = try {
+            AiSettings.chat(c, AiRequest("", system, earlier + AiMessage(true, message), json = true, webSearch = web, maxTokens = 4096, temperature = 0.6))
+        } catch (e: AiError.TooLong) {
+            if (earlier.isEmpty()) throw e
+            onStep("Shortening the chat and asking again…")
+            AiSettings.chat(c, AiRequest("", system, listOf(AiMessage(true, message)), json = true, webSearch = web, maxTokens = 4096, temperature = 0.6))
+        }
         onStep("Checking every title…")
         val parsed = parse(reply.text, cat)
         val checked = verify(c, parsed, evidence, entries, wantsRewatch(q))
