@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.settings
 
+import dev.asfakul.yumeiro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -104,9 +106,7 @@ fun AiSettingsScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().testTag("ai_settings")) {
         SubPageHeader(title = "Yumeiro AI", onBack = onBack, subtitle = "Optional · your own free key")
         Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 48.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Nothing in Yumeiro needs AI. For You, Similar by story and the reasons for each pick come from AniList and TMDB data. " +
-                "With your own key, Yumeiro can also answer questions in the Assistant and translate subtitles with AI. The key is kept on this " +
-                "device for this profile only, sealed by Android's Keystore.", color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+            Text(stringResource(R.string.ai_intro), color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
 
             GroupLabel("Provider")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -117,14 +117,14 @@ fun AiSettingsScreen(onBack: () -> Unit) {
             cfg.preset?.let { p ->
                 Text(p.note, color = TextTertiary, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.testTag("ai_provider_note"))
                 if (p.keyUrl.isNotBlank()) TextButton(onClick = { dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, p.keyUrl) }, modifier = Modifier.testTag("ai_get_key")) {
-                    Text("Get a free key from ${p.label}", color = SpotifyGreen, fontSize = 13.sp)
+                    Text(stringResource(R.string.ai_get_free_key, p.label), color = SpotifyGreen, fontSize = 13.sp)
                 }
                 if (p == AiPreset.CLOUDFLARE || p == AiPreset.CUSTOM) {
                     OutlinedTextField(extraField, { extraField = it }, singleLine = true,
                         label = { Text(if (p == AiPreset.CLOUDFLARE) "Account ID" else "Server address (…/v1)") },
                         keyboardOptions = KeyboardOptions(keyboardType = if (p == AiPreset.CUSTOM) KeyboardType.Uri else KeyboardType.Ascii),
                         modifier = Modifier.fillMaxWidth().testTag("ai_extra"))
-                    if (extraField.trim() != cfg.extra) OutlinedButton(onClick = { AiSettings.setExtra(context, extraField) }, modifier = Modifier.testTag("ai_extra_save")) { Text("Save address") }
+                    if (extraField.trim() != cfg.extra) OutlinedButton(onClick = { AiSettings.setExtra(context, extraField) }, modifier = Modifier.testTag("ai_extra_save")) { Text(stringResource(R.string.ai_save_address)) }
                 }
 
                 GroupLabel("Key")
@@ -132,11 +132,11 @@ fun AiSettingsScreen(onBack: () -> Unit) {
                     SettingsCard {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
                             Column(Modifier.weight(1f)) {
-                                Text("Key saved", color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                                Text(stringResource(R.string.ai_key_saved), color = TextPrimary, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                                 Text(hint?.let { "Ending …$it" } ?: "Sealed on this device", color = TextTertiary, fontSize = 12.5.sp, modifier = Modifier.testTag("ai_key_hint"))
                             }
                             TextButton(onClick = { AiSettings.setKey(context, null); hint = null; models = null; message = null }, modifier = Modifier.testTag("ai_key_remove")) {
-                                Text("Remove", color = dev.asfakul.yumeiro.ui.theme.WarnTone)
+                                Text(stringResource(R.string.remove_2), color = dev.asfakul.yumeiro.ui.theme.WarnTone)
                             }
                         }
                     }
@@ -144,7 +144,7 @@ fun AiSettingsScreen(onBack: () -> Unit) {
                     OutlinedTextField(keyField, { keyField = it; message = null }, singleLine = true, label = { Text(if (p == AiPreset.CUSTOM) "Key (if the server needs one)" else "API key") },
                         visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth().testTag("ai_key_field"))
                     Button(onClick = { AiSettings.setKey(context, keyField); keyField = ""; hint = AiSettings.keyHint(context); loadModels() }, enabled = keyField.isNotBlank() && busy == null,
-                        colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("ai_key_save")) { Text("Save and check") }
+                        colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("ai_key_save")) { Text(stringResource(R.string.ai_save_check)) }
                 }
 
                 if (busy != null) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth().testTag("ai_busy"))
@@ -157,9 +157,9 @@ fun AiSettingsScreen(onBack: () -> Unit) {
                     GroupLabel("Model")
                     Text(if (cfg.model.isBlank()) "No model chosen yet" else "Using ${cfg.model}", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("ai_model_current"))
                     val list = models
-                    if (list == null) OutlinedButton(onClick = { loadModels() }, enabled = busy == null, modifier = Modifier.testTag("ai_models_load")) { Text("Load models") }
+                    if (list == null) OutlinedButton(onClick = { loadModels() }, enabled = busy == null, modifier = Modifier.testTag("ai_models_load")) { Text(stringResource(R.string.ai_load_models)) }
                     else if (list.isNotEmpty()) {
-                        if (list.size > 8) OutlinedTextField(filter, { filter = it }, singleLine = true, label = { Text("Find a model") }, modifier = Modifier.fillMaxWidth().testTag("ai_model_filter"))
+                        if (list.size > 8) OutlinedTextField(filter, { filter = it }, singleLine = true, label = { Text(stringResource(R.string.ai_find_model)) }, modifier = Modifier.fillMaxWidth().testTag("ai_model_filter"))
                         val shown = list.filter { filter.isBlank() || it.id.contains(filter.trim(), true) || it.name.contains(filter.trim(), true) }.take(40)
                         Card(Modifier.fillMaxWidth(), shape = yuRound(14), colors = CardDefaults.cardColors(containerColor = GlassFill)) {
                             Column(Modifier.padding(vertical = 4.dp)) {
@@ -179,7 +179,7 @@ fun AiSettingsScreen(onBack: () -> Unit) {
                     }
                     if (cfg.model.isNotBlank()) OutlinedButton(onClick = {
                         run("test") { val r = AiSettings.test(context); "Connected to ${r.model}." }
-                    }, enabled = busy == null && cfg.ready, modifier = Modifier.testTag("ai_test")) { Text("Test connection") }
+                    }, enabled = busy == null && cfg.ready, modifier = Modifier.testTag("ai_test")) { Text(stringResource(R.string.ai_test_connection)) }
                 }
 
                 GroupLabel("Use it for")
@@ -189,15 +189,12 @@ fun AiSettingsScreen(onBack: () -> Unit) {
                     if (p.webSearch) SettingsToggleRow("Search the web", "Let ${p.label} check Google for reviews and release facts (sources are shown)", cfg.webSearch, { AiSettings.setWebSearch(context, it) }, "ai_use_web")
                 }
                 TextButton(onClick = { AiSettings.clear(context); keyField = ""; extraField = ""; models = null; message = null; hint = null }, modifier = Modifier.testTag("ai_clear")) {
-                    Text("Remove AI from this profile", color = dev.asfakul.yumeiro.ui.theme.WarnTone)
+                    Text(stringResource(R.string.ai_remove_profile), color = dev.asfakul.yumeiro.ui.theme.WarnTone)
                 }
             }
 
             GroupLabel("What needs AI")
-            Text("• Assistant: needs a key.\n• Subtitle translation: works without a key on phones (on-device translator); AI is used when chosen or on TV.\n" +
-                "• For You, Similar by story, the why sheet and Not interested: never need AI.\n" +
-                "What is sent: your question, the taste summary of this profile for that kind of media (titles and tags, nothing else), " +
-                "and the facts Yumeiro found. Reddit and X can't be searched (no free API).",
+            Text(stringResource(R.string.ai_what_needs),
                 color = TextTertiary, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.testTag("ai_what_needs"))
         }
     }

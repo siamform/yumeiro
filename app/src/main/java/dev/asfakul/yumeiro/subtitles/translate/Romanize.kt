@@ -35,6 +35,7 @@ object Romanize {
         return runCatching { ICU.transliterate(s) }.getOrNull()
     }
 
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.Q)
     private object ICU {
         private val t by lazy { android.icu.text.Transliterator.getInstance("Any-Latin; Latin-ASCII") }
         fun transliterate(s: String): String = synchronized(this) { t.transliterate(s) }

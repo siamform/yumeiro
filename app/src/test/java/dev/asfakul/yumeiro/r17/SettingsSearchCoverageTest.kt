@@ -43,6 +43,7 @@ class SettingsSearchCoverageTest {
         put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Clear watch history",
             "Clear 18+ history", "Clear listening history", "Clear search history", "Clear notifications",
             "Clear cache", "All app permissions")
+        put(Category.AI, "Assistant", "Subtitle translation", "Search the web")
         put(Category.BACKUP, "Back up automatically", "Save loaded pages on the phone", "Erase everything")
     }
 

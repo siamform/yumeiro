@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.intel
 
+import dev.asfakul.yumeiro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -179,8 +181,7 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (turns.isEmpty()) item("intro") {
                 Column(Modifier.fillMaxWidth().testTag("assistant_intro"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Ask for anything to watch, read or play next. Yumeiro looks at this profile's taste, searches AniList and TMDB itself, " +
-                        "and checks every title before showing it.", color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+                    Text(stringResource(R.string.as_intro), color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
                     assistantPrompts(cat).forEachIndexed { i, p ->
                         Text(p, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().clip(yuRound(12)).background(GlassFill)
                             .clickable { send(p) }.padding(horizontal = 14.dp, vertical = 12.dp).testTag("assistant_prompt_$i"))
@@ -207,19 +208,19 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
                 placeholder = { Text(if (cat == null) "Ask Yumeiro AI" else "Ask about ${cat.label.lowercase()}", color = TextTertiary) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { send(input) }))
             Spacer(Modifier.width(8.dp))
-            if (job != null) TextButton(onClick = { job?.cancel(); job = null; step = null; turns = turns.dropLastWhile { it.user } }, modifier = Modifier.testTag("assistant_stop")) { Text("Stop") }
+            if (job != null) TextButton(onClick = { job?.cancel(); job = null; step = null; turns = turns.dropLastWhile { it.user } }, modifier = Modifier.testTag("assistant_stop")) { Text(stringResource(R.string.stop)) }
             else IconButton(onClick = { send(input) }, enabled = input.isNotBlank(), modifier = Modifier.testTag("assistant_send")) {
                 Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = if (input.isNotBlank()) SpotifyGreen else TextTertiary)
             }
         }
     }
 
-    if (historyOpen) ModalBottomSheet(onDismissRequest = { historyOpen = false }, containerColor = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.surface) {
+    if (historyOpen) ModalBottomSheet(onDismissRequest = { historyOpen = false }, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(), containerColor = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.surface) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp).testTag("assistant_history_sheet")) {
-            Text("Past chats", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text("This profile only · the last 20" + if (dev.asfakul.yumeiro.security.Privacy.incognito.value) " · Incognito chats aren't saved" else "", color = TextTertiary, fontSize = 12.sp)
+            Text(stringResource(R.string.as_past_chats), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(stringResource(if (dev.asfakul.yumeiro.security.Privacy.incognito.value) R.string.as_history_incognito else R.string.as_history_hint), color = TextTertiary, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
-            if (chats.isEmpty()) Text("No chats yet.", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(vertical = 16.dp))
+            if (chats.isEmpty()) Text(stringResource(R.string.as_no_chats), color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(vertical = 16.dp))
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
                 items(chats, key = { it.id }) { ch ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(yuRound(12)).clickable { chatId = ch.id; historyOpen = false }.padding(horizontal = 8.dp).testTag("assistant_chat_${ch.id}"),
@@ -233,7 +234,7 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
                 }
             }
             if (chats.isNotEmpty()) TextButton(onClick = { AssistantChats.clear(context); chatId = null; turns = emptyList(); historyOpen = false }, modifier = Modifier.testTag("assistant_clear")) {
-                Text("Delete all chats", color = WarnTone)
+                Text(stringResource(R.string.as_delete_all), color = WarnTone)
             }
         }
     }
@@ -247,7 +248,7 @@ private fun SetupCard(keySet: Boolean, onOpenSettings: () -> Unit) {
             "The assistant uses your own free key from Google Gemini, OpenRouter, Groq or Cloudflare (or your own server). " +
                 "For You and Similar by story work without it.", color = TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
         Button(onClick = onOpenSettings, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent), modifier = Modifier.testTag("assistant_setup_open")) {
-            Text("Open Yumeiro AI settings")
+            Text(stringResource(R.string.as_open_ai_settings))
         }
     }
 }
@@ -266,7 +267,7 @@ private fun AnswerBlock(t: AssistantChats.Turn, onOpen: (Discovery.Rec) -> Unit,
     Column(Modifier.fillMaxWidth().testTag(if (t.error) "assistant_error" else "assistant_answer"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (t.error) {
             Text(t.text, color = WarnTone, fontSize = 14.sp)
-            OutlinedButton(onClick = onRetry, modifier = Modifier.testTag("assistant_retry")) { Text("Try again") }
+            OutlinedButton(onClick = onRetry, modifier = Modifier.testTag("assistant_retry")) { Text(stringResource(R.string.try_again)) }
             return@Column
         }
         val a = t.answer ?: return@Column
@@ -284,9 +285,9 @@ private fun AnswerBlock(t: AssistantChats.Turn, onOpen: (Discovery.Rec) -> Unit,
             Text(s.name, color = SpotifyGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
             s.picks.forEach { p -> PickCard(p, onOpen, onNotInterested) }
         }
-        if (a.sections.isEmpty() && a.reply.isBlank() && a.clarify.isBlank()) Text("No answer came back. Try asking another way.", color = TextSecondary, fontSize = 14.sp)
+        if (a.sections.isEmpty() && a.reply.isBlank() && a.clarify.isBlank()) Text(stringResource(R.string.as_no_answer), color = TextSecondary, fontSize = 14.sp)
         if (a.sources.isNotEmpty()) {
-            Text("Sources", color = TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
+            Text(stringResource(R.string.as_sources), color = TextTertiary, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 4.dp))
             a.sources.take(8).forEach { src ->
                 Text(src.title, color = SpotifyGreen, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp).clickable { Links.open(context, src.url) }.padding(vertical = 6.dp).testTag("assistant_source"))
@@ -311,16 +312,16 @@ private fun PickCard(p: Assistant.Pick, onOpen: (Discovery.Rec) -> Unit, onNotIn
                 if (p.verified) Icon(Icons.Default.Verified, "Checked", tint = SpotifyGreen, modifier = Modifier.padding(start = 4.dp).size(14.dp))
             }
             Text(listOfNotNull(p.year?.toString(), p.category?.label, p.tags.take(3).joinToString(", ").ifBlank { null }).joinToString(" · "), color = TextTertiary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (!p.verified) Text("Not confirmed on AniList or TMDB", color = WarnTone, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            if (!p.verified) Text(stringResource(R.string.as_not_confirmed), color = WarnTone, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             p.note?.takeIf { p.verified }?.let { Text(it, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) }
             if (p.why.isNotBlank()) Text(p.why, color = TextPrimary, fontSize = 13.sp, lineHeight = 18.sp)
-            if (p.differences.isNotBlank()) Text("Different: " + p.differences, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
-            if (p.reception.isNotBlank()) Text("Reception: " + p.reception, color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+            if (p.differences.isNotBlank()) Text(stringResource(R.string.as_different, p.differences), color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
+            if (p.reception.isNotBlank()) Text(stringResource(R.string.as_reception, p.reception), color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp)
             if (p.discovery.isNotBlank()) Text(p.discovery, color = TextTertiary, fontSize = 12.sp, lineHeight = 17.sp)
-            if (p.confidence.isNotBlank()) Text("Confidence: " + p.confidence, color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp)
+            if (p.confidence.isNotBlank()) Text(stringResource(R.string.as_confidence, p.confidence), color = TextTertiary, fontSize = 11.sp, lineHeight = 15.sp)
             if (rec != null) Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = { onOpen(rec) }, modifier = Modifier.testTag("assistant_pick_open")) { Text("Open", color = SpotifyGreen) }
-                TextButton(onClick = { onNotInterested(rec) }, modifier = Modifier.testTag("assistant_pick_dismiss")) { Text("Not interested", color = TextSecondary) }
+                TextButton(onClick = { onOpen(rec) }, modifier = Modifier.testTag("assistant_pick_open")) { Text(stringResource(R.string.as_open), color = SpotifyGreen) }
+                TextButton(onClick = { onNotInterested(rec) }, modifier = Modifier.testTag("assistant_pick_dismiss")) { Text(stringResource(R.string.as_not_interested), color = TextSecondary) }
             }
         }
     }

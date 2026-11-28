@@ -125,6 +125,16 @@ object OnlineSettings {
         else { volatileSecrets[name] = value; p.edit().remove(name).apply() }
     }
 
+    /**
+     * B20 S7: every stored secret, opened, for a password-locked backup (never anything else). Values that can't be
+     * opened on this device are left out.
+     */
+    internal fun allSecretsForBackup(context: Context): Map<String, String> {
+        init(context)
+        val names = (secrets?.all?.keys.orEmpty() + volatileSecrets.keys).toSortedSet()
+        return names.mapNotNull { n -> readSecret(n)?.takeIf { it.isNotBlank() }?.let { n to it } }.toMap()
+    }
+
     @androidx.annotation.VisibleForTesting
     internal fun resetForTests() { ready = false; prefs = null; secrets = null; volatileSecrets.clear() }
 

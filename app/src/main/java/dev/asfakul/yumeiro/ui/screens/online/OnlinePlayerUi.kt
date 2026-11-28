@@ -903,12 +903,12 @@ private fun TranslateSubtitlesCard(positionMs: () -> Long) {
         Modifier.fillMaxWidth().clip(yuRound(14)).background(ink.copy(alpha = 0.06f)).padding(12.dp).testTag("subtitle_translate_card"),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Translate subtitles", color = ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(stringResource(R.string.st_title), color = ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         Text(
             when (engine) {
-                dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Engine.DEVICE -> "Uses this episode's English subtitles. Translated on this phone (the language pack downloads once)."
-                dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Engine.AI -> "Uses this episode's English subtitles. Translated by your Yumeiro AI provider; the lines are sent to it."
-                null -> "On TV, subtitles are translated by Yumeiro AI. Add a free key in Settings → Yumeiro AI."
+                dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Engine.DEVICE -> stringResource(R.string.st_device)
+                dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Engine.AI -> stringResource(R.string.st_ai)
+                null -> stringResource(R.string.st_tv_needs_key)
             },
             color = ink.copy(alpha = 0.6f), fontSize = 11.sp,
         )
@@ -931,16 +931,16 @@ private fun TranslateSubtitlesCard(positionMs: () -> Long) {
                     progress = { if (st.total == 0) 0f else st.done.toFloat() / st.total }, color = SpotifyGreen, trackColor = ink.copy(alpha = 0.12f),
                     modifier = Modifier.fillMaxWidth().testTag("subtitle_translate_progress"),
                 )
-                Text("${st.done} of ${st.total} lines · ${st.source}. Keep watching; the track turns on when it's done.", color = ink.copy(alpha = 0.6f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(stringResource(R.string.st_progress, st.done, st.total, st.source), color = ink.copy(alpha = 0.6f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
             is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Ready ->
-                Text("${st.label} is on (from ${st.source}). The original is still in Captions.", color = SpotifyGreen, fontSize = 12.sp, modifier = Modifier.testTag("subtitle_translate_ready"))
+                Text(stringResource(R.string.st_ready, st.label, st.source), color = SpotifyGreen, fontSize = 12.sp, modifier = Modifier.testTag("subtitle_translate_ready"))
             is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Failed ->
                 Text(st.message, color = ErrorColor, fontSize = 12.sp, modifier = Modifier.testTag("subtitle_translate_error"))
             else -> {}
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (busy) androidx.compose.material3.OutlinedButton(onClick = { tl.cancel() }, modifier = Modifier.testTag("subtitle_translate_stop")) { Text("Stop", color = ink) }
+            if (busy) androidx.compose.material3.OutlinedButton(onClick = { tl.cancel() }, modifier = Modifier.testTag("subtitle_translate_stop")) { Text(stringResource(R.string.stop), color = ink) }
             else androidx.compose.material3.Button(
                 onClick = { tl.start(context, positionMs(), settings) }, enabled = engine != null,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black),

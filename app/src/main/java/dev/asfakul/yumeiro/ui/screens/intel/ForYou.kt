@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.intel
 
+import dev.asfakul.yumeiro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -147,7 +149,7 @@ fun ForYouShelf(category: MediaCategory, onOpen: (Discovery.Rec) -> Unit, modifi
             action = if (ask != null) "Ask AI" else null, onAction = ask?.let { { it(category) } }, actionTag = "for_you_ask",
         )
         shelf.crossFrom?.let { from ->
-            Text("From your ${from.label.lowercase()} taste", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = gutter).padding(bottom = 8.dp).testTag("for_you_cross"))
+            Text(stringResource(R.string.fy_from_your_taste, from.label.lowercase()), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = gutter).padding(bottom = 8.dp).testTag("for_you_cross"))
         }
         LazyRow(contentPadding = PaddingValues(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             itemsIndexed(shelf.recs, key = { _, r -> r.key }) { _, r ->
@@ -205,7 +207,7 @@ internal fun WhySheet(r: Discovery.Rec, onDismiss: () -> Unit, onOpen: () -> Uni
         val meta = listOfNotNull(r.year?.toString(), r.format?.lowercase()?.replace('_', ' ')?.replaceFirstChar { it.uppercase() }, r.score.takeIf { it > 0 }?.let { "Score $it" }).joinToString(" · ")
         if (meta.isNotEmpty()) Text(meta, color = TextSecondary, fontSize = 12.sp)
         Spacer(Modifier.height(12.dp))
-        Text("Why it's here", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.fy_why_here), color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         Text(
             if (similarTo != null) "${r.match}% alike. Shares with $similarTo:" else "${r.match}% taste match. Matches your taste for:",
             color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp),
@@ -213,12 +215,16 @@ internal fun WhySheet(r: Discovery.Rec, onDismiss: () -> Unit, onOpen: () -> Uni
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             r.reasons.forEach { x -> FilterPill("${x.name} · ${x.aspect.reasonLabel()}", selected = false, onClick = {}, testTag = "why_reason") }
         }
-        if (r.because.isNotEmpty()) Text("Recommended by fans of " + r.because.joinToString(" and "), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
-        if (r.gem) Text("Hidden gem: fewer people know it, and it's well rated.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
-        if (r.new) Text("New: out in the last few months.", color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        if (r.because.isNotEmpty()) Text(stringResource(R.string.fy_recommended_by_fans, r.because.joinToString(", ")), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+        if (r.gem) Text(stringResource(R.string.fy_hidden_gem), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        if (r.new) Text(stringResource(R.string.fy_new), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
         Text(
-            "Metadata match from " + (if (r.ids.anilist != null) "AniList tags" else "TMDB genres and keywords") +
-                (if (similarTo != null) "." else ", weighed by what this profile watched and read.") + " Not AI.",
+            stringResource(when {
+                r.ids.anilist != null && similarTo != null -> R.string.fy_meta_anilist
+                r.ids.anilist != null -> R.string.fy_meta_anilist_taste
+                similarTo != null -> R.string.fy_meta_tmdb
+                else -> R.string.fy_meta_tmdb_taste
+            }),
             color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 10.dp).testTag("why_source"),
         )
         Spacer(Modifier.height(12.dp))
@@ -275,7 +281,7 @@ fun CompletionPrompt(modifier: Modifier = Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.AutoAwesome, null, tint = TextSecondary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("You finished ${e.title}. How was it?", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.fy_finished_how, e.title), color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             IconButton(onClick = { entry = null; scope.launch(Dispatchers.IO) { TasteSignals.prompted(context, ref) } }, modifier = Modifier.testTag("completion_skip")) {
                 Icon(Icons.Default.Close, "Skip", tint = TextSecondary)
             }
@@ -288,7 +294,7 @@ fun CompletionPrompt(modifier: Modifier = Modifier) {
                 })
             }
         }
-        Text("Only this profile's picks use it.", color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
+        Text(stringResource(R.string.fy_profile_only), color = TextTertiary, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp))
     }
 }
 

@@ -5,6 +5,8 @@
  */
 package dev.asfakul.yumeiro.ui.screens.intel
 
+import dev.asfakul.yumeiro.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,7 +67,7 @@ fun TasteFeedbackRow(ref: TasteSignals.Ref?, modifier: Modifier = Modifier) {
         current = withContext(Dispatchers.IO) { TasteSignals.get(context, ref.key)?.feedback }
     }
     Column(modifier.testTag("taste_feedback")) {
-        Text("How was it?", color = TextSecondary, fontSize = 13.sp)
+        Text(stringResource(R.string.tf_how_was_it), color = TextSecondary, fontSize = 13.sp)
         Spacer(Modifier.height(6.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TasteSignals.Feedback.entries.forEach { f ->

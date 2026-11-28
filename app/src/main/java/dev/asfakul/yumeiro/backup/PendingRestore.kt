@@ -86,7 +86,7 @@ object PendingRestore {
         }
     }
 
-    data class Report(val prefs: Int, val files: Int, val failed: Int)
+    data class Report(val prefs: Int, val files: Int, val failed: Int, val secrets: Int = 0)
 
     private fun applyRestore(context: Context, d: File, plan: Plan): Report {
         var prefs = 0; var files = 0; var failed = 0
@@ -125,7 +125,12 @@ object PendingRestore {
         }
         profilesBefore?.let { b -> runCatching { dev.asfakul.yumeiro.profiles.Profiles.keepLocksAfterRestore(context, b) } }
         if (plan.redownload) BackupMeta.setPendingDownloads(context, plan.tachiyomi)
-        return Report(prefs, files, failed)
+        // B20 S7: keys and sign-ins, already sealed with this phone's Keystore while staging.
+        var secrets = 0
+        File(d, SecretsBackup.STAGED).takeIf { it.isFile }?.let { f ->
+            runCatching { secrets = SecretsBackup.apply(context, JSONObject(f.readText())) }.onFailure { failed++ }
+        }
+        return Report(prefs, files, failed, secrets)
     }
 }
 
@@ -137,10 +142,12 @@ object BackupMeta {
     fun recordRestore(c: Context, plan: PendingRestore.Plan, r: PendingRestore.Report) {
         val text = buildString {
             append("Restored ${r.prefs} setting groups and ${r.files} files")
+            if (r.secrets > 0) append(", ${r.secrets} keys and sign-ins")
             if (plan.from.isNotBlank()) append(" from Yumeiro ${plan.from}")
             if (r.failed > 0) append(" · ${r.failed} couldn't be written")
             append('.')
             if (plan.redownload) append(" Extensions are downloading again from their sources.")
+            if (r.secrets > 0) append(" A sign-in that has expired since the backup needs signing in again.")
         }
         p(c).edit().putLong("last_restore_at", System.currentTimeMillis()).putString("last_restore_text", text).putBoolean("show_restore_note", true).commit()
     }
