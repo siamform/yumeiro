@@ -14,6 +14,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
 import dev.asfakul.yumeiro.online.ExtensionManager
 import dev.asfakul.yumeiro.online.ExtensionMarket
@@ -77,7 +78,9 @@ class OnlinePagesTest {
         var market = 0
         rule.setContent { MTPlayerTheme { ExtensionsScreen(onBack = {}, onOpenMarket = { market++ }) } }
         settle { has("extensions_empty") }
-        rule.onNodeWithTag("extensions_empty_primary").performClick()
+        // Robolectric's 320 dp screen: the header icons wrap to a second line (Z-HEADER), so the empty state can sit
+        // below the 470 dp window. Use the button's click action instead of a touch at its position.
+        rule.onNodeWithTag("extensions_empty_primary").performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
         assertEquals(1, market)
         rule.onNodeWithTag("extensions_add").performClick()
         settle { has("extensions_add_repo") }
