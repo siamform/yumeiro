@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
 import kotlin.math.PI
@@ -62,22 +63,60 @@ object YuMarkGeometry {
     fun phase(t: Float, from: Float, to: Float): Float = ((t - from) / (to - from)).coerceIn(0f, 1f)
 }
 
-/** One frame of the mark: how much of the crescent, the triangle and the glow shows (each 0..1). */
-data class YuMarkFrame(val moon: Float, val play: Float, val glow: Float, val playScale: Float = 1f) {
+/**
+ * One frame of the mark: how much of the crescent, the triangle and the glow shows (each 0..1).
+ * B17: the two parts of the logo move on their own: [moonTurn] turns the crescent about its centre (degrees,
+ * an orbit), [playDx] moves the triangle along its play axis (mark units), and [alpha] fades the whole mark.
+ */
+data class YuMarkFrame(
+    val moon: Float,
+    val play: Float,
+    val glow: Float,
+    val playScale: Float = 1f,
+    val moonTurn: Float = 0f,
+    val playDx: Float = 0f,
+    val alpha: Float = 1f,
+) {
     companion object {
         val Full = YuMarkFrame(1f, 1f, 0f)
         /** The splash draw-in at progress [t] 0..1. */
+        /** Most the crescent turns while it orbits in (B17), in degrees. */
+        const val ORBIT_DEG = 38f
+        /** How far the triangle travels on its "play" push (B17), in mark units. */
+        const val PUSH = 6f
+
+        /**
+         * The splash draw-in at progress [t] 0..1 (Android 7–11, no system splash icon): the crescent is drawn by a
+         * sweep of moonlight while it orbits into place; the triangle slides in after it and settles with a push.
+         */
         fun drawIn(t: Float): YuMarkFrame = with(YuMarkGeometry) {
+            val m = phase(t, 0f, 0.6f)
+            val p = phase(t, 0.35f, 0.8f)
             YuMarkFrame(
                 moon = ease(phase(t, 0f, 0.55f)),
-                play = ease(phase(t, 0.35f, 0.75f)),
+                play = ease(p),
                 glow = bell(phase(t, 0.45f, 1f)),
+                moonTurn = -ORBIT_DEG * (1f - ease(m)),
+                playDx = PUSH * 0.6f * bell(phase(t, 0.6f, 0.95f)),
             )
         }
-        /** Android 12+: the system splash already showed the whole mark; the triangle "presses play" and the glow blooms. */
+
+        /**
+         * Android 12+: the system splash already showed the whole mark, so both parts start from rest: the crescent
+         * swings back on its orbit and returns (a damped sway), while the triangle "presses play": it dips, pushes
+         * forward along its axis and comes back. Different motion for each part; every value is 0 at t = 0 and t = 1.
+         */
         fun press(t: Float): YuMarkFrame = with(YuMarkGeometry) {
-            val p = phase(t, 0f, 0.5f)
-            YuMarkFrame(moon = 1f, play = 1f, glow = bell(phase(t, 0.15f, 1f)), playScale = 1f - 0.14f * bell(p))
+            val sway = phase(t, 0.04f, 0.78f)
+            val pr = phase(t, 0f, 0.5f)
+            val push = phase(t, 0.22f, 0.8f)
+            YuMarkFrame(
+                moon = 1f, play = 1f,
+                glow = bell(phase(t, 0.15f, 1f)),
+                playScale = 1f - 0.16f * bell(pr),
+                moonTurn = -ORBIT_DEG * 0.5f * bell(sway) * (1f - 0.55f * sway),
+                playDx = PUSH * bell(push),
+            )
         }
     }
 }
@@ -106,34 +145,34 @@ private fun DrawScope.drawMark(f: YuMarkFrame, moon: Path, play: Path, wedge: Pa
         scale(SCALE * k, SCALE * k, pivot = Offset.Zero)
     }) {
         if (f.glow > 0f) {
-            drawCircle(glow, radius = MOON_R * 1.9f, center = moonCentre, alpha = f.glow.coerceIn(0f, 1f))
+            drawCircle(glow, radius = MOON_R * 1.9f, center = moonCentre, alpha = (f.glow * f.alpha).coerceIn(0f, 1f))
         }
-        if (f.moon > 0f) {
+        if (f.moon > 0f && f.alpha > 0f) rotate(f.moonTurn, pivot = moonCentre) {
             val brush = moonBrush
-            if (f.moon >= 1f) drawPath(moon, brush)
+            if (f.moon >= 1f) drawPath(moon, brush, alpha = f.alpha)
             else {
                 wedge.reset()
                 val r = MOON_R + 4f
                 wedge.moveTo(moonCentre.x, moonCentre.y)
                 wedge.arcTo(Rect(moonCentre, r), SWEEP_START, 360f * f.moon, forceMoveTo = false)
                 wedge.close()
-                clipPath(wedge) { drawPath(moon, brush) }
+                clipPath(wedge) { drawPath(moon, brush, alpha = f.alpha) }
                 // The tip of the sweep: a small bright point, like moonlight drawing the edge.
                 val a = (SWEEP_START + 360f * f.moon) * PI.toFloat() / 180f
                 val tip = Offset(moonCentre.x + cos(a) * (MOON_R - 2f), moonCentre.y + sin(a) * (MOON_R - 2f))
-                drawCircle(moonColors[0].copy(alpha = 0.9f * (1f - f.moon)), radius = 2.2f, center = tip)
+                drawCircle(moonColors[0].copy(alpha = 0.9f * (1f - f.moon) * f.alpha), radius = 2.2f, center = tip)
             }
         }
-        if (f.play > 0f) {
+        if (f.play > 0f && f.alpha > 0f) {
             val s = (0.55f + 0.45f * f.play) * f.playScale
-            val dx = (1f - f.play) * -8f
+            val dx = (1f - f.play) * -8f + f.playDx
             withTransform({
                 translate(dx, 0f)
                 scale(s, s, pivot = playCentre)
             }) {
                 val brush = playBrush
-                drawPath(play, brush, alpha = f.play)
-                drawPath(play, brush, alpha = f.play, style = Stroke(width = 5f, join = StrokeJoin.Round, cap = StrokeCap.Round))
+                drawPath(play, brush, alpha = f.play * f.alpha)
+                drawPath(play, brush, alpha = f.play * f.alpha, style = Stroke(width = 5f, join = StrokeJoin.Round, cap = StrokeCap.Round))
             }
         }
     }

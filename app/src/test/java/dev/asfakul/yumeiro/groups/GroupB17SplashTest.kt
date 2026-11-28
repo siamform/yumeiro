@@ -72,6 +72,38 @@ class GroupB17SplashTest {
         assertTrue(SplashMotion.stars.none { val dx = it.x - 0.5f; val dy = it.y - 0.45f; dx * dx + dy * dy < 0.045f })
     }
 
+    /** B17 r27: the two logo parts move differently, and both start and end at rest (no jump from the system splash). */
+    @Test fun crescentOrbitsAndTriangleePushesDifferently() {
+        for (fromSystem in listOf(false, true)) {
+            val f = { t: Float -> SplashMotion.at(t, fromSystem).mark }
+            assertEquals(0f, f(1f).moonTurn, 0.001f); assertEquals(0f, f(1f).playDx, 0.001f)
+            if (fromSystem) { assertEquals(0f, f(0f).moonTurn, 0.001f); assertEquals(0f, f(0f).playDx, 0.001f) }
+            val turn = (1..99).maxOf { kotlin.math.abs(f(it / 100f).moonTurn) }
+            val push = (1..99).maxOf { f(it / 100f).playDx }
+            assertTrue("crescent turns ($turn deg)", turn >= 10f)
+            assertTrue("triangle pushes ($push)", push >= 3f)
+            // Different motion: the turn and the push peak at different moments.
+            val turnPeak = (1..99).maxBy { kotlin.math.abs(f(it / 100f).moonTurn) }
+            val pushPeak = (1..99).maxBy { f(it / 100f).playDx }
+            assertTrue("peaks at $turnPeak and $pushPeak", kotlin.math.abs(turnPeak - pushPeak) >= 10)
+        }
+    }
+
+    /** B17 r27 fail-before (run 46078131306, api36): the logo was still on screen after the splash left. */
+    @Test fun theLeaveRemovesTheLogoBeforeTheHandOver() {
+        val settled = SplashMotion.at(1f, fromSystem = true)
+        assertEquals(settled, SplashMotion.leave(settled, 0f))
+        val mid = SplashMotion.leave(settled, 0.5f)
+        assertTrue(mid.markScale > 1f && mid.mark.alpha in 0.01f..0.99f)
+        for (p in listOf(0.7f, 0.85f, 1f)) {
+            val l = SplashMotion.leave(settled, p)
+            assertEquals("logo gone at $p", 0f, l.mark.alpha, 0.001f)
+            assertEquals(0f, l.title, 0.001f); assertEquals(0f, l.sky, 0.001f)
+        }
+        assertTrue(SplashTiming.ANIM_MS + SplashTiming.LEAVE_MS <= SplashTiming.hold(false, 36))
+        assertTrue(SplashTiming.ANIM_MS + SplashTiming.LEAVE_MS >= 1500)
+    }
+
     @Test fun reducedMotionIsStill() {
         assertEquals(YuMarkFrame.Full, SplashMotion.Still.mark)
         assertEquals(0f, SplashMotion.Still.markRiseDp, 0f)

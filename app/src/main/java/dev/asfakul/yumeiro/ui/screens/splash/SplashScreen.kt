@@ -53,19 +53,31 @@ import kotlinx.coroutines.launch
  * - Android 7–11 (no system splash icon): the crescent is drawn in by a sweep of moonlight first.
  *   Android 12+: the system splash has just shown the whole mark at 288 dp on the page colour, so the
  *   in-app splash starts from that exact picture (no jump, no flash) and the triangle "presses play".
+ * - B17 (r27): the logo's two parts move differently: the crescent turns on an orbit, the triangle presses and
+ *   pushes along its play axis. The splash ends with its own leave (mark drifts forward and dissolves), so the
+ *   logo is gone before Home takes over.
  * - B17: at least 1.5 s on screen ([SplashTiming.hold] + the exit), a tap skips it, and with Remove
  *   animations / reduced motion nothing moves: the still mark and wordmark show, then fade.
  * - B1/B17: it is the only place the big mark is drawn; after its exit it leaves the tree, and it plays once
  *   per process ([SplashGate]), so no logo is left behind or shown again.
  */
 object SplashTiming {
-    /** B17: the whole motion (wash, stars, mark, words). */
-    const val ANIM_MS = 1500
-    /** B17: time before the splash starts to leave (≥ 1.5 s, owner rule), then [EXIT_MS] of fade. */
-    const val HOLD_MS = 1650L
-    const val HOLD_PRESS_MS = 1650L
+    /** B17: the arrival (wash, stars, the crescent's orbit, the triangle's push, words). */
+    const val ANIM_MS = 1300
+    /**
+     * B17: the leave, still inside the splash: the mark drifts toward the viewer and dissolves (crescent keeps
+     * turning, triangle pushes on), words sink. The logo is gone before the splash hands over, so a slow first
+     * frame of Home can never freeze a logo on screen (device run 46078131306: logo still there after it left).
+     */
+    const val LEAVE_MS = 400
+    /** A tap skips to a shorter leave. */
+    const val SKIP_LEAVE_MS = 200
+    /** B17: time from the start of the motion until the splash hands over (≥ 1.5 s, owner rule). */
+    const val HOLD_MS = 1700L
+    const val HOLD_PRESS_MS = 1700L
     const val HOLD_REDUCED_MS = 1500L
-    const val EXIT_MS = 420
+    /** After the hand-over only the plain page colour is left; it fades into Home. */
+    const val EXIT_MS = 180
     const val EXIT_REDUCED_MS = 200
     /**
      * B17: before the motion starts the splash waits (still, on its first frame, which matches the
@@ -98,6 +110,10 @@ object SplashMotion {
         val title: Float,
         val tagline: Float,
         val byline: Float,
+        /** Star and wash strength left (1 = all; 0 = gone, the leave). */
+        val sky: Float = 1f,
+        /** Extra scale of the mark (the leave drifts it toward the viewer). */
+        val markScale: Float = 1f,
     )
 
     private fun ease(t: Float) = dev.asfakul.yumeiro.ui.components.YuMarkGeometry.ease(t)
@@ -119,6 +135,27 @@ object SplashMotion {
             title = ease(phase(t, if (fromSystem) 0.18f else 0.4f, if (fromSystem) 0.5f else 0.7f)),
             tagline = ease(phase(t, if (fromSystem) 0.3f else 0.5f, if (fromSystem) 0.62f else 0.8f)),
             byline = ease(phase(t, 0.55f, 0.9f)),
+        )
+    }
+
+    /**
+     * B17: the leave at [p] 0..1, applied on the settled frame: the crescent keeps turning on its orbit, the
+     * triangle pushes forward, the mark grows toward the viewer and dissolves (fully gone by 70 %), words sink.
+     */
+    fun leave(settled: Frame, p: Float): Frame {
+        if (p <= 0f) return settled
+        val e = ease(p)
+        val fade = 1f - ease(phase(p, 0f, 0.7f))
+        return settled.copy(
+            mark = settled.mark.copy(
+                moonTurn = settled.mark.moonTurn + 26f * e,
+                playDx = settled.mark.playDx + 14f * e,
+                glow = settled.mark.glow * fade,
+                alpha = fade,
+            ),
+            markScale = 1f + 0.32f * e,
+            title = settled.title * fade, tagline = settled.tagline * fade, byline = settled.byline * fade,
+            sky = fade,
         )
     }
 
@@ -160,7 +197,9 @@ object SplashProbe {
     @Volatile var disposedAtNs = 0L
     /** When the motion started (after the main thread calmed down, see [SplashTiming.calm]). */
     @Volatile var motionAtNs = 0L
-    fun reset() { shownAtNs = 0L; finishedAtNs = 0L; disposedAtNs = 0L; motionAtNs = 0L }
+    /** When the leave started (the mark starts to dissolve). */
+    @Volatile var leaveAtNs = 0L
+    fun reset() { shownAtNs = 0L; finishedAtNs = 0L; disposedAtNs = 0L; motionAtNs = 0L; leaveAtNs = 0L }
 }
 
 object SplashGate {
@@ -182,7 +221,9 @@ fun SplashScreen(
     val fromSystem = remember { SplashTiming.startsFromSystemMark() }
     // B17: the one clock. Animatable (not a target-state API) because it is a single imperative timeline.
     val clock = remember { Animatable(if (reduced) 1f else 0f) }
+    val leaving = remember { Animatable(0f) }
     val opening = stringResource(R.string.splash_opening)
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val finish = androidx.compose.runtime.rememberUpdatedState {
         if (SplashProbe.finishedAtNs == 0L) SplashProbe.finishedAtNs = System.nanoTime()
@@ -201,11 +242,18 @@ fun SplashScreen(
             }
         }
         SplashProbe.motionAtNs = System.nanoTime()
-        if (!reduced) launch { clock.animateTo(1f, tween(SplashTiming.ANIM_MS, easing = LinearEasing)) }
-        delay(SplashTiming.hold(reduced))
+        if (reduced) delay(SplashTiming.hold(true))
+        else {
+            // Arrival, then the leave: both on the frame clock, so the hand-over always comes after the frame
+            // where the logo is gone (frame-based, not a timer that can fire while a frame is still pending).
+            clock.animateTo(1f, tween(SplashTiming.ANIM_MS, easing = LinearEasing))
+            SplashProbe.leaveAtNs = System.nanoTime()
+            leaving.animateTo(1f, tween(SplashTiming.LEAVE_MS, easing = LinearEasing))
+            withFrameNanos { }
+        }
         finish.value()
     }
-    fun frame() = if (reduced) SplashMotion.Still else SplashMotion.at(clock.value, fromSystem)
+    fun frame() = if (reduced) SplashMotion.Still else SplashMotion.leave(SplashMotion.at(clock.value, fromSystem), leaving.value)
     androidx.compose.runtime.SideEffect { SplashProbe.compositions++ }
 
     val accent = p.accent
@@ -220,15 +268,24 @@ fun SplashScreen(
             .drawBehind {
                 val t = clock.value
                 val f = frame()
-                if (f.wash > 0f) drawRect(wash, alpha = f.wash)
+                if (f.wash > 0f && f.sky > 0f) drawRect(wash, alpha = f.wash * f.sky)
                 val rise = 10.dp.toPx()
                 for (s in SplashMotion.stars) {
-                    val a = if (reduced) 0.3f else SplashMotion.starAlpha(s, t)
+                    val a = if (reduced) 0.3f else SplashMotion.starAlpha(s, t) * f.sky
                     if (a <= 0f) continue
                     drawCircle(starColor, radius = s.r.dp.toPx(), center = Offset(s.x * size.width, s.y * size.height - rise * t), alpha = a)
                 }
             }
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { finish.value() }
+            // A tap skips the rest, but still through a short leave, so the logo never stays behind.
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                if (reduced) finish.value()
+                else scope.launch {
+                    clock.snapTo(1f)
+                    leaving.animateTo(1f, tween(SplashTiming.SKIP_LEAVE_MS, easing = LinearEasing))
+                    withFrameNanos { }
+                    finish.value()
+                }
+            }
             .semantics { contentDescription = opening }
             .testTag("splash_screen_root"),
         contentAlignment = Alignment.Center,
@@ -237,7 +294,7 @@ fun SplashScreen(
         dev.asfakul.yumeiro.ui.components.YuMark(
             Modifier
                 .size(288.dp)
-                .graphicsLayer { translationY = -frame().markRiseDp.dp.toPx() }
+                .graphicsLayer { val f = frame(); translationY = -f.markRiseDp.dp.toPx(); scaleX = f.markScale; scaleY = f.markScale }
                 .testTag("splash_logo_icon"),
             glowColor = accent,
         ) { frame().mark }

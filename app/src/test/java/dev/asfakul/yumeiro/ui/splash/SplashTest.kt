@@ -60,6 +60,8 @@ class SplashTest {
         rule.setContent { MTPlayerTheme { SplashScreen(onSplashFinished = { done = true }) } }
         rule.mainClock.autoAdvance = false
         rule.onNodeWithTag("splash_screen_root").performClick()
+        // B17 r27: the skip still runs a short leave so the logo never stays behind.
+        rule.mainClock.advanceTimeBy(SplashTiming.SKIP_LEAVE_MS + 100L)
         assertTrue(done)
     }
 }

@@ -1913,8 +1913,8 @@ fun MTPlayerApp(
             visible = showSplash,
             enter = fadeIn(tween(0)),
             exit = if (splashStill) fadeOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_REDUCED_MS))
-            else fadeOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing)) +
-                androidx.compose.animation.scaleOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_MS), targetScale = 1.04f),
+            // B17 r27: the logo has already left inside the splash (its own leave); only the page colour fades.
+            else fadeOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
             label = "splash",
         ) {
             SplashScreen(onSplashFinished = { dev.asfakul.yumeiro.ui.screens.splash.SplashGate.markPlayed(); showSplash = false })
