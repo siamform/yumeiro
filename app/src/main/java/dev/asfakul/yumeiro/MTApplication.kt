@@ -86,6 +86,13 @@ class MTApplication : Application(), ImageLoaderFactory {
             // Precompile the big pattern tables (release tags, audio languages, source facts, Yumix
             // feed rules) here so the first list that shows a card never compiles them on the main thread.
             runCatching { dev.asfakul.yumeiro.text.RegexWarmup.run() }
+            // B20 S6: translated-subtitle folders older than 48 h (unless it is the episode to resume) and over 30 MB.
+            runCatching {
+                dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(app)
+                dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.sweep(app) { api, data ->
+                    dev.asfakul.yumeiro.online.OnlineHistory.progressOf(api, data)?.let { p -> p.durationMs <= 0 || p.positionMs < p.durationMs * 0.92 } ?: false
+                }
+            }
             // E4: measured extension speeds (prefs read, so here and not on main).
             runCatching { dev.asfakul.yumeiro.online.ExtensionSpeed.init(app) }
             // FIND-2: remembered title → source matches (prefs read).

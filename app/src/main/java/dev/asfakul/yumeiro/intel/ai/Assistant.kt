@@ -209,18 +209,19 @@ object Assistant {
         if (cat in FILM && HubDiscover.available()) {
             onStep("Looking it up on TMDB…")
             val kind = if (cat == MediaCategory.MOVIE) "movie" else "tv"
+            val fc: MediaCategory = cat!!
             for (s in seeds) {
                 val m = seedMeta(c, s, listOf(cat!!)) ?: continue
                 seedNames += m.title
                 val id = m.ids.tmdb ?: continue
-                runCatching { HubDiscover.recommend(kind, id.toLong()) }.getOrNull()?.also { tmdbOk = true }?.items?.filter { !it.anime }?.forEach { add(recOf(it, cat), emptyList(), "TMDB recommends it for ${m.title}", "TMDB") }
+                runCatching { HubDiscover.recommend(kind, id.toLong()) }.getOrNull()?.also { tmdbOk = true }?.items?.filter { !it.anime }?.forEach { add(recOf(it, fc), emptyList(), "TMDB recommends it for ${m.title}", "TMDB") }
             }
             val table = if (kind == "movie") HubDiscover.MOVIE_GENRES else HubDiscover.TV_GENRES
             val genreIds = table.filter { (_, name) -> name.split(" & ").any { part -> tagsIn(q, listOf(part)).isNotEmpty() } }.map { it.first }.take(2)
             if (genreIds.isNotEmpty()) {
                 tags = table.filter { it.first in genreIds }.map { it.second }
                 runCatching { HubDiscover.page(HubDiscover.Query(kind, HubDiscover.Sort.TOP, genres = genreIds, minRating = if (wantsUnderrated(q)) 6 else 7)) }.getOrNull()
-                    ?.also { tmdbOk = true }?.items?.filter { !it.anime && (!wantsUnderrated(q) || (it.votes ?: 0) < 3000) }?.forEach { add(recOf(it, cat), emptyList(), "Well rated in ${tags.joinToString(", ")} on TMDB", "TMDB") }
+                    ?.also { tmdbOk = true }?.items?.filter { !it.anime && (!wantsUnderrated(q) || (it.votes ?: 0) < 3000) }?.forEach { add(recOf(it, fc), emptyList(), "Well rated in ${tags.joinToString(", ")} on TMDB", "TMDB") }
             }
         }
         // The profile's For You picks (already ranked against its taste; no network).

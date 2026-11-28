@@ -234,6 +234,8 @@ object OnlineSession {
      */
     fun play(context: Context, detail: OnlineDetail, version: String = defaultVersion(detail.versions), episodeIndex: Int = -1, resumeMs: Long? = null) {
         val app = context.applicationContext
+        appContext = app
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel() // B20 S6: a new title
         OnlineHistory.ensureLoaded(app)
         val episodes = episodesOf(detail, version)
         val index = if (detail.playData != null && episodes.isEmpty()) -1 else episodeIndex.coerceIn(0, (episodes.size - 1).coerceAtLeast(0))
@@ -458,6 +460,18 @@ object OnlineSession {
         if (s.link != null) playCurrent(context.applicationContext, s.linkIndex, positionMs)
     }
 
+    /** B20 S6: subtitles the player should add and turn on now (a translation); no re-resolve. */
+    private val _subtitlePicks = kotlinx.coroutines.flow.MutableSharedFlow<Pair<String, OnlineSubtitle>>(extraBufferCapacity = 4)
+    val subtitlePicks: kotlinx.coroutines.flow.SharedFlow<Pair<String, OnlineSubtitle>> = _subtitlePicks
+
+    /** B20 S6: adds a Yumeiro-made track to this episode; the open player adds it at the same position and selects it. */
+    fun offerSubtitle(subtitle: OnlineSubtitle) {
+        val s = _state.value ?: return
+        val id = s.videoId ?: return
+        _state.value = s.copy(subtitles = (s.subtitles.filter { it.url != subtitle.url }) + subtitle)
+        _subtitlePicks.tryEmit(id to subtitle)
+    }
+
     fun switchSource(context: Context, linkIndex: Int, positionMs: Long) {
         val s = _state.value ?: return
         if (linkIndex !in s.links.indices) return
@@ -574,9 +588,15 @@ object OnlineSession {
     private fun pageFor(s: State): String? =
         CapturePage.pick(s.links.map { it.referer }, s.links.map { it.url }, s.data, s.detail.url)
 
+    /** B20 S6: for clean-up when the player closes ([end] has no context). */
+    @Volatile private var appContext: Context? = null
+
     fun playEpisode(context: Context, index: Int) {
         val s = _state.value ?: return
         if (index !in s.episodes.indices) return
+        // B20 S6: another episode starts, so the last one's translation files go (and its translation stops).
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel()
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.keepOnly(context, dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.keyFor(s.api, s.detail.url, s.episodes[index].data))
         _state.value = s.copy(index = index, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet(), visible = PAGE,
             // NBUG-12 NB12-5: each episode gets its own refresh and page step.
             refreshed = false, captured = false)
@@ -606,6 +626,7 @@ object OnlineSession {
             dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "${version.ifBlank { "That version" }} isn't available for $what yet. Still playing ${s.version.ifBlank { "the current version" }}.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
             return
         }
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel() // B20 S6: other version, other subtitles
         _state.value = s.copy(version = version, episodes = eps, index = idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE,
             refreshed = false, captured = false) // NBUG-12 NB12-5
         resolve(context.applicationContext, null)
@@ -623,6 +644,8 @@ object OnlineSession {
         // BUG-1 (D4): Close runs end() before the player's last save; that save still belongs here.
         val s = _state.value?.takeIf { it.videoId == videoId } ?: ended?.takeIf { it.videoId == videoId } ?: return
         OnlineHistory.record(context.applicationContext, s.detail, s.version, s.episode, positionMs, durationMs)
+        // B20 S6: an episode watched to the end loses its translation files when the player closes.
+        if (durationMs > 0 && positionMs >= durationMs * 0.92) dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.keyOf(s)?.let { dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.markFinished(it) }
         // B20: the same progress feeds this profile's taste (start / substantial / complete / rewatch marks).
         dev.asfakul.yumeiro.intel.TasteRefs.online(s.detail)?.let { ref ->
             runCatching { dev.asfakul.yumeiro.intel.TasteSignals.played(context.applicationContext, ref, s.episode?.data, positionMs, durationMs, s.index, s.episodes.size) }
@@ -642,6 +665,8 @@ object OnlineSession {
     fun end() {
         job?.cancel(); job = null; failoverJob?.cancel(); failoverJob = null
         ended = _state.value?.takeIf { it.videoId != null }
+        ended?.let { e -> dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.keyOf(e)?.let { k -> appContext?.let { dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.onPlayerClosed(it, k) } } }
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel()
         _state.value = null
     }
 

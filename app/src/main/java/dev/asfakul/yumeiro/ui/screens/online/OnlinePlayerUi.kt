@@ -74,6 +74,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -197,7 +200,7 @@ fun BoxScope.OnlinePlayerOverlay(controlsVisible: Boolean, player: dev.asfakul.y
                 when (panel) {
                     Panel.EPISODES -> EpisodesPanel(state) { i -> panel = null; OnlineSession.playEpisode(context, i) }
                     Panel.SOURCES -> SourcesPanel(state, player.selectAudio) { i -> panel = null; OnlineSession.switchSource(context, i, positionMs()) }
-                    Panel.SUBTITLES -> SubtitlesPanel(state) { sub -> panel = null; OnlineSession.addSubtitle(context, sub, positionMs()) }
+                    Panel.SUBTITLES -> SubtitlesPanel(state, positionMs) { sub -> panel = null; OnlineSession.addSubtitle(context, sub, positionMs()) }
                     null -> {}
                 }
             }
@@ -747,7 +750,7 @@ fun OnlineWatchPanel(player: dev.asfakul.yumeiro.ui.screens.video.PlayerHandle?,
                 Column {
                     when (sheet) {
                         Sheet.SOURCES -> SourcesPanel(state, { key -> player?.selectAudio?.invoke(key) == true }) { i -> sheet = null; OnlineSession.switchSource(context, i, player?.positionMs?.invoke() ?: 0L) }
-                        Sheet.SUBTITLES -> SubtitlesPanel(state) { sub -> sheet = null; OnlineSession.addSubtitle(context, sub, player?.positionMs?.invoke() ?: 0L) }
+                        Sheet.SUBTITLES -> SubtitlesPanel(state, { player?.positionMs?.invoke() ?: 0L }) { sub -> sheet = null; OnlineSession.addSubtitle(context, sub, player?.positionMs?.invoke() ?: 0L) }
                         null -> {}
                     }
                 }
@@ -805,7 +808,7 @@ internal fun BoxScope.SkipButton(player: dev.asfakul.yumeiro.ui.screens.video.Pl
 
 /** Searches every subtitle site with a free key (OpenSubtitles, SubDL, SubSource) for the playing title / episode. */
 @Composable
-private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yumeiro.online.OnlineSubtitle) -> Unit) {
+private fun SubtitlesPanel(state: OnlineSession.State, positionMs: () -> Long, onPick: (dev.asfakul.yumeiro.online.OnlineSubtitle) -> Unit) {
     val ink = LocalPanelInk.current
     val errInk = if (ink.luminance() > 0.5f) ErrorColor else Color(0xFFB3261E)
     val context = LocalContext.current
@@ -831,6 +834,8 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
         busy = false
     }
     LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // B20 S6: translate this episode's English subtitles.
+        item(key = "translate") { TranslateSubtitlesCard(positionMs) }
         item {
             Text(
                 if (state.subtitles.isEmpty()) "No subtitles came with this source." else "${state.subtitles.size} subtitle track${if (state.subtitles.size == 1) "" else "s"} from the source — pick them in Captions.",
@@ -867,6 +872,80 @@ private fun SubtitlesPanel(state: OnlineSession.State, onPick: (dev.asfakul.yume
                 }
                 if (fetching == r.key) CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
             }
+        }
+    }
+}
+
+/**
+ * B20 S6: the subtitle translation controls: language, Translated / Romanised / Both, the engine when there is a
+ * choice, and progress. Work runs in [dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate] (it outlives the panel).
+ */
+@Composable
+private fun TranslateSubtitlesCard(positionMs: () -> Long) {
+    val ink = LocalPanelInk.current
+    val context = LocalContext.current
+    val tl = dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate
+    val status by tl.status.collectAsState()
+    var settings by remember { mutableStateOf(tl.settings(context)) }
+    val engines = remember { tl.engines(context) }
+    val engine = tl.engineFor(context, settings)
+    val latin = dev.asfakul.yumeiro.subtitles.translate.Romanize.supports(settings.target)
+    val busy = status is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Finding || status is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Translating
+    @Composable
+    fun Chip(label: String, on: Boolean, tag: String, click: () -> Unit) {
+        Text(
+            label, color = if (on) Color.Black else ink, fontSize = 12.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+            modifier = Modifier.clip(yuRound(16)).background(if (on) SpotifyGreen else ink.copy(alpha = 0.08f))
+                .clickable(enabled = !busy) { click() }.padding(horizontal = 12.dp, vertical = 7.dp).testTag(tag),
+        )
+    }
+    Column(
+        Modifier.fillMaxWidth().clip(yuRound(14)).background(ink.copy(alpha = 0.06f)).padding(12.dp).testTag("subtitle_translate_card"),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("Translate subtitles", color = ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(
+            when (engine) {
+                dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Engine.DEVICE -> "Uses this episode's English subtitles. Translated on this phone (the language pack downloads once)."
+                dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Engine.AI -> "Uses this episode's English subtitles. Translated by your Yumeiro AI provider; the lines are sent to it."
+                null -> "On TV, subtitles are translated by Yumeiro AI. Add a free key in Settings → Yumeiro AI."
+            },
+            color = ink.copy(alpha = 0.6f), fontSize = 11.sp,
+        )
+        Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            tl.TARGETS.forEach { (code, name) -> Chip(name, settings.target == code, "subtitle_translate_lang_$code") { settings = settings.copy(target = code) } }
+        }
+        if (latin) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Mode.entries.forEach { m -> Chip(m.label, settings.mode == m, "subtitle_translate_mode_${m.code}") { settings = settings.copy(mode = m) } }
+        }
+        if (engines.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            engines.forEach { e -> Chip(e.label, engine == e, "subtitle_translate_engine_${e.code}") { settings = settings.copy(engine = e) } }
+        }
+        when (val st = status) {
+            is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Finding -> Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(color = SpotifyGreen, strokeWidth = 2.dp, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(8.dp))
+                Text(st.what, color = ink.copy(alpha = 0.7f), fontSize = 12.sp)
+            }
+            is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Translating -> Column(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { if (st.total == 0) 0f else st.done.toFloat() / st.total }, color = SpotifyGreen, trackColor = ink.copy(alpha = 0.12f),
+                    modifier = Modifier.fillMaxWidth().testTag("subtitle_translate_progress"),
+                )
+                Text("${st.done} of ${st.total} lines · ${st.source}. Keep watching; the track turns on when it's done.", color = ink.copy(alpha = 0.6f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+            is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Ready ->
+                Text("${st.label} is on (from ${st.source}). The original is still in Captions.", color = SpotifyGreen, fontSize = 12.sp, modifier = Modifier.testTag("subtitle_translate_ready"))
+            is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Failed ->
+                Text(st.message, color = ErrorColor, fontSize = 12.sp, modifier = Modifier.testTag("subtitle_translate_error"))
+            else -> {}
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (busy) androidx.compose.material3.OutlinedButton(onClick = { tl.cancel() }, modifier = Modifier.testTag("subtitle_translate_stop")) { Text("Stop", color = ink) }
+            else androidx.compose.material3.Button(
+                onClick = { tl.start(context, positionMs(), settings) }, enabled = engine != null,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = Color.Black),
+                modifier = Modifier.testTag("subtitle_translate_start"),
+            ) { Text(if (status is dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.Status.Ready) "Make another" else "Translate") }
         }
     }
 }

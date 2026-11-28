@@ -171,7 +171,11 @@ data class OnlineLink(
 private val AUDIO_NAME_RX = Regex("""\((mp3|m4a|aac|flac|ogg|opus|wav|vbr mp3)\)""", RegexOption.IGNORE_CASE)
 private val AUDIO_EXT = setOf("mp3", "m4a", "aac", "flac", "oga", "opus", "wav", "wma", "ogg")
 
-data class OnlineSubtitle(val language: String, val url: String, val headers: Map<String, String>)
+data class OnlineSubtitle(
+    val language: String, val url: String, val headers: Map<String, String>,
+    /** B20 S6: made by Yumeiro (a translation); turned on when added and never offered as "more from the source". */
+    val auto: Boolean = false,
+)
 
 /** Events while resolving links for one title / episode. */
 sealed interface LinkEvent {

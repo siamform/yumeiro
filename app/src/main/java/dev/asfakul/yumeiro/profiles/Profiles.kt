@@ -377,6 +377,8 @@ object Profiles {
         "play_counts", "mt_player_music_prefs", "activity_log",
         // B21: the profile's own AI provider, model and choices (its key is a sealed secret, see AiSettings).
         "intel_ai",
+        // B20 S6: the profile's subtitle translation language, style and engine.
+        "sub_tl",
     )
 
     internal fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")

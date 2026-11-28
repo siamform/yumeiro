@@ -112,11 +112,17 @@ object SubDL {
     /** SubDL refuses titles with these characters; each becomes a space (keeps "Grey s Anatomy" searchable). */
     internal fun sanitizeTitle(title: String): String = title.replace(RX_SUBDL_1, " ").replace(RX_SUBDL_2, " ").trim()
 
-    fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String): List<SubtitleHit> {
+    /** B20 S6: [tmdbId] is used when there is no IMDb id, [year] narrows a name search (both in SubDL's API doc). */
+    fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String,
+               tmdbId: Int? = null, year: Int? = null): List<SubtitleHit> {
         val key = OnlineSettings.subdlKey.value.ifBlank { throw IllegalStateException("Add a free SubDL API key in Settings → Subtitles & intros") }
         val url = API.toHttpUrl().newBuilder().apply {
             addQueryParameter("api_key", key)
-            if (!imdbId.isNullOrBlank()) addQueryParameter("imdb_id", imdbId) else addQueryParameter("film_name", sanitizeTitle(title))
+            when {
+                !imdbId.isNullOrBlank() -> addQueryParameter("imdb_id", imdbId)
+                tmdbId != null -> addQueryParameter("tmdb_id", tmdbId.toString())
+                else -> { addQueryParameter("film_name", sanitizeTitle(title)); year?.let { addQueryParameter("year", it.toString()) } }
+            }
             if (season != null || episode != null) addQueryParameter("type", "tv")
             season?.let { addQueryParameter("season_number", it.toString()) }
             episode?.let { addQueryParameter("episode_number", it.toString()) }
