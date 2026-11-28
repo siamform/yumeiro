@@ -56,6 +56,7 @@ object NavActive {
             NavPrefs.Shortcut.WATCH_TOGETHER -> r == Screen.WatchTogether.route
             NavPrefs.Shortcut.SETTINGS, NavPrefs.Shortcut.PROFILES -> r == Screen.Settings.route
             NavPrefs.Shortcut.TRACKING -> r == Screen.Tracking.route
+            NavPrefs.Shortcut.ASSISTANT -> r.startsWith("assistant")
             NavPrefs.Shortcut.STATS -> r == Screen.Stats.route
             NavPrefs.Shortcut.UPCOMING -> r == Screen.OnlineUpcoming.route
             NavPrefs.Shortcut.READING -> r == Screen.ReadingLibrary.route

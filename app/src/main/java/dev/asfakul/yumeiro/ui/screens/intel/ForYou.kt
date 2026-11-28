@@ -140,9 +140,11 @@ fun ForYouShelf(category: MediaCategory, onOpen: (Discovery.Rec) -> Unit, modifi
     if (shelf.recs.isEmpty()) return
     var why by remember { mutableStateOf<Discovery.Rec?>(null) }
     Column(modifier.fillMaxWidth().testTag("for_you_${category.code}")) {
+        val ask = LocalAssistantOpener.current
         YuSection(
             "推薦", "For you", category.shelfTitle(),
             modifier = Modifier.padding(horizontal = gutter),
+            action = if (ask != null) "Ask AI" else null, onAction = ask?.let { { it(category) } }, actionTag = "for_you_ask",
         )
         shelf.crossFrom?.let { from ->
             Text("From your ${from.label.lowercase()} taste", color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = gutter).padding(bottom = 8.dp).testTag("for_you_cross"))
@@ -315,6 +317,9 @@ fun SimilarByStory(ref: TasteSignals.Ref?, modifier: Modifier = Modifier, gutter
 /** The app's pick opener (title pages read it; MTPlayerApp provides it). */
 val LocalRecOpener = androidx.compose.runtime.staticCompositionLocalOf<((Discovery.Rec) -> Unit)?> { null }
 
+/** B21: opens the assistant for a category (null = everything); provided by the app shell. */
+val LocalAssistantOpener = androidx.compose.runtime.staticCompositionLocalOf<((MediaCategory?) -> Unit)?> { null }
+
 /** Where a pick asks the installed sources by name (manga and novel homes read it once when they open). */
 object IntelSearchPending {
     @Volatile var manga: String? = null
@@ -343,7 +348,9 @@ fun ForYouMix(onOpen: (Discovery.Rec) -> Unit, modifier: Modifier = Modifier, gu
     if (mixed.isEmpty()) return
     var why by remember { mutableStateOf<Discovery.Rec?>(null) }
     Column(modifier.fillMaxWidth().testTag("for_you_home")) {
-        YuSection("推薦", "For you", "Picked from your taste", modifier = Modifier.padding(horizontal = gutter))
+        val ask = LocalAssistantOpener.current
+        YuSection("推薦", "For you", "Picked from your taste", modifier = Modifier.padding(horizontal = gutter),
+            action = if (ask != null) "Ask AI" else null, onAction = ask?.let { { it(null) } }, actionTag = "for_you_ask")
         LazyRow(contentPadding = PaddingValues(horizontal = gutter), horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
             itemsIndexed(mixed, key = { _, r -> r.category.code + r.key }) { _, r ->
                 RecCard(r, onClick = { Discovery.opened(context, r); onOpen(r) }, onMore = { why = r }, category = r.category)

@@ -28,6 +28,7 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -135,6 +136,8 @@ fun MTTopBar(
     searchDescription: String = "Search your library",
     /** TV-4 (ADR-036): runs the committed library query as an online Yumix search; null = no button. */
     onSearchOnline: ((String) -> Unit)? = null,
+    /** B21: opens the assistant for this tab's category; null = no button (not set up). */
+    onAssistantClick: (() -> Unit)? = null,
 ) {
     var isSearchExpanded by rememberSaveable { mutableStateOf(false) }
     // The text last committed; suggestions hide until the user types something new.
@@ -298,6 +301,12 @@ fun MTTopBar(
                         contentDescription = searchDescription,
                         onClick = { if (onSearchClick != null) onSearchClick() else isSearchExpanded = true },
                         modifier = Modifier.testTag("topbar_search_action")
+                    )
+                    if (onAssistantClick != null) TopAction(
+                        icon = Icons.Default.AutoAwesome,
+                        contentDescription = "Ask Yumeiro AI",
+                        onClick = onAssistantClick,
+                        modifier = Modifier.testTag("topbar_assistant_action")
                     )
                     TopAction(
                         icon = if (unreadCount > 0) Icons.Default.NotificationsActive else Icons.Outlined.Notifications,

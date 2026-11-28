@@ -299,6 +299,15 @@ fun MTPlayerApp(
         }
     }
 
+    // B21: the assistant space, opened for a category (null = everything) from every section.
+    val openAssistant: (dev.asfakul.yumeiro.intel.MediaCategory?) -> Unit = remember(navigateSub) {
+        { c -> navigateSub(Screen.Assistant.route(c?.code)) }
+    }
+    val aiProfile by dev.asfakul.yumeiro.profiles.Profiles.currentFlow.collectAsStateWithLifecycle()
+    // Re-read on a profile switch: each profile has its own provider and key.
+    androidx.compose.runtime.LaunchedEffect(aiProfile) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.intel.ai.AiSettings.get(context) } }
+    val aiConfig by dev.asfakul.yumeiro.intel.ai.AiSettings.config.collectAsStateWithLifecycle()
+
     // Extensions that open another title (CloudStream's loadResult) land on our title page.
     androidx.compose.runtime.DisposableEffect(navigateSub) {
         com.lagradost.cloudstream3.utils.AppContextUtils.opener = { url, api, _ -> navigateSub(Screen.OnlineTitle.route(api, url)) }
@@ -571,6 +580,7 @@ fun MTPlayerApp(
         dev.asfakul.yumeiro.ui.components.LocalIsPlaying provides playbackState.isPlaying,
         dev.asfakul.yumeiro.ui.components.LocalCurrentTrackId provides playbackState.currentTrack?.id,
         dev.asfakul.yumeiro.ui.components.LocalReducedMotion provides reducedMotionOn,
+        dev.asfakul.yumeiro.ui.screens.intel.LocalAssistantOpener provides openAssistant,
         dev.asfakul.yumeiro.ui.components.LocalOfflineExits provides offlineExits,
         dev.asfakul.yumeiro.ui.theme.LocalAmbientColor provides ambientColor,
     ) {
@@ -651,6 +661,14 @@ fun MTPlayerApp(
                             else -> "Search your library"
                         },
                         offline = !isOnline,
+                        // B21: once the assistant is set up, one tap from every tab (Home has its Spaces tile instead).
+                        onAssistantClick = if (aiConfig.ready && aiConfig.forAssistant && tabRoute != Screen.Home.route) ({
+                            openAssistant(when {
+                                tabRoute == Screen.Music.route -> dev.asfakul.yumeiro.intel.MediaCategory.MUSIC
+                                tabRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> dev.asfakul.yumeiro.intel.MediaCategory.YOUTUBE
+                                else -> null
+                            })
+                        }) else null,
                         onSearchOnline = if (onlineSearchFlag) ({ q ->
                             dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = q
                             navigateSub(Screen.OnlineSearch.route)
@@ -709,6 +727,7 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TRACKING -> navigateSub(Screen.Tracking.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.ASSISTANT -> openAssistant(null)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.NETWORK_STREAM -> {
                 dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch.openLink()
                 openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
@@ -863,6 +882,7 @@ fun MTPlayerApp(
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.TELEGRAM -> navigateSub(Screen.Telegram.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PROFILES -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PROFILES)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.STATS -> navigateSub(Screen.Stats.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.ASSISTANT -> openAssistant(null)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NOVELS -> navigateSub(Screen.Novels.route)
@@ -1408,6 +1428,14 @@ fun MTPlayerApp(
                     }
                     page(subPad, Screen.AiSettings.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.AiSettingsScreen(onBack = popSub) }
+                    }
+                    page(subPad, Screen.Assistant.route, arguments = listOf(navArgument(Screen.Assistant.ARG) { type = NavType.StringType; defaultValue = "" })) { entry ->
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.intel.AssistantScreen(
+                                initialCategory = dev.asfakul.yumeiro.intel.MediaCategory.of(entry.arguments?.getString(Screen.Assistant.ARG)?.ifBlank { null }),
+                                onBack = popSub, onOpenSettings = { navigateSub(Screen.AiSettings.route) }, onOpenRec = openRec,
+                            )
+                        }
                     }
                     page(subPad, Screen.YouTubeAccount.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.YouTubeAccountScreen(onBack = popSub) }

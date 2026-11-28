@@ -7,6 +7,8 @@ package dev.asfakul.yumeiro.ui.navigation
 
 import android.content.Context
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Download
@@ -112,6 +114,8 @@ object NavPrefs {
         STATS("stats", "Your statistics", "Streaks, totals and the activity map", nav("stats", "Stats", Icons.Filled.Insights, Icons.Outlined.Insights), newer = true),
         UPCOMING("upcoming", "Airing soon", "New episodes of what you follow", nav("upcoming", "Airing", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth), newer = true),
         READING("reading", "Reading", "Manga and books you read", nav("reading", "Reading", Icons.Filled.AutoStories, Icons.Outlined.AutoStories), newer = true),
+        // B21: the assistant space, pinnable to the bar (phone) or the rail (TV).
+        ASSISTANT("assistant", "Yumeiro AI", "Ask for what to watch or read next", nav("assistant", "AI", Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome)),
         TRACKING("tracking", "Tracking", "AniList and MyAnimeList sync", nav("tracking", "Tracking", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges), newer = true),
         // H-12 (owner item 12): straight to "Play link" (URL, M3U8, MPD, RTSP, magnet), the Network Stream page.
         NETWORK_STREAM("network_stream", "Network stream", "Play a link: URL, M3U8, DASH, RTSP or magnet", nav("network_stream", "Stream", Icons.Filled.Link, Icons.Outlined.Link)),

@@ -108,6 +108,11 @@ sealed class Screen(val route: String) {
     data object Privacy : Screen("settings/privacy")
     data object Tracking : Screen("settings/tracking")
     data object AiSettings : Screen("settings/ai")
+    /** B21: the assistant space; [ARG] = a MediaCategory code or empty (everything). */
+    data object Assistant : Screen("assistant?cat={cat}") {
+        const val ARG = "cat"
+        fun route(cat: String? = null): String = "assistant?cat=${cat.orEmpty()}"
+    }
     data object YouTubeAccount : Screen("settings/youtube")
     data object Backup : Screen("settings/backup")
     data object WatchTogether : Screen("watch/together")

@@ -81,7 +81,7 @@ class GroupB13NavActiveTest {
                 "manga", "novels", Screen.Downloads.route, Screen.Extensions.route, Screen.SourcesHub.route, Screen.OnlineSearch.route,
                 Screen.WebSites.route, Screen.Telegram.route, Screen.Sports.route, Screen.OnlineLibrary.route, Screen.OnlineHistory.route,
                 Screen.ExtensionMarket.route, Screen.SourceHealth.route, Screen.Equalizer.route, Screen.WatchTogether.route,
-                Screen.Settings.route, Screen.Tracking.route, Screen.Stats.route, Screen.OnlineUpcoming.route, Screen.ReadingLibrary.route,
+                Screen.Settings.route, Screen.Tracking.route, Screen.Stats.route, Screen.OnlineUpcoming.route, Screen.ReadingLibrary.route, Screen.Assistant.route(),
             ).map { State(it, "online", "device") }
         dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.entries
             .filter { it != dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.INBOX }

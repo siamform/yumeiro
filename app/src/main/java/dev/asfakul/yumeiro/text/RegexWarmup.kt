@@ -44,6 +44,7 @@ object RegexWarmup {
         "dev.asfakul.yumeiro.intel.MetaCache", // B20 description clean-up
         "dev.asfakul.yumeiro.intel.ai.AiHttp", // B21 AI replies
         "dev.asfakul.yumeiro.intel.ai.AiSettings", // B21 Cloudflare account id
+        "dev.asfakul.yumeiro.intel.ai.Assistant", // B21 question parsing
         "dev.asfakul.yumeiro.sports.SportsScores",
         "dev.asfakul.yumeiro.tracking.Trakt",
         "dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch",
