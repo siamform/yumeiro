@@ -8,6 +8,7 @@ package dev.asfakul.yumeiro
 import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -153,7 +154,7 @@ class GroupZR27TrackingShotsDeviceTest {
         OnlineSettings.init(ctx)
         OnlineSettings.setSubdlKey(ctx, ""); OnlineSettings.setSecret(ctx, "subdl_user", null)
         dev.asfakul.yumeiro.tracking.Kitsu.signOut(ctx)
-        rule.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { Box(Modifier.fillMaxSize()) { TrackingScreen(onBack = {}); AppMessageHost() } } } }
+        rule.setContent { CompositionLocalProvider(LocalTvMode provides tv) { MTPlayerTheme { Box(Modifier.fillMaxSize().background(dev.asfakul.yumeiro.ui.theme.DarkBackground)) { TrackingScreen(onBack = {}); AppMessageHost() } } } }
         assertTrue(waitFor(20_000) { has("tracking_screen") })
     }
 

@@ -473,12 +473,14 @@ fun SubPageHeader(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     if (handleBack) BackHandler(onBack = onBack)
-    Row(
-        modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    // Z-HEADER: a page with many header icons (Extensions has seven) used to squeeze the title to one letter.
+    // The title keeps at least SubPageHeaderLayout.MIN_TITLE; when the icons don't fit beside it they move to a
+    // second line under the title, aligned to the end, so every page keeps a readable name.
+    androidx.compose.ui.layout.Layout(
+        modifier = modifier.fillMaxWidth().statusBarsPadding().padding(start = 4.dp, end = 4.dp, top = 6.dp, bottom = 4.dp),
+        content = {
         YumeIconButton(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack, modifier = Modifier.testTag("subpage_back"))
-        Column(Modifier.weight(1f).padding(start = 4.dp)) {
+        Column(Modifier.padding(start = 4.dp)) {
             // Editorial overline: the page's kanji in the accent, then the brand (設定 · YUMEIRO).
             // The kanji is decorative, so TalkBack skips it; the title below is the heading.
             val kana = if (kanaEnabled()) androidx.compose.runtime.remember(title) { Kana.forTitle(title) } else null
@@ -495,8 +497,32 @@ fun SubPageHeader(
                 modifier = Modifier.padding(top = 2.dp).testTag("subpage_title").semantics { heading() })
             subtitle?.let { Text(it, color = TextSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp)) }
         }
-        actions()
+        Row(Modifier.testTag("subpage_actions"), verticalAlignment = Alignment.CenterVertically) { actions() }
+        },
+    ) { measurables, constraints ->
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val width = constraints.maxWidth
+        val back = measurables[0].measure(loose)
+        val acts = measurables[2].measure(loose.copy(maxWidth = width))
+        val minTitle = SubPageHeaderLayout.MIN_TITLE.roundToPx()
+        val wrap = SubPageHeaderLayout.wraps(width, back.width, acts.width, minTitle)
+        val titleMax = (if (wrap) width - back.width else width - back.width - acts.width).coerceAtLeast(0)
+        val title = measurables[1].measure(loose.copy(maxWidth = titleMax))
+        val line1 = maxOf(back.height, title.height, if (wrap) 0 else acts.height)
+        val height = (if (wrap) line1 + acts.height else line1).coerceIn(constraints.minHeight, constraints.maxHeight)
+        layout(width, height) {
+            back.placeRelative(0, (line1 - back.height) / 2)
+            title.placeRelative(back.width, (line1 - title.height) / 2)
+            if (wrap) acts.placeRelative(width - acts.width, line1)
+            else acts.placeRelative(width - acts.width, (line1 - acts.height) / 2)
+        }
     }
+}
+
+/** Pure rule for [SubPageHeader]: icons go to a second line when they would leave the title less than [MIN_TITLE]. */
+object SubPageHeaderLayout {
+    val MIN_TITLE = 136.dp
+    fun wraps(width: Int, back: Int, actions: Int, minTitle: Int): Boolean = actions > 0 && width - back - actions < minTitle
 }
 
 // endregion
