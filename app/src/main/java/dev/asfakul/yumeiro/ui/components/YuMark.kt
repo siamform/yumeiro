@@ -109,7 +109,8 @@ data class YuMarkFrame(
         fun press(t: Float): YuMarkFrame = with(YuMarkGeometry) {
             val sway = phase(t, 0.04f, 0.78f)
             val pr = phase(t, 0f, 0.5f)
-            val push = phase(t, 0.22f, 0.8f)
+            // The push comes after the sway's peak (13 % of the splash clock apart), so the parts clearly move on their own.
+            val push = phase(t, 0.4f, 0.95f)
             YuMarkFrame(
                 moon = 1f, play = 1f,
                 glow = bell(phase(t, 0.15f, 1f)),

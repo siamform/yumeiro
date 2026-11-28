@@ -209,11 +209,13 @@ object Trakt {
     /** What happened to one play. [NOT_FOUND]: Trakt has no such title; [SIGNED_OUT]: sign in again. */
     enum class Sent { ADDED, NOT_FOUND, SIGNED_OUT, REJECTED }
 
+    private val IMDB_ID = Regex("tt\\d{5,10}")
+
     /** The `ids` object for a title: TMDB and/or IMDb when the source knows them, else the Trakt id. */
     internal fun ids(tmdb: Int?, imdb: String?, trakt: Long?): JSONObject? {
         val o = JSONObject()
         if (tmdb != null && tmdb > 0) o.put("tmdb", tmdb)
-        imdb?.trim()?.takeIf { Regex("tt\\d{5,10}").matches(it) }?.let { o.put("imdb", it) }
+        imdb?.trim()?.takeIf { IMDB_ID.matches(it) }?.let { o.put("imdb", it) }
         if (o.length() == 0 && trakt != null && trakt > 0) o.put("trakt", trakt)
         return o.takeIf { it.length() > 0 }
     }

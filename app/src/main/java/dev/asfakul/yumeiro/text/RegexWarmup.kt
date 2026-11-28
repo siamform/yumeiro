@@ -40,6 +40,9 @@ object RegexWarmup {
 
     /** JVM names of the classes whose static initialiser compiles patterns. */
     val CLASSES: List<String> = listOf(
+        "dev.asfakul.yumeiro.sports.SportsScores",
+        "dev.asfakul.yumeiro.tracking.Trakt",
+        "dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch",
         "dev.asfakul.yumeiro.online.vault.VaultHtml", // F1 Vault data block
         "dev.asfakul.yumeiro.online.vault.VaultLinks", // F1 Vault link rules
         "dev.asfakul.yumeiro.online.TitleDedupe",

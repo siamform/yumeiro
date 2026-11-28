@@ -217,7 +217,7 @@ private fun Periods(sides: List<SportsScores.DetailSide>) {
     ) {
         Row {
             Spacer(Modifier.weight(1f))
-            for (i in 1..n) Text("$i", color = TextTertiary, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 30.dp))
+            for (i in 1..n) Text(i.toString(), color = TextTertiary, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 30.dp))
         }
         sides.forEach { s ->
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -281,8 +281,8 @@ private fun FormBlock(f: SportsScores.Form, dateFmt: DateTimeFormatter) {
                     stringResource(if (g.atHome) R.string.sports_detail_vs else R.string.sports_detail_at, g.opponent) + if (i == 0) " · " + stringResource(R.string.sports_detail_last) else "",
                     color = TextPrimary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                 )
-                if (g.own != null && g.other != null) Text("${g.own}–${g.other}", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"))
-                g.date?.let { Text("  " + it.atZone(zone).toLocalDate().format(dateFmt), color = TextTertiary, style = MaterialTheme.typography.labelSmall) }
+                if (g.own != null && g.other != null) Text(listOf(g.own, g.other).joinToString("–"), color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"))
+                g.date?.let { Text(it.atZone(zone).toLocalDate().format(dateFmt), color = TextTertiary, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 8.dp)) }
             }
         }
     }

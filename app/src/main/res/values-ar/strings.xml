@@ -1070,4 +1070,8 @@
     <string name="sports_detail_vs">ضد %1$s</string>
     <string name="sports_detail_at">في ملعب %1$s</string>
     <string name="sports_detail_last">آخر مباراة</string>
+    <string name="subdl_api_key_title">مفتاح SubDL API</string>
+    <string name="subdl_api_key_hint">الصق المفتاح من صفحة API في لوحة SubDL. يتحقق Yumeiro منه مع SubDL قبل الحفظ.</string>
+    <string name="subdl_get_free_key">احصل على مفتاحك المجاني  ·  subdl.com</string>
+    <string name="subdl_api_key_label">مفتاح API</string>
 </resources>

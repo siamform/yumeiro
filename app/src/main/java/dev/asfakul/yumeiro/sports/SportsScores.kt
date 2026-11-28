@@ -365,7 +365,8 @@ object SportsScores {
             val h = statsOf(homeId); val a = statsOf(awayId)
             for ((label, hv) in h) {
                 val av = a[label] ?: continue
-                val shown = label.split(' ').joinToString(" ") { w -> if (w.length > 1 && w.all { it.isUpperCase() }) w.lowercase().replaceFirstChar { it.uppercase() } else w }
+                // Shouted words read calmer in title case; short abbreviations (FG, FT, PIM) stay as they are.
+                val shown = label.split(' ').joinToString(" ") { w -> if (w.length > 3 && w.all { it.isUpperCase() }) w.lowercase().replaceFirstChar { it.uppercase() } else w }
                 stats += StatLine(shown, statValue(label, hv), statValue(label, av))
                 if (stats.size >= MAX_STATS) break
             }

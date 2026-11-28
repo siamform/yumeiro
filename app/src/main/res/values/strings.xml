@@ -1069,4 +1069,8 @@
     <string name="sports_detail_vs">vs %1$s</string>
     <string name="sports_detail_at">at %1$s</string>
     <string name="sports_detail_last">last match</string>
+    <string name="subdl_api_key_title">SubDL API key</string>
+    <string name="subdl_api_key_hint">Paste the key from the API page of your SubDL panel. Yumeiro checks it with SubDL before saving.</string>
+    <string name="subdl_get_free_key">Get your free key  ·  subdl.com</string>
+    <string name="subdl_api_key_label">API key</string>
 </resources>

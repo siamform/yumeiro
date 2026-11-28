@@ -189,13 +189,13 @@ internal fun SubDlKeyDialog(onDismiss: () -> Unit, onLinked: (String) -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     TsukiDialog(
         onDismissRequest = { if (!busy) onDismiss() },
-        title = { Text("SubDL API key") },
+        title = { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_api_key_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Paste the key from the API page of your SubDL panel. Yumeiro checks it with SubDL before saving.", color = TextSecondary, fontSize = 13.sp)
+                Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_api_key_hint), color = TextSecondary, fontSize = 13.sp)
                 TextButton(onClick = { dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, dev.asfakul.yumeiro.online.subtitles.SubDL.KEY_PAGE) },
-                    modifier = Modifier.testTag("subdl_key_page")) { Text("Get your free key  ·  subdl.com", color = SpotifyGreen, fontSize = 13.sp) }
-                OutlinedTextField(key, { key = it; error = null }, singleLine = true, enabled = !busy, label = { Text("API key") },
+                    modifier = Modifier.testTag("subdl_key_page")) { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_get_free_key), color = SpotifyGreen, fontSize = 13.sp) }
+                OutlinedTextField(key, { key = it; error = null }, singleLine = true, enabled = !busy, label = { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_api_key_label)) },
                     visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth().testTag("subdl_key_field"))
                 error?.let { e ->
                     Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 13.sp,

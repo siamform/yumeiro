@@ -8,8 +8,6 @@ package dev.asfakul.yumeiro.ui.screens.splash
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -234,6 +232,10 @@ fun SplashScreen(
     }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { SplashProbe.disposedAtNs = System.nanoTime() } }
     LaunchedEffect(Unit) {
+        // B17 (run 46105382358, tv-api24): the effect starts before the first frame reaches the screen; on a slow
+        // device the page stayed blank for ~0.5 s of the hold. The hold starts once the first frame is drawn.
+        withFrameNanos { }
+        withFrameNanos { }
         SplashProbe.shownAtNs = System.nanoTime()
         if (!reduced) {
             val gaps = ArrayList<Long>()
@@ -249,9 +251,12 @@ fun SplashScreen(
         else {
             // Arrival, then the leave: both on the frame clock, so the hand-over always comes after the frame
             // where the logo is gone (frame-based, not a timer that can fire while a frame is still pending).
-            clock.animateTo(1f, tween(SplashTiming.ANIM_MS, easing = LinearEasing))
+            // On the frame clock itself, not a tween: a tween follows the process's animator duration scale, which
+            // on Android 7 is not refreshed in a running process (run 46105382358: the arrival ran in ~0 ms and
+            // the splash held 555 ms). Whether to animate at all is decided above from the user's setting.
+            clock.runOnFrames(SplashTiming.ANIM_MS)
             SplashProbe.leaveAtNs = System.nanoTime()
-            leaving.animateTo(1f, tween(SplashTiming.LEAVE_MS, easing = LinearEasing))
+            leaving.runOnFrames(SplashTiming.LEAVE_MS)
             withFrameNanos { }
         }
         finish.value()
@@ -286,7 +291,7 @@ fun SplashScreen(
                 if (reduced) finish.value()
                 else scope.launch {
                     clock.snapTo(1f)
-                    leaving.animateTo(1f, tween(SplashTiming.SKIP_LEAVE_MS, easing = LinearEasing))
+                    leaving.runOnFrames(SplashTiming.SKIP_LEAVE_MS)
                     withFrameNanos { }
                     finish.value()
                 }
@@ -330,5 +335,17 @@ fun SplashScreen(
                 .padding(bottom = 24.dp)
                 .graphicsLayer { alpha = frame().byline },
         )
+    }
+}
+
+/** Runs this value from where it is to 1 over [ms] of frame time (vsync timestamps), one step per frame. */
+private suspend fun Animatable<Float, *>.runOnFrames(ms: Int) {
+    val from = value
+    val start = withFrameNanos { it }
+    while (true) {
+        val t = withFrameNanos { it }
+        val f = ((t - start) / 1_000_000.0 / ms).coerceIn(0.0, 1.0).toFloat()
+        snapTo(from + (1f - from) * f)
+        if (f >= 1f) break
     }
 }

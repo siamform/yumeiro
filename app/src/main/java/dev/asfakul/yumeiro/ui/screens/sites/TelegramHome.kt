@@ -173,6 +173,7 @@ fun TelegramHome(onBack: () -> Unit) {
 
     if (help) TsukiDialog(
         onDismissRequest = { help = false },
+        title = { Text(SetupGuides.telegram.title) },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) { dev.asfakul.yumeiro.ui.screens.settings.GuideBody(SetupGuides.telegram) } },
         confirmButton = { TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text(stringResource(R.string.got_it)) } },
     )

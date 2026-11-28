@@ -171,7 +171,11 @@ class GroupB17SplashDeviceTest {
             val ui = m.getMetric(FrameMetrics.UNKNOWN_DELAY_DURATION) + m.getMetric(FrameMetrics.INPUT_HANDLING_DURATION) +
                 m.getMetric(FrameMetrics.ANIMATION_DURATION) + m.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION) +
                 m.getMetric(FrameMetrics.DRAW_DURATION) + m.getMetric(FrameMetrics.SYNC_DURATION)
-            frames += longArrayOf(m.getMetric(FrameMetrics.VSYNC_TIMESTAMP), m.getMetric(FrameMetrics.TOTAL_DURATION), ui)
+            // VSYNC_TIMESTAMP is Android 8+; on Android 7 (tv-api24, run 46105382358: 0 frames) the frame's end time
+            // minus its total duration stands in for it.
+            val total = m.getMetric(FrameMetrics.TOTAL_DURATION)
+            val vsync = if (android.os.Build.VERSION.SDK_INT >= 26) m.getMetric(FrameMetrics.VSYNC_TIMESTAMP) else System.nanoTime() - total
+            frames += longArrayOf(vsync, total, ui)
         }
         val app = ctx.applicationContext as Application
         val cb = object : Application.ActivityLifecycleCallbacks {

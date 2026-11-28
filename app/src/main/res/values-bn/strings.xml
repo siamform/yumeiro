@@ -1070,4 +1070,8 @@
     <string name="sports_detail_vs">বনাম %1$s</string>
     <string name="sports_detail_at">%1$s-এর মাঠে</string>
     <string name="sports_detail_last">শেষ ম্যাচ</string>
+    <string name="subdl_api_key_title">SubDL API কি</string>
+    <string name="subdl_api_key_hint">আপনার SubDL প্যানেলের API পেজ থেকে কি-টি পেস্ট করুন। সেভ করার আগে Yumeiro SubDL-এর সাথে এটি যাচাই করে।</string>
+    <string name="subdl_get_free_key">ফ্রি কি নিন  ·  subdl.com</string>
+    <string name="subdl_api_key_label">API কি</string>
 </resources>
