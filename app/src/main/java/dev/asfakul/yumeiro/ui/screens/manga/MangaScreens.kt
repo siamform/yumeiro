@@ -177,6 +177,8 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
         submitted = q; feed = Feed.SEARCH; savedOnly = false
     }
     val barHide = dev.asfakul.yumeiro.ui.components.rememberHideOnScrollState()
+    // B20: a For You pick from elsewhere (Home) arrives as a search of the chosen source.
+    LaunchedEffect(Unit) { dev.asfakul.yumeiro.ui.screens.intel.IntelSearchPending.takeManga()?.let { query = it.take(80); searchOpen = true } }
 
     Column(Modifier.fillMaxSize().testTag("manga_home")) {
         SubPageHeader(
@@ -222,7 +224,7 @@ fun MangaHomeScreen(onBack: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpen
             val saved = library.filter { it.saved }
             when {
                 savedOnly -> SavedGrid(saved, onOpenTitle)
-                provider != null -> MangaGrid(provider, feed, submitted, library, onOpenTitle, onResume)
+                provider != null -> MangaGrid(provider, feed, submitted, library, onOpenTitle, onResume, onRec = { r -> query = r.title.take(80); searchOpen = true })
             }
         }
     }
@@ -305,7 +307,7 @@ private fun MangaSourceSheet(providers: List<MangaProvider>, selected: String?, 
 }
 
 @Composable
-private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, library: List<MangaLibrary.Entry>, onOpen: (MangaItem) -> Unit, onResume: ((MangaLibrary.Entry) -> Unit)? = null) {
+private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, library: List<MangaLibrary.Entry>, onOpen: (MangaItem) -> Unit, onResume: ((MangaLibrary.Entry) -> Unit)? = null, onRec: ((dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit)? = null) {
     val items = remember(provider.id, feed, query) { mutableStateListOf<MangaItem>() }
     var page by remember(provider.id, feed, query) { mutableStateOf(0) }
     var hasNext by remember(provider.id, feed, query) { mutableStateOf(true) }
@@ -349,6 +351,10 @@ private fun MangaGrid(provider: MangaProvider, feed: Feed, query: String, librar
                     }
                 }
             }
+        }
+        // B20: manga picked from this profile's taste (its manga, else its anime); a pick searches this source.
+        if (onRec != null && feed != Feed.SEARCH) item(span = { GridItemSpan(maxLineSpan) }, key = "for_you", contentType = "for_you") {
+            dev.asfakul.yumeiro.ui.screens.intel.ForYouShelf(dev.asfakul.yumeiro.intel.MediaCategory.MANGA, onOpen = onRec)
         }
         items(items, key = { it.url }, contentType = { "cover" }) { m -> Cover(m, null) { onOpen(it) } }
         // SKELETON-2: cover placeholders in the grid's own shape instead of a spinner.
@@ -473,6 +479,8 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                     modifier = Modifier.padding(top = 8.dp).clickable { open = !open })
             } }
             if (details != null) item("taste") { dev.asfakul.yumeiro.ui.screens.intel.TasteFeedbackRow(tasteRef, Modifier.padding(top = 10.dp)) }
+            // B20: manga alike in characters and story (AniList tags).
+            if (details != null) item("similar_story") { dev.asfakul.yumeiro.ui.screens.intel.SimilarByStory(tasteRef, Modifier.padding(top = 8.dp)) }
             error?.let { e -> item("err") { StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { attempt++ }) } }
             if (chapters == null && error == null) item("loading") {
                 dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 6, modifier = Modifier.padding(top = 12.dp))

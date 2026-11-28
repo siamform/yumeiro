@@ -95,6 +95,7 @@ object HomeLayout {
     val sections = listOf(
         "episodes" to "New episodes",
         "spaces" to "Your spaces",
+        "foryou" to "For you",
         "moods" to "Mood of the hour",
         "discover" to "Discover",
         "new" to "New arrivals",

@@ -282,6 +282,23 @@ fun MTPlayerApp(
         { item -> dev.asfakul.yumeiro.online.OnlineSession.open(context, item) { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) } }
     }
 
+    // B20: a For You / Similar pick opens its catalog title page (films, series, anime found by name and year);
+    // otherwise the installed sources are searched by its name, so availability is never claimed without a search.
+    val recScope = androidx.compose.runtime.rememberCoroutineScope()
+    val openRec: (dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit = remember(navigateSub) {
+        { r ->
+            recScope.launch {
+                val item = dev.asfakul.yumeiro.intel.Discovery.resolve(r)
+                when {
+                    item != null -> navigateSub(Screen.OnlineTitle.route(item.api, item.url))
+                    r.category == dev.asfakul.yumeiro.intel.MediaCategory.MANGA -> { dev.asfakul.yumeiro.ui.screens.intel.IntelSearchPending.manga = r.title; navigateSub(Screen.Manga.route) }
+                    r.category == dev.asfakul.yumeiro.intel.MediaCategory.NOVEL -> { dev.asfakul.yumeiro.ui.screens.intel.IntelSearchPending.novel = r.title; navigateSub(Screen.Novels.route) }
+                    else -> { dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = r.title; navigateSub(Screen.OnlineSearch.route) }
+                }
+            }
+        }
+    }
+
     // Extensions that open another title (CloudStream's loadResult) land on our title page.
     androidx.compose.runtime.DisposableEffect(navigateSub) {
         com.lagradost.cloudstream3.utils.AppContextUtils.opener = { url, api, _ -> navigateSub(Screen.OnlineTitle.route(api, url)) }
@@ -874,6 +891,7 @@ fun MTPlayerApp(
                                 onOpenManga = { navigateSub(Screen.Manga.route) },
                                 onOpenSources = { navigateSub(Screen.SourcesHub.route()) },
                                 onOpenOnlineTitle = openOnline,
+                                onOpenRec = openRec,
                                 onOpenYouTube = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE; navigateTop(Screen.Videos.route) },
                                 onOpenHues = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                                 onOpenLive = { openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE) },
@@ -1024,6 +1042,7 @@ fun MTPlayerApp(
                                     onOpenInfo = { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) },
                                     onOpenLibrary = { navigateSub(Screen.OnlineLibrary.route) },
                                     onOpenUpcoming = { navigateSub(Screen.OnlineUpcoming.route) },
+                                    onOpenRec = openRec,
                                 )
                             } else {
                             VideoScreen(
@@ -1207,6 +1226,7 @@ fun MTPlayerApp(
                         ),
                     ) { entry ->
                         OpaquePage {
+                        androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.screens.intel.LocalRecOpener provides openRec) {
                         OnlineDetailScreen(
                             api = entry.arguments?.getString(Screen.OnlineTitle.ARG_API).orEmpty(),
                             url = entry.arguments?.getString(Screen.OnlineTitle.ARG_URL).orEmpty(),
@@ -1214,6 +1234,7 @@ fun MTPlayerApp(
                             onOpenTitle = openOnline,
                             onOpenExtensions = { navigateSub(Screen.Extensions.route) },
                         )
+                        }
                         }
                     }
                     page(
@@ -1323,12 +1344,14 @@ fun MTPlayerApp(
                     }
                     page(subPad, Screen.NovelTitle.route, arguments = listOf("p", "u", "t", "i").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
                         val a = entry.arguments
+                        androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.screens.intel.LocalRecOpener provides openRec) {
                         OpaquePage {
                             dev.asfakul.yumeiro.ui.screens.novel.NovelDetailScreen(
                                 pluginId = a?.getString("p").orEmpty(), path = a?.getString("u").orEmpty(), name = a?.getString("t").orEmpty(),
                                 cover = a?.getString("i")?.takeIf { it.isNotBlank() }, onBack = popSub,
                                 onRead = { n, ch -> navigateSub(Screen.NovelReader.route(n.pluginId, n.path, n.name, ch.path)) },
                             )
+                        }
                         }
                     }
                     page(subPad, Screen.NovelReader.route, arguments = listOf("p", "u", "t", "c").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
@@ -1357,6 +1380,7 @@ fun MTPlayerApp(
                     }
                     page(subPad, Screen.MangaTitle.route, arguments = listOf("p", "u", "t", "i").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
                         val a = entry.arguments
+                        androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.screens.intel.LocalRecOpener provides openRec) {
                         OpaquePage {
                             dev.asfakul.yumeiro.ui.screens.manga.MangaDetailScreen(
                                 providerId = a?.getString("p").orEmpty(), url = a?.getString("u").orEmpty(), title = a?.getString("t").orEmpty(),
@@ -1364,6 +1388,7 @@ fun MTPlayerApp(
                                 onBack = popSub,
                                 onRead = { m, ch -> navigateSub(Screen.MangaReader.route(m.providerId, m.url, m.title, ch.url, ch.name)) },
                             )
+                        }
                         }
                     }
                     page(subPad, Screen.MangaReader.route, arguments = listOf("p", "u", "t", "c", "n").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->

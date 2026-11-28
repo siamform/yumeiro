@@ -383,6 +383,9 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                 }
             }
         }
+        // B20: anime alike in characters and story (AniList tags), beside the source's own "More like this".
+        val similarRef = dev.asfakul.yumeiro.intel.TasteRefs.online(d)?.takeIf { it.category == dev.asfakul.yumeiro.intel.MediaCategory.ANIME }
+        if (similarRef != null) item("similar_story") { dev.asfakul.yumeiro.ui.screens.intel.SimilarByStory(similarRef, gutter = 16.dp) }
         if (d.recommendations.isNotEmpty()) {
             item("recs") {
                 Column {

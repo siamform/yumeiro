@@ -146,6 +146,8 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
     var submitted by rememberSaveable { mutableStateOf("") }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var sourceSheet by rememberSaveable { mutableStateOf(false) }
+    // B20: a For You pick from elsewhere (Home) arrives as a search of every novel source.
+    LaunchedEffect(Unit) { dev.asfakul.yumeiro.ui.screens.intel.IntelSearchPending.takeNovel()?.let { query = it.take(80); searchOpen = true } }
     LaunchedEffect(query) {
         val q = query.trim()
         if (q.isEmpty()) { submitted = ""; return@LaunchedEffect }
@@ -218,10 +220,12 @@ fun NovelHomeScreen(onBack: () -> Unit, onOpenNovel: (NovelItem) -> Unit, onOpen
                     // Group X (B5): Continue reading, newest first; a tap reopens the chapter at the exact line.
                     val continuing = remember(library) { library.values.filter { it.readAt > 0 && !it.chapterPath.isNullOrBlank() }.sortedByDescending { it.readAt }.take(10) }
                     val resume = onResume
-                    if (all) BrowseAllGrid(feed == Feed.LATEST, onOpenNovel, reading, continuing, resume)
+                    // B20: a For You pick searches every novel source by its name.
+                    val pick: (dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit = { r -> query = r.title.take(80); searchOpen = true }
+                    if (all) BrowseAllGrid(feed == Feed.LATEST, onOpenNovel, reading, continuing, resume, onRec = pick)
                     else if (plugin != null) BrowseGrid(plugin, feed == Feed.LATEST, onOpenNovel, reading,
                         onUnusable = if (state.installed.size > 1 && noFallback != plugin.id) ({ fellBackFrom = plugin.id }) else null,
-                        continuing = continuing, onResume = resume)
+                        continuing = continuing, onResume = resume, onRec = pick)
                 }
             }
         }
@@ -258,7 +262,7 @@ private fun NovelError(pluginId: String, title: String, error: String, testTag: 
 
 @Composable
 private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry? = null, onUnusable: (() -> Unit)? = null,
-    continuing: List<NovelLibrary.Entry> = emptyList(), onResume: ((NovelLibrary.Entry) -> Unit)? = null) {
+    continuing: List<NovelLibrary.Entry> = emptyList(), onResume: ((NovelLibrary.Entry) -> Unit)? = null, onRec: ((dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit)? = null) {
     val context = LocalContext.current
     val items = remember(plugin.id, latest) { mutableStateListOf<NovelItem>() }
     var page by remember(plugin.id, latest) { mutableIntStateOf(1) }
@@ -303,6 +307,7 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
             }
         }
         novelContinueRow(continuing, onResume)
+        novelForYouRow(onRec)
         itemsIndexed(items, key = { _, it -> it.path }) { _, it -> NovelCover(it, null) { n -> onOpen(n) } }
         // SKELETON-2: cover placeholders in the grid's own shape instead of a spinner.
         if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(items.isNotEmpty()), key = { "sk_$it" }, contentType = { "skeleton" }) {
@@ -320,7 +325,7 @@ private fun BrowseGrid(plugin: NovelPlugin, latest: Boolean, onOpen: (NovelItem)
  * stops being asked.
  */
 @Composable
-private fun BrowseAllGrid(latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry?, continuing: List<NovelLibrary.Entry> = emptyList(), onResume: ((NovelLibrary.Entry) -> Unit)? = null) {
+private fun BrowseAllGrid(latest: Boolean, onOpen: (NovelItem) -> Unit, reading: NovelLibrary.Entry?, continuing: List<NovelLibrary.Entry> = emptyList(), onResume: ((NovelLibrary.Entry) -> Unit)? = null, onRec: ((dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit)? = null) {
     val context = LocalContext.current
     val state by NovelSources.state.collectAsState()
     val ids = state.installed.map { it.id }
@@ -377,6 +382,7 @@ private fun BrowseAllGrid(latest: Boolean, onOpen: (NovelItem) -> Unit, reading:
             }
         }
         novelContinueRow(continuing, onResume)
+        novelForYouRow(onRec)
         itemsIndexed(items, key = { _, it -> it.pluginId + "|" + it.path }) { _, it -> NovelCover(it, names[it.pluginId]) { n -> onOpen(n) } }
         if (loading) items(dev.asfakul.yumeiro.ui.components.skeletonCells(true), key = { "sk_$it" }, contentType = { "skeleton" }) {
             dev.asfakul.yumeiro.ui.components.CoverSkeleton()
@@ -411,6 +417,14 @@ private fun SearchAllResults(query: String, onOpen: (NovelItem) -> Unit) {
 }
 
 /** Group X (B5): "Continue reading" across the grid's width; each cover reopens its chapter at the saved line. */
+/** B20: novels picked from this profile's taste (its novels, else its manga or anime). */
+private fun androidx.compose.foundation.lazy.grid.LazyGridScope.novelForYouRow(onRec: ((dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit)?) {
+    if (onRec == null) return
+    item(key = "novel_for_you", span = { GridItemSpan(maxLineSpan) }, contentType = "for_you") {
+        dev.asfakul.yumeiro.ui.screens.intel.ForYouShelf(dev.asfakul.yumeiro.intel.MediaCategory.NOVEL, onOpen = onRec)
+    }
+}
+
 private fun androidx.compose.foundation.lazy.grid.LazyGridScope.novelContinueRow(continuing: List<NovelLibrary.Entry>, onResume: ((NovelLibrary.Entry) -> Unit)?) {
     if (continuing.isEmpty() || onResume == null) return
     item(key = "novel_continue", span = { GridItemSpan(maxLineSpan) }, contentType = "continue") {
@@ -626,6 +640,8 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp).heightIn(min = 48.dp).testTag("novel_read"),
                 ) { Text(if (resume != null) "Continue · ${resume.name}" else "Start reading", maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold) }
                 dev.asfakul.yumeiro.ui.screens.intel.TasteFeedbackRow(tasteRef, Modifier.padding(top = 12.dp))
+                // B20: novels alike in characters and story (AniList tags).
+                dev.asfakul.yumeiro.ui.screens.intel.SimilarByStory(tasteRef, Modifier.padding(top = 8.dp))
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.chapters), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     TextButton(onClick = { newestFirst = !newestFirst }, modifier = Modifier.testTag("novel_order")) { Text(if (newestFirst) "Newest first" else "First first", color = TextSecondary) }

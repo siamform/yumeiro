@@ -271,6 +271,8 @@ fun HomeScreen(
      */
     onOpenShortcut: (HomeShortcut) -> Unit = {},
     onOpenOnlineTitle: (OnlineItem) -> Unit = {},
+    /** B20: opens a For You pick (its catalog title, or a search of the installed sources by name). */
+    onOpenRec: (dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit = {},
     /** Opens one extension row on its own page (paged "See all"). */
     onOpenRow: (OnlineRow) -> Unit = {},
     /** Number of installed + enabled extension packages (the Extensions tile). */
@@ -654,6 +656,14 @@ fun HomeScreen(
                         else -> EpisodesEmpty(hasSources = huesCount > 0, onFind = onOpenHues, onAddSources = onOpenHueStore)
                     }
                 }
+            }
+
+            // ---- 推薦 For you (B20: this profile's taste, per kind of media) -------------------------------
+            if ("foryou" !in hidden) {
+                item(key = "completion_prompt", contentType = "prompt") {
+                    dev.asfakul.yumeiro.ui.screens.intel.CompletionPrompt(Modifier.padding(top = 16.dp))
+                }
+                item(key = "for_you", contentType = "for_you") { dev.asfakul.yumeiro.ui.screens.intel.ForYouMix(onOpen = onOpenRec) }
             }
 
             // ---- 気分 Mood of the hour --------------------------------------------------------------

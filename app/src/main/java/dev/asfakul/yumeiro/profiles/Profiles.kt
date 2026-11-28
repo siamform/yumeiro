@@ -314,7 +314,7 @@ object Profiles {
         if (id != DEFAULT) return remove(context, id)
         val app = context.applicationContext
         // B20: pending taste writes land first, then the whole taste folder (signals, picks, AI context, chats) goes.
-        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.unload() }
+        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.unload(); dev.asfakul.yumeiro.intel.Discovery.unload() }
         PROFILE_FILES.forEach { File(app.filesDir, it).delete() }
         File(app.filesDir, "intel").deleteRecursively()
         app.getSharedPreferences("yt_history", Context.MODE_PRIVATE).edit().clear().commit()

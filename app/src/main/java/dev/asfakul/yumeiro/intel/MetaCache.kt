@@ -63,6 +63,8 @@ object MetaCache {
     private val running = java.util.concurrent.atomic.AtomicBoolean(false)
     private val aniGate = Mutex()
     @Volatile private var lastAniAt = 0L
+    /** AniList spacing (rate limit 30/min while degraded); tests shorten it. */
+    @Volatile internal var spacingMs = SPACING_MS
     @Volatile private var pausedUntil = 0L
 
     /** AniList GraphQL: (query, variables) → `data`, or throws. Tests replace it. */
@@ -119,7 +121,7 @@ object MetaCache {
     /** Tests: waits until the queue is empty. */
     internal suspend fun idle(timeoutMs: Long = 10_000) { withTimeoutOrNull(timeoutMs) { while (running.get() || queue.isNotEmpty()) delay(20) } }
 
-    internal fun resetForTests() { queue.clear(); tried.clear(); pausedUntil = 0; lastAniAt = 0 }
+    internal fun resetForTests() { queue.clear(); tried.clear(); pausedUntil = 0; lastAniAt = 0; spacingMs = SPACING_MS }
 
     // endregion
 
@@ -158,7 +160,7 @@ object MetaCache {
     internal suspend fun ani(q: String, v: JSONObject): JSONObject? = aniGate.withLock {
         val now = System.currentTimeMillis()
         if (now < pausedUntil) throw java.io.IOException("AniList paused (rate limit)")
-        val wait = lastAniAt + SPACING_MS - now
+        val wait = lastAniAt + spacingMs - now
         if (wait > 0) delay(wait)
         lastAniAt = System.currentTimeMillis()
         try { aniList(q, v) } catch (e: dev.asfakul.yumeiro.online.anime.AnimeIds.HttpError) {
@@ -248,6 +250,10 @@ object MetaCache {
         val id = tmdb
         return cached(c, "tm:$kind:$id") { hubGet("/title?type=$kind&id=$id")?.let { parseHubTitle(it, kind) } }
     }
+
+    /** A catalog title by its TMDB id (cached 30 days; shared with the lookups above). */
+    internal suspend fun filmById(c: Context, id: Int, kind: String): Meta? =
+        cached(c, "tm:$kind:$id") { hubGet("/title?type=$kind&id=$id")?.let { parseHubTitle(it, kind) } }
 
     /** Pure: `/v1/hub/title` → [Meta]: genres (genre aspect) and TMDB keywords (story themes). */
     internal fun parseHubTitle(body: String, kind: String): Meta? {
