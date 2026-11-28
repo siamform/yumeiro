@@ -218,7 +218,7 @@ fun AssistantScreen(initialCategory: MediaCategory?, onBack: () -> Unit, onOpenS
     if (historyOpen) ModalBottomSheet(onDismissRequest = { historyOpen = false }, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(), containerColor = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current.surface) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp).testTag("assistant_history_sheet")) {
             Text(stringResource(R.string.as_past_chats), color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Text(stringResource(if (dev.asfakul.yumeiro.security.Privacy.incognito.value) R.string.as_history_incognito else R.string.as_history_hint), color = TextTertiary, fontSize = 12.sp)
+            Text(stringResource(if (dev.asfakul.yumeiro.security.Privacy.incognito.collectAsState().value) R.string.as_history_incognito else R.string.as_history_hint), color = TextTertiary, fontSize = 12.sp)
             Spacer(Modifier.height(8.dp))
             if (chats.isEmpty()) Text(stringResource(R.string.as_no_chats), color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(vertical = 16.dp))
             LazyColumn(Modifier.heightIn(max = 420.dp)) {
