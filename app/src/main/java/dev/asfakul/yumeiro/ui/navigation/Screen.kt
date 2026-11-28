@@ -107,6 +107,7 @@ sealed class Screen(val route: String) {
     }
     data object Privacy : Screen("settings/privacy")
     data object Tracking : Screen("settings/tracking")
+    data object AiSettings : Screen("settings/ai")
     data object YouTubeAccount : Screen("settings/youtube")
     data object Backup : Screen("settings/backup")
     data object WatchTogether : Screen("watch/together")

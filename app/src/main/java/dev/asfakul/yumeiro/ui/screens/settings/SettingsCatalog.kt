@@ -97,6 +97,8 @@ object SettingsCatalog {
         TRACKING(Group.SOURCES, "Tracking", "AniList, MyAnimeList, Kitsu, Trakt, Simkl and Last.fm sign-in",
             listOf("anilist", "mal", "myanimelist", "kitsu", "trakt", "simkl", "sync", "list", "progress", "account", "scrobble"), route = "tracking",
             settings = listOf("Scrobble what I play", "Last.fm", "Tracking V2")),
+        AI(Group.SOURCES, "Yumeiro AI", "Optional: your own free Gemini, OpenRouter, Groq or Cloudflare key for the Assistant and subtitle translation",
+            listOf("ai", "assistant", "gemini", "openrouter", "groq", "cloudflare", "ollama", "llm", "chatgpt", "api key", "translate", "recommend"), route = "ai"),
         YOUTUBE(Group.SOURCES, "YouTube account", "Optional sign-in for blocked or age-restricted videos",
             listOf("google", "login", "sign in", "bot", "age", "cookies", "cookie", "paste", "token", "youtube music"), route = "youtube"),
         TOGETHER(Group.SOURCES, "Watch together", "Sync playback with people on the same Wi-Fi",

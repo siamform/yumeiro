@@ -1406,6 +1406,9 @@ fun MTPlayerApp(
                     page(subPad, Screen.Tracking.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = popSub) }
                     }
+                    page(subPad, Screen.AiSettings.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.AiSettingsScreen(onBack = popSub) }
+                    }
                     page(subPad, Screen.YouTubeAccount.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.YouTubeAccountScreen(onBack = popSub) }
                     }
@@ -1505,6 +1508,7 @@ fun MTPlayerApp(
                                 navigateSub(when (page) {
                                     "sources" -> Screen.SourcesHub.route()
                                     "tracking" -> Screen.Tracking.route
+                                    "ai" -> Screen.AiSettings.route
                                     "backup" -> Screen.Backup.route
                                     "together" -> Screen.WatchTogether.route
                                     "health" -> Screen.SourceHealth.route

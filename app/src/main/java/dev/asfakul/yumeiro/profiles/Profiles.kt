@@ -250,6 +250,7 @@ object Profiles {
         runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.removeProfile(context, id) } // B19: its downloads and their files
         File(root(context), id).deleteRecursively()
         SCOPED_PREFS.forEach { name -> runCatching { context.applicationContext.deleteSharedPreferences("$name@p$id") } }
+        runCatching { dev.asfakul.yumeiro.intel.ai.AiSettings.forgetProfile(context, id) } // B21: its AI key
         runCatching { ProfileScope.dropProfile(context, id) } // F-19-EXT: its own extensions / repositories go with it
         _all.value = _all.value.filterNot { it.id == id }
         if (_current.value == id) _current.value = DEFAULT
@@ -314,7 +315,7 @@ object Profiles {
         if (id != DEFAULT) return remove(context, id)
         val app = context.applicationContext
         // B20: pending taste writes land first, then the whole taste folder (signals, picks, AI context, chats) goes.
-        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.unload(); dev.asfakul.yumeiro.intel.Discovery.unload() }
+        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.unload(); dev.asfakul.yumeiro.intel.Discovery.unload(); dev.asfakul.yumeiro.intel.ai.AiContext.unload() }
         PROFILE_FILES.forEach { File(app.filesDir, it).delete() }
         File(app.filesDir, "intel").deleteRecursively()
         app.getSharedPreferences("yt_history", Context.MODE_PRIVATE).edit().clear().commit()
@@ -323,6 +324,7 @@ object Profiles {
         app.getSharedPreferences("online_settings", Context.MODE_PRIVATE).edit().putBoolean("adult", false).commit()
         runCatching { dev.asfakul.yumeiro.online.download.PrivateDownloads.removeProfile(context, DEFAULT) }
         runCatching { ProfilePhotos.file(context, DEFAULT).delete() }
+        runCatching { dev.asfakul.yumeiro.intel.ai.AiSettings.forgetProfile(context, DEFAULT) } // B21: its AI key
         replace(context, DEFAULT) { it.copy(pinHash = null, salt = null, biometric = false, photo = 0L) }
         clearGuard(context, DEFAULT)
         return true
@@ -363,7 +365,7 @@ object Profiles {
     }
 
     /** B19: the default profile's own files that stay out of a backup made from another profile while it is locked. */
-    private val PRIVATE_PREFS = setOf("play_counts", "mt_player_music_prefs", "activity_log", "yt_history", "private_vault", "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen")
+    private val PRIVATE_PREFS = setOf("play_counts", "mt_player_music_prefs", "activity_log", "yt_history", "private_vault", "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen", "intel_ai")
 
     /** Preference files that are kept per profile (removed with the profile). */
     val SCOPED_PREFS = listOf(
@@ -373,6 +375,8 @@ object Profiles {
         "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen",
         // B20-A2: music favourites, playlists and plays, Home "Most played" and the activity statistics.
         "play_counts", "mt_player_music_prefs", "activity_log",
+        // B21: the profile's own AI provider, model and choices (its key is a sealed secret, see AiSettings).
+        "intel_ai",
     )
 
     internal fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")

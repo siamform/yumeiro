@@ -262,6 +262,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         dev.asfakul.yumeiro.player.LastPlayed.init(application)
         // Round 2, order 5: Home → Jump back in reads online watch history too; it used to load
         // only when a Yumix page opened, so the card was stale until then.
+        // B21: the assistant's context knows this profile's most played artists (play counts are per profile).
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            repository.mostPlayedTracks.collect { tracks ->
+                dev.asfakul.yumeiro.intel.ai.AiContext.musicArtists = tracks.take(100).map { it.artist }
+                    .filter { it.isNotBlank() && !it.equals("<unknown>", true) && !it.equals("Unknown artist", true) }
+                    .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(10).map { it.key }
+            }
+        }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             runCatching { dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(application) }
             runCatching { dev.asfakul.yumeiro.youtube.YtHistory.load(application) }
