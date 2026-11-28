@@ -47,6 +47,7 @@ class DiscoveryTest {
     private val cozy = listOf(t("Iyashikei"), t("Slice of Life", Aspect.GENRE, 1f), t("Food"), t("Female Protagonist", Aspect.CHARACTERS))
 
     @Before fun setUp() {
+        dev.asfakul.yumeiro.AppStartupForTests.await()
         Profiles.resetForTests(ctx)
         TasteSignals.resetForTests()
         Discovery.resetForTests()

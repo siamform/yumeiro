@@ -39,6 +39,7 @@ class AiTest {
     private var server: MockWebServer? = null
 
     @Before fun setUp() {
+        dev.asfakul.yumeiro.AppStartupForTests.await()
         Profiles.resetForTests(ctx)
         AiSettings.clear(ctx); AiSettings.unload()
         AiHttp.client = { OkHttpClient() }

@@ -40,6 +40,7 @@ class TasteSignalsTest {
         TasteSignals.Ref(key, cat, title, sourceTags = listOf("Thriller", "Mystery"))
 
     @Before fun setUp() {
+        dev.asfakul.yumeiro.AppStartupForTests.await()
         Profiles.resetForTests(ctx)
         TasteSignals.resetForTests()
         TasteSignals.clock = { now }

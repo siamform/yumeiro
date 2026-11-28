@@ -26,6 +26,7 @@ class PrepStoreTest {
     private val day = 24 * 60 * 60_000L
     private val t0 = 1_800_000_000_000L
 
+    @org.junit.Before fun waitForStartup() = dev.asfakul.yumeiro.AppStartupForTests.await()
     @After fun tearDown() = PrepStore.resetForTest()
 
     @Test fun missesAreRememberedForSixHours() {

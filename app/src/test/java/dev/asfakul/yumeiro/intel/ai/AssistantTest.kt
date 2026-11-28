@@ -33,7 +33,7 @@ import org.robolectric.annotation.Config
 class AssistantTest {
     private val ctx: Context = ApplicationProvider.getApplicationContext()
 
-    @Before fun setUp() { Profiles.resetForTests(ctx); AssistantChats.unload(); Privacy.setIncognito(ctx, false) }
+    @Before fun setUp() { dev.asfakul.yumeiro.AppStartupForTests.await(); Profiles.resetForTests(ctx); AssistantChats.unload(); Privacy.setIncognito(ctx, false) }
     @After fun tearDown() { runCatching { AssistantChats.clear(ctx) }; AssistantChats.unload(); Privacy.setIncognito(ctx, false); Profiles.resetForTests(ctx) }
 
     @Test fun categoriesInKeepsTheOrderTheyAreNamed() {
