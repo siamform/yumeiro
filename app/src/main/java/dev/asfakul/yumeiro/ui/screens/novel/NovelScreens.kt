@@ -581,6 +581,11 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
     }
     val d = details
     val item = NovelItem(pluginId, d?.name ?: name, path, d?.cover ?: cover)
+    // B20: this profile opened the novel (weak interest); its genres stand in until AniList's tags arrive.
+    val tasteRef = remember(pluginId, path, item.name, d) { dev.asfakul.yumeiro.intel.TasteRefs.novel(pluginId, path, item.name, item.cover, d?.genres.orEmpty()) }
+    LaunchedEffect(d != null) {
+        if (d != null) withContext(Dispatchers.IO) { runCatching { dev.asfakul.yumeiro.intel.TasteSignals.opened(context, tasteRef) } }
+    }
     Column(Modifier.fillMaxSize().testTag("novel_detail")) {
         SubPageHeader(title = d?.name ?: name, onBack = onBack, subtitle = NovelSources.plugin(pluginId)?.name) {
             val saved = entry?.saved == true
@@ -620,6 +625,7 @@ fun NovelDetailScreen(pluginId: String, path: String, name: String, cover: Strin
                     onClick = { onRead(item, start) }, colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                     modifier = Modifier.fillMaxWidth().padding(top = 14.dp).heightIn(min = 48.dp).testTag("novel_read"),
                 ) { Text(if (resume != null) "Continue · ${resume.name}" else "Start reading", maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold) }
+                dev.asfakul.yumeiro.ui.screens.intel.TasteFeedbackRow(tasteRef, Modifier.padding(top = 12.dp))
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.chapters), color = TextPrimary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     TextButton(onClick = { newestFirst = !newestFirst }, modifier = Modifier.testTag("novel_order")) { Text(if (newestFirst) "Newest first" else "First first", color = TextSecondary) }
@@ -681,6 +687,8 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
     val item = NovelItem(pluginId, details?.name ?: name, path, details?.cover)
     // The chapter loads before the novel's details may arrive: progress always uses the latest of both.
     val where by rememberUpdatedState(Triple(item, chapter, index))
+    // B20: the last chapter completes the novel, known only when the whole chapter list is loaded (one page).
+    val chapterCount by rememberUpdatedState(if ((details?.totalPages ?: 1) <= 1) chapters.size else 0)
 
     var spot by remember { mutableFloatStateOf(0f) }
     // The spot when the text size was changed (taken at the tap, before the paragraphs change height).
@@ -714,7 +722,7 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
         if (restoredFor != current) return@LaunchedEffect
         snapshotFlow { spot }.debounce(500).collect { s ->
             val (it0, ch0, ix0) = where
-            withContext(Dispatchers.IO) { NovelLibrary.progress(context, it0, ch0, ix0, s) }
+            withContext(Dispatchers.IO) { NovelLibrary.progress(context, it0, ch0, ix0, s, total = chapterCount) }
         }
     }
     // A new text size keeps the same line at the top (the paragraphs change height; the share into one does not).
@@ -733,7 +741,7 @@ fun NovelReaderScreen(pluginId: String, path: String, name: String, chapterPath:
         val keep = {
             if (restoredFor == current && paras != null) {
                 val (it0, ch0, ix0) = where; val s = spot
-                ReadingSaves.scope.launch { NovelLibrary.progress(context, it0, ch0, ix0, s) }
+                ReadingSaves.scope.launch { NovelLibrary.progress(context, it0, ch0, ix0, s, total = chapterCount) }
             }
         }
         val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) keep() }

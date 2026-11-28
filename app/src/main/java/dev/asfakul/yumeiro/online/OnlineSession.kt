@@ -623,6 +623,10 @@ object OnlineSession {
         // BUG-1 (D4): Close runs end() before the player's last save; that save still belongs here.
         val s = _state.value?.takeIf { it.videoId == videoId } ?: ended?.takeIf { it.videoId == videoId } ?: return
         OnlineHistory.record(context.applicationContext, s.detail, s.version, s.episode, positionMs, durationMs)
+        // B20: the same progress feeds this profile's taste (start / substantial / complete / rewatch marks).
+        dev.asfakul.yumeiro.intel.TasteRefs.online(s.detail)?.let { ref ->
+            runCatching { dev.asfakul.yumeiro.intel.TasteSignals.played(context.applicationContext, ref, s.episode?.data, positionMs, durationMs, s.index, s.episodes.size) }
+        }
         dev.asfakul.yumeiro.online.anime.AnimeSync.onProgress(context, s.detail, s.episode, s.index, positionMs, durationMs)
     }
 

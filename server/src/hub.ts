@@ -39,6 +39,8 @@ export interface HubTitle extends HubItem {
   runtime?: number;
   rating?: number;
   seasons?: { n: number; count: number; name?: string }[];
+  /** B20 (taste): TMDB keywords (themes such as "time travel", "revenge"), names only, at most 20. */
+  keywords?: string[];
 }
 
 /** Home shelves: key -> [TMDB path, query]. The app shows them in this order. */
@@ -145,6 +147,11 @@ export function title(r: Raw, t: Kind): HubTitle | null {
       .filter((s) => s.n >= 1 && s.count > 0)
       .slice(0, 60);
   }
+  // B20: films carry keywords.keywords, series keywords.results.
+  const kw = (r.keywords ?? {}) as Raw;
+  const kwList = (Array.isArray(kw.keywords) ? kw.keywords : Array.isArray(kw.results) ? kw.results : []) as Raw[];
+  const keywords = [...new Set(kwList.map((k) => str(k.name)).filter((k): k is string => !!k && k.length <= 60))].slice(0, 20);
+  if (keywords.length) out.keywords = keywords;
   return out;
 }
 
@@ -168,7 +175,7 @@ export function plan(path: string, params: URLSearchParams, today: string = new 
     const t = params.get("type");
     const id = Number(params.get("id"));
     if ((t !== "movie" && t !== "tv") || !Number.isInteger(id) || id <= 0 || id > 1e9) return { error: "bad_title" };
-    return { tmdb: `/${t}/${id}?append_to_response=external_ids,watch/providers`, kind: t, ttl: 24 * 3600 };
+    return { tmdb: `/${t}/${id}?append_to_response=external_ids,watch/providers,keywords`, kind: t, ttl: 24 * 3600 };
   }
   // Group O (F6 "If you like"): TMDB's recommendations for one title.
   if (path === "/v1/hub/recommend") {

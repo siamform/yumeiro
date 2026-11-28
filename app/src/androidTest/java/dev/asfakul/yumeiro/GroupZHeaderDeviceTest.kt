@@ -44,8 +44,9 @@ class GroupZHeaderDeviceTest {
         android.util.Log.i("YuZHeader", "ZH_RESULT title width ${w.value} dp")
         assertTrue("title is ${w.value} dp wide, too narrow to read", w >= 100.dp)
         repeat(7) { i ->
+            // Bounds are pixels divided by the density, so a 40 dp icon can read 39.99998 dp: half a dp of slack.
             val b = rule.onNodeWithTag("zh_icon_$i", true).getBoundsInRoot()
-            assertTrue("icon $i is squeezed or off screen: $b", b.right - b.left >= 40.dp && b.right <= 411.dp)
+            assertTrue("icon $i is squeezed or off screen: $b", b.right - b.left >= 39.5.dp && b.right <= 411.5.dp)
         }
     }
 }

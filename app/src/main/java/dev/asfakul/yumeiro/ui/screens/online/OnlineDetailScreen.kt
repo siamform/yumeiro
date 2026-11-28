@@ -155,6 +155,10 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
         (state as? DetailState.Ready)?.let { r ->
             dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(context)
             dev.asfakul.yumeiro.online.OnlineBookmarks.seen(context, api, url, dev.asfakul.yumeiro.online.NewEpisodesWorker.episodeCount(r.detail))
+            // B20: opening a title page is a weak interest signal of this profile (once per 6 hours).
+            dev.asfakul.yumeiro.intel.TasteRefs.online(r.detail)?.let { ref ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { dev.asfakul.yumeiro.intel.TasteSignals.opened(context, ref) } }
+            }
         }
         refreshing = false
     }
@@ -309,6 +313,11 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                     }
                 }
                 MyListButton(d)
+                val tasteRef = remember(d) { dev.asfakul.yumeiro.intel.TasteRefs.online(d) }
+                if (tasteRef != null && d.kind != OnlineKind.LIVE) {
+                    Spacer(Modifier.height(12.dp))
+                    dev.asfakul.yumeiro.ui.screens.intel.TasteFeedbackRow(tasteRef)
+                }
                 if (d.unsupportedReason == null && (d.playData != null || ordered.isNotEmpty()) && d.kind != OnlineKind.LIVE) {
                     Spacer(Modifier.height(8.dp))
                     TitleDownloadButton(d, version, ordered, episodes, season?.title?.takeIf { seasons.size > 1 }, Modifier.fillMaxWidth(), current = target, onVersion = { version = it })

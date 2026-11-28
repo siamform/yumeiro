@@ -37,7 +37,11 @@ object Profiles {
     const val GUARD_PREFS = "_profile_guard"
     private const val MAX_LOCKOUT_MS = 60 * 60_000L
     /** Files that are a profile's own (top level for the default profile). */
-    val PROFILE_FILES = listOf("online_history.json", "online_bookmarks.json")
+    val PROFILE_FILES = listOf("online_history.json", "online_bookmarks.json",
+        // B20-A1: the reading libraries are the profile's own too (a locked default profile kept them in backups made elsewhere).
+        "manga/library.json", "novel/library.json",
+        // B20: taste signals, Discovery picks, AI context and assistant chats.
+        "intel/signals.json", "intel/feed.json", "intel/ai_context.json", "intel/chats.json")
 
     data class Profile(
         val id: String,
@@ -309,8 +313,13 @@ object Profiles {
         if (find(context, id) == null) return false
         if (id != DEFAULT) return remove(context, id)
         val app = context.applicationContext
+        // B20: pending taste writes land first, then the whole taste folder (signals, picks, AI context, chats) goes.
+        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.unload() }
         PROFILE_FILES.forEach { File(app.filesDir, it).delete() }
+        File(app.filesDir, "intel").deleteRecursively()
         app.getSharedPreferences("yt_history", Context.MODE_PRIVATE).edit().clear().commit()
+        // B20-A2: and every other preference file that is the profile's own (plays, music lists, searches, activity...).
+        PRIVATE_PREFS.forEach { runCatching { app.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() } }
         app.getSharedPreferences("online_settings", Context.MODE_PRIVATE).edit().putBoolean("adult", false).commit()
         runCatching { dev.asfakul.yumeiro.online.download.PrivateDownloads.removeProfile(context, DEFAULT) }
         runCatching { ProfilePhotos.file(context, DEFAULT).delete() }
@@ -354,7 +363,7 @@ object Profiles {
     }
 
     /** B19: the default profile's own files that stay out of a backup made from another profile while it is locked. */
-    private val PRIVATE_PREFS = setOf("yt_history", "private_vault", "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen")
+    private val PRIVATE_PREFS = setOf("play_counts", "mt_player_music_prefs", "activity_log", "yt_history", "private_vault", "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen")
 
     /** Preference files that are kept per profile (removed with the profile). */
     val SCOPED_PREFS = listOf(
@@ -362,6 +371,8 @@ object Profiles {
         // B19 (GH-47): searches, saved and visited websites, site sign-in marks, Play Link / Live TV recents and
         // episode marks are the profile's own too (they were shared by every profile).
         "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen",
+        // B20-A2: music favourites, playlists and plays, Home "Most played" and the activity statistics.
+        "play_counts", "mt_player_music_prefs", "activity_log",
     )
 
     internal fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")

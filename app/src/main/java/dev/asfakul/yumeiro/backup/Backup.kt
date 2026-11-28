@@ -66,7 +66,7 @@ object Backup {
     /** Top-level files that are device-specific. */
     private val excludedFiles = setOf("online_downloads.json", dev.asfakul.yumeiro.player.LastPlayed.QUEUE_FILE) // G6-QP: device URIs, refills on play
     /** Folders under filesDir that hold user data. */
-    internal val dataDirs = listOf("streams", "servers", "manga", "stremio", "js", "lyrics", "extensions", "tachiyomi", "profiles", "scripts")
+    internal val dataDirs = listOf("streams", "servers", "manga", "novel", "stremio", "js", "lyrics", "extensions", "tachiyomi", "profiles", "scripts", "intel")
     private const val PHOTO = "backdrop_photo.jpg"
     private const val SCRIPT_LIST = "scripts/registry.json"
 
@@ -85,7 +85,8 @@ object Backup {
         val top = rel.substringBefore('/')
         return when {
             isCode(name) -> Section.EXTENSION_FILES
-            top == "manga" || top == "lyrics" -> Section.LIBRARY
+            top == "manga" || top == "novel" || top == "lyrics" -> Section.LIBRARY // B20-A1: novels were never backed up
+            top == "intel" -> if (rel.endsWith(".json")) Section.LIBRARY else null // B20: taste, picks, AI context, chats
             top == "profiles" -> if (rel.endsWith(".json")) Section.LIBRARY else null // PR-1: each profile's lists
             top == "tachiyomi" && rel.startsWith("tachiyomi/memo/") -> Section.LIBRARY
             top == "extensions" -> if (rel == "extensions/state.json") Section.SOURCES else null // market caches refill themselves
@@ -160,6 +161,7 @@ object Backup {
         val now = System.currentTimeMillis()
         dev.asfakul.yumeiro.online.OnlineHistory.flush() // R16: history is written in the background now
         dev.asfakul.yumeiro.sources.manga.MangaLibrary.flush() // R16 (G5): so is the reading library
+        dev.asfakul.yumeiro.intel.TasteSignals.flush() // B20: and the taste signals
         val files = collect(app, sections)
         val prefs = prefsSnapshot(app, sections)
         var count = 0

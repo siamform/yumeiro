@@ -194,3 +194,13 @@ test("Group W: list rows carry a backdrop for genre art", () => {
   const it = item({ id: 5, media_type: "tv", name: "Show", backdrop_path: "/b.jpg" });
   assert.equal(it?.backdrop, "https://image.tmdb.org/t/p/w780/b.jpg");
 });
+
+test("B20: title pages ask TMDB for keywords and pass their names on (films and series)", () => {
+  const p = plan("/v1/hub/title", new URLSearchParams("type=tv&id=1399"));
+  assert.ok(!("error" in p) && p.tmdb.includes("append_to_response=external_ids,watch/providers,keywords"));
+  const film = title({ id: 1, title: "A", genres: [], keywords: { keywords: [{ id: 1, name: "time travel" }, { id: 2, name: "revenge" }, { id: 3, name: "revenge" }] } }, "movie");
+  assert.deepEqual(film?.keywords, ["time travel", "revenge"]);
+  const show = title({ id: 2, name: "B", genres: [], keywords: { results: [{ id: 9, name: "death game" }] } }, "tv");
+  assert.deepEqual(show?.keywords, ["death game"]);
+  assert.equal(title({ id: 3, title: "C", genres: [] }, "movie")?.keywords, undefined);
+});

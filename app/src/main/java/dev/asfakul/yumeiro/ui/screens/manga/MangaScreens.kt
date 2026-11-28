@@ -426,6 +426,11 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
     LaunchedEffect(details, entry?.key) {
         details?.let { d -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.refreshMeta(context, providerId, url, d.title, d.cover ?: cover) } }
     }
+    // B20: this profile opened the title (weak interest); its genres stand in until AniList's tags arrive.
+    val tasteRef = remember(providerId, url, item.title, details) { dev.asfakul.yumeiro.intel.TasteRefs.manga(providerId, url, item.title, item.cover, details?.genres.orEmpty()) }
+    LaunchedEffect(details != null) {
+        if (details != null) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { dev.asfakul.yumeiro.intel.TasteSignals.opened(context, tasteRef) } }
+    }
     val sorted = chapters?.let { if (newestFirst) it else it.reversed() }
 
     Column(Modifier.fillMaxSize().testTag("manga_detail")) {
@@ -467,6 +472,7 @@ fun MangaDetailScreen(providerId: String, url: String, title: String, cover: Str
                 Text(d, color = TextSecondary, fontSize = 13.sp, maxLines = if (open) Int.MAX_VALUE else 4, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 8.dp).clickable { open = !open })
             } }
+            if (details != null) item("taste") { dev.asfakul.yumeiro.ui.screens.intel.TasteFeedbackRow(tasteRef, Modifier.padding(top = 10.dp)) }
             error?.let { e -> item("err") { StateMessage(Icons.Default.ErrorOutline, "Couldn't load", e, primary = "Retry" to { attempt++ }) } }
             if (chapters == null && error == null) item("loading") {
                 dev.asfakul.yumeiro.ui.components.SkeletonList(rows = 6, modifier = Modifier.padding(top = 12.dp))
@@ -590,6 +596,8 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
         MangaReaderChapter(
             providerId, mangaUrl, mangaTitle, cur.first, cur.second, onBack,
             prev = prev, next = next, onGo = { c -> cur = c.url to c.name },
+            // B20: only a known chapter list can say this is the last chapter (completes the title in the taste).
+            isLast = chapters.size > 1 && next == null && chapters.any { it.url == cur.first },
         )
     }
 }
@@ -597,7 +605,7 @@ fun MangaReaderScreen(providerId: String, mangaUrl: String, mangaTitle: String, 
 @Composable
 private fun MangaReaderChapter(
     providerId: String, mangaUrl: String, mangaTitle: String, chapterUrl: String, chapterName: String, onBack: () -> Unit,
-    prev: MangaChapter?, next: MangaChapter?, onGo: (MangaChapter) -> Unit,
+    prev: MangaChapter?, next: MangaChapter?, onGo: (MangaChapter) -> Unit, isLast: Boolean = false,
 ) {
     val context = LocalContext.current
     val online = remember(providerId) { SourceHub.manga(providerId) }
@@ -657,16 +665,17 @@ private fun MangaReaderChapter(
     // The leave / background save below outlives this state's re-creation (it is keyed on the page list), so it
     // reads the current one through this (run 46055991744: it read the first, never-restored one and saved nothing).
     val restoredNow by rememberUpdatedState(restored)
+    val isLastNow by rememberUpdatedState(isLast)
     LaunchedEffect(pages, restored) {
         if (!restored || (pages?.size ?: 0) == 0) return@LaunchedEffect
         snapshotFlow { latest }.debounce(400).collect { (page, w, n) ->
-            if (n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w)
+            if (n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w, isLast = isLastNow)
         }
     }
     // Leaving the chapter (or the app going to the background) keeps the very last spot, not one 0.4 s old.
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     androidx.compose.runtime.DisposableEffect(lifecycle) {
-        val keep = { val (page, w, n) = latest; if (restoredNow && n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w) }
+        val keep = { val (page, w, n) = latest; if (restoredNow && n > 0) MangaLibrary.progress(context, item, chapter, page, finished = page >= n - 1, offset = w, isLast = isLastNow) }
         val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_STOP) keep() }
         lifecycle.addObserver(obs)
         onDispose { lifecycle.removeObserver(obs); keep() }

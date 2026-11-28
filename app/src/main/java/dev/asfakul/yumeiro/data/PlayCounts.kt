@@ -56,7 +56,7 @@ object PlayCounts {
         synchronized(this) {
             if (loaded) return
             loaded = true
-            val raw = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null) ?: return
+            val raw = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).getString(KEY, null) ?: return
             _entries.value = runCatching { parse(JSONArray(raw)) }.getOrDefault(emptyList())
         }
     }
@@ -119,7 +119,7 @@ object PlayCounts {
                 e.adult?.let { put("ad", it) }
             })
         }
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, a.toString()).apply()
+        context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE).edit().putString(KEY, a.toString()).apply()
     }
 
     internal fun parse(a: JSONArray): List<Entry> = (0 until a.length()).mapNotNull { i ->

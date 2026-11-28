@@ -114,6 +114,9 @@ class MTApplication : Application(), ImageLoaderFactory {
             runCatching { dev.asfakul.yumeiro.backup.AutoBackupWorker.schedule(app) }
             // Time limits for saved pages and website cookies.
             runCatching { dev.asfakul.yumeiro.cache.DataCache.runJanitor(app) }
+            // B20: read the open profile's taste store here (library hooks call it on main), importing what the
+            // profile already watched and read the first time.
+            runCatching { dev.asfakul.yumeiro.intel.TasteImport.ensure(app) }
         }, "yu-startup").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
     }
 
