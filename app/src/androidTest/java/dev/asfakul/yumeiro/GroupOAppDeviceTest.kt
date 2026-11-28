@@ -102,7 +102,6 @@ class GroupOAppDeviceTest {
         HubDiscover.clearCache()
         dev.asfakul.yumeiro.ui.screens.online.Discover.memory.clear()
         dev.asfakul.yumeiro.ui.screens.online.Discover.providerMemory.clear()
-        dev.asfakul.yumeiro.ui.screens.online.Discover.grid = null
         YumixDefaults.resetForTest()
         inst.runOnMainSync { YumixDefaults.init(ctx); YumixDefaults.setPicked(ctx, null) }
         SourceHub.publishVideo(BRIDGE, SourceHub.Ecosystem.CLOUDSTREAM, listOf(

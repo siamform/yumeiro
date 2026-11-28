@@ -28,7 +28,9 @@ class SettingsSearchCoverageTest {
             // PC-1: player controls moved here from Video quality.
             "Previous and next video", "Rewind and forward 10 s", "Fullscreen button")
         put(Category.VIDEO_QUALITY, "Default quality", "Default audio", "Default speed", "Resume playback", "Video decoder", "Video renderer",
-            "Anime4K enhancement", "Anime4K preset", "Default player", "Torrent streaming")
+            "Anime4K enhancement", "Anime4K preset", "Default player", "Torrent streaming",
+            // B23: the Anticipation Engine.
+            "Prepare upcoming episodes", "Ask before playing from another source")
         put(Category.SUBTITLES, "Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro", "Skip automatically")
         put(Category.MUSIC, "Audio quality", "Equalizer & sound effects", "Find lyrics online")
         put(Category.DOWNLOADS, "Ask before each download", "Permanent by default", "Save YouTube and link downloads to phone", "Show tips on the Downloads page",
@@ -43,6 +45,7 @@ class SettingsSearchCoverageTest {
         put(Category.PRIVACY, "Incognito", "Lock Yumeiro", "Hide content in recents", "Clear watch history",
             "Clear 18+ history", "Clear listening history", "Clear search history", "Clear notifications",
             "Clear cache", "All app permissions")
+        put(Category.AI, "Assistant", "Subtitle translation", "Search the web")
         put(Category.BACKUP, "Back up automatically", "Save loaded pages on the phone", "Erase everything")
     }
 

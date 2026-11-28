@@ -260,8 +260,42 @@ internal fun PosterCard(item: OnlineItem, onClick: () -> Unit, width: Dp = 116.d
         Text(item.name.replace('\n', ' '), color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 15.sp)
         // GROUP G1: the type already sits on the poster as a chip; the line under the name no longer repeats it.
         val sub = posterSubline(item, showSource)
-        if (sub.isNotEmpty()) Text(sub, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("online_poster_sub"))
+        // Group W (B12): the line is always laid out (blank when there is nothing to say), so a card without one is
+        // not 13 dp shorter than its neighbours and the skeleton below matches every card exactly.
+        Text(sub.ifEmpty { " " }, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = if (sub.isNotEmpty()) Modifier.testTag("online_poster_sub") else Modifier)
     }
+}
+
+/**
+ * Group W (B12): a [PosterCard] stand-in with the card's exact size (same poster ratio, the same two title lines
+ * and meta line laid out with the same text styles), so a shelf keeps its height from first frame to loaded.
+ */
+@Composable
+internal fun PosterCardSkeleton(width: Dp? = 116.dp, modifier: Modifier = Modifier, still: Boolean = false) {
+    // [width] null = the cell's width (grids); [still] = no shimmer (an error card drawn over the reserved space).
+    val block: Modifier.(Int) -> Modifier = { r -> if (still) this else this.shimmer(yuRound(r)) }
+    Column((if (width == null) modifier.fillMaxWidth() else modifier.width(width)).padding(bottom = 10.dp).testTag("poster_skeleton")) {
+        Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).block(14))
+        Spacer(Modifier.height(6.dp))
+        Box {
+            Text(SpacerLine, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, minLines = 2, maxLines = 2, lineHeight = 15.sp, color = Color.Transparent)
+            Column(Modifier.matchParentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.fillMaxWidth(0.9f).height(11.dp).block(6))
+                Box(Modifier.fillMaxWidth(0.6f).height(11.dp).block(6))
+            }
+        }
+        Text(SpacerLine, fontSize = 10.sp, maxLines = 1, color = Color.Transparent)
+    }
+}
+
+/** Group W (B12): a shelf's poster row while it loads: [count] skeleton cards, the loaded row's exact height. */
+@Composable
+internal fun ShelfPostersSkeleton(width: Dp = 112.dp, count: Int = 6, still: Boolean = false) {
+    // A still lazy row (like the loaded one) so the last cards keep their full size instead of being squeezed.
+    LazyRow(
+        Modifier.fillMaxWidth().testTag("poster_row_skeleton"), contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), userScrollEnabled = false,
+    ) { items(count) { PosterCardSkeleton(width, still = still) } }
 }
 
 /**
@@ -349,17 +383,10 @@ internal fun SeeAllButton(onClick: () -> Unit) {
 
 @Composable
 internal fun PosterRowSkeleton(count: Int = 6) {
+    // Group W (B12): the same card-sized placeholders as every shelf (the old ones were squeezed on narrow phones).
     Column(Modifier.fillMaxWidth().testTag("online_row_skeleton")) {
         SkeletonBlock(140.dp, 14.dp, Modifier.padding(start = 16.dp, bottom = 10.dp))
-        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            repeat(count) {
-                Column(Modifier.width(116.dp)) {
-                    Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).shimmer(yuRound(14)))
-                    Spacer(Modifier.height(6.dp))
-                    SkeletonBlock(90.dp, 10.dp)
-                }
-            }
-        }
+        ShelfPostersSkeleton(116.dp, count)
     }
 }
 
@@ -433,3 +460,6 @@ internal fun EpisodeThumb(d: dev.asfakul.yumeiro.online.OnlineDetail, e: dev.asf
         }
     }
 }
+
+/** A blank line that keeps a placeholder's text height (not shown, nothing to translate). */
+private const val SpacerLine = " "

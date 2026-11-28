@@ -86,6 +86,13 @@ class MTApplication : Application(), ImageLoaderFactory {
             // Precompile the big pattern tables (release tags, audio languages, source facts, Yumix
             // feed rules) here so the first list that shows a card never compiles them on the main thread.
             runCatching { dev.asfakul.yumeiro.text.RegexWarmup.run() }
+            // B20 S6: translated-subtitle folders older than 48 h (unless it is the episode to resume) and over 30 MB.
+            runCatching {
+                dev.asfakul.yumeiro.online.OnlineHistory.ensureLoaded(app)
+                dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.sweep(app) { api, data ->
+                    dev.asfakul.yumeiro.online.OnlineHistory.progressOf(api, data)?.let { p -> p.durationMs <= 0 || p.positionMs < p.durationMs * 0.92 } ?: false
+                }
+            }
             // E4: measured extension speeds (prefs read, so here and not on main).
             runCatching { dev.asfakul.yumeiro.online.ExtensionSpeed.init(app) }
             // FIND-2: remembered title → source matches (prefs read).
@@ -114,6 +121,11 @@ class MTApplication : Application(), ImageLoaderFactory {
             runCatching { dev.asfakul.yumeiro.backup.AutoBackupWorker.schedule(app) }
             // Time limits for saved pages and website cookies.
             runCatching { dev.asfakul.yumeiro.cache.DataCache.runJanitor(app) }
+            // B23: the Anticipation Engine's 7-day cleanup (its own file only; never downloads, history or bookmarks).
+            runCatching { dev.asfakul.yumeiro.online.anticipation.PrepStore.cleanup(app) }
+            // B20: read the open profile's taste store here (library hooks call it on main), importing what the
+            // profile already watched and read the first time.
+            runCatching { dev.asfakul.yumeiro.intel.TasteImport.ensure(app) }
         }, "yu-startup").apply { priority = Thread.NORM_PRIORITY - 1 }.start()
     }
 

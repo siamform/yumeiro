@@ -73,7 +73,9 @@ fun OnlineSettingsCard(part: OnlinePart) {
         dismissButton = { TextButton(onClick = { confirmAdult = false }) { Text(stringResource(R.string.cancel)) } },
     )
 
-    edit?.let { which ->
+    // B19: the SubDL key is checked with SubDL before it's saved (same form as the Tracking page).
+    if (edit == "subdl") SubDlKeyDialog(onDismiss = { edit = null }) { edit = null }
+    edit?.takeIf { it != "subdl" }?.let { which ->
         var text by remember(which) { mutableStateOf(when (which) { "os" -> osKey; "subdl" -> subdlKey; "subsource" -> subsourceKey; else -> lang }) }
         TsukiDialog(
             onDismissRequest = { edit = null },
@@ -127,7 +129,7 @@ fun OnlineSettingsCard(part: OnlinePart) {
                 ValueRow("Subtitle search language", lang.uppercase()) { edit = "lang" }
                 Text(stringResource(R.string.subtitle_sites_all_free_use_any), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                 ValueRow("OpenSubtitles API key", when { osKey.isNotBlank() -> "Your key"; dev.asfakul.yumeiro.online.subtitles.OpenSubtitles.builtIn -> "Built-in"; else -> "Not set" }) { edit = "os" }
-                ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else "Set") { edit = "subdl" }
+                ValueRow("SubDL API key", if (subdlKey.isBlank()) "Not set" else dev.asfakul.yumeiro.online.subtitles.SubDL.account() ?: "Set") { edit = "subdl" }
                 ValueRow("SubSource API key", if (subsourceKey.isBlank()) "Not set" else "Set") { edit = "subsource" }
             }
         }

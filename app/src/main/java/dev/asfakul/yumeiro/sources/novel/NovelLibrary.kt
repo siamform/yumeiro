@@ -43,7 +43,9 @@ object NovelLibrary {
 
     fun key(pluginId: String, path: String) = "$pluginId\u0001$path"
 
-    private fun file(c: Context) = File(File(c.applicationContext.filesDir, "novel").apply { mkdirs() }, "library.json")
+    /** B20-A1: per profile (the default profile keeps filesDir/novel/library.json; others profiles/<id>/novel/). */
+    private fun file(c: Context) = dev.asfakul.yumeiro.profiles.Profiles.file(c, FILE).also { it.parentFile?.mkdirs() }
+    const val FILE = "novel/library.json"
 
     fun ensureLoaded(c: Context) = synchronized(lock) {
         if (loaded) return@synchronized
@@ -60,12 +62,23 @@ object NovelLibrary {
     /** Novels with reading progress, last read first. */
     fun history(): List<Entry> = _entries.value.values.filter { it.readAt > 0 }.sortedByDescending { it.readAt }
 
-    fun setSaved(c: Context, item: NovelItem, saved: Boolean, now: Long = System.currentTimeMillis()) = update(c, item) {
-        it.copy(saved = saved, addedAt = if (saved && !it.saved) now else it.addedAt, name = item.name, cover = item.cover ?: it.cover)
+    fun setSaved(c: Context, item: NovelItem, saved: Boolean, now: Long = System.currentTimeMillis()) {
+        update(c, item) {
+            it.copy(saved = saved, addedAt = if (saved && !it.saved) now else it.addedAt, name = item.name, cover = item.cover ?: it.cover)
+        }
+        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.setSaved(c, dev.asfakul.yumeiro.intel.TasteRefs.novel(item.pluginId, item.path, item.name, item.cover), saved) }
     }
 
     /** Reading progress: [position] is how far down the chapter (0..1). */
-    fun progress(c: Context, item: NovelItem, chapter: NovelChapter, index: Int, position: Float, now: Long = System.currentTimeMillis()) {
+    fun progress(c: Context, item: NovelItem, chapter: NovelChapter, index: Int, position: Float, now: Long = System.currentTimeMillis(), total: Int = 0) {
+        if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
+        // B20: a fifth of a chapter starts it, its end reads it; the last chapter of the list completes the novel.
+        runCatching {
+            dev.asfakul.yumeiro.intel.TasteSignals.read(
+                c, dev.asfakul.yumeiro.intel.TasteRefs.novel(item.pluginId, item.path, item.name, item.cover), chapter.path,
+                position, engaged = position >= 0.2f, done = position >= 0.98f, isLast = total > 1 && index == total - 1,
+            )
+        }
         update(c, item) {
             it.copy(chapterPath = chapter.path, chapterName = chapter.name, chapterIndex = index, position = position.coerceIn(0f, 1f), readAt = now)
         }

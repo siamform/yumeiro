@@ -196,6 +196,8 @@ fun OnlineHomeScreen(
     onOpenInfo: (OnlineItem) -> Unit = onOpenTitle,
     onOpenLibrary: () -> Unit = onOpenHistory,
     onOpenUpcoming: (() -> Unit)? = null,
+    /** B20: opens a For You pick; null = no For You shelves here. */
+    onOpenRec: ((dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit)? = null,
 ) {
     androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("yumix") } // FREEZE-4
     val context = LocalContext.current
@@ -635,7 +637,6 @@ fun OnlineHomeScreen(
                     val hubPublished = providers.any { it.name == dev.asfakul.yumeiro.sources.hub.YumeiroHub.NAME }
                     val discoverOn = hubPublished && dev.asfakul.yumeiro.sources.hub.YumeiroHub.catalogOn() && dev.asfakul.yumeiro.sources.hub.HubDiscover.available()
                     val discoverSeeds = remember(continueItems) { continueItems.map { it.toItem() } }
-                    Discover.grid?.let { g -> if (discoverOn) DiscoverGrid(g, onOpen = openInfo, onClose = { Discover.grid = null }) }
                     val exploreRows = remember(exploreSnap, exploreLimit) { hueGridRows(exploreSnap.take(exploreLimit)) }
                     val catItems = remember(cats, cat) { cats.firstOrNull { it.first.name == cat }?.second }
                     // GATE-1-RENDER-2: sections join one per frame on open (StagedReveal), flag FEED_STAGED_REVEAL.
@@ -657,12 +658,19 @@ fun OnlineHomeScreen(
                         if (continueItems.isNotEmpty()) st.item("continue") {
                             ContinueRow(continueItems, onClick = { onOpenTitle(it) }, onSeeAll = onOpenHistory)
                         }
+                        // B20: this profile's own picks (anime, movies, series each from its own taste); empty until honest.
+                        if (onOpenRec != null) {
+                            st.item("completion_prompt") { dev.asfakul.yumeiro.ui.screens.intel.CompletionPrompt(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+                            listOf(dev.asfakul.yumeiro.intel.MediaCategory.ANIME, dev.asfakul.yumeiro.intel.MediaCategory.MOVIE, dev.asfakul.yumeiro.intel.MediaCategory.SERIES).forEach { c ->
+                                st.item("for_you_${c.code}", contentType = "for_you") { dev.asfakul.yumeiro.ui.screens.intel.ForYouShelf(c, onOpen = onOpenRec, gutter = 16.dp) }
+                            }
+                        }
                         // Group O (F5, F6, F9): Discover (section bar, then that section's shelves, one list item each).
                         if (discoverOn) {
                             st.item("discover_bar") { DiscoverBar(Discover.section, onPick = { Discover.section = it }) }
                             Discover.shelves(Discover.section).forEach { sh ->
                                 st.item("discover_${Discover.section.name}_${sh.key}", contentType = "discover") {
-                                    DiscoverShelf(sh, discoverSeeds, onOpen = openInfo, onGrid = { Discover.grid = it })
+                                    DiscoverShelf(sh, discoverSeeds, onOpen = openInfo)
                                 }
                             }
                         }

@@ -37,7 +37,11 @@ object Profiles {
     const val GUARD_PREFS = "_profile_guard"
     private const val MAX_LOCKOUT_MS = 60 * 60_000L
     /** Files that are a profile's own (top level for the default profile). */
-    val PROFILE_FILES = listOf("online_history.json", "online_bookmarks.json")
+    val PROFILE_FILES = listOf("online_history.json", "online_bookmarks.json",
+        // B20-A1: the reading libraries are the profile's own too (a locked default profile kept them in backups made elsewhere).
+        "manga/library.json", "novel/library.json",
+        // B20: taste signals, Discovery picks, AI context and assistant chats.
+        "intel/signals.json", "intel/feed.json", "intel/ai_context.json", "intel/chats.json")
 
     data class Profile(
         val id: String,
@@ -246,6 +250,7 @@ object Profiles {
         runCatching { dev.asfakul.yumeiro.online.download.OnlineDownloads.removeProfile(context, id) } // B19: its downloads and their files
         File(root(context), id).deleteRecursively()
         SCOPED_PREFS.forEach { name -> runCatching { context.applicationContext.deleteSharedPreferences("$name@p$id") } }
+        runCatching { dev.asfakul.yumeiro.intel.ai.AiSettings.forgetProfile(context, id) } // B21: its AI key
         runCatching { ProfileScope.dropProfile(context, id) } // F-19-EXT: its own extensions / repositories go with it
         _all.value = _all.value.filterNot { it.id == id }
         if (_current.value == id) _current.value = DEFAULT
@@ -309,11 +314,17 @@ object Profiles {
         if (find(context, id) == null) return false
         if (id != DEFAULT) return remove(context, id)
         val app = context.applicationContext
+        // B20: pending taste writes land first, then the whole taste folder (signals, picks, AI context, chats) goes.
+        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.unload(); dev.asfakul.yumeiro.intel.Discovery.unload(); dev.asfakul.yumeiro.intel.ai.AiContext.unload(); dev.asfakul.yumeiro.intel.ai.AssistantChats.unload() }
         PROFILE_FILES.forEach { File(app.filesDir, it).delete() }
+        File(app.filesDir, "intel").deleteRecursively()
         app.getSharedPreferences("yt_history", Context.MODE_PRIVATE).edit().clear().commit()
+        // B20-A2: and every other preference file that is the profile's own (plays, music lists, searches, activity...).
+        PRIVATE_PREFS.forEach { runCatching { app.getSharedPreferences(it, Context.MODE_PRIVATE).edit().clear().commit() } }
         app.getSharedPreferences("online_settings", Context.MODE_PRIVATE).edit().putBoolean("adult", false).commit()
         runCatching { dev.asfakul.yumeiro.online.download.PrivateDownloads.removeProfile(context, DEFAULT) }
         runCatching { ProfilePhotos.file(context, DEFAULT).delete() }
+        runCatching { dev.asfakul.yumeiro.intel.ai.AiSettings.forgetProfile(context, DEFAULT) } // B21: its AI key
         replace(context, DEFAULT) { it.copy(pinHash = null, salt = null, biometric = false, photo = 0L) }
         clearGuard(context, DEFAULT)
         return true
@@ -354,7 +365,7 @@ object Profiles {
     }
 
     /** B19: the default profile's own files that stay out of a backup made from another profile while it is locked. */
-    private val PRIVATE_PREFS = setOf("yt_history", "private_vault", "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen")
+    private val PRIVATE_PREFS = setOf("play_counts", "mt_player_music_prefs", "activity_log", "yt_history", "private_vault", "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen", "intel_ai")
 
     /** Preference files that are kept per profile (removed with the profile). */
     val SCOPED_PREFS = listOf(
@@ -362,6 +373,12 @@ object Profiles {
         // B19 (GH-47): searches, saved and visited websites, site sign-in marks, Play Link / Live TV recents and
         // episode marks are the profile's own too (they were shared by every profile).
         "online", "search_recent", "yu_sites", "yu_sites_recent", "site_logins", "mt_streams", "live_tv", "episode_seen",
+        // B20-A2: music favourites, playlists and plays, Home "Most played" and the activity statistics.
+        "play_counts", "mt_player_music_prefs", "activity_log",
+        // B21: the profile's own AI provider, model and choices (its key is a sealed secret, see AiSettings).
+        "intel_ai",
+        // B20 S6: the profile's subtitle translation language, style and engine.
+        "sub_tl",
     )
 
     internal fun root(context: Context) = File(context.applicationContext.filesDir, "profiles")

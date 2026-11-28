@@ -18,6 +18,8 @@ sealed class Screen(val route: String) {
     data object WebSites : Screen("websites")
     /** F-02 split: saved public Telegram channels on their own page. */
     data object Telegram : Screen("telegram")
+    /** B15: Live TV → Tools → Sports (live scores and fixtures). */
+    data object Sports : Screen("stream/sports")
     data object Library : Screen("library")
     data object Settings : Screen("settings")
     data object Equalizer : Screen("equalizer")
@@ -47,6 +49,20 @@ sealed class Screen(val route: String) {
     }
     /** "See all" for Continue watching. */
     data object OnlineHistory : Screen("videos/online/history")
+    /** Group W (B1): "Find something": catalog results with filters (the filter travels as [DiscoverFilter.encode]). */
+    data object OnlineDiscover : Screen("videos/online/discover?f={f}") {
+        const val ARG_F = "f"
+        fun route(f: dev.asfakul.yumeiro.sources.hub.DiscoverFilter = dev.asfakul.yumeiro.sources.hub.DiscoverFilter()): String =
+            "videos/online/discover?f=" + android.net.Uri.encode(f.encode())
+    }
+    /** Group W (B2): every genre and theme, searchable, by kind. */
+    data object OnlineGenres : Screen("videos/online/genres?k={k}") {
+        const val ARG_K = "k"
+        fun route(kind: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind = dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ALL): String =
+            "videos/online/genres?k=" + kind.name.lowercase()
+    }
+    /** Group W (B3): every streaming service in the chosen country. */
+    data object OnlineServices : Screen("videos/online/services")
     /** F-08: release calendar. */
     data object OnlineUpcoming : Screen("videos/online/upcoming")
     /** F-17: profile statistics. */
@@ -91,6 +107,12 @@ sealed class Screen(val route: String) {
     }
     data object Privacy : Screen("settings/privacy")
     data object Tracking : Screen("settings/tracking")
+    data object AiSettings : Screen("settings/ai")
+    /** B21: the assistant space; [ARG] = a MediaCategory code or empty (everything). */
+    data object Assistant : Screen("assistant?cat={cat}") {
+        const val ARG = "cat"
+        fun route(cat: String? = null): String = "assistant?cat=${cat.orEmpty()}"
+    }
     data object YouTubeAccount : Screen("settings/youtube")
     data object Backup : Screen("settings/backup")
     data object WatchTogether : Screen("watch/together")

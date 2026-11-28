@@ -162,6 +162,13 @@ The Beta channel has the next release, **2.4.0**, while it is being tested. High
 | **Play a pasted link** | A video link, magnet link or info hash in Search plays at once |
 | **Compressor controls** | Threshold, ratio, make-up, attack and release, in the player and in Settings |
 | **Profiles fixed** | Each profile has its own search history, downloads and saved websites |
+| **Sports** | Live TV › Tools › Sports: live scores for yesterday, today and tomorrow, and match statistics where the feed has them |
+| **For You** | Shelves picked from what each profile watches, reads and listens to, each with its reason |
+| **Yumeiro AI (optional)** | Your own free key from Google Gemini, OpenRouter, Groq or Cloudflare, or your own server, for the Assistant and AI subtitles. Nothing needs it |
+| **Translated subtitles** | English subtitles into Bangla, Hindi, Arabic and more, on the phone itself or with Yumeiro AI |
+| **Next episode, ready sooner** | The next episodes are prepared while one plays; if a link is missing, Yumeiro asks before playing another source |
+| **Trakt and SubDL** | Trakt links through its own sign-in pages; SubDL sits next to your trackers with a free key |
+| **Locked backups** | A password-locked backup can carry your keys and sign-ins |
 
 Every item was checked with automatic tests on Android phone and TV emulators; checks on real phones and TVs are still
 open. Full list: [yumeiro.click/changelog](https://yumeiro.click/changelog) and [CHANGELOG.md](CHANGELOG.md).

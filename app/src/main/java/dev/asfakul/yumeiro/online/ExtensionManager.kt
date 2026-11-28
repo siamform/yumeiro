@@ -114,6 +114,9 @@ object ExtensionManager {
     fun pluginClassLoaders(): List<ClassLoader> =
         synchronized(plugins) { plugins.values.mapNotNull { it.javaClass.classLoader } }.distinct()
 
+    /** Group W (B12): whether every installed extension has finished loading (for a first value; follow [state]). */
+    fun readyNow(): Boolean = _state.value.ready
+
     /** True while at least one extension is loaded (ADR-014: only then can extension code open windows). */
     fun anyPluginLoaded(): Boolean = synchronized(plugins) { plugins.isNotEmpty() }
 

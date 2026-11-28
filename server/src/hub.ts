@@ -24,6 +24,8 @@ export interface HubItem {
   rating?: number;
   votes?: number;
   genres?: string[];
+  /** Group W (B2): a wide still for genre and service art (w780). */
+  backdrop?: string;
 }
 
 export interface HubTitle extends HubItem {
@@ -37,6 +39,8 @@ export interface HubTitle extends HubItem {
   runtime?: number;
   rating?: number;
   seasons?: { n: number; count: number; name?: string }[];
+  /** B20 (taste): TMDB keywords (themes such as "time travel", "revenge"), names only, at most 20. */
+  keywords?: string[];
 }
 
 /** Home shelves: key -> [TMDB path, query]. The app shows them in this order. */
@@ -105,6 +109,8 @@ export function item(r: Raw, fallback?: Kind): HubItem | null {
   if (y) out.year = y;
   const p = str(r.poster_path);
   if (p) out.poster = `${IMG}/w342${p}`;
+  const bd = str(r.backdrop_path);
+  if (bd) out.backdrop = `${IMG}/w780${bd}`;
   if (lang) out.lang = lang;
   if (genres.includes(16) && lang === "ja") out.anime = true;
   const d = str(t === "movie" ? r.release_date : r.first_air_date);
@@ -141,11 +147,16 @@ export function title(r: Raw, t: Kind): HubTitle | null {
       .filter((s) => s.n >= 1 && s.count > 0)
       .slice(0, 60);
   }
+  // B20: films carry keywords.keywords, series keywords.results.
+  const kw = (r.keywords ?? {}) as Raw;
+  const kwList = (Array.isArray(kw.keywords) ? kw.keywords : Array.isArray(kw.results) ? kw.results : []) as Raw[];
+  const keywords = [...new Set(kwList.map((k) => str(k.name)).filter((k): k is string => !!k && k.length <= 60))].slice(0, 20);
+  if (keywords.length) out.keywords = keywords;
   return out;
 }
 
 /** The TMDB request for a hub call, or an error code (pure; unit-tested). */
-export function plan(path: string, params: URLSearchParams, today: string = new Date().toISOString().slice(0, 10)): { tmdb: string; kind?: Kind; ttl: number } | { error: string } {
+export function plan(path: string, params: URLSearchParams, today: string = new Date().toISOString().slice(0, 10)): { tmdb: string; also?: string; kind?: Kind; ttl: number } | { error: string } {
   const page = Math.min(Math.max(Number(params.get("page") ?? "1") | 0, 1), MAX_PAGE);
   if (path === "/v1/hub/shelves") return { tmdb: "", ttl: 86_400 };
   if (path === "/v1/hub/catalog") {
@@ -164,7 +175,7 @@ export function plan(path: string, params: URLSearchParams, today: string = new 
     const t = params.get("type");
     const id = Number(params.get("id"));
     if ((t !== "movie" && t !== "tv") || !Number.isInteger(id) || id <= 0 || id > 1e9) return { error: "bad_title" };
-    return { tmdb: `/${t}/${id}?append_to_response=external_ids,watch/providers`, kind: t, ttl: 24 * 3600 };
+    return { tmdb: `/${t}/${id}?append_to_response=external_ids,watch/providers,keywords`, kind: t, ttl: 24 * 3600 };
   }
   // Group O (F6 "If you like"): TMDB's recommendations for one title.
   if (path === "/v1/hub/recommend") {
@@ -176,12 +187,14 @@ export function plan(path: string, params: URLSearchParams, today: string = new 
   // Group O (F5): the streaming services TMDB knows in a region, most used first.
   if (path === "/v1/hub/providers") {
     const region = iso2(params.get("region")) ?? "US";
-    return { tmdb: `/watch/providers/movie?${new URLSearchParams({ watch_region: region })}`, ttl: 24 * 3600 };
+    // Group W (B3): films and series lists are merged in the Worker (one card per service, not two).
+    return { tmdb: `/watch/providers/movie?${new URLSearchParams({ watch_region: region })}`, also: `/watch/providers/tv?${new URLSearchParams({ watch_region: region })}`, ttl: 24 * 3600 };
   }
   if (path === "/v1/hub/discover") return discover(params, page, today);
   return { error: "not_found" };
 }
 
+const yearParam = (v: string | null) => { const y = Number(v); return Number.isInteger(y) && y >= 1900 && y <= 2100 ? y : undefined; };
 const iso2 = (v: string | null) => (v && /^[A-Z]{2}$/.test(v) ? v : undefined);
 const ids = (v: string | null, max: number) => (v ?? "").split(/[,|]/).map(Number).filter((n) => Number.isInteger(n) && n > 0 && n < 1e6).slice(0, max);
 
@@ -206,7 +219,7 @@ export function discover(params: URLSearchParams, page: number, today: string): 
   const t = params.get("type");
   if (t !== "movie" && t !== "tv") return { error: "bad_type" };
   const sort = params.get("sort") ?? "popular";
-  if (!["popular", "top", "new", "upcoming"].includes(sort)) return { error: "bad_sort" };
+  if (!["popular", "top", "new", "upcoming", "rating"].includes(sort)) return { error: "bad_sort" };
   const date = t === "movie" ? "primary_release_date" : "first_air_date";
   const q: Record<string, string> = { include_adult: "false", page: String(page) };
   const genres = ids(params.get("genre"), 3);
@@ -214,7 +227,16 @@ export function discover(params: URLSearchParams, page: number, today: string): 
   const region = iso2(params.get("region"));
   const origin = iso2(params.get("origin"));
   const lang = params.get("lang");
+  // Group W (B1, B2): themes (TMDB keyword ids, all of them, like genres), a year range and a lowest score.
+  const keywords = ids(params.get("keyword"), 3);
+  const yFrom = yearParam(params.get("year_from"));
+  const yTo = yearParam(params.get("year_to"));
+  const minRating = Number(params.get("min_rating"));
   if (params.get("anime") === "1") { genres.push(16); q.with_original_language = "ja"; }
+  if (keywords.length) q.with_keywords = keywords.join(",");
+  if (yFrom) q[`${date}.gte`] = `${yFrom}-01-01`;
+  if (yTo) q[`${date}.lte`] = `${yTo}-12-31`;
+  if (Number.isFinite(minRating) && minRating >= 1 && minRating <= 9) { q["vote_average.gte"] = String(Math.floor(minRating)); q["vote_count.gte"] ??= "50"; }
   if (genres.length) q.with_genres = [...new Set(genres)].join(",");
   if (providers.length) { q.with_watch_providers = providers.join("|"); q.watch_region = region ?? "US"; q.with_watch_monetization_types = "flatrate"; }
   if (origin) q.with_origin_country = origin;
@@ -222,7 +244,8 @@ export function discover(params: URLSearchParams, page: number, today: string): 
   switch (sort) {
     case "popular": q.sort_by = "popularity.desc"; break;
     case "top": q.sort_by = "vote_average.desc"; q["vote_count.gte"] = t === "movie" ? "300" : "150"; break;
-    case "new": q.sort_by = `${date}.desc`; q[`${date}.lte`] = today; q["vote_count.gte"] = "5"; break;
+    case "rating": q.sort_by = "vote_average.desc"; q["vote_count.gte"] ??= "100"; break;
+    case "new": q.sort_by = `${date}.desc`; if (!q[`${date}.lte`] || q[`${date}.lte`] > today) q[`${date}.lte`] = today; q["vote_count.gte"] ??= "5"; break;
     case "upcoming": q.sort_by = "popularity.desc"; q[`${date}.gte`] = today; q[`${date}.lte`] = plusDays(today, UPCOMING_DAYS); break;
   }
   return { tmdb: `/discover/${t}?${new URLSearchParams(q)}`, kind: t, ttl: sort === "upcoming" || sort === "new" ? 6 * 3600 : 12 * 3600 };
@@ -232,14 +255,38 @@ export function shelves() {
   return { shelves: Object.entries(SHELVES).map(([key, s]) => ({ key, name: s.name })) };
 }
 
-/** Group O (F5): TMDB watch providers -> the 24 most used in [region] (pure; unit-tested). */
-export function providers(body: Raw, region: string): { id: number; name: string; logo?: string }[] {
-  const rows = Array.isArray(body.results) ? (body.results as Raw[]) : [];
+/**
+ * Group W (B3): rent-and-buy stores, profile variants and comparison-site channels. They are not services anyone
+ * subscribes to, and several carry almost the same logo as a real service (Apple TV Store next to Apple TV+).
+ * Ids read from the live TMDB lists (US, IN, GB, BD, JP), 2026-11-27.
+ */
+const NOT_A_SERVICE = new Set([2, 3, 7, 10, 175, 192, 332, 2285, 2784, 2785, 2791, 1796, 1825]);
+/** The services most people have, pinned to the front (in the region's own order); the rest follow, also in it. */
+export const MAJOR_SERVICES = [8, 9, 119, 337, 1899, 350, 283, 15, 531, 386, 2336, 232, 237, 315, 11, 526];
+
+/** True when [name] / [id] is a service you subscribe to (pure; unit-tested). */
+export function subscribable(id: number, name: string): boolean {
+  if (NOT_A_SERVICE.has(id)) return false;
+  const n = name.toLowerCase().trim();
+  return !/(amazon channel|apple tv channel|roku premium channel|\bchannel$|\bstore$|\bkids$|with ads$|standard with ads|basic with ads)/.test(n);
+}
+
+/** Group O (F5) + W (B3): TMDB watch providers (films and series lists merged) -> the 40 most used in [region]. */
+export function providers(body: Raw, region: string, also?: Raw): { id: number; name: string; logo?: string }[] {
+  const rows = [...(Array.isArray(body.results) ? (body.results as Raw[]) : []), ...(Array.isArray(also?.results) ? (also!.results as Raw[]) : [])];
   const prio = (r: Raw) => num(((r.display_priorities ?? {}) as Raw)[region]) ?? num(r.display_priority) ?? 999;
+  const rank = (id: number) => (MAJOR_SERVICES.includes(id) ? 0 : 1);
+  const seen = new Set<number>();
+  const names = new Set<string>();
   return rows
-    .filter((r) => num(r.provider_id) && str(r.provider_name))
-    .sort((a, b) => prio(a) - prio(b))
-    .slice(0, 24)
+    .filter((r) => num(r.provider_id) && str(r.provider_name) && subscribable(num(r.provider_id)!, str(r.provider_name)!))
+    .sort((a, b) => rank(num(a.provider_id)!) - rank(num(b.provider_id)!) || prio(a) - prio(b) || str(a.provider_name)!.localeCompare(str(b.provider_name)!))
+    .filter((r) => {
+      const id = num(r.provider_id)!, n = str(r.provider_name)!.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (seen.has(id) || names.has(n)) return false;
+      seen.add(id); names.add(n); return true;
+    })
+    .slice(0, 40)
     .map((r) => {
       const logo = str(r.logo_path);
       return { id: num(r.provider_id)!, name: str(r.provider_name)!, ...(logo ? { logo: `${IMG}/w154${logo}` } : {}) };
@@ -247,9 +294,9 @@ export function providers(body: Raw, region: string): { id: number; name: string
 }
 
 /** Shapes a TMDB answer for the app (pure; unit-tested). */
-export function shape(path: string, body: Raw, kind?: Kind, region?: string): unknown {
+export function shape(path: string, body: Raw, kind?: Kind, region?: string, also?: Raw): unknown {
   if (path === "/v1/hub/title") return title({ ...body, _region: region ?? "US" }, kind!) ?? { error: "not_found" };
-  if (path === "/v1/hub/providers") return { providers: providers(body, region ?? "US") };
+  if (path === "/v1/hub/providers") return { providers: providers(body, region ?? "US", also) };
   const rows = Array.isArray(body.results) ? (body.results as Raw[]) : [];
   const items = rows.map((r) => item(r, kind)).filter((x): x is HubItem => !!x);
   const page = num(body.page) ?? 1, pages = num(body.total_pages) ?? 1;

@@ -35,7 +35,7 @@ object ActivityLog {
         }
     }
 
-    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE) // B20-A2: per profile
     private fun off(context: Context): Boolean =
         dev.asfakul.yumeiro.security.Privacy.incognito.value ||
             !dev.asfakul.yumeiro.FeatureFlags.on(context, dev.asfakul.yumeiro.FeatureFlags.Flag.PROFILE_STATS)

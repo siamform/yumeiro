@@ -102,6 +102,13 @@ object StreamResolver {
         var r = resolveBlocking(request, defaultUserAgent(context), StreamInterceptors.clientFor(request.url, NetworkClient.get(context)), thorough)
         // ADCHAIN-3 (item 28): a shortener link the resolver could not open: try the plain-HTTP chain walk first.
         if (r is Resolution.NeedsBrowser || r is Resolution.Failed) AdChainBridge.after(context, request, r, thorough)?.let { r = it }
+        // B16: a public post whose video Telegram keeps off its web preview ("Media is too big", most movie and trailer
+        // channels) was a dead end when opened as a link (Network stream, shared link, history): "only in its own
+        // app". The channel page already played these with the signed-in account; links now do the same.
+        if (r is Resolution.Failed && r.message == dev.asfakul.yumeiro.online.telegram.TelegramPublic.Messages.APP_ONLY) {
+            (dev.asfakul.yumeiro.online.telegram.TelegramPublic.parse(request.url) as? dev.asfakul.yumeiro.online.telegram.TelegramPublic.Post)
+                ?.let { post -> r = telegramWithheld(context, request, post) }
+        }
         // A page that embeds a YouTube player: play that video in-app too (hand-off stays the fallback).
         if (r is Resolution.Handoff && r.platform == "YouTube" && request.group != "YouTube") {
             val id = dev.asfakul.yumeiro.youtube.YouTube.idFrom(r.url)
@@ -142,6 +149,22 @@ object StreamResolver {
     }
 
     const val TELEGRAM_GROUP = "Telegram"
+
+    /** B16: a withheld public post plays with the user's own Telegram account, or says exactly what is missing. */
+    private suspend fun telegramWithheld(context: Context, request: StreamRequest, post: dev.asfakul.yumeiro.online.telegram.TelegramPublic.Post): Resolution {
+        val acc = dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay
+        val title = request.title.ifBlank { "@${post.channel} · ${post.id}" }
+        return when (val a = acc.request(context, post.channel, post.id, title, request.logoUrl)) {
+            is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Ok -> Resolution.Playable(a.request, Sniff(MediaKind.VIDEO, "Telegram", "account"))
+            dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.NeedsSignIn ->
+                Resolution.Failed(TELEGRAM_SIGN_IN_TITLE, dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.NEEDS_SIGN_IN + " " + dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Words.WHERE_SIGN_IN)
+            is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Unavailable ->
+                Resolution.Failed("Telegram post can't play", dev.asfakul.yumeiro.online.telegram.TelegramPublic.Messages.APP_ONLY + " " + a.reason)
+            is dev.asfakul.yumeiro.online.telegram.TelegramAccountPlay.Result.Failed -> Resolution.Failed("Telegram post can't play", a.message)
+        }
+    }
+
+    const val TELEGRAM_SIGN_IN_TITLE = "Sign in to Telegram to play this"
 
     /**
      * DW-BOT-1: true when a Telegram account is signed in on this profile (set by MTApplication; no TDLib start).

@@ -104,11 +104,12 @@ class GroupUBlackSourceFlowDeviceTest {
         }
         server.start()
         BlackSource.baseForTest = server.url("/v1/blacksource").toString().trimEnd('/')
+        BlackSource.aniListForTest = "http://127.0.0.1:9/" // B9: AniList first; here it fails so the recorded Worker answers
         ctx.getSharedPreferences("blacksource", Context.MODE_PRIVATE).edit().putBoolean("opted_in", true).commit()
     }
 
     @After fun tearDown() {
-        BlackSource.baseForTest = null
+        BlackSource.baseForTest = null; BlackSource.aniListForTest = null
         ctx.getSharedPreferences("blacksource", Context.MODE_PRIVATE).edit().clear().commit()
         runCatching { server.close() }
     }

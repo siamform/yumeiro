@@ -29,9 +29,12 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -198,7 +201,6 @@ internal fun copyToClipboard(context: Context, label: String, value: String) {
  */
 @Composable
 fun GuideCard(guide: SetupGuide, modifier: Modifier = Modifier, startExpanded: Boolean = false) {
-    val context = LocalContext.current
     var open by rememberSaveable(guide.id) { mutableStateOf(startExpanded) }
     val turn by animateFloatAsState(if (open) 180f else 0f, label = "guide_chevron")
     Surface(
@@ -218,21 +220,53 @@ fun GuideCard(guide: SetupGuide, modifier: Modifier = Modifier, startExpanded: B
                 }
                 Icon(Icons.Default.ExpandMore, if (open) "Hide guide" else "Show guide", tint = TextSecondary, modifier = Modifier.rotate(turn))
             }
-            AnimatedVisibility(open) {
-                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(guide.intro, color = TextSecondary, fontSize = 13.sp)
-                    guide.steps.forEachIndexed { i, s -> GuideStep(i + 1, s, context) }
-                    guide.tips.forEach { tip ->
-                        Row(verticalAlignment = Alignment.Top) {
-                            Icon(Icons.Default.Lightbulb, null, tint = BrandGold.copy(alpha = 0.8f), modifier = Modifier.size(14.dp).padding(top = 2.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(tip, color = TextTertiary, fontSize = 12.sp)
-                        }
-                    }
-                }
+            AnimatedVisibility(open) { GuideBody(guide, Modifier.padding(top = 10.dp)) }
+        }
+    }
+}
+
+/** A guide's intro, numbered steps (links, values to copy) and tips. Shared by [GuideCard] and [GuideHelpButton]. */
+@Composable
+fun GuideBody(guide: SetupGuide, modifier: Modifier = Modifier, lead: String? = null) {
+    val context = LocalContext.current
+    Column(modifier.testTag("guide_${guide.id}_body"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (lead != null) Text(lead, color = TextSecondary, fontSize = 13.sp)
+        Text(guide.intro, color = TextSecondary, fontSize = 13.sp)
+        guide.steps.forEachIndexed { i, s -> GuideStep(i + 1, s, context) }
+        guide.tips.forEach { tip ->
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(Icons.Default.Lightbulb, null, tint = BrandGold.copy(alpha = 0.8f), modifier = Modifier.size(14.dp).padding(top = 2.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(tip, color = TextTertiary, fontSize = 12.sp)
             }
         }
     }
+}
+
+/**
+ * B18: the "?" that replaces inline "how to set up" cards. Pages stay clean; the full guide (steps,
+ * links, values to copy, tips) opens in a dialog on demand. [lead] is an optional short paragraph
+ * shown above the guide (for headers that already had a one-line explanation).
+ */
+@Composable
+fun GuideHelpButton(guide: SetupGuide, modifier: Modifier = Modifier, tag: String = "guide_${guide.id}_help", lead: String? = null) {
+    var open by rememberSaveable(tag) { mutableStateOf(false) }
+    androidx.compose.material3.IconButton(onClick = { open = true }, modifier = modifier.testTag(tag)) {
+        Icon(Icons.AutoMirrored.Filled.HelpOutline, stringResource(R.string.help, guide.title), tint = TextSecondary)
+    }
+    if (open) dev.asfakul.yumeiro.ui.components.TsukiDialog(
+        onDismissRequest = { open = false },
+        title = { Text(guide.title) },
+        text = {
+            Column(Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState())) { GuideBody(guide, lead = lead) }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { open = false }, modifier = Modifier.testTag(tag + "_ok")) {
+                Text(stringResource(R.string.got_it), color = SpotifyGreen, fontWeight = FontWeight.Bold)
+            }
+        },
+        modifier = Modifier.testTag(tag + "_dialog"),
+    )
 }
 
 @Composable

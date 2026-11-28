@@ -69,6 +69,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Stream
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.AddLink
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -146,6 +147,7 @@ fun StreamScreen(
     onOpenMarket: () -> Unit = {},
     onOpenWebsites: () -> Unit = {},
     onOpenTelegram: () -> Unit = {},
+    onOpenSports: () -> Unit = {},
 ) {
     androidx.compose.runtime.SideEffect { dev.asfakul.yumeiro.diagnostics.DrawCounter.hit("live") } // FREEZE-4
     val context = LocalContext.current
@@ -443,6 +445,22 @@ fun StreamScreen(
     val countryRecent by androidx.compose.runtime.produceState(emptyList<String>(), countryOpen) {
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { LiveCountryRecent.read(app) }
     }
+    // B15: Sports → Watch. Waits for the playlists to load, then picks the sports filter once.
+    val sportsAsked by StreamLaunch.sports.collectAsState()
+    LaunchedEffect(sportsAsked, feed, feedLoading) {
+        if (!sportsAsked) return@LaunchedEffect
+        pane = "hub"
+        if (feedLoading > 0) return@LaunchedEffect
+        if (!StreamLaunch.takeSports()) return@LaunchedEffect
+        if (feed.size == 0) return@LaunchedEffect
+        val pick = StreamLaunch.sportsFilter(feed, genreChips = countriesByCategory && feed.genres.size > 1)
+        liveCountry = null
+        when {
+            pick.genre != null -> { liveGroup = null; liveGenre = pick.genre }
+            pick.group != null -> { liveGenre = null; liveGroup = pick.group }
+            else -> { liveGroup = null; liveGenre = null; liveQuery = pick.query.orEmpty(); liveSearching = true }
+        }
+    }
     LaunchedEffect(feed) { if (liveGroup != null && feedLoading == 0 && feed.categories.none { it.name.equals(liveGroup, ignoreCase = true) }) liveGroup = null }
     LaunchedEffect(feed) { if (liveCountry != null && feedLoading == 0 && (!feed.showCountryChips || feed.countries.none { it.name.equals(liveCountry, ignoreCase = true) })) liveCountry = null }
     // Near the end = the footer or one of the last two shown tile rows is on screen. Read from the item
@@ -639,6 +657,7 @@ fun StreamScreen(
         LiveTool("market_entry", "Market", "${playlists.count { it.isMarket }} installed", Icons.Default.Storefront, liveHue("market"), onOpenMarket),
         LiveTool("stream_websites", "Websites", "Saved sites", Icons.Default.Language, liveHue("websites"), onOpenWebsites),
         LiveTool("stream_telegram", "Telegram", "Public channels", Icons.AutoMirrored.Filled.Send, liveHue("telegram"), onOpenTelegram),
+        LiveTool("live_tool_sports", stringResource(R.string.sports_title), stringResource(R.string.sports_tool_status), Icons.Default.SportsSoccer, liveHue("sports"), onOpenSports),
         LiveTool("live_tool_add_url", "Add URL", "Remote list", Icons.Default.AddLink, liveHue("addurl")) { addingRemote = true },
         LiveTool("live_tool_new", "New list", "Your own", Icons.AutoMirrored.Filled.PlaylistAdd, liveHue("newlist")) { creatingLocal = true },
         LiveTool("live_tool_sync", "Update all", if (syncing) "Updating…" else "Every playlist", Icons.Default.Sync, liveHue("sync")) { sync() },
@@ -989,4 +1008,24 @@ object StreamLaunch {
     fun openLink() { _link.value = true }
     /** True once per request. */
     fun take(): Boolean = if (_link.value) { _link.value = false; true } else false
+
+    /** B15: Sports → "Watch": Live TV opens on the sports channels of the user's own playlists. */
+    private val _sports = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val sports: kotlinx.coroutines.flow.StateFlow<Boolean> = _sports
+    fun watchSports() { _sports.value = true }
+    fun takeSports(): Boolean = if (_sports.value) { _sports.value = false; true } else false
+
+    private val SPORT_WORD = Regex("sport|deporte|esporte|رياض|খেলা", RegexOption.IGNORE_CASE)
+
+    /**
+     * Which filter shows sports: a "Sports" genre (tvg-category) when its chip row is on screen (so the user can
+     * clear it), then a category (group-title), else a name search for "sport" (its box shows and closes).
+     * Pure, unit tested.
+     */
+    fun sportsFilter(feed: LiveChannelFeed.Feed, genreChips: Boolean): SportsPick {
+        if (genreChips) feed.genres.firstOrNull { SPORT_WORD.containsMatchIn(it.name) }?.let { return SportsPick(genre = it.name) }
+        feed.categories.firstOrNull { SPORT_WORD.containsMatchIn(it.name) }?.let { return SportsPick(group = it.name) }
+        return SportsPick(query = "sport")
+    }
+    data class SportsPick(val genre: String? = null, val group: String? = null, val query: String? = null)
 }

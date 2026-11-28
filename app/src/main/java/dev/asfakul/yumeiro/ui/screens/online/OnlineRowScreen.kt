@@ -5,6 +5,22 @@
  */
 package dev.asfakul.yumeiro.ui.screens.online
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import dev.asfakul.yumeiro.R
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
@@ -172,7 +188,10 @@ fun OnlineRowScreen(api: String, title: String, pageName: String, pageData: Stri
     }
 }
 
-/** "See all" for Continue watching. */
+/**
+ * "See all" for Continue watching. Group Y (B6): delete by time range (with a live count), select many titles and
+ * delete them together, remove one, and Undo every delete for a few seconds (nothing is lost by a slip of the finger).
+ */
 @Composable
 fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
     val context = LocalContext.current
@@ -181,40 +200,194 @@ fun OnlineHistoryScreen(onBack: () -> Unit, onOpenTitle: (OnlineItem) -> Unit) {
     val adultOn by dev.asfakul.yumeiro.online.OnlineSettings.adult.collectAsState()
     val adultPrivate by dev.asfakul.yumeiro.online.OnlineSettings.adultPrivate.collectAsState()
     // 18+ titles are kept quietly: hidden here unless the user asks to see them.
-    var showAdult by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
-    val adultCount = androidx.compose.runtime.remember(all) { all.count { OnlineHistory.isAdult(it) } }
-    val entries = androidx.compose.runtime.remember(all, adultOn, adultPrivate, showAdult) {
+    var showAdult by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val adultCount = remember(all) { all.count { OnlineHistory.isAdult(it) } }
+    val entries = remember(all, adultOn, adultPrivate, showAdult) {
         if (showAdult) all.filter { OnlineHistory.isAdult(it) } else OnlineHistory.forFeed(all, adultOn, adultPrivate)
     }
-    var confirmClear by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    if (confirmClear) dev.asfakul.yumeiro.ui.components.TsukiDialog(
-        tone = dev.asfakul.yumeiro.ui.components.DialogTone.DANGER,
-        onDismissRequest = { confirmClear = false },
-        title = { Text(if (showAdult) "Clear 18+ history?" else "Clear watch history?") },
-        text = { Text(if (showAdult) "Removes every 18+ title and its resume position from this device." else "Removes every title and resume position from this device. This can't be undone.") },
-        confirmButton = { TextButton(onClick = { if (showAdult) OnlineHistory.clearAdult(context) else OnlineHistory.clear(context); confirmClear = false; showAdult = false }, modifier = Modifier.testTag("online_history_clear_confirm")) { Text(stringResource(R.string.clear), color = ErrorColor) } },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
+    var selecting by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val selected = remember { mutableStateListOf<String>() }
+    // Titles that leave the list (deleted elsewhere) leave the selection too.
+    LaunchedEffect(entries) { val keys = entries.map { it.key }.toHashSet(); selected.retainAll { it in keys }; if (entries.isEmpty()) selecting = false }
+    var sheet by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var undo by remember { mutableStateOf<OnlineHistory.Removed?>(null) }
+    // Wall-clock wait (not the frame clock), so Undo stays exactly this long on every device and in tests.
+    LaunchedEffect(undo) { if (undo != null) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { kotlinx.coroutines.delay(HISTORY_UNDO_MS) }; undo = null } }
+    val removed: (OnlineHistory.Removed) -> Unit = { r -> if (r.count > 0) undo = r }
+    val exitSelect = { selecting = false; selected.clear() }
+    var confirmSelected by remember { mutableStateOf(false) }
+    if (confirmSelected) TsukiDialog(
+        tone = dev.asfakul.yumeiro.ui.components.DialogTone.WARNING,
+        onDismissRequest = { confirmSelected = false },
+        title = { Text(stringResource(R.string.hx_confirm_selected, selected.size)) },
+        text = { Text(stringResource(R.string.hx_confirm_selected_body)) },
+        confirmButton = {
+            TextButton(onClick = {
+                val keys = selected.toHashSet()
+                confirmSelected = false
+                removed(OnlineHistory.removeWhere(context) { it.key in keys }); exitSelect()
+            }, modifier = Modifier.testTag("history_delete_selected_confirm")) { Text(stringResource(R.string.delete), color = ErrorColor) }
+        },
+        dismissButton = { TextButton(onClick = { confirmSelected = false }) { Text(stringResource(R.string.cancel)) } },
     )
-    Column(Modifier.fillMaxSize().testTag("online_history_screen")) {
-        SubPageHeader(title = if (showAdult) "18+ history" else "Continue watching", subtitle = "${entries.size} title${if (entries.size == 1) "" else "s"}", onBack = { if (showAdult) showAdult = false else onBack() }) {
-            if (adultCount > 0 && adultOn) TextButton(onClick = { showAdult = !showAdult }, modifier = Modifier.testTag("online_history_adult")) {
-                Text(if (showAdult) "All" else "18+ ($adultCount)", color = TextSecondary, fontSize = 12.sp)
+    if (sheet) HistoryDeleteSheet(entries, adultOnly = showAdult, onDismiss = { sheet = false }) { r -> sheet = false; removed(r) }
+    androidx.activity.compose.BackHandler(enabled = selecting) { exitSelect() }
+    Box(Modifier.fillMaxSize().testTag("online_history_screen")) {
+        Column(Modifier.fillMaxSize()) {
+            if (selecting) SubPageHeader(title = stringResource(R.string.hx_selected, selected.size), onBack = exitSelect) {
+                val everything = selected.size == entries.size && entries.isNotEmpty()
+                TextButton(onClick = { if (everything) selected.clear() else { selected.clear(); selected.addAll(entries.map { it.key }) } }, modifier = Modifier.testTag("history_select_all")) {
+                    Text(stringResource(if (everything) R.string.hx_select_none else R.string.hx_select_all), color = TextSecondary, fontSize = 12.sp)
+                }
+                IconButton(onClick = { confirmSelected = true }, enabled = selected.isNotEmpty(), modifier = Modifier.testTag("history_delete_selected")) {
+                    Icon(Icons.Default.Delete, stringResource(R.string.hx_delete_selected), tint = if (selected.isNotEmpty()) ErrorColor else TextTertiary)
+                }
+            } else SubPageHeader(title = if (showAdult) "18+ history" else "Continue watching", subtitle = "${entries.size} title${if (entries.size == 1) "" else "s"}", onBack = { if (showAdult) showAdult = false else onBack() }) {
+                if (adultCount > 0 && adultOn) TextButton(onClick = { showAdult = !showAdult }, modifier = Modifier.testTag("online_history_adult")) {
+                    Text(if (showAdult) "All" else "18+ ($adultCount)", color = TextSecondary, fontSize = 12.sp)
+                }
+                if (entries.isNotEmpty()) {
+                    IconButton(onClick = { selecting = true }, modifier = Modifier.testTag("history_select")) { Icon(Icons.Default.Checklist, stringResource(R.string.hx_select), tint = TextPrimary) }
+                    IconButton(onClick = { sheet = true }, modifier = Modifier.testTag("online_history_clear")) { Icon(Icons.Default.DeleteSweep, stringResource(R.string.hx_delete_history), tint = TextPrimary) }
+                }
             }
-            if (entries.isNotEmpty()) IconButton(onClick = { confirmClear = true }, modifier = Modifier.testTag("online_history_clear")) {
-                Icon(Icons.Default.DeleteSweep, stringResource(R.string.clear_history), tint = TextPrimary)
+            if (entries.isEmpty()) StateMessage(Icons.Default.History, "Nothing yet", "Titles you watch online show up here so you can pick up where you left off.", tint = TextSecondary, testTag = "online_history_empty")
+            else LazyVerticalGrid(
+                columns = GridCells.Fixed(gridColumns()), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 96.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxSize().testTag("history_grid"),
+            ) {
+                items(entries, key = { it.key }) { e ->
+                    val on = e.key in selected
+                    Column(Modifier.testTag("history_item_${e.url}")) {
+                        Box {
+                            PosterCard(e.toItem(), onClick = { onOpenTitle(e.toItem()) }, modifier = Modifier.fillMaxWidth(), progress = e.fraction, showSource = true, actions = !selecting)
+                            if (selecting) HistoryPickOverlay(on, e.name, Modifier.matchParentSize().testTag("history_pick_${e.url}")) { if (on) selected.remove(e.key) else selected.add(e.key) }
+                        }
+                        e.episodeLabel?.let { Text(it, color = TextTertiary, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 2.dp)) }
+                        val removeLabel = stringResource(R.string.hx_remove_title, e.name)
+                        if (!selecting) TextButton(
+                            onClick = { removed(OnlineHistory.removeWhere(context) { it.key == e.key }) },
+                            modifier = Modifier.height(30.dp).testTag("history_remove_${e.url}").semantics { contentDescription = removeLabel },
+                            contentPadding = PaddingValues(0.dp),
+                        ) { Text(stringResource(R.string.remove_2), color = TextSecondary, fontSize = 11.sp) }
+                    }
+                }
             }
         }
-        if (entries.isEmpty()) StateMessage(Icons.Default.History, "Nothing yet", "Titles you watch online show up here so you can pick up where you left off.", tint = TextSecondary, testTag = "online_history_empty")
-        else LazyVerticalGrid(
-            columns = GridCells.Fixed(gridColumns()), contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 48.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxSize(),
-        ) {
-            items(entries, key = { it.key }) { e ->
-                Column {
-                    PosterCard(e.toItem(), onClick = { onOpenTitle(e.toItem()) }, modifier = Modifier.fillMaxWidth(), progress = e.fraction, showSource = true)
-                    e.episodeLabel?.let { Text(it, color = TextTertiary, fontSize = 10.sp, maxLines = 1, modifier = Modifier.padding(top = 2.dp)) }
-                    TextButton(onClick = { OnlineHistory.remove(context, e.api, e.url) }, modifier = Modifier.height(30.dp), contentPadding = PaddingValues(0.dp)) { Text(stringResource(R.string.remove_2), color = TextSecondary, fontSize = 11.sp) }
+        undo?.let { r -> HistoryUndoBar(r.count, Modifier.align(Alignment.BottomCenter)) { OnlineHistory.restore(context, r); undo = null } }
+    }
+}
+
+/** Group Y (B6): "only these sources / types" for the delete sheet. None picked = all. */
+@Composable
+private fun HistoryFilterPills(title: String, all: List<String>, picked: Set<String>, tagPrefix: String, onChange: (Set<String>) -> Unit) {
+    Text(title, color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        item(key = "__all__") { dev.asfakul.yumeiro.ui.components.FilterPill(stringResource(R.string.hx_any), selected = picked.isEmpty(), onClick = { onChange(emptySet()) }, testTag = "${tagPrefix}any") }
+        items(all.size, key = { all[it] }) { i ->
+            val v = all[i]
+            dev.asfakul.yumeiro.ui.components.FilterPill(v, selected = v in picked, onClick = { onChange(if (v in picked) picked - v else picked + v) }, testTag = "$tagPrefix$v")
+        }
+    }
+}
+
+/** How long Undo stays on screen after a history delete. */
+internal const val HISTORY_UNDO_MS = 8_000L
+
+@Composable
+private fun HistoryPickOverlay(on: Boolean, name: String, modifier: Modifier, onToggle: () -> Unit) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+    Box(
+        modifier
+            .clip(shape)
+            .background(if (on) p.accent.copy(alpha = 0.28f) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f))
+            .then(if (on) Modifier.border(2.dp, p.accent, shape) else Modifier)
+            .toggleable(value = on, role = androidx.compose.ui.semantics.Role.Checkbox, onValueChange = { onToggle() })
+            .semantics { contentDescription = name },
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        Icon(
+            if (on) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null,
+            tint = if (on) p.accent else androidx.compose.ui.graphics.Color.White, modifier = Modifier.padding(6.dp).size(22.dp),
+        )
+    }
+}
+
+@Composable
+private fun HistoryUndoBar(count: Int, modifier: Modifier, onUndo: () -> Unit) {
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    androidx.compose.material3.Surface(
+        color = p.chipSelected, contentColor = p.onChipSelected, shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp), shadowElevation = 6.dp,
+        modifier = modifier.navigationBarsPadding().padding(16.dp).fillMaxWidth().testTag("history_undo_bar")
+            .semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite },
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.hx_removed, count), modifier = Modifier.weight(1f).padding(vertical = 12.dp), fontSize = 14.sp)
+            TextButton(onClick = onUndo, modifier = Modifier.testTag("history_undo")) { Text(stringResource(R.string.hx_undo), color = p.onChipSelected, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+        }
+    }
+}
+
+/** Group Y (B6): delete by time, with the number of titles each choice removes shown before anything happens. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun HistoryDeleteSheet(entries: List<OnlineHistory.Entry>, adultOnly: Boolean, onDismiss: () -> Unit, onDeleted: (OnlineHistory.Removed) -> Unit) {
+    val context = LocalContext.current
+    val p = dev.asfakul.yumeiro.ui.theme.LocalMtPalette.current
+    val now = remember { System.currentTimeMillis() }
+    var range by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(dev.asfakul.yumeiro.online.HistoryRange.HOUR) }
+    var apis by remember { mutableStateOf(emptySet<String>()) }
+    var types by remember { mutableStateOf(emptySet<String>()) }
+    val allApis = remember(entries) { entries.map { it.api }.distinct().sorted() }
+    val allTypes = remember(entries) { entries.map { dev.asfakul.yumeiro.online.HistoryRange.typeOf(it) }.distinct().sorted() }
+    val filter = dev.asfakul.yumeiro.online.HistoryDeleteFilter(range, apis, types)
+    val counts = remember(entries, apis, types) {
+        dev.asfakul.yumeiro.online.HistoryRange.entries.associateWith { r -> dev.asfakul.yumeiro.online.HistoryDeleteFilter(r, apis, types).pick(entries, now).size }
+    }
+    val n = counts[range] ?: 0
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss, sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = p.surfaceContainerHigh, dragHandle = dev.asfakul.yumeiro.ui.components.sheetDragHandle(), modifier = Modifier.testTag("history_delete_sheet"),
+    ) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 16.dp).selectableGroup()) {
+            Text(stringResource(R.string.hx_delete_history), color = TextPrimary, fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            Text(stringResource(R.string.hx_sheet_note), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp, bottom = 8.dp))
+            dev.asfakul.yumeiro.online.HistoryRange.entries.forEach { r ->
+                val label = stringResource(when (r) {
+                    dev.asfakul.yumeiro.online.HistoryRange.HOUR -> R.string.hx_range_hour
+                    dev.asfakul.yumeiro.online.HistoryRange.DAY -> R.string.hx_range_day
+                    dev.asfakul.yumeiro.online.HistoryRange.WEEK -> R.string.hx_range_week
+                    dev.asfakul.yumeiro.online.HistoryRange.MONTH -> R.string.hx_range_month
+                    dev.asfakul.yumeiro.online.HistoryRange.ALL -> R.string.hx_range_all
+                })
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .selectable(selected = r == range, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = { range = r })
+                        .padding(horizontal = 8.dp).testTag("history_range_${r.name.lowercase()}"),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.RadioButton(selected = r == range, onClick = null)
+                    Text(label, color = TextPrimary, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
+                    Text(stringResource(R.string.hx_range_count, counts[r] ?: 0), color = TextSecondary, fontSize = 13.sp, modifier = Modifier.testTag("history_range_count_${r.name.lowercase()}"))
                 }
+            }
+            if (allApis.size > 1) HistoryFilterPills(stringResource(R.string.hx_by_source), allApis, apis, "history_api_") { apis = it }
+            if (allTypes.size > 1) HistoryFilterPills(stringResource(R.string.hx_by_type), allTypes, types, "history_type_") { types = it }
+            if (n == 0) Text(stringResource(R.string.hx_nothing_in_range), color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp).testTag("history_range_none"))
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                androidx.compose.material3.Button(
+                    onClick = {
+                        val keys = filter.pick(entries, now).map { it.key }.toHashSet()
+                        // Time ranges also forget episode marks recorded in them; the 18+ view only touches 18+ titles.
+                        val since = if (adultOnly) null else filter.marksSince(now)
+                        onDeleted(OnlineHistory.removeWhere(context, marksSince = since) { it.key in keys })
+                    },
+                    enabled = n > 0,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = ErrorColor, contentColor = androidx.compose.ui.graphics.Color.White),
+                    modifier = Modifier.testTag("history_range_delete"),
+                ) { Text(stringResource(R.string.hx_delete_count, n)) }
             }
         }
     }

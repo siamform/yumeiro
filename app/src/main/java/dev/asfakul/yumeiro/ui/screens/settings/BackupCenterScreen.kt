@@ -96,7 +96,12 @@ fun BackupScreen(onBack: () -> Unit) {
     var items by remember { mutableStateOf<List<BackupStore.Item>>(emptyList()) }
     var refresh by remember { mutableIntStateOf(0) }
     var sections by remember { mutableStateOf(Backup.Section.entries.toSet() - Backup.Section.EXTENSION_FILES) }
-    var preview by remember { mutableStateOf<Pair<Backup.Info, () -> InputStream?>?>(null) }
+    var preview by remember { mutableStateOf<Triple<Backup.Info, () -> InputStream?, CharArray?>?>(null) }
+    // B20 S7: password lock for new backups, and the password a locked backup asks for.
+    var lock by remember { mutableStateOf(false) }
+    var pw by remember { mutableStateOf("") }
+    var pw2 by remember { mutableStateOf("") }
+    var askPassword by remember { mutableStateOf<(() -> InputStream?)?>(null) }
     var deleting by remember { mutableStateOf<BackupStore.Item?>(null) }
     var resetting by remember { mutableStateOf<ResetCenter.Scope?>(null) }
     var erase by remember { mutableStateOf(false) }
@@ -121,8 +126,9 @@ fun BackupScreen(onBack: () -> Unit) {
     }
 
     fun openPreview(open: () -> InputStream?) = work("Reading backup") {
+        if (kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.backup.BackupCrypt.isLocked(open) }) { askPassword = open; return@work }
         val info = Backup.inspect(open)
-        preview = info to open
+        preview = Triple(info, open, null)
     }
 
     val folder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -180,21 +186,39 @@ fun BackupScreen(onBack: () -> Unit) {
 
             // Make a backup
             Block("Back up", "Saved to: $location") {
-                Backup.Section.entries.forEach { s ->
+                Backup.Section.entries.filter { it != Backup.Section.SECRETS || lock }.forEach { s ->
                     CheckRow(s.label, s.hint, s in sections, "backup_section_${s.name.lowercase()}") { on ->
                         sections = if (on) sections + s else sections - s
                     }
+                }
+                SettingsDivider()
+                CheckRow("Lock with a password", "Encrypts the whole backup. Needed to include keys and sign-ins", lock, "backup_lock") { on ->
+                    lock = on; if (!on) { pw = ""; pw2 = "" }
+                }
+                val pwProblem = if (lock) dev.asfakul.yumeiro.backup.BackupCrypt.passwordProblem(pw.toCharArray(), pw2.toCharArray()) else null
+                if (lock) {
+                    PasswordField(pw, "Password", "backup_password") { pw = it }
+                    PasswordField(pw2, "Password again", "backup_password_again") { pw2 = it }
+                    Text(
+                        if (pw.isNotEmpty() && pwProblem != null) pwProblem
+                        else "Yumeiro never saves this password. Without it, nobody (not even you) can open this backup.",
+                        color = if (pw.isNotEmpty() && pwProblem != null) dev.asfakul.yumeiro.ui.theme.DangerTone else TextTertiary,
+                        fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp).testTag("backup_password_hint"),
+                    )
                 }
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Button(
                         onClick = {
-                            work("Backing up") {
-                                val saved = BackupStore.save(context, "manual", sections)
-                                AppMessages.success(context, "Backup saved · ${formatFileSize(saved.size)}")
+                            val password = if (lock) pw.toCharArray() else null
+                            work(if (lock) "Locking and backing up" else "Backing up") {
+                                try {
+                                    val saved = BackupStore.save(context, "manual", sections, password)
+                                    AppMessages.success(context, (if (password != null) "Locked backup saved · " else "Backup saved · ") + formatFileSize(saved.size))
+                                } finally { password?.fill(' ') }
                             }
                         },
-                        enabled = busy == null && sections.isNotEmpty(),
+                        enabled = busy == null && sections.any { it != Backup.Section.SECRETS || lock } && pwProblem == null,
                         shape = yuRound(20),
                         colors = ButtonDefaults.buttonColors(containerColor = SpotifyGreen, contentColor = OnAccent),
                         modifier = Modifier.testTag("backup_now"),
@@ -292,20 +316,35 @@ fun BackupScreen(onBack: () -> Unit) {
             }
 
             Text(
-                "Never in a backup: downloaded videos, account sign-ins (they're locked to this phone) and the app lock. " +
+                "Never in a backup: downloaded videos and the app lock. Keys and sign-ins only go into a backup locked with a password. " +
                     "Extensions are saved as a list and download again from their own repositories after a restore.",
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp),
             )
         }
     }
 
-    preview?.let { (info, open) ->
-        RestoreDialog(info, onDismiss = { preview = null }) { chosen ->
+    askPassword?.let { open ->
+        UnlockDialog(onDismiss = { askPassword = null }) { typed ->
+            askPassword = null
+            work("Unlocking backup") {
+                try {
+                    val info = Backup.inspect(open, typed)
+                    preview = Triple(info, open, typed)
+                } catch (e: dev.asfakul.yumeiro.backup.BackupCrypt.WrongPassword) {
+                    typed.fill(' '); AppMessages.error(context, e.message ?: "Wrong password"); askPassword = open
+                } catch (t: Throwable) { typed.fill(' '); throw t }
+            }
+        }
+    }
+    preview?.let { (info, open, password) ->
+        RestoreDialog(info, onDismiss = { password?.fill(' '); preview = null }) { chosen ->
             preview = null
             work("Restoring") {
-                // Safety first: what's on the phone now goes into a backup before it's replaced.
-                runCatching { BackupStore.save(context, "safety", Backup.Section.entries.toSet() - Backup.Section.EXTENSION_FILES) }
-                Backup.stage(context, open, chosen)
+                try {
+                    // Safety first: what's on the phone now goes into a backup before it's replaced.
+                    runCatching { BackupStore.save(context, "safety", Backup.Section.entries.toSet() - Backup.Section.EXTENSION_FILES) }
+                    Backup.stage(context, open, chosen, password)
+                } finally { password?.fill(' ') }
                 Restart.now(context)
             }
         }
@@ -394,6 +433,10 @@ private fun RestoreDialog(info: Backup.Info, onDismiss: () -> Unit, onRestore: (
                         RadioRow("Use the copies in this backup", "Works offline. Only for a backup you made yourself", useFiles, "restore_ext_files") { useFiles = true }
                     }
                 }
+                if (Backup.Section.SECRETS in chosen) {
+                    Text(stringResource(R.string.restore_secrets_note),
+                        fontSize = 12.sp, color = TextSecondary, modifier = Modifier.padding(top = 8.dp).testTag("restore_secrets_note"))
+                }
                 Text(stringResource(R.string.whats_on_this_phone_now_is), fontSize = 12.sp, color = TextTertiary, modifier = Modifier.padding(top = 8.dp))
             }
         },
@@ -403,6 +446,38 @@ private fun RestoreDialog(info: Backup.Info, onDismiss: () -> Unit, onRestore: (
                 enabled = chosen.isNotEmpty(),
                 modifier = Modifier.testTag("restore_confirm"),
             ) { Text(stringResource(R.string.restore)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+/** B20 S7: a password field (hidden text, no suggestions, no autofill of other apps' passwords). */
+@Composable
+private fun PasswordField(value: String, label: String, tag: String, onChange: (String) -> Unit) {
+    androidx.compose.material3.OutlinedTextField(
+        value = value, onValueChange = { onChange(it.take(256)) }, label = { Text(label) }, singleLine = true,
+        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Password, autoCorrectEnabled = false),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).testTag(tag),
+    )
+}
+
+/** B20 S7: asks for a locked backup's password. */
+@Composable
+private fun UnlockDialog(onDismiss: () -> Unit, onUnlock: (CharArray) -> Unit) {
+    var typed by remember { mutableStateOf("") }
+    TsukiDialog(
+        tone = DialogTone.WARNING,
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.restore_locked_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.restore_locked_hint), fontSize = 13.sp, color = TextSecondary)
+                PasswordField(typed, "Password", "restore_password") { typed = it }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onUnlock(typed.toCharArray()); typed = "" }, enabled = typed.isNotEmpty(), modifier = Modifier.testTag("restore_unlock")) { Text(stringResource(R.string.unlock)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )

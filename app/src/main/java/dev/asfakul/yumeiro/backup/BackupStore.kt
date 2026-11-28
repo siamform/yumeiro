@@ -32,10 +32,13 @@ import java.io.InputStream
 object BackupStore {
     const val RELATIVE = "Download/Yumeiro/Backups"
     private const val MIME = "application/zip"
+    private const val MIME_LOCKED = "application/octet-stream"
 
     enum class Where { FOLDER, DOWNLOADS, LEGACY, APP }
 
     data class Item(val uri: Uri, val name: String, val size: Long, val modified: Long, val where: Where) {
+        /** B20 S7: a password-locked backup. */
+        val locked: Boolean get() = name.endsWith(BackupCrypt.EXTENSION, true)
         /** "auto", "safety" or "manual", read from the name the app gave it. */
         val kind: String get() = when {
             name.startsWith("yumeiro-auto-") -> "auto"
@@ -44,7 +47,7 @@ object BackupStore {
         }
     }
 
-    fun isBackupName(n: String) = n.endsWith(".zip", true) && n.startsWith("yumeiro", true)
+    fun isBackupName(n: String) = (n.endsWith(".zip", true) || n.endsWith(BackupCrypt.EXTENSION, true)) && n.startsWith("yumeiro", true)
 
     private fun legacyDir(): File = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Yumeiro/Backups")
     private fun appDir(c: Context): File? = c.getExternalFilesDir("Backups")
@@ -77,50 +80,50 @@ object BackupStore {
     fun pickerStart(): Uri = DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Download/Yumeiro")
 
     /** Makes a backup and saves it in the backup folder. */
-    suspend fun save(context: Context, kind: String, sections: Set<Backup.Section>): Item = withContext(Dispatchers.IO) {
+    suspend fun save(context: Context, kind: String, sections: Set<Backup.Section>, password: CharArray? = null): Item = withContext(Dispatchers.IO) {
         val c = context.applicationContext
-        val name = Backup.suggestedName(kind)
+        val name = Backup.suggestedName(kind, locked = password != null)
         val item = when {
-            folderUri(c) != null -> saveToTree(c, folderUri(c)!!, name, sections, kind)
-            Build.VERSION.SDK_INT >= 29 -> saveToDownloads(c, name, sections, kind)
-            !legacyNeedsPermission(c) -> saveToFile(c, File(legacyDir().apply { mkdirs() }, name), sections, kind, Where.LEGACY)
-            else -> saveToFile(c, File(appDir(c)?.apply { mkdirs() } ?: error("No storage available"), name), sections, kind, Where.APP)
+            folderUri(c) != null -> saveToTree(c, folderUri(c)!!, name, sections, kind, password)
+            Build.VERSION.SDK_INT >= 29 -> saveToDownloads(c, name, sections, kind, password)
+            !legacyNeedsPermission(c) -> saveToFile(c, File(legacyDir().apply { mkdirs() }, name), sections, kind, Where.LEGACY, password)
+            else -> saveToFile(c, File(appDir(c)?.apply { mkdirs() } ?: error("No storage available"), name), sections, kind, Where.APP, password)
         }
         if (kind != "auto") BackupMeta.recordBackup(c)
         item
     }
 
-    private suspend fun saveToTree(c: Context, tree: Uri, name: String, sections: Set<Backup.Section>, kind: String): Item {
+    private suspend fun saveToTree(c: Context, tree: Uri, name: String, sections: Set<Backup.Section>, kind: String, password: CharArray?): Item {
         val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
-        val doc = DocumentsContract.createDocument(c.contentResolver, parent, MIME, name) ?: error("Couldn't create a file in that folder")
+        val doc = DocumentsContract.createDocument(c.contentResolver, parent, if (password != null) MIME_LOCKED else MIME, name) ?: error("Couldn't create a file in that folder")
         try {
             val out = c.contentResolver.openOutputStream(doc, "wt") ?: error("Couldn't write to that folder")
-            val s = Backup.export(c, out, sections, kind)
+            val s = Backup.export(c, out, sections, kind, password)
             return Item(doc, name, s.bytes, System.currentTimeMillis(), Where.FOLDER)
         } catch (t: Throwable) { runCatching { DocumentsContract.deleteDocument(c.contentResolver, doc) }; throw t }
     }
 
     @android.annotation.TargetApi(29)
-    private suspend fun saveToDownloads(c: Context, name: String, sections: Set<Backup.Section>, kind: String): Item {
+    private suspend fun saveToDownloads(c: Context, name: String, sections: Set<Backup.Section>, kind: String, password: CharArray?): Item {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, MIME)
+            put(MediaStore.MediaColumns.MIME_TYPE, if (password != null) MIME_LOCKED else MIME)
             put(MediaStore.MediaColumns.RELATIVE_PATH, "$RELATIVE/")
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val uri = c.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: error("Couldn't save to Downloads")
         try {
             val out = c.contentResolver.openOutputStream(uri, "wt") ?: error("Couldn't save to Downloads")
-            val s = Backup.export(c, out, sections, kind)
+            val s = Backup.export(c, out, sections, kind, password)
             c.contentResolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
             return Item(uri, name, s.bytes, System.currentTimeMillis(), Where.DOWNLOADS)
         } catch (t: Throwable) { runCatching { c.contentResolver.delete(uri, null, null) }; throw t }
     }
 
-    private suspend fun saveToFile(c: Context, f: File, sections: Set<Backup.Section>, kind: String, where: Where): Item {
+    private suspend fun saveToFile(c: Context, f: File, sections: Set<Backup.Section>, kind: String, where: Where, password: CharArray? = null): Item {
         val tmp = File(f.parentFile, f.name + ".part")
         try {
-            val s = Backup.export(c, tmp.outputStream(), sections, kind)
+            val s = Backup.export(c, tmp.outputStream(), sections, kind, password)
             if (!tmp.renameTo(f)) error("Couldn't save the backup")
             return Item(Uri.fromFile(f), f.name, s.bytes, f.lastModified(), where)
         } finally { tmp.delete() }

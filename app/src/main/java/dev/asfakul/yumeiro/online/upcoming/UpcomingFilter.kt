@@ -24,7 +24,8 @@ object UpcomingFilter {
     data class Choice(val query: String = "", val genre: String? = null, val country: String? = null, val day: LocalDate? = null)
 
     fun options(list: List<Upcoming.Entry>): Options = Options(
-        genres = byCount(list.flatMap { e -> e.genres.map { it.trim() }.filter { it.isNotEmpty() }.distinct() }),
+        // Group W (B2): one name per genre ("Sci-Fi" and "Science Fiction" are one chip).
+        genres = byCount(list.flatMap { e -> dev.asfakul.yumeiro.sources.hub.GenreCatalog.clean(e.genres, max = 24) }),
         countries = byCount(list.mapNotNull { it.country?.trim()?.uppercase()?.takeIf { c -> c.isNotEmpty() } }),
         days = list.map { it.day }.distinct().sorted(),
     )
@@ -52,7 +53,7 @@ object UpcomingFilter {
         val q = fold(c.query)
         return list.filter { e ->
             (q.isEmpty() || fold(e.title).contains(q)) &&
-                (c.genre == null || e.genres.any { it.trim().equals(c.genre, ignoreCase = true) }) &&
+                (c.genre == null || dev.asfakul.yumeiro.sources.hub.GenreCatalog.clean(e.genres, max = 24).any { it.equals(c.genre, ignoreCase = true) }) &&
                 (c.country == null || e.country?.trim()?.uppercase() == c.country) &&
                 (c.day == null || e.day == c.day)
         }

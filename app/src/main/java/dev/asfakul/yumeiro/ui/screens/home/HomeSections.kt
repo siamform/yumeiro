@@ -95,6 +95,7 @@ object HomeLayout {
     val sections = listOf(
         "episodes" to "New episodes",
         "spaces" to "Your spaces",
+        "foryou" to "For you",
         "moods" to "Mood of the hour",
         "discover" to "Discover",
         "new" to "New arrivals",
@@ -254,6 +255,25 @@ internal fun HeroCarousel(slides: List<HeroSlide>, tag: String, onOpen: (Int) ->
                 }
             }
         }
+    }
+}
+
+/**
+ * Group W (B12): the carousel's placeholder at the carousel's exact size: the 184 dp card, the dots row and (when
+ * the loaded carousel will have one) the caption line under it, so nothing below moves when it fills in.
+ */
+@Composable
+internal fun HeroCarouselSkeleton(caption: Boolean) {
+    Column(Modifier.fillMaxWidth().testTag("home_episodes_skeleton")) {
+        dev.asfakul.yumeiro.ui.components.SkeletonBlock(null, 184.dp, shape = yuRound(24))
+        // Dots row laid out as the carousel's (10 dp padding + 5 dp dot), so pixel rounding is the same too.
+        Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(5.dp))
+        // The loaded caption's own text, invisible: same lines on every screen width and font size.
+        if (caption) Text(
+            androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.follow_a_series_with_reminders_on),
+            style = MaterialTheme.typography.bodySmall, color = androidx.compose.ui.graphics.Color.Transparent,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 2.dp),
+        )
     }
 }
 

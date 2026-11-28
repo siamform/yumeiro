@@ -28,6 +28,8 @@ object MangaLibrary {
         val lastChapterUrl: String? = null,
         val lastChapterName: String? = null,
         val lastPage: Int = 0,
+        /** Group X (B5): how far into [lastPage] the top of the screen was (share of the page's height, 0..1). */
+        val lastOffset: Float = 0f,
         val readChapters: List<String> = emptyList(),
         val updatedAt: Long = 0,
     ) { val key get() = "$providerId|$url" }
@@ -91,8 +93,12 @@ object MangaLibrary {
         save(context)
     }
 
-    fun toggleSaved(context: Context, item: MangaItem) =
+    fun toggleSaved(context: Context, item: MangaItem) {
         upsert(context, Entry(item.providerId, item.url, item.title, item.cover)) { it.copy(saved = !it.saved, title = item.title, cover = item.cover ?: it.cover) }
+        // B20: saving is a (small) taste signal of this profile.
+        val now = get(item.providerId, item.url)?.saved == true
+        runCatching { dev.asfakul.yumeiro.intel.TasteSignals.setSaved(context, dev.asfakul.yumeiro.intel.TasteRefs.manga(item.providerId, item.url, item.title, item.cover), now) }
+    }
 
     /** Keeps a stored entry's title / cover current once the title page has loaded (no reorder). */
     fun refreshMeta(context: Context, providerId: String, url: String, title: String?, cover: String?) {
@@ -105,11 +111,18 @@ object MangaLibrary {
         save(context)
     }
 
-    fun progress(context: Context, item: MangaItem, chapter: MangaChapter, page: Int, finished: Boolean) {
+    fun progress(context: Context, item: MangaItem, chapter: MangaChapter, page: Int, finished: Boolean, offset: Float = 0f, isLast: Boolean = false) {
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
+        // B20: a chapter counts as started past page 3 and as read at its last page; the last chapter completes it.
+        runCatching {
+            dev.asfakul.yumeiro.intel.TasteSignals.read(
+                context, dev.asfakul.yumeiro.intel.TasteRefs.manga(item.providerId, item.url, item.title, item.cover), chapter.url,
+                if (finished) 1f else 0f, engaged = page >= 3, done = finished, isLast = isLast && finished,
+            )
+        }
         upsert(context, Entry(item.providerId, item.url, item.title, item.cover)) {
             it.copy(
-                lastChapterUrl = chapter.url, lastChapterName = chapter.name, lastPage = page,
+                lastChapterUrl = chapter.url, lastChapterName = chapter.name, lastPage = page, lastOffset = offset.coerceIn(0f, 0.999f),
                 readChapters = if (finished && chapter.url !in it.readChapters) (it.readChapters + chapter.url).takeLast(5000) else it.readChapters,
             )
         }

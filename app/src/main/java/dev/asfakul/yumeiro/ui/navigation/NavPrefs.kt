@@ -7,6 +7,8 @@ package dev.asfakul.yumeiro.ui.navigation
 
 import android.content.Context
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.Download
@@ -36,7 +38,9 @@ import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.filled.Equalizer
@@ -91,6 +95,8 @@ object NavPrefs {
         SEARCH("search", "Search", "Search every extension at once", nav("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)),
         WEBSITES("websites", "Websites", "Play videos from sites you saved", nav("websites", "Sites", Icons.Filled.Language, Icons.Outlined.Language)),
         TELEGRAM("telegram", "Telegram", "Videos from public Telegram channels", nav("telegram", "Telegram", Icons.AutoMirrored.Filled.Send, Icons.AutoMirrored.Outlined.Send)),
+        // B15: live scores and fixtures (Live TV → Tools → Sports), pinnable like the other tools.
+        SPORTS("sports", "Sports", "Live scores and fixtures", nav("sports", "Sports", Icons.Filled.SportsSoccer, Icons.Outlined.SportsSoccer)),
         YUMIX("yumix", "Yumix", "Anime, movies and shows from your extensions", nav("yumix", "Yumix", dev.asfakul.yumeiro.ui.components.YumixLogo.Filled, dev.asfakul.yumeiro.ui.components.YumixLogo.Icon)),
         YTMUSIC("ytmusic", "YouTube Music", "Songs, albums and artists online", nav("ytmusic", "YT Music", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic)),
         MIX("mix", "Music mix", "Your songs and YouTube Music woven together", nav("mix", "Mix", Icons.Filled.Shuffle, Icons.Outlined.Shuffle)),
@@ -108,6 +114,8 @@ object NavPrefs {
         STATS("stats", "Your statistics", "Streaks, totals and the activity map", nav("stats", "Stats", Icons.Filled.Insights, Icons.Outlined.Insights), newer = true),
         UPCOMING("upcoming", "Airing soon", "New episodes of what you follow", nav("upcoming", "Airing", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth), newer = true),
         READING("reading", "Reading", "Manga and books you read", nav("reading", "Reading", Icons.Filled.AutoStories, Icons.Outlined.AutoStories), newer = true),
+        // B21: the assistant space, pinnable to the bar (phone) or the rail (TV).
+        ASSISTANT("assistant", "Yumeiro AI", "Ask for what to watch or read next", nav("assistant", "AI", Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome)),
         TRACKING("tracking", "Tracking", "AniList and MyAnimeList sync", nav("tracking", "Tracking", Icons.Filled.TrackChanges, Icons.Outlined.TrackChanges), newer = true),
         // H-12 (owner item 12): straight to "Play link" (URL, M3U8, MPD, RTSP, magnet), the Network Stream page.
         NETWORK_STREAM("network_stream", "Network stream", "Play a link: URL, M3U8, DASH, RTSP or magnet", nav("network_stream", "Stream", Icons.Filled.Link, Icons.Outlined.Link)),
@@ -126,8 +134,15 @@ object NavPrefs {
         /** Routes of the main tabs that are shown, in bar order (Home always first). */
         val tabs: List<String> = DEFAULT_TABS,
         val shortcuts: List<Shortcut> = emptyList(),
+        /** B14: every bar route in the user's order (Home first). Empty = tabs, then shortcuts. */
+        val order: List<String> = emptyList(),
     ) {
         val size get() = tabs.size + shortcuts.size
+        /** Bar routes in bar order. */
+        val routes: List<String> get() {
+            val all = tabs + shortcuts.map { SHORTCUT_PREFIX + it.id }
+            return (listOf(Screen.Home.route) + order.filter { it in all && it != Screen.Home.route } + all).distinct().filter { it in all }
+        }
     }
 
     private val DEFAULT_TABS = bottomNavItems.map { it.route }
@@ -143,6 +158,7 @@ object NavPrefs {
             Config(
                 tabs = p.getString("tabs", null)?.split(',')?.filter { it.isNotBlank() } ?: DEFAULT_TABS,
                 shortcuts = p.getString("shortcuts", null)?.split(',')?.mapNotNull { Shortcut.of(it) }.orEmpty(),
+                order = p.getString("order", null)?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
             ),
         )
         loaded = true
@@ -157,14 +173,30 @@ object NavPrefs {
         if (tabs.size + shortcuts.size < MIN_ITEMS) {
             // Too few: bring hidden tabs back in their usual order until the bar has three.
             val back = known.filter { it !in tabs }.take(MIN_ITEMS - tabs.size - shortcuts.size)
-            return Config((tabs + back).sortedBy { known.indexOf(it) }, shortcuts)
+            val t = (tabs + back).sortedBy { known.indexOf(it) }
+            return Config(t, shortcuts, Config(t, shortcuts, c.order).routes)
         }
-        return Config(tabs, shortcuts)
+        return Config(tabs, shortcuts, Config(tabs, shortcuts, c.order).routes)
+    }
+
+    /**
+     * B14: moves bar item [route] to bar position [to] (Home keeps position 0). False when it is
+     * not on the bar, is Home, or [to] is outside 1 until size.
+     */
+    fun move(context: Context, route: String, to: Int): Boolean {
+        val c = _config.value
+        val r = c.routes.toMutableList()
+        val from = r.indexOf(route)
+        if (from <= 0 || to !in 1 until r.size) return false
+        if (from == to) return true
+        r.add(to, r.removeAt(from))
+        return commit(context, c.copy(order = r))
     }
 
     fun setTab(context: Context, route: String, shown: Boolean): Boolean {
         val c = _config.value
-        val next = if (shown) c.copy(tabs = c.tabs + route) else c.copy(tabs = c.tabs - route)
+        // A tab coming back lands where it usually sits among the tabs (before the shortcuts).
+        val next = if (shown) c.copy(tabs = c.tabs + route, order = placeTab(c.routes, route)) else c.copy(tabs = c.tabs - route)
         return commit(context, next)
     }
 
@@ -176,6 +208,14 @@ object NavPrefs {
 
     fun reset(context: Context) { commit(context, Config()) }
 
+    private fun placeTab(routes: List<String>, route: String): List<String> {
+        val known = DEFAULT_TABS
+        // Before the tab that usually follows it; else right after the last tab on the bar.
+        val next = routes.indexOfFirst { it in known && known.indexOf(it) > known.indexOf(route) }
+        val at = if (next >= 0) next else routes.indexOfLast { it in known } + 1
+        return routes.toMutableList().apply { add(at.coerceIn(1, size), route) }
+    }
+
     /** False when the change would break the 3–6 rule (the caller explains why). */
     private fun commit(context: Context, next: Config): Boolean {
         if (next.size !in MIN_ITEMS..MAX_ITEMS || next.shortcuts.size > MAX_SHORTCUTS) return false
@@ -184,15 +224,18 @@ object NavPrefs {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("tabs", clean.tabs.joinToString(","))
             .putString("shortcuts", clean.shortcuts.joinToString(",") { it.id })
+            .putString("order", clean.order.joinToString(","))
             .apply()
         return true
     }
 
     /** The main tabs to show (pager pages), in order. */
-    fun tabItems(c: Config): List<BottomNavItem> = bottomNavItems.filter { it.route in c.tabs }
+    fun tabItems(c: Config): List<BottomNavItem> = c.routes.mapNotNull { r -> bottomNavItems.firstOrNull { it.route == r } }
 
     /** Everything on the bar: main tabs, then pinned shortcuts. */
-    fun barItems(c: Config): List<BottomNavItem> = tabItems(c) + c.shortcuts.map { it.item }
+    fun barItems(c: Config): List<BottomNavItem> = c.routes.mapNotNull { r ->
+        bottomNavItems.firstOrNull { it.route == r } ?: Shortcut.of(r.removePrefix(SHORTCUT_PREFIX))?.item
+    }
 
     private fun nav(id: String, label: String, sel: androidx.compose.ui.graphics.vector.ImageVector, unsel: androidx.compose.ui.graphics.vector.ImageVector) =
         BottomNavItem(SHORTCUT_PREFIX + id, label, sel, unsel, "nav_shortcut_$id")

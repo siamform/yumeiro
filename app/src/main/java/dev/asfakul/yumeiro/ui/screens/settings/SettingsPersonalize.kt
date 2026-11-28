@@ -55,8 +55,6 @@ import androidx.compose.ui.unit.sp
 import dev.asfakul.yumeiro.player.AudioQuality
 import dev.asfakul.yumeiro.ui.components.AppMessages
 import dev.asfakul.yumeiro.ui.navigation.NavPrefs
-import dev.asfakul.yumeiro.ui.navigation.bottomNavItems
-import dev.asfakul.yumeiro.ui.navigation.Screen
 import dev.asfakul.yumeiro.ui.theme.BrandGold
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
 import dev.asfakul.yumeiro.ui.theme.TextPrimary
@@ -67,8 +65,9 @@ import dev.asfakul.yumeiro.ui.theme.yuRound
 // region Navigation bar
 
 /**
- * Settings → Navigation bar. A live preview of the bar on top, the main tabs as switches, and up to
- * two shortcuts as chips. The 3–6 item rule is enforced by [NavPrefs]; a refused change explains why.
+ * Settings → Navigation bar. A live preview of the bar on top, then B14's reorderable list
+ * ([NavBarEditor]): what is on the bar, in order, and what can be added. The 3–7 item rule is
+ * enforced by [NavPrefs]; a refused change explains why. Reset asks first.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -85,50 +84,11 @@ fun NavigationBarSettingsCard() {
             Spacer(Modifier.height(10.dp))
             NavPreview(items.map { it.label to it.selectedIcon })
             Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.of_each_with_a_short_label, items.size, NavPrefs.MAX_ITEMS),
+            Text(stringResource(R.string.nav_edit_count, items.size, NavPrefs.MAX_ITEMS, cfg.shortcuts.size, NavPrefs.MAX_SHORTCUTS),
                 color = TextTertiary, fontSize = 12.sp, modifier = Modifier.testTag("nav_settings_count"))
         }
 
-        GroupLabel("Tabs")
-        SettingsCard {
-            bottomNavItems.forEachIndexed { i, item ->
-                if (i > 0) SettingsDivider()
-                val home = item.route == Screen.Home.route
-                SettingsToggleRow(
-                    title = item.label,
-                    subtitle = when {
-                        home -> "Always shown: everything else is reachable from Home"
-                        else -> "Hidden tabs stay one tap away on Home"
-                    },
-                    checked = item.route in cfg.tabs,
-                    onCheckedChange = { on ->
-                        if (home) return@SettingsToggleRow
-                        if (!NavPrefs.setTab(context, item.route, on)) AppMessages.info(context, ruleMessage(cfg.size, on))
-                    },
-                    testTag = "nav_settings_tab_${item.label.lowercase()}",
-                    enabled = !home,
-                )
-            }
-        }
-
-        GroupLabel("Shortcuts")
-        SettingsCard {
-            Text(stringResource(R.string.pin_up_to_pages_you_open, NavPrefs.MAX_SHORTCUTS), color = TextSecondary, fontSize = 13.sp)
-            Spacer(Modifier.height(12.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                NavPrefs.Shortcut.offered().forEach { s ->
-                    val on = s in cfg.shortcuts
-                    SelectChip(
-                        label = s.label, selected = on, tag = "nav_settings_shortcut_${s.id}",
-                        leading = { Icon(s.item.selectedIcon, null, modifier = Modifier.size(16.dp), tint = if (on) LocalMtPalette.current.onAccent else TextSecondary) },
-                    ) {
-                        if (!NavPrefs.setShortcut(context, s, !on)) {
-                            AppMessages.info(context, if (cfg.shortcuts.size >= NavPrefs.MAX_SHORTCUTS && !on) "Up to ${NavPrefs.MAX_SHORTCUTS} shortcuts. Remove one first." else ruleMessage(cfg.size, !on))
-                        }
-                    }
-                }
-            }
-        }
+        NavBarEditor(cfg)
         if (!dev.asfakul.yumeiro.Edition.isTv) GroupLabel("Layout")
         if (!dev.asfakul.yumeiro.Edition.isTv) SettingsCard {
             remember(context) { dev.asfakul.yumeiro.ui.tv.TvMode.init(context); 0 }
@@ -148,17 +108,29 @@ fun NavigationBarSettingsCard() {
                 }
             }
         }
+        var confirmReset by rememberSaveable { mutableStateOf(false) }
         SettingsCard {
-            SettingsActionRow("Reset to default", "Home, Music, Videos and Library", "nav_settings_reset") {
-                NavPrefs.reset(context); AppMessages.success(context, "Navigation bar reset")
-            }
+            SettingsActionRow("Reset to default", "Home, Music, Videos and Library", "nav_settings_reset") { confirmReset = true }
+        }
+        if (confirmReset) {
+            val done = stringResource(R.string.nav_edit_reset_done)
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { confirmReset = false },
+                title = { Text(stringResource(R.string.nav_edit_reset_title)) },
+                text = { Text(stringResource(R.string.nav_edit_reset_text)) },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { confirmReset = false; NavPrefs.reset(context); AppMessages.success(context, done) },
+                        modifier = Modifier.testTag("nav_settings_reset_confirm"),
+                    ) { Text(stringResource(R.string.nav_edit_reset)) }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.nav_edit_cancel)) }
+                },
+            )
         }
     }
 }
-
-private fun ruleMessage(size: Int, adding: Boolean) =
-    if (adding && size >= NavPrefs.MAX_ITEMS) "The bar holds up to ${NavPrefs.MAX_ITEMS} items. Remove one first."
-    else "Keep at least ${NavPrefs.MIN_ITEMS} items on the bar."
 
 @Composable
 private fun NavPreview(items: List<Pair<String, androidx.compose.ui.graphics.vector.ImageVector>>) {

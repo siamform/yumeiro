@@ -73,13 +73,14 @@ object SubtitleHub {
         if (SubSource.available()) add(SubSource.NAME)
     }
 
-    suspend fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String): Outcome = coroutineScope {
+    suspend fun search(client: OkHttpClient, title: String, imdbId: String?, season: Int?, episode: Int?, language: String,
+                       tmdbId: Int? = null, year: Int? = null): Outcome = coroutineScope {
         val providers = configured()
         val jobs = providers.map { p ->
             async(Dispatchers.IO) {
                 p to runCatching {
                     when (p) {
-                        SubDL.NAME -> SubDL.search(client, title, imdbId, season, episode, language)
+                        SubDL.NAME -> SubDL.search(client, title, imdbId, season, episode, language, tmdbId, year)
                         SubSource.NAME -> SubSource.search(client, title, imdbId, season, episode, language)
                         else -> OpenSubtitles.search(client, title, imdbId, season, episode, language).map {
                             SubtitleHit("OpenSubtitles", it.fileId.toString(), SubtitleLanguages.normalize(it.language), it.release,

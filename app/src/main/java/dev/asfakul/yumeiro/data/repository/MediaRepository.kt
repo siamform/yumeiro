@@ -187,7 +187,7 @@ class OfflineMediaRepository(
     override val folders = _folders.asStateFlow()
 
     // Music library state (favourites, playlists, history) is persisted so it survives restarts.
-    private val musicPrefs = context.getSharedPreferences("mt_player_music_prefs", Context.MODE_PRIVATE)
+    private val musicPrefs = context.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, dev.asfakul.yumeiro.data.MusicPlayHistory.PREFS), Context.MODE_PRIVATE) // B20-A2: favourites, playlists, plays per profile
 
     private val favoriteIds: MutableSet<String> = java.util.Collections.synchronizedSet(
         (musicPrefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet()).toMutableSet()

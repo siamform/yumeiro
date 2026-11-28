@@ -43,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -173,6 +174,53 @@ private val KitsuOrange = androidx.compose.ui.graphics.Color(0xFFFD755C)
 private val TraktRed = androidx.compose.ui.graphics.Color(0xFFED1C24)
 private val SimklBlue = androidx.compose.ui.graphics.Color(0xFF3D9BE9)
 private val LastFmRed = androidx.compose.ui.graphics.Color(0xFFD51007)
+private val SubDlGreen = androidx.compose.ui.graphics.Color(0xFF2FB673)
+
+/**
+ * B19: paste a SubDL key, SubDL checks it, then it is saved. Shared by the Tracking page and
+ * Settings → Subtitles so both say the same thing. The form stays open with the reason on failure.
+ */
+@Composable
+internal fun SubDlKeyDialog(onDismiss: () -> Unit, onLinked: (String) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var key by remember { mutableStateOf(dev.asfakul.yumeiro.online.OnlineSettings.subdlKey.value) }
+    var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    TsukiDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_api_key_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_api_key_hint), color = TextSecondary, fontSize = 13.sp)
+                TextButton(onClick = { dev.asfakul.yumeiro.ui.screens.extras.Links.open(context, dev.asfakul.yumeiro.online.subtitles.SubDL.KEY_PAGE) },
+                    modifier = Modifier.testTag("subdl_key_page")) { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_get_free_key), color = SpotifyGreen, fontSize = 13.sp) }
+                OutlinedTextField(key, { key = it; error = null }, singleLine = true, enabled = !busy, label = { Text(androidx.compose.ui.res.stringResource(dev.asfakul.yumeiro.R.string.subdl_api_key_label)) },
+                    visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth().testTag("subdl_key_field"))
+                error?.let { e ->
+                    Text(e, color = dev.asfakul.yumeiro.ui.theme.WarnTone, fontSize = 13.sp,
+                        modifier = Modifier.fillMaxWidth().testTag("subdl_key_error").semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite })
+                }
+                if (busy) LinearProgressIndicator(color = SpotifyGreen, trackColor = GlassFill, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = !busy && key.isNotBlank(), modifier = Modifier.testTag("subdl_key_save"), onClick = {
+                busy = true; error = null
+                scope.launch {
+                    val r = withContext(Dispatchers.IO) { dev.asfakul.yumeiro.online.subtitles.SubDL.link(context, NetworkClient.get(context), key) }
+                    busy = false
+                    when (r) {
+                        is dev.asfakul.yumeiro.online.subtitles.SubDL.KeyCheck.Valid -> onLinked(r.account ?: "SubDL account")
+                        dev.asfakul.yumeiro.online.subtitles.SubDL.KeyCheck.Rejected -> error = "SubDL didn't accept this key. Copy it again from the API page."
+                        is dev.asfakul.yumeiro.online.subtitles.SubDL.KeyCheck.Unreachable -> error = r.reason
+                    }
+                }
+            }) { Text(if (error != null) "Try again" else "Check and save") }
+        },
+        dismissButton = { TextButton(enabled = !busy, onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
 
 @Composable
 fun TrackingScreen(onBack: () -> Unit) {
@@ -187,6 +235,14 @@ fun TrackingScreen(onBack: () -> Unit) {
     var lastfmUrl by remember { mutableStateOf<String?>(null) }
     var lastfmJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var editId by remember { mutableStateOf<String?>(null) }
+    var subdlForm by remember { mutableStateOf(false) }
+    // A key saved before B19 (Settings → Subtitles) has no account name yet: ask SubDL once.
+    LaunchedEffect(Unit) {
+        if (dev.asfakul.yumeiro.online.subtitles.SubDL.available() && dev.asfakul.yumeiro.online.subtitles.SubDL.account() == null) {
+            val r = withContext(Dispatchers.IO) { runCatching { dev.asfakul.yumeiro.online.subtitles.SubDL.checkKey(NetworkClient.get(context), dev.asfakul.yumeiro.online.OnlineSettings.subdlKey.value) }.getOrNull() }
+            if (r is dev.asfakul.yumeiro.online.subtitles.SubDL.KeyCheck.Valid) { OnlineSettings.setSecret(context, "subdl_user", r.account ?: "SubDL account"); refresh++ }
+        }
+    }
     fun open(url: String) = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         .onFailure { AppMessages.error(context, "No browser to sign in with") }
 
@@ -201,29 +257,26 @@ fun TrackingScreen(onBack: () -> Unit) {
                 GroupLabel("Anime")
                 val aniId = AniList.clientId().isNotBlank()
                 TrackerCard(
-                    name = "AniList", tint = AniListBlue, user = AniList.user(), configured = aniId, tag = "anilist",
+                    name = "AniList", guide = SetupGuides.anilist, tint = AniListBlue, user = AniList.user(), configured = aniId, tag = "anilist",
                     onSetUp = { editId = "anilist" }, onSignIn = { AniList.loginUrl(context)?.let { open(it) } },
                     onSignOut = { AniList.signOut(context); refresh++ },
                 )
-                GuideCard(SetupGuides.anilist)
 
                 val malId = MyAnimeList.clientId().isNotBlank()
                 TrackerCard(
-                    name = "MyAnimeList", tint = MalBlue, user = MyAnimeList.user(), configured = malId, tag = "mal",
+                    name = "MyAnimeList", guide = SetupGuides.myAnimeList, tint = MalBlue, user = MyAnimeList.user(), configured = malId, tag = "mal",
                     onSetUp = { editId = "mal" }, onSignIn = { MyAnimeList.loginUrl(context)?.let { open(it) } },
                     onSignOut = { MyAnimeList.signOut(context); refresh++ },
                 )
-                GuideCard(SetupGuides.myAnimeList)
 
                 TrackerCard(
-                    name = "Kitsu", tint = KitsuOrange, user = Kitsu.user(), configured = true, tag = "kitsu",
+                    name = "Kitsu", guide = SetupGuides.kitsu, tint = KitsuOrange, user = Kitsu.user(), configured = true, tag = "kitsu",
                     onSetUp = null, onSignIn = { kitsuForm = true }, onSignOut = { Kitsu.signOut(context); refresh++ },
                 )
-                GuideCard(SetupGuides.kitsu)
 
                 GroupLabel("Movies & shows")
                 TrackerCard(
-                    name = "Trakt", tint = TraktRed, user = Trakt.user(), configured = Trakt.configured, tag = "trakt",
+                    name = "Trakt", guide = SetupGuides.trakt, tint = TraktRed, user = Trakt.user(), configured = Trakt.configured, tag = "trakt",
                     onSetUp = { traktKeys = true },
                     onSignIn = {
                         scope.launch {
@@ -238,10 +291,9 @@ fun TrackingScreen(onBack: () -> Unit) {
                     },
                     onSignOut = { Trakt.signOut(context); refresh++ },
                 )
-                GuideCard(SetupGuides.trakt)
 
                 TrackerCard(
-                    name = "Simkl", tint = SimklBlue, user = Simkl.user(), configured = Simkl.configured, tag = "simkl",
+                    name = "Simkl", guide = SetupGuides.simkl, tint = SimklBlue, user = Simkl.user(), configured = Simkl.configured, tag = "simkl",
                     onSetUp = { simklKeys = true },
                     onSignIn = {
                         scope.launch {
@@ -256,11 +308,19 @@ fun TrackingScreen(onBack: () -> Unit) {
                     },
                     onSignOut = { Simkl.signOut(context); refresh++ },
                 )
-                GuideCard(SetupGuides.simkl)
+
+                GroupLabel("Subtitles")
+                TrackerCard(
+                    name = "SubDL", guide = SetupGuides.subdl, tint = SubDlGreen,
+                    user = dev.asfakul.yumeiro.online.subtitles.SubDL.account() ?: if (dev.asfakul.yumeiro.online.subtitles.SubDL.available()) "your API key" else null,
+                    configured = true, tag = "subdl",
+                    onSetUp = null, onSignIn = { subdlForm = true },
+                    onSignOut = { dev.asfakul.yumeiro.online.subtitles.SubDL.unlink(context); refresh++ },
+                )
 
                 GroupLabel("Music")
                 TrackerCard(
-                    name = "Last.fm", tint = LastFmRed, user = LastFm.user(), configured = LastFm.configured, tag = "lastfm",
+                    name = "Last.fm", guide = SetupGuides.lastfm, tint = LastFmRed, user = LastFm.user(), configured = LastFm.configured, tag = "lastfm",
                     onSetUp = null,
                     onSignIn = {
                         lastfmJob?.cancel()
@@ -286,7 +346,6 @@ fun TrackingScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-                GuideCard(SetupGuides.lastfm)
                 Text(stringResource(R.string.tokens_and_keys_are_encrypted_with),
                     color = TextTertiary, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             }
@@ -354,6 +413,10 @@ fun TrackingScreen(onBack: () -> Unit) {
             },
             dismissButton = { TextButton(enabled = !busy, onClick = { kitsuForm = false }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+    if (subdlForm) SubDlKeyDialog(onDismiss = { subdlForm = false }) { name ->
+        subdlForm = false; refresh++
+        AppMessages.success(context, "SubDL linked as $name. Its subtitles now show in subtitle search")
     }
     if (traktKeys) {
         var id by remember { mutableStateOf(OnlineSettings.secret("trakt_client").orEmpty()) }
@@ -439,7 +502,7 @@ fun TrackingScreen(onBack: () -> Unit) {
 
 @Composable
 private fun TrackerCard(
-    name: String, tint: androidx.compose.ui.graphics.Color, user: String?, configured: Boolean, tag: String,
+    name: String, guide: SetupGuide, tint: androidx.compose.ui.graphics.Color, user: String?, configured: Boolean, tag: String,
     onSetUp: (() -> Unit)?, onSignIn: () -> Unit, onSignOut: () -> Unit,
 ) {
     GlassGroup(Modifier.testTag("tracker_$tag")) {
@@ -453,11 +516,13 @@ private fun TrackerCard(
             Column(Modifier.weight(1f)) {
                 Text(name, color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    when { user != null -> "Signed in as $user"; !configured -> "Needs a free key. See the guide below"; else -> "Ready to sign in" },
+                    when { user != null -> "Signed in as $user"; !configured -> "Needs a free key. Tap ? for the steps"; else -> "Ready to sign in" },
                     color = TextTertiary, fontSize = 12.sp,
                 )
             }
             StatusChip(when { user != null -> "Linked"; !configured -> "Set up"; else -> "Ready" }, when { user != null -> true; !configured -> false; else -> null })
+            // B18: setup steps open from "?" instead of a guide card under every tracker.
+            GuideHelpButton(guide, tag = "tracker_${tag}_help")
         }
         Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
             if (onSetUp != null && user == null) {

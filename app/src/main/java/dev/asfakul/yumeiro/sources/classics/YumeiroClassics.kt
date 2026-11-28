@@ -223,10 +223,10 @@ class YumeiroClassicsProvider(
                 .map { n -> (if (".asr." in n) "English (auto)" else "English") to n }
                 .take(2)
 
-        suspend fun httpGet(url: String): String? = withContext(Dispatchers.IO) {
+        suspend fun httpGet(url: String, timeoutSec: Long = 20): String? = withContext(Dispatchers.IO) {
             runCatching {
                 val call = NetworkClient.get().newCall(Request.Builder().url(url).header("User-Agent", "Yumeiro (https://yumeiro.click)").build())
-                call.timeout().timeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                call.timeout().timeout(timeoutSec, java.util.concurrent.TimeUnit.SECONDS)
                 call.execute().use { r -> if (r.isSuccessful) r.body.string() else null }
             }.getOrNull()
         }

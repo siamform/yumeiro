@@ -5,8 +5,12 @@
  */
 package dev.asfakul.yumeiro
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import android.util.Log
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -27,7 +31,6 @@ import dev.asfakul.yumeiro.ui.screens.online.UpcomingPrefs
 import dev.asfakul.yumeiro.sources.hub.HubDiscover
 import dev.asfakul.yumeiro.ui.screens.online.Discover
 import dev.asfakul.yumeiro.ui.screens.online.DiscoverBar
-import dev.asfakul.yumeiro.ui.screens.online.DiscoverGrid
 import dev.asfakul.yumeiro.ui.screens.online.DiscoverShelf
 import dev.asfakul.yumeiro.ui.screens.online.UpcomingScreen
 import dev.asfakul.yumeiro.ui.theme.MTPlayerTheme
@@ -71,7 +74,7 @@ class GroupOScreensDeviceTest {
         for (i in 0 until n) runCatching { rule.onAllNodes(m, true)[i].performScrollToNode(androidx.compose.ui.test.hasTestTag(tag)) }
         rule.waitForIdle()
     }
-    private val inGrid = androidx.compose.ui.test.hasTestTag("online_poster") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("discover_grid"))
+    private val inGrid = androidx.compose.ui.test.hasTestTag("online_poster") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.hasTestTag("discover_results"))
     private fun gridPosters() = rule.onAllNodes(inGrid, true).fetchSemanticsNodes().size
     /** Every text inside the node tagged [tag] (a clickable row keeps its texts in child nodes). */
     private fun under(tag: String): List<String> = rule.onAllNodes(
@@ -83,7 +86,7 @@ class GroupOScreensDeviceTest {
         hub.start()
         HubDiscover.baseForTest = hub.base
         HubDiscover.clearCache()
-        Discover.memory.clear(); Discover.providerMemory.clear(); Discover.grid = null; Discover.section = Discover.Section.DISCOVER
+        Discover.memory.clear(); Discover.providerMemory.clear(); Discover.providerRegion.clear(); Discover.section = Discover.Section.DISCOVER
         ctx.cacheDir.listFiles()?.filter { it.name.startsWith("upcoming_") }?.forEach(File::delete)
         UpcomingPrefs.setCountry(ctx, null); UpcomingPrefs.setGenre(ctx, null)
     }
@@ -194,11 +197,21 @@ class GroupOScreensDeviceTest {
         rule.setContent {
             MTPlayerTheme {
                 androidx.compose.foundation.layout.Box {
+                    // Group W: "See all", genres and services open the results page as its own route.
+                    var route by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+                    androidx.compose.runtime.LaunchedEffect(Unit) { dev.asfakul.yumeiro.ui.navigation.NavRequests.requests.collect { route = it } }
                     LazyColumn(Modifier.testTag("groupo_discover_list")) {
                         item("bar") { DiscoverBar(Discover.section, onPick = { Discover.section = it }) }
-                        Discover.shelves(Discover.section).forEach { sh -> item(Discover.section.name + sh.key) { DiscoverShelf(sh, seeds, onOpen = { opened += it.name + "|" + it.url }, onGrid = { Discover.grid = it }) } }
+                        Discover.shelves(Discover.section).forEach { sh -> item(Discover.section.name + sh.key) { DiscoverShelf(sh, seeds, onOpen = { opened += it.name + "|" + it.url }) } }
                     }
-                    Discover.grid?.let { g -> DiscoverGrid(g, onOpen = { opened += it.name + "|" + it.url }, onClose = { Discover.grid = null }) }
+                    route?.takeIf { it.startsWith("videos/online/discover") }?.let { r ->
+                        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
+                            dev.asfakul.yumeiro.ui.screens.online.DiscoverScreen(
+                                dev.asfakul.yumeiro.sources.hub.DiscoverFilter.decode(android.net.Uri.parse(r).getQueryParameter("f")),
+                                onBack = { route = null }, onOpenTitle = { opened += it.name + "|" + it.url },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -215,19 +228,19 @@ class GroupOScreensDeviceTest {
         scrollTo("discover_services")
         rule.waitUntil(20_000) { count("discover_service_8") > 0 }
         scrollTo("discover_genres")
-        rule.waitUntil(5_000) { count("discover_genre_28") > 0 }
+        rule.waitUntil(5_000) { count("discover_genre_action") > 0 }
         FirstRun.shot("groupo_f5_f9_discover")
-        tap("discover_genre_28")
+        tap("genre_card_action")
         rule.waitUntil(20_000) { gridPosters() > 0 }
         assertTrue("genre grid asks with the genre", hub.requests.any { it.startsWith("/v1/hub/discover") && "genre=28" in it })
-        tap("discover_grid_back")
-        rule.waitUntil(5_000) { count("discover_grid") == 0 }
+        tap("subpage_back")
+        rule.waitUntil(5_000) { count("discover_results") == 0 }
         scrollToTop("groupo_discover_list")
         tap("discover_section_tv")
         rule.waitUntil(20_000) { count("discover_row_t_pop") > 0 }
         scrollTo("discover_service_8")
         tap("discover_service_8")
-        rule.waitUntil(20_000) { count("discover_grid") > 0 }
+        rule.waitUntil(20_000) { count("discover_results") > 0 }
         assertTrue("service grid asks by provider and region", hub.requests.any { it.startsWith("/v1/hub/discover") && "provider=8" in it && "region=" in it && "type=tv" in it })
         rule.waitUntil(20_000) { gridPosters() > 0 }
         rule.onAllNodes(inGrid, true)[0].performClick(); rule.waitForIdle()

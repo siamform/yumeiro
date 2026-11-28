@@ -38,7 +38,7 @@ internal object MusicPlayHistory {
         if (id.isBlank() || screenRecorders.get() > 0) return
         if (dev.asfakul.yumeiro.security.Privacy.incognito.value) return
         runCatching {
-            val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val prefs = context.applicationContext.getSharedPreferences(dev.asfakul.yumeiro.profiles.Profiles.prefsName(context, PREFS), Context.MODE_PRIVATE) // B20-A2
             val recent = prefs.getString(KEY_RECENT, null).orEmpty().split('\n').filter { it.isNotBlank() }
             val counts = runCatching {
                 val obj = org.json.JSONObject(prefs.getString(KEY_PLAY_COUNTS, null) ?: "{}")

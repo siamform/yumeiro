@@ -115,7 +115,8 @@ class GroupLShellTest {
         assertEquals(1f, YuMarkFrame.press(0f).playScale, 0.001f)
         assertTrue("presses in the middle", YuMarkFrame.press(0.25f).playScale < 0.9f)
         assertEquals(1f, YuMarkFrame.press(1f).playScale, 0.001f)
-        assertTrue(SplashTiming.hold(false, 30) < 900L && SplashTiming.hold(false, 34) < 900L)
+        // B17 (owner, Beta): the splash now stays at least 1.5 s (was < 900 ms under Group L).
+        assertTrue(SplashTiming.hold(false, 30) >= 1500L && SplashTiming.hold(false, 34) >= 1500L)
         assertTrue(SplashTiming.hold(true, 34) < SplashTiming.hold(false, 34))
     }
 

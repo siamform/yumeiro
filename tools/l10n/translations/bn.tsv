@@ -759,8 +759,6 @@ reliable_alerts_need_a_free_unifiedpush	নির্ভরযোগ্য অ্
 f_droid	F-Droid
 google_play	Google Play
 preview	প্রিভিউ
-of_each_with_a_short_label	%2$s-এর মধ্যে %1$s · প্রতিটিতে ছোট লেবেল; বুড়ো আঙুলের নাগালে সাতটি পর্যন্ত আঁটে
-pin_up_to_pages_you_open	প্রতিদিন খোলেন এমন %1$sটি পর্যন্ত পাতা পিন করুন।
 built_in_torrent_engine	অন্তর্ভুক্ত টরেন্ট ইঞ্জিন
 before_you_turn_it_on	চালু করার আগে
 i_understand_turn_on	বুঝেছি, চালু করুন
@@ -844,7 +842,7 @@ bs_title	ব্ল্যাকসোর্স
 bs_subtitle	জনরা, ট্যাগ ও দর্শকশ্রেণি · AniList ও আপনার সোর্স
 bs_open	ব্ল্যাকসোর্স
 bs_optin_title	ব্ল্যাকসোর্স চালু করবেন?
-bs_optin_text	ব্ল্যাকসোর্স আপনার বেছে নেওয়া শব্দ, জনরা, ট্যাগ ও দর্শকশ্রেণি Yumeiro Cloud-এ পাঠায়, যা AniList-এ খোঁজে (আপনার সম্পর্কে আর কিছু পাঠানো বা রাখা হয় না)। তারপর প্রতিটি টাইটেল আপনার নিজের সোর্সে খোঁজে। এতে সাধারণ সার্চের চেয়ে বেশি সময় লাগে, প্রায়ই ১০ থেকে ৪০ সেকেন্ড, এবং বেশি ডেটা খরচ হয়।
+bs_optin_text	ব্ল্যাকসোর্স আপনার বেছে নেওয়া শব্দ ও ফিল্টার AniList-এ পাঠায় (AniList-এ পৌঁছানো না গেলে Yumeiro Cloud আপনার হয়ে খোঁজে)। আপনার সম্পর্কে আর কিছু পাঠানো বা রাখা হয় না। তারপর আপনার বেছে নেওয়া সোর্সগুলোতে প্রতিটি টাইটেল খোঁজে। এতে সাধারণ সার্চের চেয়ে বেশি সময় লাগে, প্রায়ই ১০ থেকে ৪০ সেকেন্ড, এবং বেশি ডেটা খরচ হয়।
 bs_optin_accept	চালু করুন
 bs_optin_decline	এখন নয়
 bs_turn_off	বন্ধ করুন
@@ -855,7 +853,7 @@ bs_tags_hint	কমা দিয়ে আলাদা করা ট্যাগ
 bs_search	ব্ল্যাকসোর্স দিয়ে খুঁজুন
 bs_idle	অন্তত একটি জনরা, ট্যাগ, দর্শকশ্রেণি বা শব্দ বেছে নিন।
 bs_loading	AniList-এ খোঁজা হচ্ছে…
-bs_error	ব্ল্যাকসোর্স Yumeiro Cloud-এ পৌঁছাতে পারেনি। সংযোগ দেখে আবার চেষ্টা করুন।
+bs_error	ব্ল্যাকসোর্স AniList বা Yumeiro Cloud-এ পৌঁছাতে পারেনি। সংযোগ দেখে আবার চেষ্টা করুন।
 bs_error_busy	AniList এখন ব্যস্ত। এক মিনিট পরে আবার চেষ্টা করুন।
 bs_none	এই ফিল্টারের সাথে কোনো টাইটেল মেলেনি।
 bs_checking	আপনার সোর্স দেখা হচ্ছে… %2$d-এর মধ্যে %1$d
@@ -864,3 +862,191 @@ bs_no_sources	AniList থেকে %1$dটি টাইটেল। আপনা
 bs_episodes	%1$d পর্ব
 bs_search_sources	আপনার সোর্সে খুঁজুন
 bs_own_genres	আপনার সোর্সের নিজস্ব জনরা অনুযায়ী পাওয়া
+dw_find_something	কিছু খুঁজুন
+dw_find_hint	কিছু খুঁজুন: জনরা, সার্ভিস, বছর, রেটিং…
+dw_subtitle_filterable	সিনেমা, সিরিজ ও অ্যানিমে · Yumeiro Cloud
+dw_subtitle_shelf	Yumeiro Cloud · TMDB
+dw_cloud_error_title	Yumeiro Cloud সাড়া দেয়নি
+dw_cloud_error_text	সংযোগ দেখে নিয়ে আবার চেষ্টা করুন।
+dw_nothing_matches	মিলছে এমন কিছু নেই
+dw_try_fewer	কম ফিল্টার দিয়ে চেষ্টা করুন।
+dw_nothing_listed	এখানে এখনো কিছু নেই।
+dw_clear_filters	ফিল্টার মুছুন
+dw_tmdb_credit	তথ্য: TMDB। এই পণ্যটি TMDB API ব্যবহার করে, তবে TMDB এটি অনুমোদন বা প্রত্যয়ন করেনি।
+dw_filters_on	ফিল্টার (%1$dটি চালু)
+dw_sort_label	সাজানো: %1$s
+dw_sort_popular	জনপ্রিয়
+dw_sort_top	সর্বকালের সেরা
+dw_sort_new	সবচেয়ে নতুন
+dw_sort_upcoming	শীঘ্রই আসছে
+dw_sort_rating	সর্বোচ্চ রেটিং
+dw_clear_all	সব মুছুন
+dw_service	সার্ভিস
+dw_from_country	%1$s থেকে
+dw_score_at_least	রেটিং %1$d+
+dw_remove	%1$s সরান
+dw_years_range	%1$d–%2$d
+dw_years_from	%1$d ও তার পরে
+dw_years_to	%1$d পর্যন্ত
+dw_years_any	যেকোনো বছর
+dw_genres	জনরা
+dw_genres_hint	সর্বোচ্চ %1$dটি; টাইটেলে সবগুলো থাকতে হবে
+dw_anime_themes	অ্যানিমে থিম
+dw_themes	থিম ও মুড
+dw_streaming_on	যেখানে স্ট্রিম হয়
+dw_streaming_hint	সর্বোচ্চ %1$dটি; যেকোনোটি · %2$s
+dw_no_services_country	এই দেশের জন্য কোনো সার্ভিস তালিকায় নেই।
+dw_from	দেশ
+dw_released	মুক্তির বছর
+dw_score	রেটিং
+dw_score_hint	TMDB ব্যবহারকারীদের রেটিং
+dw_reset	রিসেট
+dw_show_results	ফলাফল দেখুন
+dw_show_results_n	ফলাফল দেখুন (%1$d)
+dw_genres_count	জনরা ও থিম: %1$dটি
+dw_search_genres	জনরা খুঁজুন
+dw_clear_search	খোঁজা মুছুন
+dw_from_sources	আপনার সোর্স থেকে
+dw_from_sources_hint	আপনার এক্সটেনশন যেসব জনরা ব্যবহার করে; খোঁজ খুলবে
+dw_no_genre	“%1$s” নামে কোনো জনরা নেই
+dw_search_instead	এর বদলে আপনার সোর্সে এটি খুঁজুন।
+dw_open	%1$s খুলুন
+dw_services_title	স্ট্রিমিং সার্ভিস
+dw_where_to_watch	কোথায় দেখবেন · %1$s
+dw_in_country	%1$s-এ
+dw_services_fallback	%1$s-এর জন্য কোনো সার্ভিস তালিকায় নেই; %2$s-এর সার্ভিস দেখানো হচ্ছে।
+dw_no_services	কোনো সার্ভিস তালিকায় নেই
+dw_no_services_text	TMDB-তে %1$s-এর জন্য কিছু নেই। ওপরে অন্য দেশ বেছে নিন।
+dw_all_genres	সব জনরা
+dw_all_services	সব সার্ভিস
+dw_kind_all	সব
+dw_kind_movie	সিনেমা
+dw_kind_tv	সিরিজ
+dw_kind_anime	অ্যানিমে
+dw_score_plus	%1$d+
+nx_all_sources	সব উৎস
+nx_fallback_note	%1$s সাড়া দেয়নি, তাই আপনার সব উৎস দেখানো হচ্ছে।
+nx_fallback_retry	%1$s আবার চেষ্টা করুন
+nx_some_failed	সাড়া দেয়নি: %1$s
+nx_try_again	আবার চেষ্টা করুন
+nx_all_none_title	এখানে কিছু নেই
+nx_all_none_text	আপনার কোনো উৎসেই কোনো উপন্যাস পাওয়া যায়নি।
+hx_select	নির্বাচন
+hx_selected	%1$d টি নির্বাচিত
+hx_select_all	সব নির্বাচন
+hx_select_none	নির্বাচন বাতিল
+hx_delete_selected	নির্বাচিতগুলো মুছুন
+hx_delete_history	ইতিহাস মুছুন
+hx_range_hour	গত এক ঘণ্টা
+hx_range_day	গত ২৪ ঘণ্টা
+hx_range_week	গত ৭ দিন
+hx_range_month	গত ৩০ দিন
+hx_range_all	সব সময়
+hx_range_count	শিরোনাম: %1$d
+hx_delete_count	মুছুন (%1$d)
+hx_removed	ইতিহাস থেকে সরানো হয়েছে: %1$d
+hx_undo	ফিরিয়ে আনুন
+hx_sheet_note	এই সময়ে শেষবার দেখা শিরোনাম ও সেগুলোর আবার-শুরুর জায়গা সরানো হবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।
+hx_nothing_in_range	এই সময়ে কিছু দেখা হয়নি
+hx_remove_title	%1$s ইতিহাস থেকে সরান
+hx_by_source	শুধু এই উৎসগুলো
+hx_by_type	শুধু এই ধরনগুলো
+hx_any	যেকোনো
+hx_confirm_selected	ইতিহাস থেকে %1$d টি শিরোনাম মুছবেন?
+hx_confirm_selected_body	আবার-শুরুর জায়গাও মুছে যাবে। ঠিক পরেই ফিরিয়ে আনতে পারবেন।
+drc_saved_summary	আপনার প্রিসেট · %1$s
+drc_knee	নি
+drc_knee_hint	থ্রেশহোল্ডের কাছে কতটা নরমভাবে কমানো শুরু হয়
+drc_delete_saved	%1$s মুছুন
+drc_save_as	প্রিসেট হিসেবে সংরক্ষণ
+drc_name	নাম
+drc_default_name	আমার সাউন্ড %1$d
+drc_name_needed	একটি নাম দিন
+drc_full	সর্বোচ্চ %1$d টি প্রিসেট রাখা যায়। আগে একটি মুছুন।
+drc_replaces	এই নামের প্রিসেটটি বদলে যাবে
+xr_page	পৃষ্ঠা %1$d
+bs9_more	আরও ফিল্টার
+bs9_fewer	কম ফিল্টার
+bs9_format	ধরন
+bs9_status	অবস্থা
+bs9_years	শুরু হয়েছে এর মধ্যে
+bs9_year_from	শুরুর বছর
+bs9_year_to	শেষ বছর
+bs9_score	সর্বনিম্ন স্কোর
+bs9_score_at_least	%1$d+
+bs9_without	এই ঘরানাগুলো বাদ দিন
+bs9_sort	ক্রম
+bs9_sort_popular	জনপ্রিয়
+bs9_sort_score	সেরা রেটিং
+bs9_sort_trending	ট্রেন্ডিং
+bs9_sort_newest	নতুন
+bs9_f_tv	টিভি
+bs9_f_tv_short	ছোট টিভি
+bs9_f_movie	মুভি
+bs9_f_special	স্পেশাল
+bs9_s_airing	চলছে
+bs9_s_finished	শেষ
+bs9_s_upcoming	এখনও আসেনি
+bs9_s_hiatus	বিরতিতে
+bs9_sources	সোর্স: %2$d-এর মধ্যে %1$d
+bs9_sources_hint	প্রতিটি ইকোসিস্টেম থেকে কোন সোর্সে খুঁজবেন তা বাছুন
+bs9_sources_title	যেসব সোর্সে খুঁজবে
+bs9_sources_note	কম সোর্স হলে তাড়াতাড়ি শেষ হয়। নতুন সোর্স চালু থাকে, যতক্ষণ না আপনি বন্ধ করেন।
+bs9_sources_none	এখনও কোনো সোর্স ইনস্টল করা নেই।
+bs9_group	%1$s · %3$d-এর মধ্যে %2$d
+bs9_cost	বেশি সময় লাগে: সর্বোচ্চ %1$dটি খোঁজ · বাছাই করা সোর্স: %2$d
+bs9_clear	ফিল্টার মুছুন (%1$d)
+bs9_only_found	শুধু আমার সোর্সে থাকা টাইটেল
+bs9_score_of	স্কোর %1$d
+nav_edit_on_bar	বারে আছে
+nav_edit_on_bar_hint	ক্রম বদলাতে হ্যান্ডেল টেনে আনুন বা তীর ব্যবহার করুন। হোম সবসময় প্রথমে থাকে।
+nav_edit_more	আরও যা যোগ করা যায়
+nav_edit_more_hint	মূল ট্যাব আর প্রায়ই খোলা পাতার শর্টকাট।
+nav_edit_kind_tab	মূল ট্যাব
+nav_edit_kind_shortcut	শর্টকাট
+nav_edit_home_first	সবসময় প্রথমে
+nav_edit_move_up	%1$s ওপরে সরান
+nav_edit_move_down	%1$s নিচে সরান
+nav_edit_drag	%1$s-এর ক্রম বদলাতে টানুন
+nav_edit_count	%2$d-এর মধ্যে %1$dটি আইটেম · %4$d-এর মধ্যে %3$dটি শর্টকাট
+nav_edit_full	বার ভরা। আগে একটি বন্ধ করুন।
+nav_edit_shortcuts_full	সর্বোচ্চ %1$dটি শর্টকাট। আগে একটি বন্ধ করুন।
+nav_edit_min	বারে অন্তত %1$dটি আইটেম রাখুন।
+nav_edit_crowded	পাঁচটি বা তার কম আইটেম থাকলে প্রতিটি লেবেল সহজে পড়া যায়।
+nav_edit_reset_title	বার রিসেট করবেন?
+nav_edit_reset_text	হোম, মিউজিক, ভিডিও আর লাইব্রেরি, এই ক্রমে, কোনো শর্টকাট ছাড়া।
+nav_edit_reset	রিসেট
+nav_edit_cancel	বাতিল
+nav_edit_reset_done	নেভিগেশন বার রিসেট হয়েছে
+sports_title	খেলাধুলা
+sports_tool_status	লাইভ স্কোর · সূচি
+sports_shortcut_detail	লাইভ স্কোর ও খেলার সূচি
+sport_football	ফুটবল
+sport_cricket	ক্রিকেট
+sport_basketball	বাস্কেটবল
+sport_american_football	আমেরিকান ফুটবল
+sport_hockey	আইস হকি
+sport_baseball	বেসবল
+sport_tennis	টেনিস
+sport_rugby	রাগবি
+sports_yesterday	গতকাল
+sports_today	আজ
+sports_tomorrow	আগামীকাল
+sports_live	লাইভ
+sports_live_count	%1$dটি লাইভ
+sports_auto	লাইভ খেলা চলাকালীন প্রতি ৩০ সেকেন্ডে আপডেট হয়
+sports_source	স্কোর: %1$s · আপডেট %2$s
+sports_source_fallback	সূচি: %1$s (ESPN সাড়া দেয়নি, তাই কম ম্যাচ) · আপডেট %2$s
+sports_refresh	স্কোর রিফ্রেশ করুন
+sports_retry	আবার চেষ্টা করুন
+sports_empty_title	এই দিনে কোনো ম্যাচ নেই
+sports_empty_msg	%2$s তারিখে %1$s-এর কিছু তালিকায় নেই। অন্য দিন বা খেলা দেখুন।
+sports_err_offline_title	আপনি অফলাইনে
+sports_err_offline	স্কোরের জন্য ইন্টারনেট লাগে। পুরোনো সংখ্যা দেখানোর বদলে কিছুই দেখানো হচ্ছে না।
+sports_err_down_title	এখন স্কোর পাওয়া যাচ্ছে না
+sports_err_down	ESPN বা TheSportsDB কেউ সাড়া দেয়নি। এক মিনিট পরে আবার চেষ্টা করুন।
+sports_err_bad	স্কোর সার্ভিস এমন কিছু পাঠিয়েছে যা Yumeiro পড়তে পারেনি। এক মিনিট পরে আবার চেষ্টা করুন।
+sports_cd_vs	%1$s বনাম %2$s
+sports_status_live	লাইভ, %1$s
+sports_starts	শুরু %1$s
+splash_opening	Yumeiro খুলছে

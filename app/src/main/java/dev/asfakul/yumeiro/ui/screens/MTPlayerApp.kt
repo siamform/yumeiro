@@ -41,6 +41,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -273,10 +275,38 @@ fun MTPlayerApp(
     LaunchedEffect(tabPager) {
         androidx.compose.runtime.snapshotFlow { tabPager.targetPage }.collect { dev.asfakul.yumeiro.ui.components.Entrance.quiet() }
     }
+    // Group W (B13): pages asked for from deep inside a shelf (genres, services, Discover "See all").
+    LaunchedEffect(navController) { dev.asfakul.yumeiro.ui.navigation.NavRequests.requests.collect { navigateSub(it) } }
     // Tap on an online title: movies play straight away; series open their episode list.
     val openOnline: (dev.asfakul.yumeiro.online.OnlineItem) -> Unit = remember(navigateSub) {
         { item -> dev.asfakul.yumeiro.online.OnlineSession.open(context, item) { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) } }
     }
+
+    // B20: a For You / Similar pick opens its catalog title page (films, series, anime found by name and year);
+    // otherwise the installed sources are searched by its name, so availability is never claimed without a search.
+    val recScope = androidx.compose.runtime.rememberCoroutineScope()
+    val openRec: (dev.asfakul.yumeiro.intel.Discovery.Rec) -> Unit = remember(navigateSub) {
+        { r ->
+            recScope.launch {
+                val item = dev.asfakul.yumeiro.intel.Discovery.resolve(r)
+                when {
+                    item != null -> navigateSub(Screen.OnlineTitle.route(item.api, item.url))
+                    r.category == dev.asfakul.yumeiro.intel.MediaCategory.MANGA -> { dev.asfakul.yumeiro.ui.screens.intel.IntelSearchPending.manga = r.title; navigateSub(Screen.Manga.route) }
+                    r.category == dev.asfakul.yumeiro.intel.MediaCategory.NOVEL -> { dev.asfakul.yumeiro.ui.screens.intel.IntelSearchPending.novel = r.title; navigateSub(Screen.Novels.route) }
+                    else -> { dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = r.title; navigateSub(Screen.OnlineSearch.route) }
+                }
+            }
+        }
+    }
+
+    // B21: the assistant space, opened for a category (null = everything) from every section.
+    val openAssistant: (dev.asfakul.yumeiro.intel.MediaCategory?) -> Unit = remember(navigateSub) {
+        { c -> navigateSub(Screen.Assistant.route(c?.code)) }
+    }
+    val aiProfile by dev.asfakul.yumeiro.profiles.Profiles.currentFlow.collectAsStateWithLifecycle()
+    // Re-read on a profile switch: each profile has its own provider and key.
+    androidx.compose.runtime.LaunchedEffect(aiProfile) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.asfakul.yumeiro.intel.ai.AiSettings.get(context) } }
+    val aiConfig by dev.asfakul.yumeiro.intel.ai.AiSettings.config.collectAsStateWithLifecycle()
 
     // Extensions that open another title (CloudStream's loadResult) land on our title page.
     androidx.compose.runtime.DisposableEffect(navigateSub) {
@@ -550,6 +580,7 @@ fun MTPlayerApp(
         dev.asfakul.yumeiro.ui.components.LocalIsPlaying provides playbackState.isPlaying,
         dev.asfakul.yumeiro.ui.components.LocalCurrentTrackId provides playbackState.currentTrack?.id,
         dev.asfakul.yumeiro.ui.components.LocalReducedMotion provides reducedMotionOn,
+        dev.asfakul.yumeiro.ui.screens.intel.LocalAssistantOpener provides openAssistant,
         dev.asfakul.yumeiro.ui.components.LocalOfflineExits provides offlineExits,
         dev.asfakul.yumeiro.ui.theme.LocalAmbientColor provides ambientColor,
     ) {
@@ -561,6 +592,13 @@ fun MTPlayerApp(
     val lastTabRoute = remember { mutableStateOf(currentRoute) }
     if (!isSubpage && lastTabRoute.value != currentRoute) lastTabRoute.value = currentRoute
     val tabRoute = lastTabRoute.value
+    // B13: the lit bar item follows the route AND the tab's source, plus the item tapped last
+    // (NavActive), so Live TV, Network stream, YouTube... each light themselves, not "Videos".
+    var barIntent by rememberSaveable { mutableStateOf<String?>(null) }
+    val navState = dev.asfakul.yumeiro.ui.navigation.NavActive.State(currentRoute, videoSource.tag, musicMode.key)
+    val keptIntent = dev.asfakul.yumeiro.ui.navigation.NavActive.keepIntent(barIntent, navState, onTab = !isSubpage)
+    if (keptIntent != barIntent) androidx.compose.runtime.SideEffect { barIntent = keptIntent }
+    val barActive = dev.asfakul.yumeiro.ui.navigation.NavActive.active(navState, keptIntent, tabRoute, barItems.map { it.route }) ?: ""
     var tabTopH by remember { mutableStateOf(0.dp) }
     var tabBottomH by remember { mutableStateOf(0.dp) }
     val tabTopBar: @Composable () -> Unit = {
@@ -623,6 +661,14 @@ fun MTPlayerApp(
                             else -> "Search your library"
                         },
                         offline = !isOnline,
+                        // B21: once the assistant is set up, one tap from every tab (Home has its Spaces tile instead).
+                        onAssistantClick = if (aiConfig.ready && aiConfig.forAssistant && tabRoute != Screen.Home.route) ({
+                            openAssistant(when {
+                                tabRoute == Screen.Music.route -> dev.asfakul.yumeiro.intel.MediaCategory.MUSIC
+                                tabRoute == Screen.Videos.route && videoSource == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE -> dev.asfakul.yumeiro.intel.MediaCategory.YOUTUBE
+                                else -> null
+                            })
+                        }) else null,
                         onSearchOnline = if (onlineSearchFlag) ({ q ->
                             dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = q
                             navigateSub(Screen.OnlineSearch.route)
@@ -645,6 +691,7 @@ fun MTPlayerApp(
             }
     }
     val onBarNavigate: (String) -> Unit = { route ->
+        barIntent = route
         val shortcut = dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.of(route.removePrefix(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX))
         when (if (route.startsWith(dev.asfakul.yumeiro.ui.navigation.NavPrefs.SHORTCUT_PREFIX)) shortcut else null) {
             null -> navigateTop(route)
@@ -658,6 +705,7 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SEARCH -> navigateSub(Screen.OnlineSearch.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.WEBSITES -> navigateSub(Screen.WebSites.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TELEGRAM -> navigateSub(Screen.Telegram.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.SPORTS -> navigateSub(Screen.Sports.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YUMIX -> openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.YTMUSIC -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.ONLINE)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.MIX -> openMusic(dev.asfakul.yumeiro.ui.screens.music.MusicMode.MIX)
@@ -679,6 +727,7 @@ fun MTPlayerApp(
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.TRACKING -> navigateSub(Screen.Tracking.route)
+            dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.ASSISTANT -> openAssistant(null)
             dev.asfakul.yumeiro.ui.navigation.NavPrefs.Shortcut.NETWORK_STREAM -> {
                 dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch.openLink()
                 openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
@@ -706,7 +755,7 @@ fun MTPlayerApp(
                         )
 
                         if (!tvLayout) MTBottomBar(
-                            currentRoute = tabRoute,
+                            currentRoute = barActive,
                             items = barItems,
                             onNavigateToRoute = onBarNavigate,
                             joinedWithMiniPlayer = dockJoined,
@@ -715,6 +764,12 @@ fun MTPlayerApp(
                     }
                 }
     }
+    // derivedStateOf: the app recomposes when the keyboard opens or closes, not on each frame of its slide.
+    val imeInsets = WindowInsets.ime
+    val imeDensity = androidx.compose.ui.platform.LocalDensity.current
+    val imeOpen by remember(imeInsets, imeDensity) { androidx.compose.runtime.derivedStateOf { imeInsets.getBottom(imeDensity) > 0 } }
+    val subBarOn = isSubpage && !tvLayout && !dev.asfakul.yumeiro.ui.navigation.NavActive.isImmersive(currentRoute) &&
+        !showSplash && !(activePlayingVideo != null && !videoMinimized) && !isNowPlayingExpanded && !imeOpen
     Box(modifier = Modifier.fillMaxSize().pageBackground()) {
         // GATE-1-RENDER: first-use GPU programs compile in idle frames, drawn under every page.
         dev.asfakul.yumeiro.ui.components.ShaderPrewarmHost(remember { dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.SHADER_PREWARM) })
@@ -723,6 +778,9 @@ fun MTPlayerApp(
                 .fillMaxSize()
                 .testTag("app_root_scaffold"),
             containerColor = Color.Transparent,
+            // B13: the same dock stays under every sub-page (not over readers, players, Now Playing,
+            // the splash, the TV layout or an open keyboard). Pages get its height as bottom padding.
+            bottomBar = { if (subBarOn) Box(Modifier.fillMaxWidth().testTag("sub_dock")) { tabBottomBar() } },
         ) { innerPadding ->
             // Each layer keeps its own padding through the page transition. The bars disappear the
             // moment a sub-page opens; with one shared padding the outgoing tab (e.g. Yumix) jumped
@@ -824,6 +882,7 @@ fun MTPlayerApp(
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.TELEGRAM -> navigateSub(Screen.Telegram.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.PROFILES -> settings(dev.asfakul.yumeiro.ui.screens.settings.SettingsCatalog.Category.PROFILES)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.STATS -> navigateSub(Screen.Stats.route)
+                                        dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.ASSISTANT -> openAssistant(null)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.UPCOMING -> navigateSub(Screen.OnlineUpcoming.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.READING -> navigateSub(Screen.ReadingLibrary.route)
                                         dev.asfakul.yumeiro.ui.screens.home.HomeShortcut.NOVELS -> navigateSub(Screen.Novels.route)
@@ -852,6 +911,7 @@ fun MTPlayerApp(
                                 onOpenManga = { navigateSub(Screen.Manga.route) },
                                 onOpenSources = { navigateSub(Screen.SourcesHub.route()) },
                                 onOpenOnlineTitle = openOnline,
+                                onOpenRec = openRec,
                                 onOpenYouTube = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE; navigateTop(Screen.Videos.route) },
                                 onOpenHues = { videoSourcePicked = true; videoSource = dev.asfakul.yumeiro.ui.screens.online.VideoSource.ONLINE; navigateTop(Screen.Videos.route) },
                                 onOpenLive = { openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE) },
@@ -985,6 +1045,7 @@ fun MTPlayerApp(
                                     onOpenMarket = { navigateSub(Screen.Market.route) },
                                     onOpenWebsites = { navigateSub(Screen.WebSites.route) },
                                     onOpenTelegram = { navigateSub(Screen.Telegram.route) },
+                                    onOpenSports = { navigateSub(Screen.Sports.route) },
                                 )
                             } else if (vs == dev.asfakul.yumeiro.ui.screens.online.VideoSource.YOUTUBE) {
                                 dev.asfakul.yumeiro.ui.screens.youtube.YouTubeVideoScreen(
@@ -1001,6 +1062,7 @@ fun MTPlayerApp(
                                     onOpenInfo = { navigateSub(Screen.OnlineTitle.route(it.api, it.url)) },
                                     onOpenLibrary = { navigateSub(Screen.OnlineLibrary.route) },
                                     onOpenUpcoming = { navigateSub(Screen.OnlineUpcoming.route) },
+                                    onOpenRec = openRec,
                                 )
                             } else {
                             VideoScreen(
@@ -1147,7 +1209,9 @@ fun MTPlayerApp(
                             }
                             val railPad = if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvRailWidth else 0.dp
                             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabTopH) tabTopH = h } }) { tabTopBar() }
-                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }) { tabBottomBar() }
+                            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = railPad).onSizeChanged { with(density) { it.height.toDp() }.let { h -> if (h != tabBottomH) tabBottomH = h } }
+                                // B13: while a sub-page slides in, its own dock (same place, same look) takes over.
+                                .graphicsLayer { alpha = if (subBarOn) 0f else 1f }) { tabBottomBar() }
                             if (tvLayout) dev.asfakul.yumeiro.ui.tv.TvNavRail(
                                 currentRoute = tabRoute,
                                 selectedFocus = railFocus,
@@ -1182,6 +1246,7 @@ fun MTPlayerApp(
                         ),
                     ) { entry ->
                         OpaquePage {
+                        androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.screens.intel.LocalRecOpener provides openRec) {
                         OnlineDetailScreen(
                             api = entry.arguments?.getString(Screen.OnlineTitle.ARG_API).orEmpty(),
                             url = entry.arguments?.getString(Screen.OnlineTitle.ARG_URL).orEmpty(),
@@ -1189,6 +1254,7 @@ fun MTPlayerApp(
                             onOpenTitle = openOnline,
                             onOpenExtensions = { navigateSub(Screen.Extensions.route) },
                         )
+                        }
                         }
                     }
                     page(
@@ -1220,6 +1286,36 @@ fun MTPlayerApp(
                         })
                         }
                     }
+                    page(
+                        subPad, Screen.OnlineDiscover.route,
+                        arguments = listOf(navArgument(Screen.OnlineDiscover.ARG_F) { type = NavType.StringType; defaultValue = "" }),
+                    ) { entry ->
+                        OpaquePage {
+                        dev.asfakul.yumeiro.ui.screens.online.DiscoverScreen(
+                            initial = dev.asfakul.yumeiro.sources.hub.DiscoverFilter.decode(entry.arguments?.getString(Screen.OnlineDiscover.ARG_F)),
+                            onBack = popSub, onOpenTitle = openOnline,
+                        )
+                        }
+                    }
+                    page(
+                        subPad, Screen.OnlineGenres.route,
+                        arguments = listOf(navArgument(Screen.OnlineGenres.ARG_K) { type = NavType.StringType; defaultValue = "all" }),
+                    ) { entry ->
+                        OpaquePage {
+                        dev.asfakul.yumeiro.ui.screens.online.GenresScreen(
+                            initialKind = dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.entries.firstOrNull { it.name.equals(entry.arguments?.getString(Screen.OnlineGenres.ARG_K), true) }
+                                ?: dev.asfakul.yumeiro.sources.hub.GenreCatalog.Kind.ALL,
+                            onBack = popSub,
+                            onOpen = { navigateSub(Screen.OnlineDiscover.route(it)) },
+                            onSearch = { q -> dev.asfakul.yumeiro.ui.screens.online.OnlineSearchPending.query = q; navigateSub(Screen.OnlineSearch.route) },
+                        )
+                        }
+                    }
+                    page(subPad, Screen.OnlineServices.route) {
+                        OpaquePage {
+                        dev.asfakul.yumeiro.ui.screens.online.ServicesScreen(onBack = popSub, onOpen = { navigateSub(Screen.OnlineDiscover.route(it)) })
+                        }
+                    }
                     page(subPad, Screen.OnlineHistory.route) {
                         OpaquePage {
                         dev.asfakul.yumeiro.ui.screens.online.OnlineHistoryScreen(onBack = popSub, onOpenTitle = openOnline)
@@ -1248,6 +1344,8 @@ fun MTPlayerApp(
                                 onBack = popSub,
                                 onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
                                 onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
+                                // Group X (B5): Continue reading opens the chapter itself; the reader restores the exact spot.
+                                onResume = { e -> navigateSub(Screen.MangaReader.route(e.providerId, e.url, e.title, e.lastChapterUrl.orEmpty(), e.lastChapterName.orEmpty())) },
                             )
                         }
                     }
@@ -1257,6 +1355,7 @@ fun MTPlayerApp(
                                 onBack = popSub,
                                 onOpenNovel = { navigateSub(Screen.NovelTitle.route(it.pluginId, it.path, it.name, it.cover)) },
                                 onOpenSources = { navigateSub(Screen.NovelSources.route) },
+                                onResume = { e -> navigateSub(Screen.NovelReader.route(e.pluginId, e.path, e.name, e.chapterPath.orEmpty())) },
                             )
                         }
                     }
@@ -1265,12 +1364,14 @@ fun MTPlayerApp(
                     }
                     page(subPad, Screen.NovelTitle.route, arguments = listOf("p", "u", "t", "i").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
                         val a = entry.arguments
+                        androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.screens.intel.LocalRecOpener provides openRec) {
                         OpaquePage {
                             dev.asfakul.yumeiro.ui.screens.novel.NovelDetailScreen(
                                 pluginId = a?.getString("p").orEmpty(), path = a?.getString("u").orEmpty(), name = a?.getString("t").orEmpty(),
                                 cover = a?.getString("i")?.takeIf { it.isNotBlank() }, onBack = popSub,
                                 onRead = { n, ch -> navigateSub(Screen.NovelReader.route(n.pluginId, n.path, n.name, ch.path)) },
                             )
+                        }
                         }
                     }
                     page(subPad, Screen.NovelReader.route, arguments = listOf("p", "u", "t", "c").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
@@ -1285,11 +1386,21 @@ fun MTPlayerApp(
                     page(subPad, Screen.WebSites.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.WEBSITE) }
                     }
+                    page(subPad, Screen.Sports.route) {
+                        OpaquePage {
+                            // B15 "watch sports": back on Live TV with the user's own sports channels picked.
+                            dev.asfakul.yumeiro.ui.screens.stream.SportsScreen(onBack = popSub, onWatch = {
+                                dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch.watchSports()
+                                openVideos(dev.asfakul.yumeiro.ui.screens.online.VideoSource.LIVE)
+                            })
+                        }
+                    }
                     page(subPad, Screen.Telegram.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.sites.WebSitesScreen(onBack = popSub, only = dev.asfakul.yumeiro.online.web.SavedSites.Kind.TELEGRAM) }
                     }
                     page(subPad, Screen.MangaTitle.route, arguments = listOf("p", "u", "t", "i").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
                         val a = entry.arguments
+                        androidx.compose.runtime.CompositionLocalProvider(dev.asfakul.yumeiro.ui.screens.intel.LocalRecOpener provides openRec) {
                         OpaquePage {
                             dev.asfakul.yumeiro.ui.screens.manga.MangaDetailScreen(
                                 providerId = a?.getString("p").orEmpty(), url = a?.getString("u").orEmpty(), title = a?.getString("t").orEmpty(),
@@ -1297,6 +1408,7 @@ fun MTPlayerApp(
                                 onBack = popSub,
                                 onRead = { m, ch -> navigateSub(Screen.MangaReader.route(m.providerId, m.url, m.title, ch.url, ch.name)) },
                             )
+                        }
                         }
                     }
                     page(subPad, Screen.MangaReader.route, arguments = listOf("p", "u", "t", "c", "n").map { a -> navArgument(a) { type = NavType.StringType; defaultValue = "" } }) { entry ->
@@ -1313,6 +1425,17 @@ fun MTPlayerApp(
                     }
                     page(subPad, Screen.Tracking.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.TrackingScreen(onBack = popSub) }
+                    }
+                    page(subPad, Screen.AiSettings.route) {
+                        OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.AiSettingsScreen(onBack = popSub) }
+                    }
+                    page(subPad, Screen.Assistant.route, arguments = listOf(navArgument(Screen.Assistant.ARG) { type = NavType.StringType; defaultValue = "" })) { entry ->
+                        OpaquePage {
+                            dev.asfakul.yumeiro.ui.screens.intel.AssistantScreen(
+                                initialCategory = dev.asfakul.yumeiro.intel.MediaCategory.of(entry.arguments?.getString(Screen.Assistant.ARG)?.ifBlank { null }),
+                                onBack = popSub, onOpenSettings = { navigateSub(Screen.AiSettings.route) }, onOpenRec = openRec,
+                            )
+                        }
                     }
                     page(subPad, Screen.YouTubeAccount.route) {
                         OpaquePage { dev.asfakul.yumeiro.ui.screens.settings.YouTubeAccountScreen(onBack = popSub) }
@@ -1372,6 +1495,7 @@ fun MTPlayerApp(
                                     onBrowse = { navigateSub(Screen.Manga.route) },
                                     onOpenTitle = { navigateSub(Screen.MangaTitle.route(it.providerId, it.url, it.title, it.cover)) },
                                     onOpenSources = { navigateSub(Screen.SourcesHub.route(1)) },
+                                    onResume = { e -> navigateSub(Screen.MangaReader.route(e.providerId, e.url, e.title, e.lastChapterUrl.orEmpty(), e.lastChapterName.orEmpty())) },
                                 )
                             }
                         }
@@ -1412,6 +1536,7 @@ fun MTPlayerApp(
                                 navigateSub(when (page) {
                                     "sources" -> Screen.SourcesHub.route()
                                     "tracking" -> Screen.Tracking.route
+                                    "ai" -> Screen.AiSettings.route
                                     "backup" -> Screen.Backup.route
                                     "together" -> Screen.WatchTogether.route
                                     "health" -> Screen.SourceHealth.route
@@ -1665,7 +1790,7 @@ fun MTPlayerApp(
                     onMinimize = { videoMinimized = true },
                     onExpand = { videoMinimized = false },
                     minimizedBottomInset = when {
-                        isSubpage -> 16.dp
+                        isSubpage && !subBarOn -> 16.dp
                         playbackState.currentTrack != null -> 170.dp
                         else -> 100.dp
                     },
@@ -1739,7 +1864,7 @@ fun MTPlayerApp(
                 !(isNowPlayingExpanded && playbackState.currentTrack != null),
             enter = fadeIn(tween(200)), exit = fadeOut(tween(200)),
             modifier = Modifier.align(Alignment.BottomCenter),
-        ) { dev.asfakul.yumeiro.ui.components.OfflineBanner() }
+        ) { dev.asfakul.yumeiro.ui.components.OfflineBanner(if (subBarOn) Modifier.padding(bottom = tabBottomH) else Modifier) }
 
         // First-run setup guide (skippable; reopened from Home's setup card).
         val setupOpen by dev.asfakul.yumeiro.ui.screens.extras.SetupGuide.open.collectAsState()
@@ -1782,7 +1907,7 @@ fun MTPlayerApp(
         // (tv-api34: a quick card left 44 dp uncovered under it). TV: at the bottom, above the mini player.
         val tvMessages = dev.asfakul.yumeiro.ui.tv.LocalTvMode.current
         AppMessageHost(bottomPadding = when {
-            isSubpage -> androidx.compose.ui.unit.Dp(24f)
+            isSubpage && !subBarOn -> androidx.compose.ui.unit.Dp(24f)
             tvMessages -> if (playbackState.currentTrack != null) androidx.compose.ui.unit.Dp(96f) else androidx.compose.ui.unit.Dp(24f)
             else -> androidx.compose.ui.unit.Dp(150f)
         })
@@ -1844,11 +1969,16 @@ fun MTPlayerApp(
             )
         }
 
-        // Splash overlay (fades out once, then never shown again for this task).
+        // Splash overlay (fades out once, then never shown again for this task). B17: it drifts gently toward
+        // the viewer as it dissolves into Home (a plain short fade with reduced motion), then leaves the tree.
+        val splashStill = dev.asfakul.yumeiro.ui.components.reducedMotion()
         AnimatedVisibility(
             visible = showSplash,
             enter = fadeIn(tween(0)),
-            exit = fadeOut(tween(250))
+            exit = if (splashStill) fadeOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_REDUCED_MS))
+            // B17 r27: the logo has already left inside the splash (its own leave); only the page colour fades.
+            else fadeOut(tween(dev.asfakul.yumeiro.ui.screens.splash.SplashTiming.EXIT_MS, easing = androidx.compose.animation.core.FastOutLinearInEasing)),
+            label = "splash",
         ) {
             SplashScreen(onSplashFinished = { dev.asfakul.yumeiro.ui.screens.splash.SplashGate.markPlayed(); showSplash = false })
         }

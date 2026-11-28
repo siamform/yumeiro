@@ -84,7 +84,6 @@ import dev.asfakul.yumeiro.online.web.SavedSites
 import dev.asfakul.yumeiro.stream.IncomingMedia
 import dev.asfakul.yumeiro.ui.components.SubPageHeader
 import dev.asfakul.yumeiro.ui.components.TsukiDialog
-import dev.asfakul.yumeiro.ui.screens.settings.GuideCard
 import dev.asfakul.yumeiro.ui.screens.settings.SetupGuides
 import dev.asfakul.yumeiro.ui.screens.stream.PageStreamFinderDialog
 import dev.asfakul.yumeiro.ui.theme.LocalMtPalette
@@ -228,7 +227,8 @@ fun WebSitesScreen(onBack: () -> Unit, only: SavedSites.Kind? = null) {
 
     if (help) TsukiDialog(
         onDismissRequest = { help = false },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) { GuideCard(if (telegramPage) SetupGuides.telegram else SetupGuides.websites, startExpanded = true) } },
+        title = { Text((if (telegramPage) SetupGuides.telegram else SetupGuides.websites).title) },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) { dev.asfakul.yumeiro.ui.screens.settings.GuideBody(if (telegramPage) SetupGuides.telegram else SetupGuides.websites) } },
         confirmButton = { androidx.compose.material3.TextButton(onClick = { help = false }, modifier = Modifier.testTag("site_help_close")) { Text(stringResource(R.string.got_it)) } },
     )
 

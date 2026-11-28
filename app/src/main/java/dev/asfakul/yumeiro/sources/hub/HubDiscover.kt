@@ -7,6 +7,7 @@ package dev.asfakul.yumeiro.sources.hub
 
 import dev.asfakul.yumeiro.BuildConfig
 import dev.asfakul.yumeiro.online.OnlineItem
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
@@ -22,7 +23,7 @@ import java.time.LocalDate
  * the rest (6-24 h), which is what keeps 200k users cheap.
  */
 object HubDiscover {
-    enum class Sort(val key: String) { POPULAR("popular"), TOP("top"), NEW("new"), UPCOMING("upcoming") }
+    enum class Sort(val key: String) { POPULAR("popular"), TOP("top"), NEW("new"), UPCOMING("upcoming"), RATING("rating") }
 
     data class Query(
         val kind: String, // "movie" | "tv"
@@ -33,11 +34,17 @@ object HubDiscover {
         val origin: String? = null,
         val lang: String? = null,
         val anime: Boolean = false,
+        /** Group W (B1, B2): themes (TMDB keyword ids, all of them must match), a year range and a lowest score (1-9). */
+        val keywords: List<Int> = emptyList(),
+        val yearFrom: Int? = null,
+        val yearTo: Int? = null,
+        val minRating: Int? = null,
     )
 
     data class Item(
         val title: String, val kind: String, val id: Long, val poster: String?, val year: Int?, val date: LocalDate?,
         val rating: Double?, val votes: Int?, val genres: List<String>, val anime: Boolean,
+        val backdrop: String? = null,
     ) {
         val url: String get() = "${YumeiroCatalog.PART}:$kind:$id"
     }
@@ -79,6 +86,10 @@ object HubDiscover {
         q.origin?.takeIf { ISO2.matches(it) }?.let { p += "origin=$it" }
         q.lang?.takeIf { LANG.matches(it) }?.let { p += "lang=$it" }
         if (q.anime) p += "anime=1"
+        q.keywords.filter { it in 1..9_999_999 }.distinct().take(3).takeIf { it.isNotEmpty() }?.let { p += "keyword=" + it.joinToString(",") }
+        q.yearFrom?.takeIf { it in 1900..2100 }?.let { p += "year_from=$it" }
+        q.yearTo?.takeIf { it in 1900..2100 }?.let { p += "year_to=$it" }
+        q.minRating?.takeIf { it in 1..9 }?.let { p += "min_rating=$it" }
         p += "page=${page.coerceIn(1, 20)}"
         return "/discover?" + p.joinToString("&")
     }
@@ -102,6 +113,7 @@ object HubDiscover {
                 votes = r.optInt("votes").takeIf { it > 0 },
                 genres = r.optJSONArray("genres").strings(),
                 anime = r.optBoolean("anime"),
+                backdrop = r.optString("backdrop").takeIf { it.startsWith("https://") },
             )
         }
         return Page(out, o.optBoolean("hasNext"))
@@ -138,7 +150,15 @@ object HubDiscover {
     /** Tests and the code that swaps the server only. */
     internal fun clearCache() = synchronized(memo) { memo.clear() }
 
-    @Volatile internal var fetch: suspend (String) -> String? = { url -> dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider.httpGet(url) }
+    /**
+     * Group W (B3): the hub answers in well under a second; a call that hangs is almost always a dead pooled
+     * connection or a lost packet (TV api24 run 46042804018: the services page waited 30 s, then showed the error,
+     * while the same address answered in 0.35 s). So each try is cut at 8 s and tried once more on a fresh call.
+     */
+    @Volatile internal var fetch: suspend (String) -> String? = { url ->
+        val get = dev.asfakul.yumeiro.sources.classics.YumeiroClassicsProvider
+        get.httpGet(url, timeoutSec = 8) ?: get.httpGet(url, timeoutSec = 8)
+    }
 
     private suspend fun get(path: String): String? {
         val url = base + path
@@ -158,6 +178,28 @@ object HubDiscover {
 
     suspend fun providers(region: String?): List<Provider>? =
         if (!available()) null else parseProviders(get("/providers?region=${region?.takeIf { ISO2.matches(it) } ?: "US"}"))
+
+    /**
+     * Group W (B3): TMDB lists no services for some countries (Bangladesh, Nepal…). Pure: the country whose list
+     * is shown instead (the nearest big market), or null when [region] is already that one.
+     */
+    fun nearbyRegion(region: String): String? = when (region) {
+        "BD", "NP", "LK", "BT", "MV", "PK", "AF" -> "IN"
+        "US" -> null
+        else -> "US"
+    }
+
+    /** The services in [region], or in [nearbyRegion] when it has none; with the region they are for. */
+    suspend fun providersNear(region: String): Pair<String, List<Provider>>? = kotlinx.coroutines.coroutineScope {
+        val near = nearbyRegion(region)
+        // Countries TMDB is known to list nothing for (they fall back to India): ask both at once, not one after the other.
+        val early = if (near == "IN") async { providers(near) } else null
+        val here = providers(region) ?: run { early?.cancel(); return@coroutineScope null }
+        if (here.isNotEmpty()) { early?.cancel(); return@coroutineScope region to here }
+        if (near == null) return@coroutineScope region to here
+        val list = (early?.await() ?: providers(near)) ?: return@coroutineScope null
+        near to list
+    }
 
     // endregion
 }

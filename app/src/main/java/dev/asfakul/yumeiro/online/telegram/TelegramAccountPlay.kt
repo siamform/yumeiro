@@ -31,6 +31,7 @@ object TelegramAccountPlay {
 
     object Words {
         const val NEEDS_SIGN_IN = "Telegram keeps this video for signed-in users. Sign in once and it plays here in Yumeiro."
+        const val WHERE_SIGN_IN = "Open Telegram in Yumeiro (Live TV › Tools › Telegram) and tap the account button."
         const val ROW_SIGN_IN = "Plays after you sign in"
         const val ROW_ACCOUNT = "Plays with your account"
         const val NO_VIDEO = "Your account can't open a video in this post. It may have been deleted."

@@ -410,7 +410,7 @@ private fun VideoPlayerModalContent(
         dev.asfakul.yumeiro.online.OnlineSession.state.collect { st ->
             if (st?.videoId != video.id) return@collect
             val have = externalSubs.map { it.uri.toString() }.toSet()
-            lateSubs = st.subtitles.filter { it.url !in have }.distinctBy { it.url }.take(40)
+            lateSubs = st.subtitles.filter { it.url !in have && !it.auto }.distinctBy { it.url }.take(40)
         }
     }
 
@@ -903,6 +903,17 @@ private fun VideoPlayerModalContent(
         StreamMediaFactory.setMedia(exoPlayer, video.uri, externalSubs, video.title, curPos)
         exoPlayer.prepare()
         exoPlayer.playWhenReady = curPlaying
+    }
+
+    // B20 S6: a translated track made for this episode goes in at the same position and is turned on.
+    LaunchedEffect(video.id) {
+        if (!video.id.startsWith("online:")) return@LaunchedEffect
+        dev.asfakul.yumeiro.online.OnlineSession.subtitlePicks.collect { (id, sub) ->
+            if (id != video.id || externalSubs.any { it.uri.toString() == sub.url }) return@collect
+            addExternalSubtitle(Uri.parse(sub.url), dev.asfakul.yumeiro.online.OnlinePlayback.subtitleMime(sub.url),
+                dev.asfakul.yumeiro.online.OnlinePlayback.languageTag(sub.language) ?: "und", sub.language)
+            showToast("${sub.language} is on")
+        }
     }
 
     /**

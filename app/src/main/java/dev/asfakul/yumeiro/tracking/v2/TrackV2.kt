@@ -212,11 +212,19 @@ object TrackV2 {
             "kitsu" -> { val id = mal ?: return noMatch(); Kitsu.watched(app, client, id, item.unit, total); "Kitsu episode ${item.unit}" }
             "trakt" -> {
                 val ep = if (item.kind == TrackKind.MOVIE) null else item.unit
-                Trakt.watched(app, client, item.title, item.year, item.season, ep); "Trakt ${ep?.let { "episode $it" } ?: "movie"}"
+                when (Trakt.watched(app, client, item.title, item.year, item.season, ep, tmdb = item.tmdbId, imdb = item.imdbId)) {
+                    Trakt.Sent.ADDED -> "Trakt ${ep?.let { "episode $it" } ?: "movie"}"
+                    Trakt.Sent.NOT_FOUND -> "not found on Trakt, not sent"
+                    // B18: these were logged as sent. Throwing keeps the item queued for after a new sign-in.
+                    Trakt.Sent.SIGNED_OUT -> throw IllegalStateException("Trakt sign-in expired. Sign in again in Tracking")
+                    Trakt.Sent.REJECTED -> throw IllegalStateException("Trakt didn't accept it")
+                }
             }
             "simkl" -> {
                 val ep = if (item.kind == TrackKind.MOVIE) null else item.unit
-                Simkl.watched(app, client, Simkl.Match(item.title, item.year, mal, al, item.imdbId, item.tmdbId), item.season, ep); "Simkl ${ep ?: "movie"}"
+                // B18 pattern fix: a false answer (Simkl didn't find it) was logged as sent too.
+                if (Simkl.watched(app, client, Simkl.Match(item.title, item.year, mal, al, item.imdbId, item.tmdbId), item.season, ep)) "Simkl ${ep ?: "movie"}"
+                else "not found on Simkl, not sent"
             }
             else -> "unknown tracker"
         }

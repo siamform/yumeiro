@@ -171,7 +171,11 @@ data class OnlineLink(
 private val AUDIO_NAME_RX = Regex("""\((mp3|m4a|aac|flac|ogg|opus|wav|vbr mp3)\)""", RegexOption.IGNORE_CASE)
 private val AUDIO_EXT = setOf("mp3", "m4a", "aac", "flac", "oga", "opus", "wav", "wma", "ogg")
 
-data class OnlineSubtitle(val language: String, val url: String, val headers: Map<String, String>)
+data class OnlineSubtitle(
+    val language: String, val url: String, val headers: Map<String, String>,
+    /** B20 S6: made by Yumeiro (a translation); turned on when added and never offered as "more from the source". */
+    val auto: Boolean = false,
+)
 
 /** Events while resolving links for one title / episode. */
 sealed interface LinkEvent {
@@ -416,7 +420,7 @@ object OnlineRepository {
     data class SearchUpdate(val api: String, val items: List<OnlineItem>, val error: String? = null)
 
     /** Searches every provider in parallel; emits each provider's results as soon as they arrive. */
-    fun search(query: String, apis: List<MainAPI>, retry: Boolean = false): Flow<SearchUpdate> = channelFlow {
+    fun search(query: String, apis: List<MainAPI>, retry: Boolean = false, lane: Int = PriorityGate.PICKED): Flow<SearchUpdate> = channelFlow {
         val q = query.trim()
         if (q.isEmpty()) return@channelFlow
         val failMemory = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_S3_FAIL_MEMORY)
@@ -453,7 +457,7 @@ object OnlineRepository {
                 send(update)
             }
         }
-    }.flowOn(Dispatchers.IO + PriorityGate.Lane(PriorityGate.PICKED)) // FE-2c: the user is waiting for a search.
+    }.flowOn(Dispatchers.IO + PriorityGate.Lane(lane)) // FE-2c: the user is waiting for a search (B23: the engine's own searches go BACKGROUND).
 
     private val searchCache = ConcurrentHashMap<String, Timed<List<OnlineItem>>>()
     /** FE-S3: memory only, 2 minutes: a site that just failed a query is not asked again until Retry. */

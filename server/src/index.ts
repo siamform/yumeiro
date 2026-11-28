@@ -15,7 +15,7 @@ import {
 } from "./fcm.ts";
 import { apiSig, signRequest } from "./lastfm.ts";
 import { plan as hubPlan, shape as hubShape, shelves as hubShelves } from "./hub.ts";
-import { ANILIST, DEMOGRAPHICS, GENRES, SEARCH_QUERY, SORTS, TAGS_QUERY, plan as bsPlan, shape as bsShape, tagList as bsTags } from "./blacksource.ts";
+import { ANILIST, DEMOGRAPHICS, FORMATS, GENRES, SEARCH_QUERY, SORTS, STATUSES, TAGS_QUERY, plan as bsPlan, shape as bsShape, tagList as bsTags } from "./blacksource.ts";
 
 export interface Env {
   DB: D1Database;
@@ -122,7 +122,14 @@ async function hub(req: Request, env: Env, url: URL, ctx?: ExecutionContext): Pr
   if (r.status === 404) return fail(404, "not_found");
   if (!r.ok) return fail(502, "upstream");
   const region = /^[A-Z]{2}$/.test(url.searchParams.get("region") ?? "") ? url.searchParams.get("region")! : "US";
-  const body = hubShape(url.pathname, await r.json<Record<string, unknown>>(), p.kind, region);
+  // Group W (B3): a second list merged in (series providers next to film providers); a failed second call only
+  // drops its part.
+  let also: Record<string, unknown> | undefined;
+  if (p.also) {
+    const r2 = await fetch(`https://api.themoviedb.org/3${p.also}`, { headers: { authorization: `Bearer ${env.TMDB_TOKEN}`, accept: "application/json" } }).catch(() => null);
+    if (r2?.ok) also = await r2.json<Record<string, unknown>>();
+  }
+  const body = hubShape(url.pathname, await r.json<Record<string, unknown>>(), p.kind, region, also);
   if (body && typeof body === "object" && "error" in body) return fail(404, "not_found");
   const res = cached(json(body), p.ttl);
   if (cache) { const put = cache.put(key, res.clone()); if (ctx) ctx.waitUntil(put); else await put; }
@@ -147,7 +154,7 @@ async function blacksource(req: Request, env: Env, url: URL, ctx?: ExecutionCont
   try {
     r = await fetch(ANILIST, {
       method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers: { "content-type": "application/json", accept: "application/json", "user-agent": "Yumeiro-Cloud/2.0 (+https://github.com/siamform/yumeiro)" },
       body: JSON.stringify(meta ? { query: TAGS_QUERY } : { query: SEARCH_QUERY, variables: p!.variables }),
       signal: AbortSignal.timeout(8000),
     });
@@ -155,10 +162,13 @@ async function blacksource(req: Request, env: Env, url: URL, ctx?: ExecutionCont
     return fail(504, "upstream_timeout");
   }
   if (r.status === 429) return fail(503, "upstream_busy");
-  if (!r.ok) return fail(502, "upstream");
+  if (!r.ok) {
+    console.warn("blacksource upstream", r.status, (await r.text().catch(() => "")).slice(0, 200));
+    return fail(502, "upstream");
+  }
   const raw = await r.json<unknown>().catch(() => null);
   const body = meta
-    ? (() => { const t = bsTags(raw); return t && { genres: GENRES, demographics: DEMOGRAPHICS, sorts: Object.keys(SORTS), tags: t.tags }; })()
+    ? (() => { const t = bsTags(raw); return t && { genres: GENRES, demographics: DEMOGRAPHICS, sorts: Object.keys(SORTS), formats: FORMATS, statuses: STATUSES, tags: t.tags }; })()
     : bsShape(raw, p!);
   if (!body) return fail(502, "upstream_shape");
   const res = cached(json(body), meta ? 24 * 3600 : p!.ttl);

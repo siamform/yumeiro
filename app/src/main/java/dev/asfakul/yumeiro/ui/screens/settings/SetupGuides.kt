@@ -203,18 +203,44 @@ object SetupGuides {
         tips = listOf("Your password goes to Kitsu once. Only the sign-in token is kept, encrypted."),
     )
 
+    /** B19: SubDL as a linked account on the Tracking page. Links checked 2026-11-28; limits from subdl.com/api-doc. */
+    val subdl = SetupGuide(
+        id = "subdl",
+        title = "Link SubDL",
+        intro = "SubDL is a free subtitle site. With your own key, the player's subtitle search adds SubDL's results for movies and episodes, in your subtitle language.",
+        steps = listOf(
+            SetupGuide.Step("Create a free SubDL account, or sign in if you have one.", link = dev.asfakul.yumeiro.online.subtitles.SubDL.REGISTER_PAGE, linkLabel = "Sign up"),
+            SetupGuide.Step("Open the API page in your SubDL panel and copy your API key.", link = dev.asfakul.yumeiro.online.subtitles.SubDL.KEY_PAGE, linkLabel = "API page"),
+            SetupGuide.Step("Tap Sign in on the SubDL card here, paste the key and tap Check and save. Yumeiro asks SubDL whether the key works before saving it."),
+        ),
+        tips = listOf(
+            "Free keys allow 2,000 searches a day; subtitle downloads don't need the key.",
+            "The key is stored encrypted on this device and only sent to SubDL.",
+        ),
+    )
+
+    /**
+     * B18: checked 2026-11-28. Sign-up moved to trakt.tv/join (trakt.tv/auth/join is a 404), API apps
+     * live at developer.trakt.tv/apps, the form refuses the out-of-band redirect, and a new app starts
+     * as a Development app that only its owner and up to 16 invited people can sign in to.
+     */
     val trakt = SetupGuide(
         id = "trakt",
         title = "Set up Trakt",
-        intro = "Trakt tracks the movies and shows you finish, from any source. Like AniList, it uses your own free API app.",
+        intro = "Trakt keeps a history of the movies and episodes you finish, from any source. Yumeiro sends each finished title with its TMDB or IMDb id, so it lands on the right show.",
         steps = listOf(
-            SetupGuide.Step("Create a free Trakt account, or skip this if you already have one.", link = "https://trakt.tv/auth/join", linkLabel = "Sign up"),
-            SetupGuide.Step("Open Trakt's API apps and tap New Application.", link = "https://trakt.tv/oauth/applications/new", linkLabel = "New application"),
-            SetupGuide.Step("Name: Yumeiro. Redirect URI: paste this exact value (Trakt may warn about it; save anyway). Leave allowed origins and the other fields empty.", copy = TRAKT_REDIRECT),
-            SetupGuide.Step("Copy the Client ID, then tap Add Trakt API app here and paste it. New Trakt apps have no client secret; paste one only if your (older) app shows it."),
-            SetupGuide.Step("Tap Sign in. Yumeiro shows a short code and opens trakt.tv/activate. Type the code there and approve."),
+            SetupGuide.Step("Create a free Trakt account, or skip this if you already have one.", link = "https://trakt.tv/join", linkLabel = "Sign up"),
+            SetupGuide.Step("If the Trakt card says Ready, skip to the last step. Otherwise open Trakt's developer page and create a new app.", link = "https://developer.trakt.tv/apps/new", linkLabel = "New app"),
+            SetupGuide.Step("Name: Yumeiro. Redirect URI: paste this value. Trakt requires one, but signing in with a code never opens it. Leave the other fields empty.", copy = TRAKT_REDIRECT),
+            SetupGuide.Step("Copy the Client ID, then tap Set up on the Trakt card here and paste it. New Trakt apps have no client secret; paste one only if your older app shows it."),
+            SetupGuide.Step("Tap Sign in. Yumeiro shows a short code and opens trakt.tv/activate. Type the code there and approve.", link = "https://trakt.tv/activate", linkLabel = "trakt.tv/activate"),
         ),
-        tips = listOf("Signing in shows a short code; nothing secret is needed. If your app has a client secret it's stored encrypted on the device and only sent to Trakt.", "Yumeiro refreshes the sign-in before it expires (Trakt sign-ins last 7 days), so tracking keeps working."),
+        tips = listOf(
+            "A Trakt app you create yourself is a Development app: only you and up to 16 people you invite can sign in with it. That's enough for your own devices.",
+            "Signing in shows a short code; nothing secret is needed. A client secret, if your app has one, is stored encrypted and only sent to Trakt.",
+            "Yumeiro refreshes the sign-in before it expires (Trakt sign-ins last 7 days), so tracking keeps working.",
+            "Yumeiro uses Trakt but is not endorsed or certified by Trakt.",
+        ),
     )
 
     val simkl = SetupGuide(
@@ -314,7 +340,7 @@ object SetupGuides {
         ),
     )
 
-    const val TRAKT_REDIRECT = dev.asfakul.yumeiro.tracking.Trakt.REDIRECT
+    const val TRAKT_REDIRECT = dev.asfakul.yumeiro.tracking.Trakt.REDIRECT_LOCAL
 
-    val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, youtube, youtubeCookie, unifiedPush)
+    val all: List<SetupGuide> = listOf(aniyomi, mihon, stremio, javascript, servers, cloudstream, anilist, myAnimeList, kitsu, trakt, subdl, youtube, youtubeCookie, unifiedPush)
 }

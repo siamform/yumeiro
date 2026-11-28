@@ -40,6 +40,15 @@ object RegexWarmup {
 
     /** JVM names of the classes whose static initialiser compiles patterns. */
     val CLASSES: List<String> = listOf(
+        "dev.asfakul.yumeiro.intel.Tag", // B20 tag names
+        "dev.asfakul.yumeiro.intel.MetaCache", // B20 description clean-up
+        "dev.asfakul.yumeiro.intel.ai.AiHttp", // B21 AI replies
+        "dev.asfakul.yumeiro.intel.ai.AiSettings", // B21 Cloudflare account id
+        "dev.asfakul.yumeiro.intel.ai.Assistant", // B21 question parsing
+        "dev.asfakul.yumeiro.subtitles.translate.SubCues", // B20 S6 subtitle parsing
+        "dev.asfakul.yumeiro.sports.SportsScores",
+        "dev.asfakul.yumeiro.tracking.Trakt",
+        "dev.asfakul.yumeiro.ui.screens.stream.StreamLaunch",
         "dev.asfakul.yumeiro.online.vault.VaultHtml", // F1 Vault data block
         "dev.asfakul.yumeiro.online.vault.VaultLinks", // F1 Vault link rules
         "dev.asfakul.yumeiro.online.TitleDedupe",

@@ -46,6 +46,9 @@ object OnlineSession {
 
     enum class Phase { RESOLVING, PLAYING, FAILED }
 
+    /** B23: an alternative prepared by the Anticipation Engine, from [via], for an episode [own] has no source for. */
+    data class Offer(val via: String, val own: String)
+
     data class State(
         val api: String,
         val detail: OnlineDetail,
@@ -75,6 +78,8 @@ object OnlineSession {
         /** B17: every link so far failed while sources were still arriving; the next one that arrives plays (at [awaitPos]). */
         val awaiting: Boolean = false,
         val awaitPos: Long = 0L,
+        /** B23: this episode's own extension has no source, but [Offer.via] was prepared; the player asks first (ADR-B23-5). */
+        val offer: Offer? = null,
     ) {
         /** Sources the lists show right now (the playing one always included). */
         val shownLinks: Int get() = maxOf(visible, linkIndex + 1).coerceAtMost(links.size)
@@ -234,6 +239,8 @@ object OnlineSession {
      */
     fun play(context: Context, detail: OnlineDetail, version: String = defaultVersion(detail.versions), episodeIndex: Int = -1, resumeMs: Long? = null) {
         val app = context.applicationContext
+        appContext = app
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel() // B20 S6: a new title
         OnlineHistory.ensureLoaded(app)
         val episodes = episodesOf(detail, version)
         val index = if (detail.playData != null && episodes.isEmpty()) -1 else episodeIndex.coerceIn(0, (episodes.size - 1).coerceAtLeast(0))
@@ -243,13 +250,62 @@ object OnlineSession {
             return
         }
         _state.value = s
+        dev.asfakul.yumeiro.online.anticipation.Anticipator.start(app) // B23: prepares the next episodes while this one plays
         dev.asfakul.yumeiro.player.StartTimeline.begin("${detail.api}: ${detail.name}")
         dev.asfakul.yumeiro.data.PlayCounts.record(
             app, dev.asfakul.yumeiro.data.PlayCounts.Kind.ONLINE, "${detail.api}|${detail.url}", detail.name, detail.api,
             detail.posterUrl, detail.posterHeaders, api = detail.api, url = detail.url,
             adult = AdultContent.isAdult(detail.api, detail.type), // NBUG-11 (ADR-023)
         )
+        if (startPrepared(app, s, resumeMs)) return
         resolve(app, resumeMs)
+    }
+
+    /**
+     * B23: the episode was prepared in the background (fresh links, subtitles, availability checked): it starts at
+     * once with the session's own player path and failover. An alternative from another source is offered first
+     * unless the person chose "Never show again". False: nothing usable was prepared, the normal resolve runs.
+     */
+    private fun startPrepared(app: Context, s: State, resumeMs: Long?): Boolean {
+        val e = s.episode ?: return false
+        val p = runCatching { dev.asfakul.yumeiro.online.anticipation.Anticipator.take(s.api, s.detail.url, s.version, e.data) }.getOrNull() ?: return false
+        if (p.links.none { !it.audioOnly }) return false
+        job?.cancel() // the previous episode's gathering, if still running
+        dev.asfakul.yumeiro.player.StartTimeline.mark("prepared", "${p.links.size} links")
+        val seeded = s.copy(links = p.links, subtitles = p.subtitles, others = p.others, linksDone = true, linkIndex = 0, offer = null)
+        val via = p.via
+        if (via != null && dev.asfakul.yumeiro.online.anticipation.AnticipationPrefs.askBeforeAlternative.value) {
+            Log.i(TAG, "prepared alternative from $via for ${s.title}: asking first")
+            _state.value = seeded.copy(phase = Phase.RESOLVING, offer = Offer(via, s.api))
+            return true
+        }
+        _state.value = seeded
+        Log.i(TAG, "prepared ${s.title}: ${p.links.size} links${via?.let { " from $it" }.orEmpty()}")
+        if (via != null) dev.asfakul.yumeiro.ui.components.AppMessages.show(app, app.getString(dev.asfakul.yumeiro.R.string.an_playing_from, via, s.api))
+        playCurrent(app, 0, resumeMs)
+        return true
+    }
+
+    /** B23 offer: "Play alternative". */
+    fun acceptOffer(context: Context) {
+        val s = _state.value ?: return
+        if (s.offer == null) return
+        _state.value = s.copy(offer = null)
+        playCurrent(context.applicationContext, 0, null)
+    }
+
+    /** B23 offer: "Skip" — on to the episode after it (or the normal search when it is the last one). */
+    fun skipOffer(context: Context) {
+        val s = _state.value ?: return
+        if (s.offer == null) return
+        if (s.hasNext) playEpisode(context, s.index + 1)
+        else { _state.value = s.copy(offer = null, links = emptyList(), linksDone = false); resolve(context.applicationContext, null) }
+    }
+
+    /** B23 offer: "Never show again" — alternatives play without asking from now on (still with a note), this one too. */
+    fun neverAskOffer(context: Context) {
+        dev.asfakul.yumeiro.online.anticipation.AnticipationPrefs.setAskBeforeAlternative(context, false)
+        acceptOffer(context)
     }
 
     private fun resolve(context: Context, resumeMs: Long?) {
@@ -410,7 +466,7 @@ object OnlineSession {
         // and the session sat on the old error forever (the last resort was never reached).
         val id = videoIdFor(s.api, data) + ":" + link.url.hashCode().toUInt().toString(16) + (if (s.refreshed) "r" else "")
         val resume = resumeMs ?: OnlineHistory.progressOf(s.api, data)?.takeIf { !it.finished }?.positionMs ?: 0L
-        _state.update { cur -> (cur ?: s).copy(phase = Phase.PLAYING, linkIndex = linkIndex, videoId = id, message = null, visible = maxOf(s.visible, linkIndex + 1)) }
+        _state.update { cur -> (cur ?: s).copy(phase = Phase.PLAYING, linkIndex = linkIndex, videoId = id, message = null, visible = maxOf(s.visible, linkIndex + 1), offer = null) }
         dev.asfakul.yumeiro.player.StartTimeline.mark("player start", link.qualityLabel)
         Log.i(TAG, "play ${s.title} via ${link.name}${link.via?.let { " from $it" }.orEmpty()} (${link.qualityLabel}, ${link.formatLabel}) ${link.url.take(120)}")
         // B17: a link from another extension uses that extension's interceptors and site address.
@@ -458,6 +514,18 @@ object OnlineSession {
         if (s.link != null) playCurrent(context.applicationContext, s.linkIndex, positionMs)
     }
 
+    /** B20 S6: subtitles the player should add and turn on now (a translation); no re-resolve. */
+    private val _subtitlePicks = kotlinx.coroutines.flow.MutableSharedFlow<Pair<String, OnlineSubtitle>>(extraBufferCapacity = 4)
+    val subtitlePicks: kotlinx.coroutines.flow.SharedFlow<Pair<String, OnlineSubtitle>> = _subtitlePicks
+
+    /** B20 S6: adds a Yumeiro-made track to this episode; the open player adds it at the same position and selects it. */
+    fun offerSubtitle(subtitle: OnlineSubtitle) {
+        val s = _state.value ?: return
+        val id = s.videoId ?: return
+        _state.value = s.copy(subtitles = (s.subtitles.filter { it.url != subtitle.url }) + subtitle)
+        _subtitlePicks.tryEmit(id to subtitle)
+    }
+
     fun switchSource(context: Context, linkIndex: Int, positionMs: Long) {
         val s = _state.value ?: return
         if (linkIndex !in s.links.indices) return
@@ -474,6 +542,10 @@ object OnlineSession {
      * Device tests only: adds [link] (for example a dead one) to the current episode's sources and
      * returns its index, so a test can pick it by hand through [switchSource].
      */
+    /** Device tests only (Group Y): show [s] as the current session without resolving or playing anything. */
+    @androidx.annotation.VisibleForTesting
+    internal fun setStateForTest(s: State?) { _state.value = s }
+
     @androidx.annotation.VisibleForTesting
     internal fun addLinkForTest(link: OnlineLink): Int {
         var index = -1
@@ -570,12 +642,19 @@ object OnlineSession {
     private fun pageFor(s: State): String? =
         CapturePage.pick(s.links.map { it.referer }, s.links.map { it.url }, s.data, s.detail.url)
 
+    /** B20 S6: for clean-up when the player closes ([end] has no context). */
+    @Volatile private var appContext: Context? = null
+
     fun playEpisode(context: Context, index: Int) {
         val s = _state.value ?: return
         if (index !in s.episodes.indices) return
+        // B20 S6: another episode starts, so the last one's translation files go (and its translation stops).
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel()
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.keepOnly(context, dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.keyFor(s.api, s.detail.url, s.episodes[index].data))
         _state.value = s.copy(index = index, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, skipped = 0, message = null, failed = emptySet(), visible = PAGE,
             // NBUG-12 NB12-5: each episode gets its own refresh and page step.
-            refreshed = false, captured = false)
+            refreshed = false, captured = false, offer = null)
+        if (startPrepared(context.applicationContext, _state.value ?: return, null)) return
         resolve(context.applicationContext, null)
     }
 
@@ -602,15 +681,16 @@ object OnlineSession {
             dev.asfakul.yumeiro.ui.components.AppMessages.show(context, "${version.ifBlank { "That version" }} isn't available for $what yet. Still playing ${s.version.ifBlank { "the current version" }}.", dev.asfakul.yumeiro.ui.components.AppMessages.Kind.WARNING)
             return
         }
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel() // B20 S6: other version, other subtitles
         _state.value = s.copy(version = version, episodes = eps, index = idx, videoId = null, phase = Phase.RESOLVING, links = emptyList(), subtitles = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE,
-            refreshed = false, captured = false) // NBUG-12 NB12-5
+            refreshed = false, captured = false, offer = null) // NBUG-12 NB12-5
         resolve(context.applicationContext, null)
     }
 
     fun retry(context: Context) {
         val s = _state.value ?: return
         _state.value = s.copy(phase = Phase.RESOLVING, links = emptyList(), linkIndex = 0, linksDone = false, message = null, failed = emptySet(), visible = PAGE,
-            refreshed = false, captured = false) // NBUG-12 NB12-5
+            refreshed = false, captured = false, offer = null) // NBUG-12 NB12-5
         resolve(context.applicationContext, null)
     }
 
@@ -619,7 +699,14 @@ object OnlineSession {
         // BUG-1 (D4): Close runs end() before the player's last save; that save still belongs here.
         val s = _state.value?.takeIf { it.videoId == videoId } ?: ended?.takeIf { it.videoId == videoId } ?: return
         OnlineHistory.record(context.applicationContext, s.detail, s.version, s.episode, positionMs, durationMs)
+        // B20 S6: an episode watched to the end loses its translation files when the player closes.
+        if (durationMs > 0 && positionMs >= durationMs * 0.92) dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.keyOf(s)?.let { dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.markFinished(it) }
+        // B20: the same progress feeds this profile's taste (start / substantial / complete / rewatch marks).
+        dev.asfakul.yumeiro.intel.TasteRefs.online(s.detail)?.let { ref ->
+            runCatching { dev.asfakul.yumeiro.intel.TasteSignals.played(context.applicationContext, ref, s.episode?.data, positionMs, durationMs, s.index, s.episodes.size) }
+        }
         dev.asfakul.yumeiro.online.anime.AnimeSync.onProgress(context, s.detail, s.episode, s.index, positionMs, durationMs)
+        dev.asfakul.yumeiro.online.anticipation.Anticipator.onProgress(videoId, positionMs, durationMs) // B23
     }
 
     /** Placeholder for the player's "Up next" card. */
@@ -634,6 +721,8 @@ object OnlineSession {
     fun end() {
         job?.cancel(); job = null; failoverJob?.cancel(); failoverJob = null
         ended = _state.value?.takeIf { it.videoId != null }
+        ended?.let { e -> dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.keyOf(e)?.let { k -> appContext?.let { dev.asfakul.yumeiro.subtitles.translate.SubtitleTemp.onPlayerClosed(it, k) } } }
+        dev.asfakul.yumeiro.subtitles.translate.SubtitleTranslate.cancel()
         _state.value = null
     }
 

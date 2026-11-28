@@ -23,6 +23,9 @@ Env: EXT_CONFIG (default .github/extensions/sources.json), GITHUB_TOKEN, GITHUB_
 """
 import concurrent.futures as cf
 import hashlib, io, json, math, os, re, sys, threading, time, urllib.parse, urllib.request, zipfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from extension_vetting import Rejected, vet  # noqa: E402  B10 health check + security vetting
 from datetime import datetime, timezone
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else "out-ext"
@@ -342,7 +345,8 @@ def main():
     max_bytes = int(limits.get("maxFileBytes", 15 << 20))
     max_per_repo = int(limits.get("maxPerRepo", 250))
     max_repos = int(limits.get("maxRepositories", 400))
-    blocked = {b.lower() for b in cfg.get("blocked", [])}
+    # B10: a blocked entry is "owner/name" or {"repo": "owner/name", "reason": "..."} (CURATION.md asks for the reason).
+    blocked = {(b if isinstance(b, str) else b.get("repo", "")).lower() for b in cfg.get("blocked", [])} - {""}
     os.makedirs(OUT, exist_ok=True)
     prev_exts, prev_repos = {}, {}
     try:
@@ -496,6 +500,49 @@ def main():
         repos_out.append(info)
         log("== %-60s %-10s %4s stars %3d extensions" % (url[:60], c["origin"], stars if stars is not None else "-", count))
 
+    # 2b. B10 health check + security vetting (.github/extensions/CURATION.md) ----------------------------------
+    # Every listed file is downloaded and read (never run). Dead, broken, unsafe and hostile files leave the market;
+    # removed.json says which and why. Curated files were downloaded above (their hash is enforced there); live
+    # community/discovered files may be rebuilt after their listing, so their hash is not enforced (the app does
+    # the same), but the file itself must pass.
+    def health(e):
+        if e.get("status") == 0:
+            return e, Rejected("dead", "marked down by its author (status 0)")
+        if e.get("ok") is False:
+            return e, None  # curated copy kept from the last run while its repository is down
+        try:
+            # Curated files are mirrored here in this run: read the copy about to be published.
+            data = open(os.path.join(OUT, e["file"]), "rb").read() if e.get("file") else fetch(e["url"], max_bytes, tries=2)
+        except Exception as x:
+            return e, Rejected("dead", "download failed: %s" % str(x).split(": ", 1)[-1][:120])
+        try:
+            v = vet(data, e["sha256"] if e["origin"] == "curated" else None)
+            e["checked"] = now()
+            if v["pluginClassName"] and not e.get("pluginClassName"):
+                e["pluginClassName"] = v["pluginClassName"]
+            return e, None
+        except Rejected as r:
+            return e, r
+
+    with cf.ThreadPoolExecutor(12) as pool:
+        checked = list(pool.map(health, all_exts))
+    removed = [{"name": e["name"], "internalName": e["internalName"], "repoUrl": e["repoUrl"], "repoName": e.get("repoName"),
+                "url": e["url"], "kind": r.kind, "reason": r.reason} for e, r in checked if r is not None]
+    dead_share = sum(1 for x in removed if x["kind"] == "dead") / max(1, len(all_exts))
+    if dead_share > 0.4:
+        # A network outage on the runner would empty the market: keep the last published index instead.
+        sys.exit("Health check: %.0f%% of files unreachable, refusing to publish" % (dead_share * 100))
+    gone = {(x["repoUrl"], x["internalName"]) for x in removed}
+    all_exts = [e for e in all_exts if (e["repoUrl"], e["internalName"]) not in gone]
+    for r in repos_out:
+        r["count"] = sum(1 for e in all_exts if e["repoUrl"] == r["url"])
+    # A repository left with nothing installable is not listed (curated ones stay, so their state is visible).
+    repos_out = [r for r in repos_out if r["count"] > 0 or r["origin"] == "curated"]
+    by_kind = {}
+    for x in removed:
+        by_kind[x["kind"]] = by_kind.get(x["kind"], 0) + 1
+    log("Health check: %d removed %s" % (len(removed), by_kind))
+
     # 3. compatibility notes, rank + de-duplicate ------------------------------
     try:
         compat = json.load(open(COMPAT))
@@ -547,6 +594,12 @@ def main():
         f.write("| # | Extension | Version | Types | Repository | Stars |\n|---|---|---|---|---|---|\n")
         for e in primary[:60]:
             f.write("| %d | %s | %d | %s | %s | %s |\n" % (e["rank"], e["name"], e["version"], ", ".join(e["categories"]), e["repoName"], e.get("stars") or "-"))
+        f.write("\n## Removed by the health check (%d)\n\n" % len(removed))
+        f.write("Rules: .github/extensions/CURATION.md. Full list: removed.json.\n\n| Kind | Count |\n|---|---|\n")
+        for k, n in sorted(by_kind.items()):
+            f.write("| %s | %d |\n" % (k, n))
+    with open(os.path.join(OUT, "removed.json"), "w") as f:
+        json.dump({"generated": now(), "removed": sorted(removed, key=lambda x: (x["kind"], x["name"].lower()))}, f, ensure_ascii=False, indent=1)
     if not all_exts:
         sys.exit("No extensions published")
 

@@ -99,6 +99,19 @@ object OnlineBookmarks {
             old?.favorite ?: false,
         )
         update { list -> listOf(b) + list.filterNot { it.key == b.key } }
+        taste(context, item.api, item.url)
+    }
+
+    /** B20: My List, Favorites and "Completed" are taste signals of this profile (small ones). */
+    private fun taste(context: Context, api: String, url: String) {
+        val b = get(api, url)
+        val ref = b?.let { dev.asfakul.yumeiro.intel.TasteRefs.online(it.api, it.url, it.name, it.posterUrl, it.type) }
+        runCatching {
+            dev.asfakul.yumeiro.intel.TasteSignals.syncSaved(
+                context, dev.asfakul.yumeiro.intel.TasteRefs.onlineKey(api, url), ref,
+                saved = b?.listed == true || b?.favorite == true, favorite = b?.favorite == true, completed = b?.status == Status.COMPLETED,
+            )
+        }
     }
 
     /** Adds or removes [item]; returns true when it's saved afterwards. */
@@ -142,11 +155,13 @@ object OnlineBookmarks {
     private fun setFavorite(context: Context, api: String, url: String, on: Boolean) {
         ensureLoaded(context)
         update { list -> list.map { if (it.api == api && it.url == url) it.copy(favorite = on) else it } }
+        taste(context, api, url)
     }
 
     fun setStatus(context: Context, api: String, url: String, status: Status) {
         ensureLoaded(context)
         update { list -> list.map { if (it.api == api && it.url == url) it.copy(status = status) else it } }
+        taste(context, api, url)
     }
 
     fun setNotify(context: Context, api: String, url: String, notify: Boolean) {
@@ -179,6 +194,7 @@ object OnlineBookmarks {
     fun remove(context: Context, api: String, url: String) {
         ensureLoaded(context)
         update { list -> list.filterNot { it.api == api && it.url == url } }
+        taste(context, api, url)
     }
 
     private fun update(change: (List<Bookmark>) -> List<Bookmark>) {

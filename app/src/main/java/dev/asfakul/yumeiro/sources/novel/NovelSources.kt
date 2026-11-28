@@ -215,6 +215,27 @@ object NovelSources {
         }
     }
 
+    /**
+     * Group X (B4): one page of Popular / Latest from every installed source at once (the "All sources" feed).
+     * Each source answers on its own; one that fails or takes too long is reported and does not hold up the rest.
+     * [only] limits the call to sources that still have pages.
+     */
+    suspend fun popularAll(context: Context, page: Int, latest: Boolean, only: Set<String>? = null, perSourceMs: Long = 25_000L): List<SearchGroup> = withContext(Dispatchers.IO) {
+        ensureLoaded(context)
+        coroutineScope {
+            _state.value.installed.filter { only == null || it.id in only }.map { p ->
+                async {
+                    val r = withTimeoutOrNull(perSourceMs) { runCatching { popular(context, p.id, page, latest) } }
+                    when {
+                        r == null -> SearchGroup(p, emptyList(), "took too long")
+                        r.isFailure -> SearchGroup(p, emptyList(), r.exceptionOrNull()?.message ?: "failed")
+                        else -> SearchGroup(p, r.getOrThrow(), null)
+                    }
+                }
+            }.map { it.await() }
+        }
+    }
+
     private val detailCache = android.util.LruCache<String, NovelDetails>(24)
 
     /** Details opened in this run (the reader reuses them for Previous / Next without asking the site again). */

@@ -21,20 +21,33 @@ export const DEMOGRAPHICS = ["Shounen", "Shoujo", "Seinen", "Josei", "Kids"] as 
 
 export const SORTS = { popular: "POPULARITY_DESC", score: "SCORE_DESC", trending: "TRENDING_DESC", newest: "START_DATE_DESC" } as const;
 
+/** B9: AniList media formats and statuses the app may ask for (allow-lists, as for genres). */
+export const FORMATS = ["TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA"] as const;
+export const STATUSES = ["RELEASING", "FINISHED", "NOT_YET_RELEASED", "HIATUS"] as const;
+export const YEAR_MIN = 1940;
+export const YEAR_MAX = 2100;
+
 const MAX_TAGS = 5;
 const PER_PAGE = 30;
 
 export type BsTitle = {
   id: number; mal?: number; title: string; english?: string; native?: string; synonyms: string[];
   format?: string; year?: number; episodes?: number; cover?: string; genres: string[]; tags: string[]; demographic?: string;
+  status?: string; score?: number;
 };
 
-export type BsPlan = { variables: Record<string, unknown>; genres: string[]; tags: string[]; demographic?: string; ttl: number };
+export type BsWant = {
+  genres: string[]; tags: string[]; demographic?: string;
+  without?: string[]; formats?: string[]; statuses?: string[]; yearFrom?: number; yearTo?: number; minScore?: number;
+};
+export type BsPlan = BsWant & { variables: Record<string, unknown>; ttl: number };
 
-export const SEARCH_QUERY = `query($page:Int,$perPage:Int,$search:String,$genres:[String],$tags:[String],$sort:[MediaSort]){
+export const SEARCH_QUERY = `query($page:Int,$perPage:Int,$search:String,$genres:[String],$tags:[String],$sort:[MediaSort],\
+$without:[String],$formats:[MediaFormat],$statuses:[MediaStatus],$after:FuzzyDateInt,$before:FuzzyDateInt,$score:Int){
 Page(page:$page,perPage:$perPage){pageInfo{hasNextPage}
-media(type:ANIME,isAdult:false,search:$search,genre_in:$genres,tag_in:$tags,sort:$sort){
-id idMal title{romaji english native} synonyms format seasonYear episodes coverImage{large}
+media(type:ANIME,isAdult:false,search:$search,genre_in:$genres,tag_in:$tags,sort:$sort,genre_not_in:$without,\
+format_in:$formats,status_in:$statuses,startDate_greater:$after,startDate_lesser:$before,averageScore_greater:$score){
+id idMal title{romaji english native} synonyms format status seasonYear startDate{year} averageScore episodes coverImage{large}
 genres tags{name rank category isAdult isMediaSpoiler}}}}`;
 
 export const TAGS_QUERY = `query{MediaTagCollection{name category isAdult}}`;
@@ -56,7 +69,25 @@ export function plan(params: URLSearchParams): BsPlan | { error: string } {
   const demoRaw = params.get("demographic") ?? "";
   const demographic = demoRaw === "" ? undefined : (DEMOGRAPHICS as readonly string[]).find((d) => d === demoRaw);
   if (demoRaw !== "" && !demographic) return { error: "bad_demographic" };
-  if (!q && genres.length === 0 && tags.length === 0 && !demographic) return { error: "no_filter" };
+  const without = list(params.get("without"));
+  if (without.length > 4 || without.some((g) => !(GENRES as readonly string[]).includes(g)) || without.some((g) => genres.includes(g))) return { error: "bad_without" };
+  const formats = list(params.get("formats"));
+  if (formats.length > FORMATS.length || formats.some((x) => !(FORMATS as readonly string[]).includes(x))) return { error: "bad_format" };
+  const statuses = list(params.get("statuses"));
+  if (statuses.length > STATUSES.length || statuses.some((x) => !(STATUSES as readonly string[]).includes(x))) return { error: "bad_status" };
+  const year = (k: string): number | undefined | null => {
+    const raw = params.get(k);
+    if (raw === null || raw === "") return undefined;
+    const n = /^\d{4}$/.test(raw) ? Number(raw) : NaN;
+    return n >= YEAR_MIN && n <= YEAR_MAX ? n : null;
+  };
+  const yearFrom = year("from"); const yearTo = year("to");
+  if (yearFrom === null || yearTo === null || (yearFrom && yearTo && yearFrom > yearTo)) return { error: "bad_year" };
+  const scoreRaw = params.get("score");
+  const minScore = scoreRaw === null || scoreRaw === "" ? undefined : (/^\d{1,2}$/.test(scoreRaw) && Number(scoreRaw) % 10 === 0 && Number(scoreRaw) > 0 ? Number(scoreRaw) : null);
+  if (minScore === null) return { error: "bad_score" };
+  const narrows = without.length > 0 || formats.length > 0 || statuses.length > 0 || !!yearFrom || !!yearTo || !!minScore;
+  if (!q && genres.length === 0 && tags.length === 0 && !demographic && !narrows) return { error: "no_filter" };
   const sortKey = params.get("sort") ?? "popular";
   const sort = (SORTS as Record<string, string>)[sortKey];
   if (!sort) return { error: "bad_sort" };
@@ -69,7 +100,21 @@ export function plan(params: URLSearchParams): BsPlan | { error: string } {
   if (q) variables.search = q;
   if (genres.length) variables.genres = genres;
   if (allTags.length) variables.tags = allTags;
-  return { variables, genres, tags, demographic, ttl: q ? 3600 : 6 * 3600 };
+  if (without.length) variables.without = without;
+  if (formats.length) variables.formats = formats;
+  if (statuses.length) variables.statuses = statuses;
+  // FuzzyDateInt is YYYYMMDD and both bounds are strict: "from 2020" is after 2019-12-31, "to 2022" before 2023-01-01.
+  if (yearFrom) variables.after = (yearFrom - 1) * 10000 + 1231;
+  if (yearTo) variables.before = (yearTo + 1) * 10000 + 101;
+  if (minScore) variables.score = minScore - 1;
+  const out: BsPlan = { variables, genres, tags, demographic, ttl: q ? 3600 : 6 * 3600 };
+  if (without.length) out.without = without;
+  if (formats.length) out.formats = formats;
+  if (statuses.length) out.statuses = statuses;
+  if (yearFrom) out.yearFrom = yearFrom;
+  if (yearTo) out.yearTo = yearTo;
+  if (minScore) out.minScore = minScore;
+  return out;
 }
 
 function str(v: unknown, max = 200): string | undefined {
@@ -83,7 +128,7 @@ function int(v: unknown, min = 0, max = 1e9): number | undefined {
 const lower = (s: string) => s.toLowerCase();
 
 /** One AniList media row → a BlackSource title, or null when it is broken, adult, or misses a requested filter. */
-export function title(m: unknown, want: { genres: string[]; tags: string[]; demographic?: string }): BsTitle | null {
+export function title(m: unknown, want: BsWant): BsTitle | null {
   if (!m || typeof m !== "object") return null;
   const r = m as Record<string, unknown>;
   const id = int(r.id, 1);
@@ -111,6 +156,21 @@ export function title(m: unknown, want: { genres: string[]; tags: string[]; demo
   if (want.genres.some((g) => !gl.has(lower(g)))) return null;
   if (want.tags.some((x) => !allTagNames.has(lower(x)))) return null;
   if (want.demographic && demographic !== want.demographic) return null;
+  if (want.without?.some((g) => gl.has(lower(g)))) return null;
+  const fmt = str(r.format, 20);
+  if (want.formats?.length && !(fmt && want.formats.includes(fmt))) return null;
+  const status = str(r.status, 20);
+  if (want.statuses?.length && !(status && want.statuses.includes(status))) return null;
+  const start = int(((r.startDate ?? {}) as Record<string, unknown>).year, YEAR_MIN, YEAR_MAX);
+  const yr = int(r.seasonYear, 1900, 2100) ?? start;
+  // The year range is checked on the start date, the same field AniList filters on (a winter season can start in
+  // December of the year before its season year).
+  const began = start ?? yr;
+  if ((want.yearFrom || want.yearTo) && !began) return null;
+  if (want.yearFrom && began! < want.yearFrom) return null;
+  if (want.yearTo && began! > want.yearTo) return null;
+  const score = int(r.averageScore, 1, 100);
+  if (want.minScore && !(score && score >= want.minScore)) return null;
   const cover = str((r.coverImage as Record<string, unknown> | undefined)?.large, 400);
   const out: BsTitle = {
     id, title: name, synonyms: Array.isArray(r.synonyms) ? r.synonyms.map((s) => str(s, 120)).filter((s): s is string => !!s).slice(0, 8) : [],
@@ -119,15 +179,17 @@ export function title(m: unknown, want: { genres: string[]; tags: string[]; demo
   const mal = int(r.idMal, 1); if (mal) out.mal = mal;
   const en = str(t.english); if (en && en !== name) out.english = en;
   const na = str(t.native); if (na && na !== name) out.native = na;
-  const fmt = str(r.format, 20); if (fmt) out.format = fmt;
-  const yr = int(r.seasonYear, 1900, 2100); if (yr) out.year = yr;
+  if (fmt) out.format = fmt;
+  if (yr) out.year = yr;
+  if (status) out.status = status;
+  if (score) out.score = score;
   const ep = int(r.episodes, 1, 100000); if (ep) out.episodes = ep;
   if (cover && cover.startsWith("https://")) out.cover = cover;
   if (demographic) out.demographic = demographic;
   return out;
 }
 
-export function shape(body: unknown, p: Pick<BsPlan, "genres" | "tags" | "demographic">): { items: BsTitle[]; more: boolean } | null {
+export function shape(body: unknown, p: BsWant): { items: BsTitle[]; more: boolean } | null {
   const page = ((body as Record<string, unknown> | null)?.data as Record<string, unknown> | undefined)?.Page as Record<string, unknown> | undefined;
   if (!page || !Array.isArray(page.media)) return null;
   const items = page.media.map((m) => title(m, p)).filter((x): x is BsTitle => x !== null);

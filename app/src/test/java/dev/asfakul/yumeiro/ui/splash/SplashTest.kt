@@ -37,9 +37,10 @@ class SplashTest {
         assertTrue(LaunchLook.isDark(ThemeMode.AFTERGLOW, systemDark = false, hour = 12))
     }
 
-    @Test fun holdIsShortAndShorterStillWithReducedMotion() {
-        assertTrue(SplashTiming.hold(false) < 900L) // the old fixed hold
-        assertTrue(SplashTiming.hold(true) < SplashTiming.hold(false))
+    @Test fun holdIsAtLeastOneAndAHalfSecondsEvenWithReducedMotion() {
+        // B17 (owner, Beta) replaced the old "shorter than 900 ms" rule.
+        assertTrue(SplashTiming.hold(false) >= 1500L)
+        assertTrue(SplashTiming.hold(true) >= 1500L)
     }
 
     @Test fun showsTheMarkAndWordmarkThenFinishesByItself() {
@@ -48,7 +49,7 @@ class SplashTest {
         rule.setContent { MTPlayerTheme { SplashScreen(onSplashFinished = { done++ }) } }
         rule.onNodeWithTag("splash_logo_icon", useUnmergedTree = true).assertExists()
         rule.onNodeWithTag("splash_wordmark", useUnmergedTree = true).assertExists()
-        rule.mainClock.advanceTimeBy(SplashTiming.HOLD_MS - 200)
+        rule.mainClock.advanceTimeBy(SplashTiming.hold(false) - 200)
         assertEquals(0, done)
         rule.mainClock.advanceTimeBy(400)
         assertEquals(1, done)
@@ -59,6 +60,8 @@ class SplashTest {
         rule.setContent { MTPlayerTheme { SplashScreen(onSplashFinished = { done = true }) } }
         rule.mainClock.autoAdvance = false
         rule.onNodeWithTag("splash_screen_root").performClick()
+        // B17 r27: the skip still runs a short leave so the logo never stays behind.
+        rule.mainClock.advanceTimeBy(SplashTiming.SKIP_LEAVE_MS + 100L)
         assertTrue(done)
     }
 }

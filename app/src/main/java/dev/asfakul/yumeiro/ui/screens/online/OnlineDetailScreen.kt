@@ -155,6 +155,10 @@ fun OnlineDetailScreen(api: String, url: String, onBack: () -> Unit, onOpenTitle
         (state as? DetailState.Ready)?.let { r ->
             dev.asfakul.yumeiro.online.OnlineBookmarks.ensureLoaded(context)
             dev.asfakul.yumeiro.online.OnlineBookmarks.seen(context, api, url, dev.asfakul.yumeiro.online.NewEpisodesWorker.episodeCount(r.detail))
+            // B20: opening a title page is a weak interest signal of this profile (once per 6 hours).
+            dev.asfakul.yumeiro.intel.TasteRefs.online(r.detail)?.let { ref ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { dev.asfakul.yumeiro.intel.TasteSignals.opened(context, ref) } }
+            }
         }
         refreshing = false
     }
@@ -309,6 +313,11 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                     }
                 }
                 MyListButton(d)
+                val tasteRef = remember(d) { dev.asfakul.yumeiro.intel.TasteRefs.online(d) }
+                if (tasteRef != null && d.kind != OnlineKind.LIVE) {
+                    Spacer(Modifier.height(12.dp))
+                    dev.asfakul.yumeiro.ui.screens.intel.TasteFeedbackRow(tasteRef)
+                }
                 if (d.unsupportedReason == null && (d.playData != null || ordered.isNotEmpty()) && d.kind != OnlineKind.LIVE) {
                     Spacer(Modifier.height(8.dp))
                     TitleDownloadButton(d, version, ordered, episodes, season?.title?.takeIf { seasons.size > 1 }, Modifier.fillMaxWidth(), current = target, onVersion = { version = it })
@@ -321,10 +330,11 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                         modifier = Modifier.animateContentSize().clickable { plotExpanded = !plotExpanded }.testTag("online_detail_plot"),
                     )
                 }
-                if (d.tags.isNotEmpty()) {
+                val cleanTags = dev.asfakul.yumeiro.ui.components.rememberCleanGenres(d.tags)
+                if (cleanTags.isNotEmpty()) {
                     Spacer(Modifier.height(10.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        d.tags.forEach { Pill(it, TextTertiary) }
+                        cleanTags.forEach { Pill(it, TextTertiary) }
                     }
                 }
             }
@@ -373,6 +383,9 @@ private fun DetailContent(d: OnlineDetail, onBack: () -> Unit, onOpenTitle: (Onl
                 }
             }
         }
+        // B20: anime alike in characters and story (AniList tags), beside the source's own "More like this".
+        val similarRef = dev.asfakul.yumeiro.intel.TasteRefs.online(d)?.takeIf { it.category == dev.asfakul.yumeiro.intel.MediaCategory.ANIME }
+        if (similarRef != null) item("similar_story") { dev.asfakul.yumeiro.ui.screens.intel.SimilarByStory(similarRef, gutter = 16.dp) }
         if (d.recommendations.isNotEmpty()) {
             item("recs") {
                 Column {

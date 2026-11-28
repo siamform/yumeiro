@@ -330,7 +330,7 @@ internal fun VideoLibraryHero(historyCount: Int, savedCount: Int, downloadCount:
 
 /** Reading tab: saved manga and continue reading. */
 @Composable
-fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpenSources: () -> Unit, modifier: Modifier = Modifier) {
+fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit, onOpenSources: () -> Unit, modifier: Modifier = Modifier, onResume: ((MangaLibrary.Entry) -> Unit)? = null) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MangaLibrary.load(context) } }
     val entries by MangaLibrary.entries.collectAsState()
@@ -346,7 +346,7 @@ fun ReadingLibraryContent(onBrowse: () -> Unit, onOpenTitle: (MangaItem) -> Unit
             item("cr_h") { LibrarySectionHeader("Continue reading") }
             item("cr") {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(reading.take(20), key = { "cr_" + it.key }) { e -> ShelfCover(e, e.lastChapterName) { onOpenTitle(MangaItem(e.providerId, e.url, e.title, e.cover)) } }
+                    items(reading.take(20), key = { "cr_" + it.key }) { e -> ShelfCover(e, e.lastChapterName) { val r = onResume; if (r != null && e.lastChapterUrl != null) r(e) else onOpenTitle(MangaItem(e.providerId, e.url, e.title, e.cover)) } }
                 }
             }
         }

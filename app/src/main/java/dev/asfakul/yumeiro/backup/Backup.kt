@@ -36,8 +36,9 @@ import java.util.zip.ZipOutputStream
  * backup is unpacked into a waiting folder, the app restarts, and [PendingRestore] applies it in
  * `Application.onCreate` before any screen, extension or setting has loaded.
  *
- * Never included: the updater state, account tokens (sealed with this phone's Keystore, they
- * would not open elsewhere), push registration, the app lock and downloaded videos.
+ * Never included: the updater state, push registration, the app lock and downloaded videos. Account tokens
+ * and API keys (sealed with this phone's Keystore) only go into a backup locked with a password (B20 S7,
+ * [BackupCrypt], [SecretsBackup]); there they are carried inside the encryption and sealed again on restore.
  */
 object Backup {
     const val FORMAT = 2
@@ -51,6 +52,7 @@ object Backup {
         SOURCES("Sources", "Extension list, repositories, playlists, home servers, Stremio add-ons"),
         EXTENSION_FILES("Extension files", "The extensions themselves, so they work offline right after restoring"),
         APPEARANCE("Background photo", "Your own photo behind the app"),
+        SECRETS("Keys and sign-ins", "API keys (Yumeiro AI, subtitles), tracker and Last.fm sign-ins, your YouTube sign-in. Only in a backup locked with a password"),
     }
 
     /** Shared preferences that must stay on this device. */
@@ -66,7 +68,7 @@ object Backup {
     /** Top-level files that are device-specific. */
     private val excludedFiles = setOf("online_downloads.json", dev.asfakul.yumeiro.player.LastPlayed.QUEUE_FILE) // G6-QP: device URIs, refills on play
     /** Folders under filesDir that hold user data. */
-    internal val dataDirs = listOf("streams", "servers", "manga", "stremio", "js", "lyrics", "extensions", "tachiyomi", "profiles", "scripts")
+    internal val dataDirs = listOf("streams", "servers", "manga", "novel", "stremio", "js", "lyrics", "extensions", "tachiyomi", "profiles", "scripts", "intel")
     private const val PHOTO = "backdrop_photo.jpg"
     private const val SCRIPT_LIST = "scripts/registry.json"
 
@@ -76,6 +78,7 @@ object Backup {
     internal fun sectionOf(name: String): Section? {
         if (name == PREFS_JSON) return Section.SETTINGS
         if (name.startsWith("prefs/")) return Section.SETTINGS // format 1
+        if (name == SecretsBackup.ENTRY) return Section.SECRETS
         if (!name.startsWith("files/")) return null
         val rel = name.removePrefix("files/")
         // R16 (G5): SafeJsonFile's temp files and kept unreadable copies are not user data.
@@ -85,7 +88,8 @@ object Backup {
         val top = rel.substringBefore('/')
         return when {
             isCode(name) -> Section.EXTENSION_FILES
-            top == "manga" || top == "lyrics" -> Section.LIBRARY
+            top == "manga" || top == "novel" || top == "lyrics" -> Section.LIBRARY // B20-A1: novels were never backed up
+            top == "intel" -> if (rel.endsWith(".json")) Section.LIBRARY else null // B20: taste, picks, AI context, chats
             top == "profiles" -> if (rel.endsWith(".json")) Section.LIBRARY else null // PR-1: each profile's lists
             top == "tachiyomi" && rel.startsWith("tachiyomi/memo/") -> Section.LIBRARY
             top == "extensions" -> if (rel == "extensions/state.json") Section.SOURCES else null // market caches refill themselves
@@ -155,19 +159,27 @@ object Backup {
      * Writes a backup to [out]. [kind] is "manual", "auto" or "safety" (made before a restore or
      * reset). Returns what went in.
      */
-    suspend fun export(context: Context, out: OutputStream, sections: Set<Section> = Section.entries.toSet(), kind: String = "manual"): Summary = withContext(Dispatchers.IO) {
+    suspend fun export(context: Context, out: OutputStream, sections: Set<Section> = Section.entries.toSet(), kind: String = "manual",
+                       password: CharArray? = null): Summary = withContext(Dispatchers.IO) {
         val app = context.applicationContext
+        // B20 S7: keys and sign-ins only travel inside a password-locked backup.
+        @Suppress("NAME_SHADOWING") val sections = if (password == null) sections - Section.SECRETS else sections
+        val secrets = if (Section.SECRETS in sections) SecretsBackup.collect(app) else null
         val now = System.currentTimeMillis()
         dev.asfakul.yumeiro.online.OnlineHistory.flush() // R16: history is written in the background now
         dev.asfakul.yumeiro.sources.manga.MangaLibrary.flush() // R16 (G5): so is the reading library
+        dev.asfakul.yumeiro.intel.TasteSignals.flush() // B20: and the taste signals
         val files = collect(app, sections)
         val prefs = prefsSnapshot(app, sections)
         var count = 0
         var bytes = 0L
-        ZipOutputStream(out.buffered()).use { zip ->
+        val sink = password?.let { BackupCrypt.seal(out.buffered(), it) } ?: out.buffered()
+        ZipOutputStream(sink).use { zip ->
             val manifest = manifest(app, now, kind, sections, files, prefs)
+                .put("locked", password != null).also { m -> secrets?.let { m.optJSONObject("counts")?.put("secrets", it.optJSONObject("secrets")?.length() ?: 0) } }
             zip.putNextEntry(ZipEntry(MANIFEST)); zip.write(manifest.toString(2).toByteArray()); zip.closeEntry()
             if (prefs.length() > 0) { zip.putNextEntry(ZipEntry(PREFS_JSON)); zip.write(prefs.toString().toByteArray()); zip.closeEntry(); count++ }
+            secrets?.let { zip.putNextEntry(ZipEntry(SecretsBackup.ENTRY)); zip.write(it.toString().toByteArray()); zip.closeEntry(); count++ }
             files.forEach { (name, f) ->
                 runCatching {
                     zip.putNextEntry(ZipEntry(name).apply { time = f.lastModified() })
@@ -265,26 +277,43 @@ object Backup {
         val hasCode: Boolean,
         val extensions: Int,
         val counts: JSONObject,
+        /** B20 S7: opened with a password. */
+        val locked: Boolean = false,
     )
 
-    fun infoOf(manifest: JSONObject, found: Set<Section>, hasCode: Boolean): Info {
+    fun infoOf(manifest: JSONObject, found: Set<Section>, hasCode: Boolean, locked: Boolean = false): Info {
         val format = manifest.optInt("format", 1)
         val counts = manifest.optJSONObject("counts") ?: JSONObject()
         val ext = manifest.optJSONArray("extensions")?.length()?.plus(manifest.optJSONArray("tachiyomi")?.length() ?: 0)
             ?.plus(manifest.optJSONArray("scripts")?.length() ?: 0)
             ?: counts.optInt("extensions")
         return Info(manifest, format, manifest.optLong("createdAt"), manifest.optString("version").take(32),
-            manifest.optString("kind", "manual"), manifest.optString("device").take(60), found, hasCode, ext, counts)
+            manifest.optString("kind", "manual"), manifest.optString("device").take(60), found, hasCode, ext, counts, locked)
     }
 
-    suspend fun inspect(open: () -> InputStream?): Info = withContext(Dispatchers.IO) {
-        val input = open() ?: error("Couldn't open that file")
+    /** B20 S7: the zip inside [raw] (opened with [password] when it is a locked backup) and whether it was locked. */
+    internal fun plain(raw: InputStream, password: CharArray?): Pair<InputStream, Boolean> {
+        val b = java.io.BufferedInputStream(raw, 64 * 1024)
+        b.mark(16)
+        val head = ByteArray(5); var n = 0
+        while (n < head.size) { val r = b.read(head, n, head.size - n); if (r < 0) break; n += r }
+        b.reset()
+        if (!BackupCrypt.isLocked(head.copyOf(n))) return b to false
+        val pw = password ?: run { b.close(); throw BackupCrypt.NeedsPassword() }
+        return try { BackupCrypt.open(b, pw) to true } catch (t: Throwable) { b.close(); throw t }
+    }
+
+    /** Reads a locked backup to its end, so a changed or cut-off tail fails before anything is used. */
+    private fun drain(s: InputStream) { val buf = ByteArray(64 * 1024); while (s.read(buf) >= 0) Unit }
+
+    suspend fun inspect(open: () -> InputStream?, password: CharArray? = null): Info = withContext(Dispatchers.IO) {
+        val (input, locked) = plain(open() ?: error("Couldn't open that file"), password)
         var manifest: JSONObject? = null
         var hasCode = false
         var entries = 0
         val found = HashSet<Section>()
         ZipInputStream(input.buffered()).use { zip ->
-            generateSequence { runCatching { zip.nextEntry }.getOrElse { throw IllegalStateException("This file is damaged or isn't a Yumeiro backup") } }.forEach { e ->
+            generateSequence { runCatching { zip.nextEntry }.getOrElse { if (it is BackupCrypt.Damaged) throw it; throw IllegalStateException("This file is damaged or isn't a Yumeiro backup") } }.forEach { e ->
                 if (++entries > MAX_RESTORE_ENTRIES) error("This backup has too many files")
                 if (e.name == MANIFEST) manifest = runCatching { JSONObject(readCapped(zip, 512 * 1024).decodeToString()) }.getOrNull()
                 else {
@@ -292,17 +321,20 @@ object Backup {
                     if (isCode(e.name)) hasCode = true
                 }
             }
+            if (locked) drain(input)
         }
+        // Keys only count from a locked backup (a plain zip with a secrets file is not trusted with them).
+        if (!locked) found -= Section.SECRETS
         val m = manifest ?: error("This isn't a Yumeiro backup")
         if (m.optString("app").isNotBlank() && !m.optString("app").startsWith("dev.asfakul.yumeiro")) error("This backup is from another app")
         // A backup without extension files still restores the list; extensions download again.
         if (m.optJSONArray("extensions")?.length() ?: 0 > 0) found += Section.SOURCES
-        infoOf(m, found, hasCode)
+        infoOf(m, found, hasCode, locked)
     }
 
     /** Old entry point kept for callers that only need the manifest. */
     suspend fun inspect(context: Context, source: Uri): JSONObject =
-        inspect { context.contentResolver.openInputStream(source) }.let { it.manifest.put("hasCode", it.hasCode) }
+        inspect(open = { context.contentResolver.openInputStream(source) }).let { it.manifest.put("hasCode", it.hasCode) }
 
     // endregion
 
@@ -313,20 +345,28 @@ object Backup {
      * [PendingRestore] applies it. Only [sections] are taken. Extension code only when
      * [EXTENSION_FILES][Section.EXTENSION_FILES] is ticked; otherwise extensions download again.
      */
-    suspend fun stage(context: Context, open: () -> InputStream?, sections: Set<Section>): Int = withContext(Dispatchers.IO) {
+    suspend fun stage(context: Context, open: () -> InputStream?, sections: Set<Section>, password: CharArray? = null): Int = withContext(Dispatchers.IO) {
         val app = context.applicationContext
-        val info = inspect(open)
+        val info = inspect(open, password)
+        @Suppress("NAME_SHADOWING") val sections = if (info.locked) sections else sections - Section.SECRETS
         require(info.format in 1..FORMAT) { "This backup was made by a newer Yumeiro. Update the app first." }
         val staging = PendingRestore.dir(app).apply { deleteRecursively(); mkdirs() }
         var count = 0
         var total = 0L
         try {
-            val input = open() ?: error("Couldn't open that file")
+            val (input, locked) = plain(open() ?: error("Couldn't open that file"), password)
             val legacyPrefs = JSONObject()
             ZipInputStream(input.buffered()).use { zip ->
                 generateSequence { zip.nextEntry }.forEach { e ->
                     if (e.isDirectory || e.name == MANIFEST) return@forEach
                     val section = sectionOf(e.name) ?: return@forEach
+                    if (e.name == SecretsBackup.ENTRY) {
+                        // B20 S7: sealed again with this phone's Keystore now; nothing opened is written.
+                        if (!locked || Section.SECRETS !in sections) return@forEach
+                        val (sealed, _) = SecretsBackup.reseal(JSONObject(readCapped(zip, 1024 * 1024).decodeToString()))
+                        File(staging, SecretsBackup.STAGED).writeText(sealed.toString())
+                        count++; return@forEach
+                    }
                     // Format 1 kept library prefs under prefs/ too: SETTINGS decides for prefs.
                     if (section !in sections && !(e.name.startsWith("prefs/") || e.name == PREFS_JSON)) return@forEach
                     if (e.name == PREFS_JSON) {
@@ -354,6 +394,7 @@ object Backup {
                     }
                     count++
                 }
+                if (locked) drain(input)
             }
             if (legacyPrefs.length() > 0) File(staging, PREFS_JSON).writeText(filterPrefs(legacyPrefs, sections).toString())
             PendingRestore.writePlan(app, PendingRestore.Plan(
@@ -399,9 +440,10 @@ object Backup {
     /** Relaunches the app (see [Restart]). */
     fun restartApp(context: Context) = Restart.now(context)
 
-    fun suggestedName(kind: String = "manual"): String {
+    fun suggestedName(kind: String = "manual", locked: Boolean = false): String {
         val stamp = java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.US).format(java.util.Date())
-        return when (kind) { "auto" -> "yumeiro-auto-$stamp.zip"; "safety" -> "yumeiro-before-restore-$stamp.zip"; else -> "yumeiro-backup-$stamp.zip" }
+        val ext = if (locked) BackupCrypt.EXTENSION else ".zip"
+        return when (kind) { "auto" -> "yumeiro-auto-$stamp$ext"; "safety" -> "yumeiro-before-restore-$stamp$ext"; else -> "yumeiro-backup-$stamp$ext" }
     }
 }
 

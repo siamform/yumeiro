@@ -28,8 +28,8 @@ import java.net.URLEncoder
 
 /**
  * F14 BlackSource (Group U, app-docs/BLACKSOURCE.md): advanced search by genre, tags and demographic.
- *  1. Yumeiro Cloud (`/v1/blacksource/…`, the owner's Cloudflare Worker) asks AniList with one fixed query and
- *     returns checked titles with their genres, tags and demographic. No third-party code runs there.
+ *  1. The phone asks AniList with one fixed query and checks every title (BlackSourceAniList); when AniList can't be
+ *     reached, Yumeiro Cloud (`/v1/blacksource/…`, the owner's Worker) runs the same query. No third-party code runs there.
  *  2. The phone then looks for those titles in the user's own sources (their extensions, which already run here),
  *     and, when words were typed, keeps source results that AniList does not know by the source's own genres.
  * Opt-in: step 2 asks every source several times, so the first use explains the extra time.
@@ -50,6 +50,13 @@ object BlackSource {
         "Mystery", "Psychological", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller",
     )
     val DEMOGRAPHICS = listOf("Shounen", "Shoujo", "Seinen", "Josei", "Kids")
+    /** B9: the Worker's allow-lists for format, status and sort (server/src/blacksource.ts). */
+    val FORMATS = listOf("TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA")
+    val STATUSES = listOf("RELEASING", "FINISHED", "NOT_YET_RELEASED", "HIATUS")
+    val SORTS = listOf("popular", "score", "trending", "newest")
+    val SCORES = listOf(60, 70, 80, 90)
+    const val YEAR_MIN = 1940
+    const val MAX_GENRES = 4
 
     data class Filter(
         val words: String = "",
@@ -57,14 +64,37 @@ object BlackSource {
         val tags: List<String> = emptyList(),
         val demographic: String? = null,
         val sort: String = "popular",
+        /** B9: genres the title must not have, formats / statuses it must be one of, start years, minimum score. */
+        val without: Set<String> = emptySet(),
+        val formats: Set<String> = emptySet(),
+        val statuses: Set<String> = emptySet(),
+        val yearFrom: Int? = null,
+        val yearTo: Int? = null,
+        val minScore: Int? = null,
     ) {
-        val empty get() = words.isBlank() && genres.isEmpty() && tags.isEmpty() && demographic == null
+        val empty get() = words.isBlank() && genres.isEmpty() && tags.isEmpty() && demographic == null &&
+            without.isEmpty() && formats.isEmpty() && statuses.isEmpty() && yearFrom == null && yearTo == null && minScore == null
+        /** How many choices are set besides the words (the filter badge). */
+        val count get() = genres.size + tags.size + without.size + formats.size + statuses.size +
+            listOfNotNull(demographic, yearFrom, yearTo, minScore).size + if (sort != "popular") 1 else 0
+        /** Years in the wrong order are swapped, not refused; values off the lists are dropped. */
+        fun cleaned(): Filter {
+            val (a, b) = if (yearFrom != null && yearTo != null && yearFrom > yearTo) yearTo to yearFrom else yearFrom to yearTo
+            return copy(
+                genres = genres.filter { it in GENRES }.take(MAX_GENRES).toSet(),
+                without = without.filter { it in GENRES && it !in genres }.take(MAX_GENRES).toSet(),
+                formats = formats.filter { it in FORMATS }.toSet(), statuses = statuses.filter { it in STATUSES }.toSet(),
+                demographic = demographic?.takeIf { it in DEMOGRAPHICS }, sort = sort.takeIf { it in SORTS } ?: "popular",
+                yearFrom = a?.takeIf { it >= YEAR_MIN }, yearTo = b?.takeIf { it >= YEAR_MIN }, minScore = minScore?.takeIf { it in SCORES },
+            )
+        }
     }
 
     data class Title(
         val id: Int, val title: String, val english: String?, val native: String?, val synonyms: List<String>,
         val year: Int?, val episodes: Int?, val format: String?, val cover: String?,
         val genres: List<String>, val tags: List<String>, val demographic: String?,
+        val status: String? = null, val score: Int? = null,
     ) {
         val names: List<String> get() = listOfNotNull(title, english, native) + synonyms
     }
@@ -74,7 +104,8 @@ object BlackSource {
     class Failure(message: String) : Exception(message)
 
     /** Pure → unit tested. */
-    fun searchUrl(f: Filter, page: Int = 1): String {
+    fun searchUrl(filter: Filter, page: Int = 1): String {
+        val f = filter.cleaned()
         val enc = { v: String -> URLEncoder.encode(v, "UTF-8") }
         val q = buildList {
             f.words.trim().takeIf { it.isNotEmpty() }?.let { add("q=" + enc(it.take(80))) }
@@ -82,6 +113,12 @@ object BlackSource {
             val tags = f.tags.map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(5)
             if (tags.isNotEmpty()) add("tags=" + enc(tags.joinToString(",")))
             f.demographic?.let { add("demographic=" + enc(it)) }
+            if (f.without.isNotEmpty()) add("without=" + enc(f.without.sorted().joinToString(",")))
+            if (f.formats.isNotEmpty()) add("formats=" + enc(FORMATS.filter { it in f.formats }.joinToString(",")))
+            if (f.statuses.isNotEmpty()) add("statuses=" + enc(STATUSES.filter { it in f.statuses }.joinToString(",")))
+            f.yearFrom?.let { add("from=$it") }
+            f.yearTo?.let { add("to=$it") }
+            f.minScore?.let { add("score=$it") }
             add("sort=" + enc(f.sort))
             if (page > 1) add("page=$page")
         }
@@ -103,12 +140,41 @@ object BlackSource {
                 year = r.optInt("year", 0).takeIf { it > 0 }, episodes = r.optInt("episodes", 0).takeIf { it > 0 },
                 format = opt("format"), cover = opt("cover")?.takeIf { it.startsWith("https://") },
                 genres = strs("genres"), tags = strs("tags"), demographic = opt("demographic"),
+                status = opt("status")?.takeIf { it in STATUSES }, score = r.optInt("score", 0).takeIf { it in 1..100 },
             )
         }
         return Page(items, o.optBoolean("more", false))
     }
 
+    @Volatile internal var aniListForTest: String? = null
+
+    /**
+     * B9: the phone asks AniList first (AniList blocks Cloudflare Workers); the Worker is the fallback when AniList
+     * can't be reached from here. Busy (429) is reported, not retried.
+     */
     suspend fun search(f: Filter, page: Int = 1): Page = withContext(Dispatchers.IO) {
+        val direct = runCatching { direct(f, page) }
+        direct.getOrNull()?.let { return@withContext it }
+        if ((direct.exceptionOrNull() as? Failure)?.message == "busy") throw Failure("busy")
+        viaCloud(f, page)
+    }
+
+    private fun direct(f: Filter, page: Int): Page {
+        val body = BlackSourceAniList.body(f, page) ?: throw Failure("no filter")
+        val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(aniListForTest ?: BlackSourceAniList.URL)) as HttpURLConnection).apply {
+            connectTimeout = 10_000; readTimeout = 15_000; requestMethod = "POST"; doOutput = true
+            setRequestProperty("Content-Type", "application/json"); setRequestProperty("Accept", "application/json")
+        }
+        try {
+            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val code = conn.responseCode
+            if (code == 429) throw Failure("busy")
+            if (code !in 200..299) throw Failure("anilist $code")
+            return BlackSourceAniList.shape(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }, f) ?: throw Failure("anilist shape")
+        } finally { conn.disconnect() }
+    }
+
+    private fun viaCloud(f: Filter, page: Int): Page {
         val conn = (dev.asfakul.yumeiro.network.AppProxy.open(URL(searchUrl(f, page))) as HttpURLConnection).apply {
             connectTimeout = 10_000; readTimeout = 15_000
             setRequestProperty("Accept", "application/json")
@@ -117,7 +183,7 @@ object BlackSource {
             val code = conn.responseCode
             if (code == 429 || code == 503) throw Failure("busy")
             if (code !in 200..299) throw Failure("http $code")
-            parse(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
+            return parse(conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) })
         } finally { conn.disconnect() }
     }
 
@@ -135,8 +201,25 @@ object BlackSource {
     fun providerTagsMatch(tags: List<String>, f: Filter): Boolean {
         val have = tags.map { SearchRanker.normalize(it) }.toSet()
         val want = f.genres + f.tags + listOfNotNull(f.demographic)
-        return want.isNotEmpty() && want.all { SearchRanker.normalize(it) in have }
+        return want.isNotEmpty() && want.all { SearchRanker.normalize(it) in have } && f.without.none { SearchRanker.normalize(it) in have }
     }
+
+    // ---- B9: which sources are asked (multi-select across every ecosystem, kept between visits) -------------------
+    private const val KEY_OFF = "sources_off"
+
+    /** Names of the sources the person turned off. New sources are on by default. */
+    fun sourcesOff(c: Context): Set<String> = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet(KEY_OFF, null).orEmpty().toSet()
+    fun setSourcesOff(c: Context, off: Set<String>) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putStringSet(KEY_OFF, off.toSet()).apply()
+
+    /** Pure → unit tested: the sources to ask. */
+    fun <T> chosen(all: List<T>, off: Set<String>, name: (T) -> String): List<T> = all.filter { name(it) !in off }
+
+    /** Pure → unit tested: one ecosystem's switch. All on → all off; otherwise all on. Other ecosystems untouched. */
+    fun toggleGroup(group: List<String>, off: Set<String>): Set<String> =
+        if (group.all { it !in off }) off + group else off - group.toSet()
+
+    /** Pure → unit tested: the extra-time note. Each title is looked up in every chosen source. */
+    fun lookups(titles: Int, sources: Int, words: Boolean, limit: Int = 12): Int = (minOf(titles, limit) + if (words) 1 else 0) * sources
 
     data class SourceHit(val title: Title?, val item: OnlineItem, val providerTags: List<String> = emptyList())
 
