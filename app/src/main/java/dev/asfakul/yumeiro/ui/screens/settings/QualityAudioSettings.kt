@@ -128,6 +128,18 @@ fun QualityAndAudioCard() {
         remember(context) { dev.asfakul.yumeiro.online.OtherSources.init(context); true }
         val others by dev.asfakul.yumeiro.online.OtherSources.mode.collectAsState()
         ChoiceRow("Other extensions", "qa_other_sources", dev.asfakul.yumeiro.online.OtherSources.Mode.entries, others, { it.label }, { it.detail }) { dev.asfakul.yumeiro.online.OtherSources.setMode(context, it) }
+        // B23: the Anticipation Engine (prepares the next episodes while one plays) and its alternative-source offer.
+        remember(context) { dev.asfakul.yumeiro.online.anticipation.AnticipationPrefs.init(context); true }
+        val prepare by dev.asfakul.yumeiro.online.anticipation.AnticipationPrefs.enabled.collectAsState()
+        val askAlt by dev.asfakul.yumeiro.online.anticipation.AnticipationPrefs.askBeforeAlternative.collectAsState()
+        SettingsDivider()
+        SettingsToggleRow("Prepare upcoming episodes", "Finds sources and subtitles for the next episodes in the background, so they start at once. Pauses on mobile data, a hot phone or low memory", prepare,
+            { dev.asfakul.yumeiro.online.anticipation.AnticipationPrefs.setEnabled(context, it) }, "qa_prepare_upcoming")
+        if (prepare) {
+            SettingsDivider()
+            SettingsToggleRow("Ask before playing from another source", "When an episode's own extension has nothing, ask before playing the source Yumeiro prepared. Off: it plays with a note", askAlt,
+                { dev.asfakul.yumeiro.online.anticipation.AnticipationPrefs.setAskBeforeAlternative(context, it) }, "qa_ask_alternative")
+        }
     }
     GroupLabel("Picture")
     SettingsCard {

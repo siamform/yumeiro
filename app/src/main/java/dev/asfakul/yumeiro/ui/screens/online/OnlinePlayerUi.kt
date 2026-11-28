@@ -386,7 +386,10 @@ internal fun ResolveCard(state: OnlineSession.State, onClose: () -> Unit, inPlay
             Spacer(Modifier.height(4.dp))
             Text(state.api, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
             Spacer(Modifier.height(16.dp))
-            if (state.phase == OnlineSession.Phase.FAILED) {
+            val offer = state.offer
+            if (offer != null) {
+                AlternativeOfferCard(state, offer, compact = false)
+            } else if (state.phase == OnlineSession.Phase.FAILED) {
                 Icon(Icons.Default.ErrorOutline, null, tint = WarnColor, modifier = Modifier.size(34.dp))
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -478,6 +481,8 @@ fun OnlineResolveLayer(playerOpen: Boolean, onOpenTitle: (api: String, url: Stri
 @Composable
 private fun BoxScope.CompactResolve(state: OnlineSession.State, onClose: () -> Unit) {
     val context = LocalContext.current
+    // B23: an alternative prepared for an episode whose own extension has nothing; the person decides.
+    state.offer?.let { o -> Column(Modifier.align(Alignment.Center)) { AlternativeOfferCard(state, o, compact = true) }; return }
     Column(Modifier.align(Alignment.Center).padding(horizontal = 24.dp).testTag("online_resolving"), horizontalAlignment = Alignment.CenterHorizontally) {
         if (state.phase == OnlineSession.Phase.FAILED) {
             Icon(Icons.Default.ErrorOutline, null, tint = WarnColor, modifier = Modifier.size(28.dp))

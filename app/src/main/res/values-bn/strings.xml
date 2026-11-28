@@ -1120,4 +1120,10 @@
     <string name="restore_secrets_note">কী ও সাইন-ইন এই ফোনের জন্য আবার সিল করা হয়। ব্যাকআপের পর যে সাইন-ইনের মেয়াদ শেষ হয়েছে, সেখানে আবার সাইন ইন করতে হবে।</string>
     <string name="restore_locked_title">এই ব্যাকআপ লক করা</string>
     <string name="restore_locked_hint">যে পাসওয়ার্ড দিয়ে এটি বানানো হয়েছিল তা লিখুন। হারানো পাসওয়ার্ড ফিরে পাওয়া যায় না।</string>
+    <string name="an_playing_from">%1$s থেকে চলছে: এই পর্বের জন্য %2$s-এ কোনো সোর্স নেই।</string>
+    <string name="an_offer_title">আরেকটি সোর্স তৈরি আছে</string>
+    <string name="an_offer_body">এই পর্বের জন্য %1$s-এ কোনো সোর্স নেই, তবে Yumeiro %2$s থেকে একটি তৈরি রেখেছে।</string>
+    <string name="an_play_alternative">বিকল্পটি চালান</string>
+    <string name="an_skip">এড়িয়ে যান</string>
+    <string name="an_never_show">আর কখনো দেখাবেন না</string>
 </resources>

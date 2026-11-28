@@ -66,7 +66,7 @@ object SettingsCatalog {
         VIDEO_QUALITY(Group.VIDEO, "Video quality & playback", "Default quality, Sub or Dub, speed, decoder, Anime4K, default player, torrents",
             listOf("video", "resolution", "1080p", "720p", "dub", "sub", "renderer", "external player", "vlc", "mx player", "upscale", "torrent", "magnet", "denoise", "de-blur", "sharpen"),
             settings = listOf("Default quality", "Default audio", "Default speed", "Resume playback", "Video decoder", "Video renderer", "Anime4K enhancement", "Anime4K preset",
-                "Default player", "Torrent streaming", "TorrServer")),
+                "Default player", "Torrent streaming", "TorrServer", "Prepare upcoming episodes", "Ask before playing from another source")),
         SUBTITLES(Group.VIDEO, "Subtitles & intros", "Captions, subtitle style and search, skip intro and outro",
             listOf("cc", "captions", "subs", "opensubtitles", "subdl", "subsource", "language", "aniskip", "introdb", "intro", "outro", "opening", "ending"),
             settings = listOf("Captions on by default", "Subtitle style", "Subtitle search language", "Skip intro & outro", "Skip automatically")),

@@ -1119,4 +1119,10 @@
     <string name="restore_secrets_note">Keys and sign-ins are sealed again for this phone. A sign-in that has expired since the backup needs signing in again.</string>
     <string name="restore_locked_title">This backup is locked</string>
     <string name="restore_locked_hint">Type the password it was made with. A lost password can\'t be recovered.</string>
+    <string name="an_playing_from">Playing from %1$s: %2$s has no source for this episode.</string>
+    <string name="an_offer_title">Another source is ready</string>
+    <string name="an_offer_body">%1$s has no source for this episode, but Yumeiro prepared one from %2$s.</string>
+    <string name="an_play_alternative">Play alternative</string>
+    <string name="an_skip">Skip</string>
+    <string name="an_never_show">Never show again</string>
 </resources>

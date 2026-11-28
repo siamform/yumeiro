@@ -420,7 +420,7 @@ object OnlineRepository {
     data class SearchUpdate(val api: String, val items: List<OnlineItem>, val error: String? = null)
 
     /** Searches every provider in parallel; emits each provider's results as soon as they arrive. */
-    fun search(query: String, apis: List<MainAPI>, retry: Boolean = false): Flow<SearchUpdate> = channelFlow {
+    fun search(query: String, apis: List<MainAPI>, retry: Boolean = false, lane: Int = PriorityGate.PICKED): Flow<SearchUpdate> = channelFlow {
         val q = query.trim()
         if (q.isEmpty()) return@channelFlow
         val failMemory = dev.asfakul.yumeiro.FeatureFlags.isOn(dev.asfakul.yumeiro.FeatureFlags.Flag.FE_S3_FAIL_MEMORY)
@@ -457,7 +457,7 @@ object OnlineRepository {
                 send(update)
             }
         }
-    }.flowOn(Dispatchers.IO + PriorityGate.Lane(PriorityGate.PICKED)) // FE-2c: the user is waiting for a search.
+    }.flowOn(Dispatchers.IO + PriorityGate.Lane(lane)) // FE-2c: the user is waiting for a search (B23: the engine's own searches go BACKGROUND).
 
     private val searchCache = ConcurrentHashMap<String, Timed<List<OnlineItem>>>()
     /** FE-S3: memory only, 2 minutes: a site that just failed a query is not asked again until Retry. */

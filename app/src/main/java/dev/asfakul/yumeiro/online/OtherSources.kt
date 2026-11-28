@@ -157,7 +157,7 @@ object OtherSources {
     /** One event from another extension: the link events of its matching episode, or that it matched. */
     sealed interface Hit {
         val api: String
-        data class Matched(override val api: String, val title: String) : Hit
+        data class Matched(override val api: String, val title: String, val url: String = "") : Hit
         data class Event(override val api: String, val event: LinkEvent) : Hit
     }
 
@@ -165,7 +165,7 @@ object OtherSources {
      * The sweep for [detail]'s [episode] in [version]: searches [apis] together, loads the matching titles
      * ([LOADS] at a time) and streams their links. Waits for [start] first ("When needed" mode): true searches, false skips.
      */
-    fun sweep(detail: OnlineDetail, version: String, episode: OnlineEpisode?, apis: List<MainAPI>, start: CompletableDeferred<Boolean>? = null): Flow<Hit> = channelFlow {
+    fun sweep(detail: OnlineDetail, version: String, episode: OnlineEpisode?, apis: List<MainAPI>, start: CompletableDeferred<Boolean>? = null, lane: Int = PriorityGate.PICKED): Flow<Hit> = channelFlow {
         if (start?.await() == false) return@channelFlow
         if (apis.isEmpty()) return@channelFlow
         val series = seriesOf(detail.type) ?: when (detail.kind) { OnlineKind.MOVIE -> false; OnlineKind.SERIES -> true; else -> if (episode == null) false else null }
@@ -174,7 +174,7 @@ object OtherSources {
         val q = queryFor(detail.name)
         Log.i(TAG, "sweep \"$q\" in ${apis.size}: ${apis.joinToString { it.name }}")
         withTimeoutOrNull(SWEEP_MS) {
-            OnlineRepository.search(q, apis).collect { u ->
+            OnlineRepository.search(q, apis, lane = lane).collect { u ->
                 val api = byName[u.api] ?: return@collect
                 val m = pick(detail.name, detail.year, series, u.items)
                 if (m == null) { Log.i(TAG, "${u.api}: no match in ${u.items.size} (${u.error ?: "ok"})"); return@collect }
@@ -183,7 +183,7 @@ object OtherSources {
                     val data = other?.let { dataFor(it, version, episode) }
                     if (data == null) { Log.i(TAG, "${u.api}: \"${m.name}\" has no matching episode"); return@launch }
                     Log.i(TAG, "${u.api}: matched \"${m.name}\"")
-                    send(Hit.Matched(u.api, m.name))
+                    send(Hit.Matched(u.api, m.name, m.url))
                     OnlineRepository.links(api, data).collect { send(Hit.Event(u.api, it)) }
                 }
             }

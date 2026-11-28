@@ -1120,4 +1120,10 @@
     <string name="restore_secrets_note">يُعاد ختم المفاتيح وعمليات تسجيل الدخول لهذا الهاتف. أي تسجيل دخول انتهت صلاحيته منذ النسخة الاحتياطية يحتاج إلى تسجيل الدخول مجددًا.</string>
     <string name="restore_locked_title">هذه النسخة الاحتياطية مقفلة</string>
     <string name="restore_locked_hint">اكتب كلمة المرور التي أُنشئت بها. لا يمكن استعادة كلمة مرور مفقودة.</string>
+    <string name="an_playing_from">يُشغَّل من %1$s: لا يوجد مصدر لهذه الحلقة في %2$s.</string>
+    <string name="an_offer_title">مصدر آخر جاهز</string>
+    <string name="an_offer_body">لا يوجد مصدر لهذه الحلقة في %1$s، لكن Yumeiro جهّز واحدًا من %2$s.</string>
+    <string name="an_play_alternative">شغّل البديل</string>
+    <string name="an_skip">تخطَّ</string>
+    <string name="an_never_show">لا تُظهر هذا مجددًا</string>
 </resources>
