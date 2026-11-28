@@ -334,7 +334,7 @@ object Backup {
 
     /** Old entry point kept for callers that only need the manifest. */
     suspend fun inspect(context: Context, source: Uri): JSONObject =
-        inspect { context.contentResolver.openInputStream(source) }.let { it.manifest.put("hasCode", it.hasCode) }
+        inspect(open = { context.contentResolver.openInputStream(source) }).let { it.manifest.put("hasCode", it.hasCode) }
 
     // endregion
 

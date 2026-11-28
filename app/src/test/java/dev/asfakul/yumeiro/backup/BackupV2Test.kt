@@ -81,7 +81,7 @@ class BackupV2Test {
         val out = ByteArrayOutputStream()
         Backup.export(ctx, out, Backup.Section.entries.toSet() - Backup.Section.EXTENSION_FILES)
         val bytes = out.toByteArray()
-        val info = Backup.inspect { bytes.inputStream() }
+        val info = Backup.inspect({ bytes.inputStream() })
         assertEquals(Backup.FORMAT, info.format)
         assertFalse(info.hasCode)
         assertEquals(1, info.extensions)
@@ -120,7 +120,7 @@ class BackupV2Test {
     }
 
     @Test fun notABackupIsRejected() = runBlocking {
-        val r = runCatching { Backup.inspect { "hello".byteInputStream() } }
+        val r = runCatching { Backup.inspect({ "hello".byteInputStream() }) }
         assertTrue(r.isFailure)
         assertFalse(PendingRestore.hasPending(ctx))
     }
