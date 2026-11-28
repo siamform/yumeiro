@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "generated": "2026-11-28T03:59:46Z",
+  "repo": "siamform/yumeiro",
+  "branch": "streams",
+  "playlists": [
+    {
+      "id": "mrgify_bdix",
+      "name": "Mrgify BDIX",
+      "category": "Bangladesh TV",
+      "description": "BDIX IPTV channels (Bangladesh)",
+      "repo": "abusaeeidx/Mrgify-BDIX-IPTV",
+      "source": "https://raw.githubusercontent.com/abusaeeidx/Mrgify-BDIX-IPTV/main/playlist.m3u",
+      "url": "https://raw.githubusercontent.com/siamform/yumeiro/streams/playlists/mrgify_bdix.m3u",
+      "updated": "2026-11-28T03:59:45Z",
+      "sha256": "14e1a8829bb90543346fe8096393ace57f0165568d29068c3487cb7eecd79457",
+      "channels": 353,
+      "groups": 26,
+      "bytes": 102909,
+      "resolved": "https://raw.githubusercontent.com/abusaeeidx/Mrgify-BDIX-IPTV/main/playlist.m3u",
+      "contentType": "text/plain; charset=utf-8",
+      "checked": "2026-11-28T03:59:45Z",
+      "ok": true
+    },
+    {
+      "id": "yumeiro_live",
+      "builder": "build_live_all",
+      "name": "Yumeiro Live",
+      "category": "Live TV",
+      "description": "All-in-one free Live TV: every country, checked every run, dead channels removed",
+      "repo": "iptv-org/iptv",
+      "source": "https://iptv-org.github.io/iptv/index.m3u",
+      "url": "https://raw.githubusercontent.com/siamform/yumeiro/streams/playlists/yumeiro_live.m3u",
+      "updated": "2026-11-28T03:59:46Z",
+      "sha256": "f5062e19c8bbe51916edac2279db4055af49d55b959eee8dc7c721a655205589",
+      "channels": 7427,
+      "groups": 171,
+      "bytes": 1761264,
+      "checked": "2026-11-28T03:59:46Z",
+      "ok": true
+    }
+  ]
+}
