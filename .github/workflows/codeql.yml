@@ -55,8 +55,12 @@ jobs:
           java-version: "21.0.13"
       - if: matrix.build-mode == 'manual'
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      # One Gradle JVM per edition with a 6 GB heap: with the CodeQL tracer, both editions in one 4 GB JVM ran out of
+      # memory in compileTvDebugKotlin (run 46138579951). The runner has 16 GB.
       - if: matrix.build-mode == 'manual'
-        run: ./gradlew --no-daemon --no-build-cache --no-configuration-cache assembleMobileDebug assembleTvDebug
+        run: |
+          ./gradlew --no-daemon --no-build-cache --no-configuration-cache "-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8" assembleMobileDebug
+          ./gradlew --no-daemon --no-build-cache --no-configuration-cache "-Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8" assembleTvDebug
       - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: /language:${{ matrix.language }}
